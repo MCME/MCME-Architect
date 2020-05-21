@@ -17,23 +17,18 @@
 package com.mcmiddleearth.architect.customHeadManager;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.deserializeLocation;
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.serializeLocation;
 import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.HeadUtil;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import lombok.Getter;
-import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import java.io.File;
+import java.util.*;
+
+import static com.mcmiddleearth.pluginutil.ConfigurationUtil.deserializeLocation;
+import static com.mcmiddleearth.pluginutil.ConfigurationUtil.serializeLocation;
 
 /**
  *
@@ -41,22 +36,15 @@ import org.bukkit.inventory.ItemStack;
  */
 public class CustomHeadManagerData {
     
-    @Getter
     private static final File acceptedHeadDir = new File(ArchitectPlugin.getPluginInstance()
                                                        .getDataFolder(),"customHeads/accepted");
-    
-    @Getter
     private static final File submittedHeadDir = new File(ArchitectPlugin.getPluginInstance()
                                                        .getDataFolder(),"customHeads/submitted");
     
-    @Getter
     private static final String fileExtension = "yml";
     
-    @Getter
     private static CustomHeadCollection collection = new CustomHeadCollection();
     
-    @Getter
-    @Setter
     private static CustomHeadGallery gallery;
     
     private static final String CONFIG_KEY = "headGalleryLocation";
@@ -294,19 +282,29 @@ public class CustomHeadManagerData {
 
     public static void upload(Player sender, String filename, boolean uploadToReviewFolder) {
         new HeadDataBuilderText(sender, filename, uploadToReviewFolder).start();
-        /*
-        try {
-            URLConnection connection= new URL("https://raw.githubusercontent.com/EriolEandur/MCME-Architect/master/src/main/resources/plugin.yml").openConnection();
-            String type = connection.getContentType();
-            if(type == null || type.startsWith("text/plain")) {
-                return null;
-            } 
-            Object content = connection.getContent();
-        }
-        catch(IOException e) {
-            return null;
-        }
-*/
     }
-    
+
+    public static File getAcceptedHeadDir() {
+        return acceptedHeadDir;
+    }
+
+    public static File getSubmittedHeadDir() {
+        return submittedHeadDir;
+    }
+
+    public static String getFileExtension() {
+        return fileExtension;
+    }
+
+    public static CustomHeadCollection getCollection() {
+        return collection;
+    }
+
+    public static CustomHeadGallery getGallery() {
+        return gallery;
+    }
+
+    public static void setGallery(CustomHeadGallery gallery) {
+        CustomHeadManagerData.gallery = gallery;
+    }
 }

@@ -46,12 +46,6 @@ public enum SpecialBlockType {
     VANILLA,
     DOOR_VANILLA,
     DOOR_THREE_BLOCKS,
-    DOOR_FOUR_BLOCKS;//("threeAxis");
+    DOOR_FOUR_BLOCKS //("threeAxis");
     
-/*    @Getter
-    private final String type;
-
-    private SpecialBlockType(String type) {
-        this.type = type;
-    }*/
 }

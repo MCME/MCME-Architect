@@ -16,19 +16,13 @@
  */
 package com.mcmiddleearth.architect.voxelStencilEditor;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import lombok.Getter;
 
 /**
  *
@@ -36,10 +30,8 @@ import lombok.Getter;
  */
 public class StencilList {
     
-    @Getter
     private final String name;
     
-    @Getter
     private final List<String> stencils= new ArrayList<>();
 
     public StencilList(String name) {
@@ -132,4 +124,11 @@ public class StencilList {
         }
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public List<String> getStencils() {
+        return stencils;
+    }
 }

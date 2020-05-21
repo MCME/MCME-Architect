@@ -18,7 +18,6 @@ package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
-import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
@@ -31,11 +30,9 @@ import org.bukkit.block.data.BlockData;
 public class BlockRawData {
     
     @Deprecated
-    @Setter
     int id=0;
     
     @Deprecated
-    @Setter
     byte dv=0;
     
     @Deprecated
@@ -80,5 +77,13 @@ public class BlockRawData {
         } else {
             return LegacyMaterialUtil.getBlockData(material,getDV());
         }
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setDv(byte dv) {
+        this.dv = dv;
     }
 }

@@ -20,15 +20,6 @@ import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.pluginutil.message.MessageUtil;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.TheGafferUtil;
-import java.io.File;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import lombok.Getter;
-import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
@@ -43,6 +34,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
+import java.io.File;
+import java.util.*;
+
 /**
  *
  * @author Eriol_Eandur
@@ -53,23 +47,14 @@ public class PluginData {
     
     private static YamlConfiguration defaultWorldConfig = new YamlConfiguration();
     
-    @Getter
     private static String defaultKey = "-default";
                                        
-    @Getter
-    @Setter
     private static boolean overrideWeather = false;
     
-    @Getter
     private static final MessageUtil messageUtil = new MessageUtil();
     
-    @Getter
     private static final Set<UUID> afkPlayerList = new HashSet<>();
-    
-    @Getter
     private static int entityStandLimit = 1000;
-    
-    @Getter
     private static int entityLimitRadius = 80;
     
     private final static String ENITIY_LIMIT_SECTION = "EntityLimit";
@@ -233,5 +218,32 @@ public class PluginData {
         WorldConfig config = getOrCreateWorldConfig(player.getWorld().getName());
         return config.isAllowedBlock(data);
    }
-    
+
+    public static String getDefaultKey() {
+        return defaultKey;
+    }
+
+    public static boolean isOverrideWeather() {
+        return overrideWeather;
+    }
+
+    public static void setOverrideWeather(boolean overrideWeather) {
+        PluginData.overrideWeather = overrideWeather;
+    }
+
+    public static MessageUtil getMessageUtil() {
+        return messageUtil;
+    }
+
+    public static Set<UUID> getAfkPlayerList() {
+        return afkPlayerList;
+    }
+
+    public static int getEntityStandLimit() {
+        return entityStandLimit;
+    }
+
+    public static int getEntityLimitRadius() {
+        return entityLimitRadius;
+    }
 }

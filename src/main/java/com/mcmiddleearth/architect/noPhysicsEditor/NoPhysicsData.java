@@ -21,26 +21,16 @@ import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.WorldConfig;
 import com.sk89q.worldedit.regions.CuboidRegion;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.util.Vector;
+
+import java.io.*;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -48,7 +38,6 @@ import org.bukkit.util.Vector;
  */
 public class NoPhysicsData {
     
-    @Getter
     private static final Map<String, ExceptionArea> exceptionAreas = new HashMap<>();
     
     private static final File dataFile = new File(ArchitectPlugin.getPluginInstance().getDataFolder(),
@@ -177,12 +166,15 @@ public class NoPhysicsData {
                 Vector maxPoint = new Vector(maxX,maxY,maxZ);
                 UUID world = UUID.fromString(scanner.next());
                 String name = scanner.nextLine().substring(1);
-//Logger.getGlobal().info("loadnophy "+name+" "+world);
                 if(world==null) continue;
                 exceptionAreas.put(name,new RedstoneCircuitArea(world,minPoint,maxPoint));
             }
         } catch (FileNotFoundException ex) {
             Logger.getLogger(NoPhysicsData.class.getName()).log(Level.WARNING,"No physics exception data file not found.");
         }
+    }
+
+    public static Map<String, ExceptionArea> getExceptionAreas() {
+        return exceptionAreas;
     }
 }

@@ -17,28 +17,8 @@
 package com.mcmiddleearth.architect.copyPaste;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.pluginutil.plotStoring.IStoragePlot;
-import com.mcmiddleearth.pluginutil.plotStoring.InvalidRestoreDataException;
-import com.mcmiddleearth.pluginutil.plotStoring.MCMEEntityFilter;
-import com.mcmiddleearth.pluginutil.plotStoring.MCMEPlotFormat;
-import com.mcmiddleearth.pluginutil.plotStoring.StoragePlotSnapshot;
+import com.mcmiddleearth.pluginutil.plotStoring.*;
 import com.sk89q.worldedit.regions.CuboidRegion;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -48,26 +28,29 @@ import org.bukkit.entity.Entity;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 
+import java.io.*;
+import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
 /**
  *
  * @author Eriol_Eandur
  */
 public class Clipboard implements IStoragePlot {
     
-    @Getter
     private final Location referencePoint;
     private Location shift;
     
-    @Getter
     private byte[] nbtData = null;
     
-    @Getter
     protected int rotation; //0, 1, 2 or 3 (90 degree steps)
     
     private boolean[] flip = new boolean[3];
-    @Getter
+
     private final Location lowCorner;
-    @Getter
     private final Location highCorner;
     
     private final static String worldMismatch = "You need to be in the same world with your WE selection.";
@@ -87,10 +70,7 @@ public class Clipboard implements IStoragePlot {
         highCorner = new Location(world,weRegion.getMaximumPoint().getBlockX(),
                                         weRegion.getMaximumPoint().getBlockY(),
                                         weRegion.getMaximumPoint().getBlockZ());
-//log("reference",referencePoint);
         shift = lowCorner.clone().subtract(this.referencePoint);
-//log("shift",shift);
-//log("lowCorner",lowCorner);
     }
     
     public Clipboard(Location referencePoint, Location lowPoint, Location highPoint) throws CopyPasteException {
@@ -108,12 +88,10 @@ public class Clipboard implements IStoragePlot {
         highCorner = new Location (lowPoint.getWorld(), Math.max(lowPoint.getBlockX(), highPoint.getBlockX()),
                                                        Math.max(lowPoint.getBlockY(), highPoint.getBlockY()),
                                                        Math.max(lowPoint.getBlockZ(), highPoint.getBlockZ()));
-//log("reference",referencePoint);
         shift = lowCorner.clone().subtract(this.referencePoint);
     }
     
     public boolean copyToClipboard() {
-//Logger.getGlobal().info("3");
         StoragePlotSnapshot snapshot = new StoragePlotSnapshot(this);
         try(ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
             DataOutputStream outStream = new DataOutputStream(
@@ -169,11 +147,9 @@ public class Clipboard implements IStoragePlot {
         for(int i = 0; i< steps; i++) {
             rotate90();
         }
-        //rotation = (rotation + degree/90)%4;
     }
     
     private void rotate90() {
-//Logger.getGlobal().info("rot90");
         Location size = getHighCorner().clone().subtract(getLowCorner());
         shift = new Location(shift.getWorld(),-shift.getBlockZ()-(rotation%2==0?size.getBlockZ():size.getBlockX()),
                                                shift.getBlockY(),
@@ -211,7 +187,6 @@ public class Clipboard implements IStoragePlot {
                                                       -shift.getBlockZ()-rotatedSize.getBlockZ());
                 flip[2] = !flip[2];
         }
-//log("shift",shift);
     }
     
     private void log(String name, Location loc) {
@@ -234,7 +209,6 @@ public class Clipboard implements IStoragePlot {
                                 .add(highCorner.clone().subtract(lowCorner).toVector())
                                 .toLocation(lowPoint.getWorld());
         }
-//Logger.getGlobal().info("low: "+lowPoint.getBlockX()+" "+lowPoint.getBlockZ()+"high: "+highPoint.getBlockX()+" "+highPoint.getBlockZ());
         return new Clipboard(lowPoint,lowPoint,highPoint);
     }
     
@@ -242,49 +216,10 @@ public class Clipboard implements IStoragePlot {
         Location paste = location.getBlock().getLocation().toVector()
                                 .add(shift.toVector()).toLocation(location.getWorld());
         return paste;
-/*//        log("ref",referencePoint);
-//        log("low",getLowCorner());
-        Location localShift = getLowCorner().clone().subtract(referencePoint);
-//        log("shift",shift);
-log("localshift",localShift);
-log("reference",referencePoint);
-log("lowCorner",lowCorner);
-        Location size = getHighCorner().clone().subtract(getLowCorner());
-//        log("size",size);
-        switch(rotation) {
-            case 1:
-                localShift = new Location(localShift.getWorld(),-localShift.getBlockZ()-size.getBlockZ(),
-                                                       localShift.getBlockY(),
-                                                       localShift.getBlockX());
-                break;
-            case 2:
-                localShift = new Location(localShift.getWorld(),-localShift.getBlockX()-size.getBlockX(),
-                                                       localShift.getBlockY(),
-                                                      -localShift.getBlockZ()-size.getBlockZ());
-                break;
-            case 3:
-                localShift = new Location(localShift.getWorld(),localShift.getBlockZ(),
-                                                      localShift.getBlockY(),
-                                                     -localShift.getBlockX()-size.getBlockX());
-                break;
-        }
-//log("shisft2",shift);
-//log("location",location);
-//log("blockloc",location.getBlock().getLocation());
-        Location localPaste = location.getBlock().getLocation().toVector()
-                                 .add(localShift.toVector()).toLocation(location.getWorld());
-log("localshift",localShift);
-log("local",localPaste);
-        Location paste = location.getBlock().getLocation().toVector()
-                                .add(localShift.toVector()).toLocation(location.getWorld());
-log("shift",shift);
-log("paste",paste);
-        return paste;*/
     }
     
     public boolean paste(Location location, boolean withAir, boolean withBiome) {
         Location paste = getPasteLocation(location);
-//log("paste",paste);
         try(DataInputStream in = new DataInputStream(
                                  new BufferedInputStream(
                                  new GZIPInputStream(
@@ -381,4 +316,25 @@ log("paste",paste);
                              in.readInt(),in.readInt(),in.readInt());
     }
 
+    public Location getReferencePoint() {
+        return referencePoint;
+    }
+
+    public byte[] getNbtData() {
+        return nbtData;
+    }
+
+    public int getRotation() {
+        return rotation;
+    }
+
+    @Override
+    public Location getLowCorner() {
+        return lowCorner;
+    }
+
+    @Override
+    public Location getHighCorner() {
+        return highCorner;
+    }
 }

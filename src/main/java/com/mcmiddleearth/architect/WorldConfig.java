@@ -17,17 +17,6 @@
 package com.mcmiddleearth.architect;
 
 import com.mcmiddleearth.pluginutil.NumericUtil;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.ShulkerBox;
@@ -37,20 +26,23 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
  */
 public class WorldConfig {
 
-    @Getter
     private static final File worldConfigDir = new File(ArchitectPlugin.getPluginInstance().getDataFolder()
             + File.separator + "WorldConfig");
 
-    @Getter
     private static final String cfgExtension = "yml";
 
-    @Getter
     private static final String defaultWorldConfigName = "defaultWorldConfig";
 
     private static final File defaultConfigFile = new File(worldConfigDir + File.separator
@@ -67,7 +59,6 @@ public class WorldConfig {
     
     private final String worldName;
 
-    @Getter
     private YamlConfiguration worldConfig;
 
     private YamlConfiguration defaultConfig;
@@ -501,5 +492,20 @@ public class WorldConfig {
         list.add("minecraft:blue_stained_glass_pane[east=false,north=false,south=false,west=false]");
         config.set(DISABLED_BLOCK_STATES, list);
     }
-    
+
+    public static File getWorldConfigDir() {
+        return worldConfigDir;
+    }
+
+    public static String getCfgExtension() {
+        return cfgExtension;
+    }
+
+    public static String getDefaultWorldConfigName() {
+        return defaultWorldConfigName;
+    }
+
+    public YamlConfiguration getWorldConfig() {
+        return worldConfig;
+    }
 }

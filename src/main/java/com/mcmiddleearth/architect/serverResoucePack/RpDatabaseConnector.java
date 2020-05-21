@@ -28,6 +28,8 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.mcmiddleearth.connect.ConnectPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
@@ -76,10 +78,10 @@ public class RpDatabaseConnector {
             @Override
             public void run() {
                 checkConnection();
-Logger.getGlobal().info("ArchitectTasks: "+Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
-Logger.getGlobal().info("ArchitectWorker: "+Bukkit.getScheduler().getActiveWorkers().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
+                Logger.getGlobal().info("ArchitectTasks: " + Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
+                Logger.getGlobal().info("ArchitectWorker: " + Bukkit.getScheduler().getActiveWorkers().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
             }
-        }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(),0,1200);
+        }.runTaskTimer(ArchitectPlugin.getPluginInstance(),0,1200);
     }
     
     private void executeAsync(Consumer<Player> method, Player player) {
@@ -94,26 +96,26 @@ Logger.getGlobal().info("ArchitectWorker: "+Bukkit.getScheduler().getActiveWorke
         }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
     }
     
-    private synchronized boolean checkConnection() {
+    private synchronized void checkConnection() {
         try {
             if(connected && dbConnection.isValid(5)) {
                 ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO, 
                         "Successfully checked connection to rp database.");
-                return true;
             } else {
-                //throw new SQLException("No connection to statistic database!");
                 if(dbConnection!=null) {
                     dbConnection.close();
                 }
-                connect();
-                ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO, 
-                        "Reconnecting to rp database.");
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        connect();
+                        ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO, "Reconnecting to rp database.");
+                    }
+                }.runTaskAsynchronously(ConnectPlugin.getInstance());
             }
-            return true;
         } catch (SQLException ex) {
             Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
             connected = false;
-            return false;
         }
     }
     
@@ -163,9 +165,7 @@ Logger.getGlobal().info("ArchitectWorker: "+Bukkit.getScheduler().getActiveWorke
     }
     
     private void checkTables(){
-        executeAsync(player -> {
-            checkTablesSync();
-        },null);
+        executeAsync(player -> checkTablesSync(),null);
     }
     
     public synchronized void loadRpSettings(UUID uuid, Map<UUID,RpPlayerData> dataMap) {

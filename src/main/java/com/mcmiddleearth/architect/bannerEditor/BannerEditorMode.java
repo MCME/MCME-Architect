@@ -5,8 +5,6 @@
  */
 package com.mcmiddleearth.architect.bannerEditor;
 
-import lombok.Getter;
-
 /**
  *
  * @author Eriol_Eandur
@@ -21,16 +19,11 @@ public enum BannerEditorMode {
     SHIELD  ("s","",": Selects banner to shield mode."),
     GET     ("g","",": Selects get banner mode.");
     
-    @Getter
     private final String name;
-
-    @Getter
     private final String arguments;
-    
-    @Getter
     private final String helpText;
     
-    private BannerEditorMode(String name, String arguments, String helpText) {
+    BannerEditorMode(String name, String arguments, String helpText) {
         this.name = name;
         this.helpText = helpText;
         this.arguments = arguments;
@@ -44,5 +37,16 @@ public enum BannerEditorMode {
         }
         return null;
     }
-    
+
+    public String getName() {
+        return name;
+    }
+
+    public String getArguments() {
+        return arguments;
+    }
+
+    public String getHelpText() {
+        return helpText;
+    }
 }

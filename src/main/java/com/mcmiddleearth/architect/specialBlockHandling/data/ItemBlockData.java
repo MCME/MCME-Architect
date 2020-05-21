@@ -18,8 +18,6 @@ package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
-import java.util.Objects;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -29,22 +27,20 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.Objects;
+
 /**
  *
  * @author Eriol_Eandur
  */
 public class ItemBlockData implements BlockData {
     
-    @Getter
     private SpecialBlockItemBlock specialItemBlock;
     
-    @Getter
     private BlockData blockData;
     
-    @Getter
     private int currentDamage;
     
-    @Getter
     private float yaw;
     
     public static final String NAMESPACE = "mcme";
@@ -123,16 +119,6 @@ public class ItemBlockData implements BlockData {
     public boolean equals(Object other) {
         if(other instanceof ItemBlockData) {
             ItemBlockData otherData = (ItemBlockData) other;
-/*Logger.getGlobal().info("*****equals*****");
-Logger.getGlobal().info(""+this.specialItemBlock.getId());
-Logger.getGlobal().info(""+otherData.specialItemBlock.getId());
-Logger.getGlobal().info(""+this.blockData.getAsString());
-Logger.getGlobal().info(""+otherData.blockData.getAsString());
-Logger.getGlobal().info(""+this.currentDamage);
-Logger.getGlobal().info(""+otherData.currentDamage);
-Logger.getGlobal().info(""+this.yaw);
-Logger.getGlobal().info(""+otherData.yaw);
-Logger.getGlobal().info("****************");*/
             return this.specialItemBlock.getId().equals(otherData.specialItemBlock.getId())
                 && this.blockData.equals(otherData.blockData)
                 && (this.currentDamage == otherData.currentDamage || this.currentDamage==-1 || otherData.currentDamage==-1)
@@ -155,5 +141,20 @@ Logger.getGlobal().info("****************");*/
     public BlockData clone() {
         return new ItemBlockData(blockData.clone(),specialItemBlock,currentDamage,yaw);
     }
-    
+
+    public SpecialBlockItemBlock getSpecialItemBlock() {
+        return specialItemBlock;
+    }
+
+    public BlockData getBlockData() {
+        return blockData;
+    }
+
+    public int getCurrentDamage() {
+        return currentDamage;
+    }
+
+    public float getYaw() {
+        return yaw;
+    }
 }

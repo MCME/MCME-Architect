@@ -16,10 +16,9 @@
  */
 package com.mcmiddleearth.architect.serverResoucePack;
 
-import java.io.Serializable;
-import lombok.Getter;
-import lombok.Setter;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
+
+import java.io.Serializable;
 
 /**
  *
@@ -29,24 +28,59 @@ public class RpPlayerData implements Serializable {
     
     private long serialVerionsUID = 1;
             
-    @Setter
-    @Getter
     private boolean autoRp = true;
-    @Setter
-    @Getter
     private String variant = "light";
-    @Setter
-    @Getter
     private int resolution = 16;
-    @Getter
-    @Setter
     private transient RpRegion currentRegion = null;
-    @Getter
-    @Setter
     private String currentRpUrl = null;
-    @Getter
-    @Setter
-    private transient PlayerResourcePackStatusEvent.Status currentRpStatus 
+    private transient PlayerResourcePackStatusEvent.Status currentRpStatus
             = PlayerResourcePackStatusEvent.Status.DECLINED;
-    
+
+    public boolean isAutoRp() {
+        return autoRp;
+    }
+
+    public void setAutoRp(boolean autoRp) {
+        this.autoRp = autoRp;
+    }
+
+    public String getVariant() {
+        return variant;
+    }
+
+    public void setVariant(String variant) {
+        this.variant = variant;
+    }
+
+    public int getResolution() {
+        return resolution;
+    }
+
+    public void setResolution(int resolution) {
+        this.resolution = resolution;
+    }
+
+    public RpRegion getCurrentRegion() {
+        return currentRegion;
+    }
+
+    public void setCurrentRegion(RpRegion currentRegion) {
+        this.currentRegion = currentRegion;
+    }
+
+    public String getCurrentRpUrl() {
+        return currentRpUrl;
+    }
+
+    public void setCurrentRpUrl(String currentRpUrl) {
+        this.currentRpUrl = currentRpUrl;
+    }
+
+    public PlayerResourcePackStatusEvent.Status getCurrentRpStatus() {
+        return currentRpStatus;
+    }
+
+    public void setCurrentRpStatus(PlayerResourcePackStatusEvent.Status currentRpStatus) {
+        this.currentRpStatus = currentRpStatus;
+    }
 }

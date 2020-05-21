@@ -16,10 +16,10 @@
  */
 package com.mcmiddleearth.architect.watcher;
 
+import org.bukkit.event.HandlerList;
+
 import java.util.HashSet;
 import java.util.Set;
-import lombok.Getter;
-import org.bukkit.event.HandlerList;
 
 /**
  *
@@ -29,7 +29,6 @@ public class WatcherEvent extends org.bukkit.event.Event {
     
     private static final HandlerList handlers = new HandlerList();
   
-    @Getter
     private Set<String> confirmations = new HashSet<>();
     
     public WatcherEvent() {
@@ -47,5 +46,9 @@ public class WatcherEvent extends org.bukkit.event.Event {
     
     public void confirm(String confirmation) {
         confirmations.add(confirmation);
+    }
+
+    public Set<String> getConfirmations() {
+        return confirmations;
     }
 }

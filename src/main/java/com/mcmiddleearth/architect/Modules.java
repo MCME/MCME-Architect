@@ -16,8 +16,6 @@
  */
 package com.mcmiddleearth.architect;
 
-import lombok.Getter;
-
 /**
  *
  * @author Eriol_Eandur
@@ -85,11 +83,13 @@ public enum Modules {
     LILY_PAD_PROTECTION       ("modules.protection.lilyPad"),
     HANGING_ENTITY_PROTECTION ("modules.protection.hangingEntity");
     
-    @Getter
     private final String moduleKey;
 
-    private Modules(String key) {
+    Modules(String key) {
         this.moduleKey = key;
     }
 
+    public String getModuleKey() {
+        return moduleKey;
+    }
 }

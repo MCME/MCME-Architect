@@ -16,8 +16,6 @@
  */
 package com.mcmiddleearth.architect;
 
-import lombok.Getter;
-
 /**
  *
  * @author Eriol_Eandur
@@ -97,11 +95,13 @@ public enum Permission {
     
     CHECK_NBT  ("architect.checknbt");
 
-    @Getter
     private final String permissionNode;
 
-    private Permission(String permissionNode) {
+    Permission(String permissionNode) {
         this.permissionNode = permissionNode;
     }
 
+    public String getPermissionNode() {
+        return permissionNode;
+    }
 }

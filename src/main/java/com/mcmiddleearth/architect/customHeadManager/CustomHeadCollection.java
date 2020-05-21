@@ -17,13 +17,12 @@
 package com.mcmiddleearth.architect.customHeadManager;
 
 import com.mcmiddleearth.util.HeadUtil;
+import org.bukkit.inventory.ItemStack;
+
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-import lombok.Getter;
-import lombok.Setter;
-import org.bukkit.inventory.ItemStack;
 
 /**
  *
@@ -31,17 +30,11 @@ import org.bukkit.inventory.ItemStack;
  */
 public class CustomHeadCollection {
     
-    @Getter
     private final TreeMap<String,CustomHeadCollection> subCollections = new TreeMap<>();
-    
-    @Getter
     private final TreeMap<String,CustomHeadData> customHeads = new TreeMap<>();
     
-    @Getter
-    @Setter
     private String[] description; //for sign, max length???
     
-    @Getter
     private String[] absoluteName = new String[0]; //full name including all parent collections
     
     public boolean addHead(String headName, CustomHeadData head) {
@@ -223,5 +216,24 @@ public class CustomHeadCollection {
         }
         return result;
     }
-    
+
+    public TreeMap<String, CustomHeadCollection> getSubCollections() {
+        return subCollections;
+    }
+
+    public TreeMap<String, CustomHeadData> getCustomHeads() {
+        return customHeads;
+    }
+
+    public String[] getDescription() {
+        return description;
+    }
+
+    public void setDescription(String[] description) {
+        this.description = description;
+    }
+
+    public String[] getAbsoluteName() {
+        return absoluteName;
+    }
 }

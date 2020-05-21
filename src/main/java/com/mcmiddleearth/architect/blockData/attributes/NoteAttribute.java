@@ -29,9 +29,9 @@ public class NoteAttribute extends Attribute {
             Note note = noteBlockData.getNote();
             boolean newSharped = false;
             int newOctave = note.getOctave();
-            Note.Tone newTone = note.getTone();
+            Tone newTone = note.getTone();
             boolean found = false;
-            for(Note.Tone search: Note.Tone.values()) {
+            for(Tone search: Tone.values()) {
                 if(found) {
                     newTone = search;
                     found = false;
@@ -50,7 +50,7 @@ public class NoteAttribute extends Attribute {
                 }
             }
             if(found) {
-                newTone = Note.Tone.values()[0];
+                newTone = Tone.values()[0];
             }
             if(newOctave==2 && newTone.equals(Tone.G)) {
                 newOctave = 0;
@@ -103,7 +103,7 @@ public class NoteAttribute extends Attribute {
         Note.Tone tone = Note.Tone.valueOf(""+input.charAt(0));*/
         int input = config.getInt(name);
         int octave = input / 12;
-        Note.Tone tone = getTone(input%12);
+        Tone tone = getTone(input%12);
         boolean sharp = getSharp(input%12);
         Note note = new Note(octave, tone, sharp);
         setState(note);
@@ -114,27 +114,27 @@ public class NoteAttribute extends Attribute {
         return (id==0) || (id==2) || (id==4) || (id==7) || (id==8);
     }
     
-    private Note.Tone getTone(int id){
+    private Tone getTone(int id){
         switch(id) {
             case 11:
             case 0: 
-                return Note.Tone.F;
+                return Tone.F;
             case 1:
             case 2:
-                return Note.Tone.G;
+                return Tone.G;
             case 3:
             case 4:
-                return Note.Tone.A;
+                return Tone.A;
             case 5:
-                return Note.Tone.B;
+                return Tone.B;
             case 6:
             case 7:
-                return Note.Tone.C;
+                return Tone.C;
             case 8:
             case 9:
-                return Note.Tone.D;
+                return Tone.D;
             case 10:
-                return Note.Tone.E;
+                return Tone.E;
             default: return null;
         }
     }

@@ -17,15 +17,10 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
 
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import lombok.Getter;
-import lombok.Setter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.*;
 
 /**
  *
@@ -33,27 +28,18 @@ import org.bukkit.inventory.ItemStack;
  */
 public class CustomInventoryCategory {
     
-    @Setter
     boolean isPublic;
     
-    @Getter
     UUID owner;
     
     Set<String> permissions=new HashSet<>();
     
-    @Getter
-    @Setter
     private ItemStack categoryItem;
-
-    @Getter
-    @Setter
     private ItemStack currentCategoryItem;
     
-    @Getter
     private final List<ItemStack> items;
     
     public CustomInventoryCategory(UUID owner, boolean isPublic, ItemStack categoryItem, ItemStack currentCategoryItem) {
-        //this.name = name;
         this.categoryItem = categoryItem;
         this.currentCategoryItem = currentCategoryItem;
         items = new ArrayList<>();
@@ -95,5 +81,33 @@ public class CustomInventoryCategory {
     
     public ItemStack getItem(String id) {
         return items.stream().filter(item -> SpecialBlockInventoryData.getSpecialBlockId(item).equals(id)).findAny().orElse(null);
+    }
+
+    public boolean isPublic() {
+        return isPublic;
+    }
+
+    public UUID getOwner() {
+        return owner;
+    }
+
+    public ItemStack getCategoryItem() {
+        return categoryItem;
+    }
+
+    public void setCategoryItem(ItemStack categoryItem) {
+        this.categoryItem = categoryItem;
+    }
+
+    public ItemStack getCurrentCategoryItem() {
+        return currentCategoryItem;
+    }
+
+    public void setCurrentCategoryItem(ItemStack currentCategoryItem) {
+        this.currentCategoryItem = currentCategoryItem;
+    }
+
+    public List<ItemStack> getItems() {
+        return items;
     }
 }

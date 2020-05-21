@@ -110,7 +110,7 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
         return blockData;
     }
     
-    public static BlockData[] loadBlockDataFromConfig(ConfigurationSection config, SpecialBlockOrientable.Orientation[] orientations) {
+    public static BlockData[] loadBlockDataFromConfig(ConfigurationSection config, Orientation[] orientations) {
         BlockData[] data = new BlockData[orientations.length];
         //convert old data
         if(!containsAllBlockData(config, orientations)) {
@@ -157,8 +157,8 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
         return data;
     }
 
-    public static boolean containsAllBlockData(ConfigurationSection config, SpecialBlockOrientable.Orientation[] orientations) {
-        for (SpecialBlockOrientable.Orientation orientation : orientations) {
+    public static boolean containsAllBlockData(ConfigurationSection config, Orientation[] orientations) {
+        for (Orientation orientation : orientations) {
             if (!config.contains("blockData" + orientation.configKey)) {
                 return false;
             }

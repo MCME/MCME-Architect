@@ -16,61 +16,34 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockSixFaces;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockThinWall;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockThreeAxis;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockTwoAxis;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockWallCombi;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockFourDirections;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockEightFaces;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockDoor;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockDoorFourBlocks;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockDoorThreeBlocks;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockFiveFaces;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
+import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.SearchInventory;
-import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockBisected;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockBurningFurnace;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockDoubleY;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemFourDirections;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemTwoDirections;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockMatchOrientation;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockMobSpawnerBlock;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockOnWater;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockOpenHalfDoor;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockVanilla;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockVanillaDoor;
+import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.*;
 import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.ConversionUtil_1_13;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ZipUtil;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.craftbukkit.libs.jline.internal.Nullable;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -286,7 +259,7 @@ public class SpecialBlockInventoryData {
         return openInventory(p,resourcePack,null);
     }
     
-    private static boolean openInventory(Player p, String resourcePack, @Nullable ItemStack collectionBase) {
+    private static boolean openInventory(Player p, String resourcePack, ItemStack collectionBase) {
         CustomInventory inv = inventories.get(resourcePack);
         if(inv==null) {
             DevUtil.log("block inventory not found for "+resourcePack);

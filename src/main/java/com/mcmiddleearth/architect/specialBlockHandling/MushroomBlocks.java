@@ -16,8 +16,6 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling;
 
-import lombok.Getter;
-
 /**
  *
  * @author Eriol_Eandur
@@ -39,12 +37,11 @@ public enum MushroomBlocks {
     ALL     ("skin all", (byte) 14),
     STEM_ALL("stem all", (byte) 15);
     
-    @Getter
     private final String displayName;
     
     private final byte dataValue;
 
-    private MushroomBlocks(String key, byte dataValue) {
+    MushroomBlocks(String key, byte dataValue) {
         this.displayName = key;
         this.dataValue = dataValue;
     }
@@ -59,4 +56,7 @@ public enum MushroomBlocks {
         return 0;
     }
 
+    public String getDisplayName() {
+        return displayName;
+    }
 }

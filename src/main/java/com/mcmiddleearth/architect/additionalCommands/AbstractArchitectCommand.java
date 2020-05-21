@@ -36,8 +36,8 @@ public abstract class AbstractArchitectCommand implements TabExecutor{
     @Override
     public List<String> onTabComplete(CommandSender sender,
                                                Command command,
-                                               java.lang.String alias,
-                                               java.lang.String[] args) {
+                                               String alias,
+                                               String[] args) {
         return new ArrayList<>();
     }
     

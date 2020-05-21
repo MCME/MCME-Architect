@@ -6,14 +6,14 @@
 package com.mcmiddleearth.architect.bannerEditor;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
-import lombok.Getter;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.inventory.ItemStack;
 
 /**
  *
@@ -21,10 +21,8 @@ import org.bukkit.inventory.ItemStack;
  */
 public class BannerEditorConfig {
     
-    @Getter
     private static final File dataDir = new File(ArchitectPlugin.getPluginInstance().getDataFolder()+"/banners");
     
-    @Getter
     private static final String fileExtension = "yml";
     
     private int patternId = 0;
@@ -125,6 +123,12 @@ public class BannerEditorConfig {
         }
         return result;
     }
-    
 
+    public static File getDataDir() {
+        return dataDir;
+    }
+
+    public static String getFileExtension() {
+        return fileExtension;
+    }
 }

@@ -5,8 +5,6 @@
  */
 package com.mcmiddleearth.architect.armorStand;
 
-import lombok.Getter;
-
 /**
  *
  * @author Eriol_Eandur
@@ -35,16 +33,11 @@ public enum ArmorStandEditorMode {
     LOCK        ("l","",": Selects switch lock mode"),
     ROLLBACK    ("rollback","",": Not implemented");
     
-    @Getter
     private final String name;
-    
-    @Getter
-    private final String helpText;
-    
-    @Getter
     private final String arguments;
+    private final String helpText;
 
-    private ArmorStandEditorMode(String name,String arguments, String helpText) {
+    ArmorStandEditorMode(String name,String arguments, String helpText) {
         this.name = name;
         this.helpText = helpText;
         this.arguments = arguments;
@@ -58,5 +51,16 @@ public enum ArmorStandEditorMode {
         }
         return null;
     }
-    
+
+    public String getName() {
+        return name;
+    }
+
+    public String getArguments() {
+        return arguments;
+    }
+
+    public String getHelpText() {
+        return helpText;
+    }
 }

@@ -24,12 +24,6 @@ import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInvento
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Scanner;
-import java.util.logging.Logger;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -47,6 +41,11 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Scanner;
+
 /**
  *
  * @author Eriol_Eandur
@@ -56,11 +55,8 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     public static final String PREFIX = "iBE_";
     public static final String ID_DELIMITER = "_id_";
     
-    @Getter
     protected Material contentItem;
-    @Getter
     protected Integer[] contentDamage;
-    @Getter
     private double contentHeight;
     
     private SpecialBlockItemBlock(String id, 
@@ -105,13 +101,6 @@ public class SpecialBlockItemBlock extends SpecialBlock {
                 return null;
             }
         }
-        /* 1.13 removed
-        Material barrelMaterial = matchMaterial(config.getString("blockMaterial",""));
-        if(barrelMaterial == null) {
-            return null;
-        }
-        byte barrelData = (byte) config.getInt("blockDataValue",0);
-        */
         Material contentItem = matchMaterial(config.getString("contentItem",""));
         Integer[] contentDamage = getContentDamage(config.getString("contentDamage","0"));
         double contentHeight = config.getDouble("contentHeight",0);
@@ -122,10 +111,6 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     @Override
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
         final Location playerLoc = player.getLocation();
-        /*if(!PluginData.moreEntitiesAllowed(blockPlace)) {
-            int count = PluginData.countNearbyEntities(blockPlace);
-            PluginData.getMessageUtil().sendErrorMessage(player, "WARNING! Already "+count+" entities (paintings, item frames, item blocks and armorstands) around here. Placing more will cause lag.");
-        }*/
         if (ItemBlockManager.allowPlace(blockPlace, player)) {
             super.placeBlock(blockPlace, blockFace, player);
             placeArmorStand(blockPlace, blockFace, playerLoc,contentDamage[NumericUtil.getRandom(0, contentDamage.length-1)]);
@@ -140,7 +125,6 @@ public class SpecialBlockItemBlock extends SpecialBlock {
         removeArmorStands(blockPlace.getLocation());
         final ArmorStand armor = (ArmorStand) blockPlace.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
         armor.setVisible(false);
-        //armor.setMarker(true); makes items vanish near the edge of screen but doesn't remove push time
         armor.setGravity(false);
         armor.setCustomName(getArmorStandName(blockPlace)+ID_DELIMITER+getId());
         armor.addScoreboardTag(ArmorStandUtil.LOCKED);
@@ -167,11 +151,8 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     public boolean isArmorStandChanged(ArmorStand armor, Block block) {
-        //Block block = blockLocation.getBlock();
         Location originalLoc = getArmorStandLocation(block,BlockFace.UP,block.getLocation());
         Location armorLoc = armor.getLocation();
-//Logger.getGlobal().info("original: "+originalLoc.getX()+" "+originalLoc.getY()+" "+originalLoc.getZ());
-//Logger.getGlobal().info("original: "+armorLoc.getX()+" "+armorLoc.getY()+" "+armorLoc.getZ());
         return !(matches(armorLoc.getX(),originalLoc.getX())
               && matches(armorLoc.getY(),originalLoc.getY())
               && matches(armorLoc.getZ(),originalLoc.getZ()));
@@ -251,11 +232,8 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     
     public static void removeArmorStands(Location loc, double xzRadius, double yRadius, boolean exactMatch) {
         for(Entity entity: loc.getBlock().getWorld().getNearbyEntities(loc, xzRadius, yRadius, xzRadius)) {
-//Logger.getGlobal().info("found "+entity.getCustomName()+" Loc: "+entity.getLocation());
-//Logger.getGlobal().info("Exact match: "+exactMatch+"   searching for: "+getArmorStandName(loc.getBlock()));
             if(entity instanceof ArmorStand && entity.getCustomName()!=null
                     && (!exactMatch || entity.getCustomName().startsWith(getArmorStandName(loc.getBlock())))) {
-//Logger.getGlobal().info("removed "+entity.getCustomName());
                 entity.remove();
             }
         }
@@ -278,19 +256,9 @@ public class SpecialBlockItemBlock extends SpecialBlock {
         return null;
     }
     
-    /*public ArmorStand getArmorStand(Location loc) {
-        ArmorStand armorStand = getArmorStandLoose(loc);
-        if(armorStand!=null 
-           && !isArmorStandChanged(armorStand,loc.getBlock())) {
-            return armorStand;
-        }
-        return null;
-    }*/
-    
     public static List<ItemBlockStat> getStatistic(Location loc, double xzRadius, double yRadius) {
         List<ItemBlockStat> stats = new ArrayList<>();
         for(Entity entity: loc.getBlock().getWorld().getNearbyEntities(loc, xzRadius, yRadius, xzRadius)) {
-//Logger.getGlobal().info("found "+entity);
             if(entity instanceof ArmorStand && entity.getCustomName()!=null
                     && ((ArmorStand)entity).getHelmet()!=null) {
                 ItemStack content = ((ArmorStand)entity).getHelmet();
@@ -306,7 +274,6 @@ public class SpecialBlockItemBlock extends SpecialBlock {
                 if(!found) {
                     stats.add(new ItemBlockStat(content));
                 }
-//Logger.getGlobal().info("removed "+entity.getCustomName());
             }
         }
         Collections.sort(stats);
@@ -315,10 +282,7 @@ public class SpecialBlockItemBlock extends SpecialBlock {
 
     public static class ItemBlockStat implements Comparable<ItemBlockStat>{
         
-        @Getter
         private int count;
-
-        @Getter
         private final ItemStack item;
 
 
@@ -334,6 +298,14 @@ public class SpecialBlockItemBlock extends SpecialBlock {
         @Override
         public int compareTo(ItemBlockStat otherStat) {
             return count==otherStat.getCount()?0:(count<otherStat.getCount()?-1:1);
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public ItemStack getItem() {
+            return item;
         }
     }
     
@@ -355,4 +327,15 @@ public class SpecialBlockItemBlock extends SpecialBlock {
         return false;
     }
 
+    public Material getContentItem() {
+        return contentItem;
+    }
+
+    public Integer[] getContentDamage() {
+        return contentDamage;
+    }
+
+    public double getContentHeight() {
+        return contentHeight;
+    }
 }

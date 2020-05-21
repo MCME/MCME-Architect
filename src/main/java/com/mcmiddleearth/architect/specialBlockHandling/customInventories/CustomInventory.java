@@ -21,36 +21,24 @@ package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
  * @author Eriol_Eandur
  */
 
-import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.logging.Logger;
-
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.libs.jline.internal.Nullable;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryAction;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.*;
 import org.bukkit.event.inventory.InventoryType.SlotType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
+
+import java.util.*;
  
 public class CustomInventory implements Listener {
  
@@ -98,7 +86,7 @@ public class CustomInventory implements Listener {
         }
     }
     
-    public void open(Player player, @Nullable ItemStack collectionBase) {
+    public void open(Player player, ItemStack collectionBase) {
         int size = CATEGORY_SLOTS + ITEM_SLOTS;//Math.min((items.get(startCategory).size()/9+1)*9,54);
         Inventory inventory = Bukkit.createInventory(player, size, name);
         CustomInventoryState state;
@@ -145,7 +133,7 @@ public class CustomInventory implements Listener {
     @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
     void onInventoryClick(final InventoryClickEvent event) {
         if (openInventories.containsKey(event.getInventory())) { //.getTitle.equals(name)) {
-            if(event.getSlotType().equals(InventoryType.SlotType.OUTSIDE)
+            if(event.getSlotType().equals(SlotType.OUTSIDE)
                     || event.getRawSlot() >= event.getInventory().getSize()
                     || event.getRawSlot() < CATEGORY_SLOTS) {//items.size()/9+1)*9 
                 return;
@@ -191,7 +179,7 @@ public class CustomInventory implements Listener {
     @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
     void onMenueClick(final InventoryClickEvent event) {
         if (openInventories.containsKey(event.getInventory())) { //.getTitle.equals(name)) {
-            if(event.getSlotType().equals(InventoryType.SlotType.OUTSIDE)
+            if(event.getSlotType().equals(SlotType.OUTSIDE)
                     || event.getRawSlot() >= CATEGORY_SLOTS
                     || event.getCurrentItem()==null) {//items.size()/9+1)*9 
                 return;
@@ -199,7 +187,6 @@ public class CustomInventory implements Listener {
             event.setCancelled(true);
             CustomInventoryState state = openInventories.get(event.getInventory());
             if(state instanceof CustomInventoryCollectionState) {
-//Logger.getGlobal().info("Create category view.");
                 state = new CustomInventoryCategoryState(state);
                 openInventories.put(state.inventory, state);
             }
@@ -222,22 +209,6 @@ public class CustomInventory implements Listener {
         }
     }
         
-    /*@EventHandler(priority=EventPriority.HIGHEST, ignoreCancelled=true)
-    void onScroll(final InventoryClickEvent event) {
-        if(openInventories.containsKey(event.getInventory())) {
-            CustomInventoryState state = openInventories.get(event.getInventory());
-            if(event.getClick().equals(ClickType.SHIFT_RIGHT)) {
-                state.pageDown();
-                state.update();
-                event.setCancelled(true);
-            } else if(event.getClick().equals(ClickType.SHIFT_LEFT)) {
-                state.pageUp();
-                state.update();
-                event.setCancelled(true);
-            }
-        }
-    }*/
-    
     @EventHandler(priority=EventPriority.HIGHEST, ignoreCancelled=false)
     void onCategoryChange(final InventoryClickEvent event) {
         if(openInventories.containsKey(event.getInventory())
@@ -312,8 +283,6 @@ public class CustomInventory implements Listener {
     }
 
     private boolean hasCollection(ItemStack currentItem) {
-//Logger.getGlobal().info(""+SpecialBlockInventoryData.getSpecialBlockDataFromItem(currentItem).getId());
-//Logger.getGlobal().info(""+SpecialBlockInventoryData.getSpecialBlockDataFromItem(currentItem).getCollection().size());
         return SpecialBlockInventoryData.getSpecialBlockDataFromItem(currentItem).hasCollection();
     }
 }

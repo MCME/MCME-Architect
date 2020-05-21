@@ -16,18 +16,14 @@
  */
 package com.mcmiddleearth.architect.blockData;
 
-import lombok.Getter;
-
 /**
  *
  * @author Eriol_Eandur
  */
 public class LegacyBlockData {
     
-    @Getter
     private final int id;
     
-    @Getter
     private final byte data;
     
     LegacyBlockData(int id, byte data) {
@@ -52,5 +48,13 @@ public class LegacyBlockData {
     @Override
     public String toString() {
         return ""+id+":"+data;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public byte getData() {
+        return data;
     }
 }

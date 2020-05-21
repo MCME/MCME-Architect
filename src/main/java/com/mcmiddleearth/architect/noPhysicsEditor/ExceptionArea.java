@@ -16,15 +16,15 @@
  */
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
-import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.math.BlockVector3;
-import java.util.UUID;
-import lombok.Getter;
+import com.sk89q.worldedit.regions.CuboidRegion;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.util.Vector;
+
+import java.util.UUID;
 
 /**
  *
@@ -34,7 +34,6 @@ public abstract class ExceptionArea {
     
     private Vector minPoint, maxPoint;
     
-    @Getter
     private UUID worldUID;
     
     public ExceptionArea(CuboidRegion region) {
@@ -95,5 +94,9 @@ public abstract class ExceptionArea {
     }
     public int getDZ() {
         return maxPoint.getBlockZ()-minPoint.getBlockZ();
+    }
+
+    public UUID getWorldUID() {
+        return worldUID;
     }
 }

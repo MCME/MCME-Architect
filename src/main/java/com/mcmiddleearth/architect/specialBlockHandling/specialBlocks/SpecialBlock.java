@@ -17,18 +17,13 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
-import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
-import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
+import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
+import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
+import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.util.DevUtil;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -40,39 +35,31 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
  */
 public class SpecialBlock {
     
-    @Getter
     private final String id;
     
-    @Getter
     private final BlockData blockData;
     
-    @Getter
     protected final SpecialBlockType type;
     
-    @Getter
     private final Map<String,String> collection = new HashMap<>();
     
-    private SpecialBlock(String id, 
-                        //Material material, 
-                        //byte dataValue,
-                        BlockData data) {
+    private SpecialBlock(String id, BlockData data) {
         this(id, data, SpecialBlockType.BLOCK);
     }
     
-    protected SpecialBlock(String id, 
-                        //Material material, 
-                        //byte dataValue,
-                        BlockData data,
-                        SpecialBlockType type) {
+    protected SpecialBlock(String id, BlockData data, SpecialBlockType type) {
         this.id = id;
-        //this.material = material;
-        //this.dataValue = dataValue;
         this.blockData = data;
         this.type = type;
     }
@@ -131,7 +118,6 @@ public class SpecialBlock {
         new BukkitRunnable() {
             @Override
             public void run() {
-                //state.update(true, false);
                 blockPlace.setBlockData(state.getBlockData(), false);
                 DevUtil.log("Special block place: ID "+state.getType()+" - DV "+state.getRawData());
                 final BlockState tempState = getBlockState(blockPlace, blockFace, playerLoc);
@@ -139,11 +125,9 @@ public class SpecialBlock {
                     @Override
                     public void run() {
                         DevUtil.log("Special block place x2: loc: "+tempState.getX()+" "+tempState.getY()+" "+tempState.getZ()+" - ID "+state.getType()+" - DV "+state.getRawData());
-                        //tempState.update(true, false);
                         blockPlace.setBlockData(tempState.getBlockData(),false);
                         NoPhysicsListener.connectNoPhysicsBlocks(blockPlace);
                         ChunkUpdateUtil.sendUpdates(blockPlace, player);
-                        //new ClientUpdateUtil().sendBlockPlaceUpdates(blockPlace,player);
                     }
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 5);
             }
@@ -152,8 +136,6 @@ public class SpecialBlock {
     
     protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
         final BlockState state = blockPlace.getState();
-        //state.setType(material);
-        //state.setRawData(dataValue);
         state.setBlockData(blockData);
         return state;
     }
@@ -212,35 +194,23 @@ public class SpecialBlock {
         }
     }
     
-    /* 1.13 removed
-    protected static BlockFace getOppositeBlockFace(BlockFace face) {
-        switch(face) {
-            case NORTH_WEST: return BlockFace.SOUTH_EAST;
-            case NORTH_NORTH_WEST: return BlockFace.SOUTH_SOUTH_EAST;
-            case NORTH: return BlockFace.SOUTH;
-            case NORTH_NORTH_EAST: return BlockFace.SOUTH_SOUTH_WEST;
-            case NORTH_EAST: return BlockFace.SOUTH_WEST;
-            case EAST_NORTH_EAST: return BlockFace.WEST_SOUTH_WEST;
-            case EAST: return BlockFace.WEST;
-            case EAST_SOUTH_EAST: return BlockFace.WEST_NORTH_WEST;
-                
-            case SOUTH_WEST: return BlockFace.NORTH_EAST;
-            case SOUTH_SOUTH_WEST: return BlockFace.NORTH_NORTH_EAST;
-            case SOUTH: return BlockFace.NORTH;
-            case SOUTH_SOUTH_EAST: return BlockFace.NORTH_NORTH_WEST;
-            case SOUTH_EAST: return BlockFace.NORTH_WEST;
-            case WEST_NORTH_WEST: return BlockFace.EAST_SOUTH_EAST;
-            case WEST: return BlockFace.EAST;
-            case WEST_SOUTH_WEST: return BlockFace.EAST_NORTH_EAST;
-            case UP: return BlockFace.DOWN;
-            default: return BlockFace.UP;
-        }
-    }*/
-    
     public boolean matches(Block block) {
         return block.getBlockData().matches(blockData);
-                //material.equals(block.getType())
-                //&& dataValue == block.getData();
     }
-    
+
+    public String getId() {
+        return id;
+    }
+
+    public BlockData getBlockData() {
+        return blockData;
+    }
+
+    public SpecialBlockType getType() {
+        return type;
+    }
+
+    public Map<String, String> getCollection() {
+        return collection;
+    }
 }

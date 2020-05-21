@@ -5,22 +5,7 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.armorStand.guard.ArmorStandGuard;
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.deserializeLocation;
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.serializeLocation;
 import com.mcmiddleearth.pluginutil.FileUtil;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import lombok.Getter;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -29,6 +14,13 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+
+import static com.mcmiddleearth.pluginutil.ConfigurationUtil.deserializeLocation;
+import static com.mcmiddleearth.pluginutil.ConfigurationUtil.serializeLocation;
 
 /**
  *
@@ -46,13 +38,10 @@ public class ArmorStandEditorConfig {
     
     private boolean hasCopiedArmorStand = false;
     
-    @Getter
     private Vector copiedArmorStandRelativeLoc = new Vector(0,0,0);
     
-    @Getter
     private static final File dataDir = new File(ArchitectPlugin.getPluginInstance().getDataFolder(),"armorStands");
     
-    @Getter
     private static final String fileExtension = "yml";
     
     public ArmorStandEditorConfig(Player p) {
@@ -255,5 +244,16 @@ public class ArmorStandEditorConfig {
     public int getRotationStep() {
         return rotationStep;
     }
-    
+
+    public Vector getCopiedArmorStandRelativeLoc() {
+        return copiedArmorStandRelativeLoc;
+    }
+
+    public static File getDataDir() {
+        return dataDir;
+    }
+
+    public static String getFileExtension() {
+        return fileExtension;
+    }
 }

@@ -16,14 +16,14 @@
  */
 package com.mcmiddleearth.architect.customHeadManager;
 
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import lombok.Getter;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
  *
@@ -31,13 +31,10 @@ import org.bukkit.configuration.file.YamlConfiguration;
  */
 public class CustomHeadData {
     
-    @Getter
     private final UUID headId;
     
-    @Getter
     private final UUID submittingPlayer;
     
-    @Getter
     private final String texture; //base64 encoded skin texture url
     
     public CustomHeadData(UUID headId, UUID ownerId, String texture) {
@@ -78,5 +75,17 @@ public class CustomHeadData {
             Logger.getLogger(CustomHeadData.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }
+    }
+
+    public UUID getHeadId() {
+        return headId;
+    }
+
+    public UUID getSubmittingPlayer() {
+        return submittingPlayer;
+    }
+
+    public String getTexture() {
+        return texture;
     }
 }

@@ -5,7 +5,6 @@
  */
 package com.mcmiddleearth.architect.blockData.attributes;
 
-import lombok.Getter;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -15,7 +14,6 @@ import org.bukkit.configuration.ConfigurationSection;
  */
 public abstract class Attribute {
 
-    @Getter
     protected int currentSubAttribute = 0;
     
     protected Class<? extends BlockData> clazz;
@@ -62,4 +60,8 @@ public abstract class Attribute {
     
     public abstract void loadFromConfig(ConfigurationSection config);
     public abstract void saveToConfig(ConfigurationSection config);
+
+    public int getCurrentSubAttribute() {
+        return currentSubAttribute;
+    }
 }

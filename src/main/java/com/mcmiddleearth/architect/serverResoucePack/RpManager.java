@@ -27,6 +27,14 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.RegionEditConversationFactory;
 import com.mcmiddleearth.util.DevUtil;
+import org.bukkit.Location;
+import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -35,22 +43,9 @@ import java.math.BigInteger;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import lombok.Getter;
-import org.bukkit.Location;
-import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 
 /**
  *
@@ -63,21 +58,16 @@ public class RpManager {
     
     private static final String rpDatabaseConfig = "rpSettingsDatabase";
     
-    @Getter
     private static Map<String, RpRegion> regions = new HashMap<>();
     
     private static Map<UUID,RpPlayerData> playerRpData = new HashMap<>();
     
-    @Getter
     private static RpDatabaseConnector dbConnector = new RpDatabaseConnector(ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(rpDatabaseConfig));
     
-    @Getter
     private static RegionEditConversationFactory regionEditConversationFactory
             = new RegionEditConversationFactory(ArchitectPlugin.getPluginInstance());
     
     public static void init() {
-        //loadPlayerData();
-        //addPacketListener();
         if(!regionFolder.exists()) {
             regionFolder.mkdir();
         }
@@ -182,9 +172,6 @@ public class RpManager {
         ConfigurationSection section = getConfigSection(rp, player);
         if(section!=null) {
             String sha = section.getString("sha");
-            /*for(int i=0; i<sha.length();i+=2) {
-                result[i/2] = Byte.parseByte(sha.substring(i, i+2),16);
-            }*/
             return stringToSHA(sha);
         }
         return result;
@@ -199,7 +186,6 @@ public class RpManager {
         if(result.length>20) {
             result = Arrays.copyOfRange(result,1,21);
         }
-//Logger.getGlobal().info("First sha byte: " +result[0]+ " "+result[19]);
         return result;
     }
     
@@ -228,11 +214,6 @@ public class RpManager {
     }
         
     public static String getCurrentRpName(Player player) {
-        /*RpRegion region = getPlayerData(player).getCurrentRegion();
-        if(region!=null) {
-            return region.getRp();
-        }
-        return "";*/
         return getRpForUrl(getPlayerData(player).getCurrentRpUrl());
     }
 
@@ -250,7 +231,6 @@ public class RpManager {
         if(data.isAutoRp()) {
             RpRegion newRegion = RpManager.getRegion(player.getLocation());
             if(newRegion != data.getCurrentRegion()) {
-//Logger.getGlobal().info("new: "+newRegion+" current: "+data.getCurrentRegion());
                 data.setCurrentRegion(newRegion);
                 if(newRegion!=null) {
                     setRp(newRegion.getRp(), player, false);
@@ -264,11 +244,8 @@ public class RpManager {
     public static boolean setRp(String rpName, Player player, boolean force) {
         String url = getRpUrl(rpName, player);
         RpPlayerData data = getPlayerData(player);
-//Logger.getGlobal().info("set Resouce Pack for: "+player.getName()+" "+rpName);
-//Logger.getGlobal().info("url: "+url+" current: "+data.getCurrentRpUrl());
         if(url!=null && data!=null && !url.equals("") && (force || !url.equals(data.getCurrentRpUrl()))) {
             data.setCurrentRpUrl(url);
-//Logger.getGlobal().info("set!");
             player.setResourcePack(url, getSHA(rpName, player));
             savePlayerData(player);
             return true;
@@ -317,22 +294,17 @@ public class RpManager {
     }
 
     public static boolean refreshSHA(CommandSender cs, String rp) {
-//Logger.getGlobal().info("rp: "+rp);
         ConfigurationSection config = getRpConfig().getConfigurationSection(rp);
         if(config!=null) {
             for(String resolutionKey: config.getKeys(false)) {
-//Logger.getGlobal().info("resolutionKey: "+resolutionKey);
                 ConfigurationSection resolutionSection = config.getConfigurationSection(resolutionKey);
                 for(String variantKey: resolutionSection.getKeys(false)) {
                     try {
-//Logger.getGlobal().info("varianKey: "+variantKey);
                         ConfigurationSection variantSection = resolutionSection.getConfigurationSection(variantKey);
-//Logger.getGlobal().info(variantSection.getString("url"));
                         URL url = new URL(variantSection.getString("url"));
                         InputStream fis = url.openStream();
                         MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-                        //FileInputStream fis = new FileInputStream(file);
-                        
+
                         byte[] data = new byte[1024];
                         int read = 0;
                         long time = System.currentTimeMillis();
@@ -349,7 +321,6 @@ public class RpManager {
                             sb.append(String.format("%02x", b));
                         }
                         String hashString = sb.toString();
-                        //String hashString = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(hashBytes)).toString();
                         variantSection.set("sha", hashString);
                         ArchitectPlugin.getPluginInstance().saveConfig();
                     } catch (IOException | NoSuchAlgorithmException ex) {
@@ -367,32 +338,12 @@ public class RpManager {
         return px+"px";
     }
     
-    /*public static void savePlayerData() {
-        try {
-            if(!playerFile.exists()) {
-                playerFile.createNewFile();
-            }
-            try(ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(playerFile))) {
-                DevUtil.log("Saving player RP data");
-                out.writeObject(playerRpData);
-            }
-        } catch (IOException ex) {
-            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }*/
-    
+
     public static void savePlayerData(Player player) {
         dbConnector.saveRpSettings(player, playerRpData.get(player.getUniqueId()));
     }
     
     public static void loadPlayerData(UUID uuid) {
-        /*if(playerFile.exists()) {
-            try(ObjectInputStream in = new ObjectInputStream(new FileInputStream(playerFile))) {
-                playerRpData = (Map<UUID,RpPlayerData>) in.readObject();
-            } catch (IOException | ClassNotFoundException ex) {
-                Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }*/
         dbConnector.loadRpSettings(uuid,playerRpData);
     }
     
@@ -472,17 +423,29 @@ public class RpManager {
         Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Adding RP packet listener");
         ProtocolManager protocolManager = protocolManager = ProtocolLibrary.getProtocolManager();
         protocolManager.addPacketListener(
-          new PacketAdapter(ArchitectPlugin.getPluginInstance(), ListenerPriority.NORMAL, 
-                  PacketType.Play.Server.RESOURCE_PACK_SEND) {
-            @Override
-            public void onPacketSending(PacketEvent event) {
-                // Item packets (id: 0x29)
-                if (event.getPacketType() == 
+                new PacketAdapter(ArchitectPlugin.getPluginInstance(), ListenerPriority.NORMAL,
                         PacketType.Play.Server.RESOURCE_PACK_SEND) {
-                    Logger.getLogger(ArchitectPlugin.class.getName())
-                          .log(Level.WARNING,"Sending RP to player "+event.getPlayer());
-                }
-            }
-        });    
+                    @Override
+                    public void onPacketSending(PacketEvent event) {
+                        // Item packets (id: 0x29)
+                        if (event.getPacketType() ==
+                                PacketType.Play.Server.RESOURCE_PACK_SEND) {
+                            Logger.getLogger(ArchitectPlugin.class.getName())
+                                    .log(Level.WARNING, "Sending RP to player " + event.getPlayer());
+                        }
+                    }
+                });
+    }
+
+    public static Map<String, RpRegion> getRegions() {
+        return regions;
+    }
+
+    public static RpDatabaseConnector getDbConnector() {
+        return dbConnector;
+    }
+
+    public static RegionEditConversationFactory getRegionEditConversationFactory() {
+        return regionEditConversationFactory;
     }
 }

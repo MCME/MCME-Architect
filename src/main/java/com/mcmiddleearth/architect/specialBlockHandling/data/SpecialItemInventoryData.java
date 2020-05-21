@@ -22,14 +22,6 @@ import com.mcmiddleearth.architect.specialBlockHandling.customInventories.Custom
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.SearchInventory;
 import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.ZipUtil;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -39,6 +31,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -52,8 +53,6 @@ public class SpecialItemInventoryData {
 
     private final static Map<String, SearchInventory> searchInventories = new HashMap<>();
 
-    //private static List<ItemStack> itemList = new ArrayList<>();
-    
     private static final String configLocator = "item_inventories";
     
     private static final File configFolder = new File(ArchitectPlugin.getPluginInstance()
@@ -71,7 +70,6 @@ public class SpecialItemInventoryData {
             }
             inventories.clear();
         }
-        //itemList = new ArrayList<>();
         File[] files = configFolder.listFiles(FileUtil.getDirFilter());
         if(files!=null) {
             for(File file: files) {
@@ -132,7 +130,6 @@ public class SpecialItemInventoryData {
                 ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
                 if(inventoryItem!=null) {
                     String category = section.getString("category","item");
-                    //itemList.add(inventoryItem);
                     inventory.add(inventoryItem, category);
                     searchInventory.add(inventoryItem);
                 } else {
@@ -145,9 +142,6 @@ public class SpecialItemInventoryData {
     
     public static boolean openInventory(Player p, String resourcePack) {
         CustomInventory inv = inventories.get(resourcePack);
-        /*if(inv==null) {
-            inv = inventories.get("Gondor");
-        }*/
         if(inv!=null && !inv.isEmpty()) {
             inv.open(p,null);
             return true;
@@ -163,7 +157,6 @@ public class SpecialItemInventoryData {
         if(inv!=null && !inv.isEmpty()) {
             inv.open(p, search);
             return true;
-//Logger.getGlobal().info("Inventory 3");
         }
         return false;
     }
@@ -172,15 +165,6 @@ public class SpecialItemInventoryData {
     public static boolean hasItemInventory(String rpName) {
         return inventories.containsKey(rpName);
     }
-    
-    /*public static ItemStack getSpecialItem(String id) {
-        for(ItemStack data: itemList) {
-            if(getId(data).equals(id)) {
-                return data;
-            }
-        }
-        return null;
-    }*/
     
     public static synchronized int downloadConfig(String rpName, InputStream in) throws IOException {
         return ZipUtil.extract(RpManager.getRpUrl(rpName,null), in, configLocator, new File(configFolder,rpName));
@@ -219,57 +203,3 @@ public class SpecialItemInventoryData {
         return "";
     }
 }
-/*    
-    @Getter
-    private static CustomInventory inventory;
-
-    private static final File configFile = new File(ArchitectPlugin.getPluginInstance()
-                                                       .getDataFolder(),"specialItems.yml");
-   
-    private static void createItemInventory() {
-        Configuration config = YamlConfiguration.loadConfiguration(configFile);
-        inventory = new CustomInventory("SpecialItemInventory");
-        loadItems("", config);
-    }
-    
-    private static void loadItems(String path, ConfigurationSection config) {
-        ConfigurationSection itemConfig = config.getConfigurationSection("items");
-        if(itemConfig!=null) {
-            for(String name: itemConfig.getKeys(false)) {
-                inventory.add(deserializeItem(path, name, itemConfig.getConfigurationSection(name)),"main");
-            }
-        }
-        ConfigurationSection subConfig = config.getConfigurationSection("folders");
-        if(subConfig!=null) {
-            for(String dirName: subConfig.getKeys(false)) {
-                loadItems(path+"/"+dirName,subConfig.getConfigurationSection(dirName));
-            }
-        }
-    }
-    
-    private static ItemStack deserializeItem(String path, String name, ConfigurationSection config) {
-        ItemStack item = new ItemStack(Material.getMaterial(config.getString("material")),1, 
-                             (short) config.getInt("durability"));
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(name);
-        List<String> lore = new ArrayList<>();
-        if(config.contains("lore")) {
-            lore.addAll(config.getStringList("lore"));
-        }
-        lore.add("");
-        lore.add(path+"/"+name);
-        meta.setLore(lore);
-        item.setItemMeta(meta);
-        return item;
-    }
-    
-    public static void loadInventory() {
-        if(inventory!=null) {
-            inventory.destroy();
-        }
-        createItemInventory();
-    }
-    
-    
-}
-*/

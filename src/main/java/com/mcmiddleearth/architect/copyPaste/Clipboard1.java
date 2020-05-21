@@ -16,25 +16,8 @@
  */
 package com.mcmiddleearth.architect.copyPaste;
 
-import com.mcmiddleearth.pluginutil.plotStoring.IStoragePlot;
-import com.mcmiddleearth.pluginutil.plotStoring.InvalidRestoreDataException;
-import com.mcmiddleearth.pluginutil.plotStoring.MCMEEntityFilter;
-import com.mcmiddleearth.pluginutil.plotStoring.MCMEPlotFormat;
-import com.mcmiddleearth.pluginutil.plotStoring.StoragePlotSnapshot;
+import com.mcmiddleearth.pluginutil.plotStoring.*;
 import com.sk89q.worldedit.regions.CuboidRegion;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -43,25 +26,28 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.BoundingBox;
 
+import java.io.*;
+import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
 /**
  *
  * @author Eriol_Eandur
  */
 public class Clipboard1 implements IStoragePlot {
     
-    @Getter
     private final Location referencePoint;
     
-    @Getter
     private byte[] nbtData = null;
     
-    @Getter
     protected int rotation; //0, 1, 2 or 3 (90 degree steps)
     
     private boolean[] flip = new boolean[3];
-    @Getter
+
     private final Location lowCorner;
-    @Getter
     private final Location highCorner;
     
     private final static String worldMismatch = "You need to be in the same world with your WE selection.";
@@ -101,7 +87,6 @@ public class Clipboard1 implements IStoragePlot {
     }
     
     public boolean copyToClipboard() {
-//Logger.getGlobal().info("3");
         StoragePlotSnapshot snapshot = new StoragePlotSnapshot(this);
         try(ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
             DataOutputStream outStream = new DataOutputStream(
@@ -190,12 +175,8 @@ public class Clipboard1 implements IStoragePlot {
     }
     
     private Location getPasteLocation(Location location) {
-//        log("ref",referencePoint);
-//        log("low",getLowCorner());
         Location shift = getLowCorner().clone().subtract(referencePoint);
-//        log("shift",shift);
         Location size = getHighCorner().clone().subtract(getLowCorner());
-//        log("size",size);
         switch(rotation) {
             case 1:
                 shift = new Location(shift.getWorld(),-shift.getBlockZ()-size.getBlockZ(),
@@ -213,9 +194,6 @@ public class Clipboard1 implements IStoragePlot {
                                                      -shift.getBlockX()-size.getBlockX());
                 break;
         }
-//log("shisft2",shift);
-//log("location",location);
-//log("blockloc",location.getBlock().getLocation());
         Location paste = location.getBlock().getLocation().toVector()
                                  .add(shift.toVector()).toLocation(location.getWorld());
         return paste;
@@ -223,7 +201,6 @@ public class Clipboard1 implements IStoragePlot {
     
     public boolean paste(Location location, boolean withAir, boolean withBiome) {
         Location paste = getPasteLocation(location);
-//log("paste",paste);
         try(DataInputStream in = new DataInputStream(
                                  new BufferedInputStream(
                                  new GZIPInputStream(
@@ -249,6 +226,26 @@ public class Clipboard1 implements IStoragePlot {
                 && lctn.getBlockY()>=getLowCorner().getBlockY() && lctn.getBlockY()<=getHighCorner().getBlockY()
                 && lctn.getBlockZ()>=getLowCorner().getBlockZ() && lctn.getBlockZ()<=getHighCorner().getBlockZ();
     }
-    
-    
+
+    public Location getReferencePoint() {
+        return referencePoint;
+    }
+
+    public byte[] getNbtData() {
+        return nbtData;
+    }
+
+    public int getRotation() {
+        return rotation;
+    }
+
+    @Override
+    public Location getLowCorner() {
+        return lowCorner;
+    }
+
+    @Override
+    public Location getHighCorner() {
+        return highCorner;
+    }
 }

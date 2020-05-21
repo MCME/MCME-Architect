@@ -21,29 +21,20 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.util.DevUtil;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.ItemFrame;
-import org.bukkit.entity.Painting;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -53,7 +44,6 @@ public class ItemBlockManager {
     
     private static final File regionFolder = new File(ArchitectPlugin.getPluginInstance().getDataFolder(),"itemBlockRegions");
     
-    @Getter
     private static Map<String, ItemBlockRegion> regions = new HashMap<>();
     
     private static Map<Player, Integer> glowPlayer = new HashMap<>();
@@ -63,8 +53,6 @@ public class ItemBlockManager {
     private static BukkitTask glowTask;
     
     public static void init() {
-        //loadPlayerData();
-        //addPacketListener();
         if(!regionFolder.exists()) {
             regionFolder.mkdir();
         }
@@ -199,5 +187,8 @@ public class ItemBlockManager {
     static void addGlowPlayer(Player p, int radius) {
         glowPlayer.put(p, radius);
     }
-    
+
+    public static Map<String, ItemBlockRegion> getRegions() {
+        return regions;
+    }
 }

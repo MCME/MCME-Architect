@@ -36,10 +36,10 @@ public class SpecialBlockItemFourDirections extends SpecialBlockItemOrientable {
     //private final byte[] dataValue;
     
     private static Orientation[] fourFaces = new Orientation[] {
-        new SpecialBlockOrientable.Orientation(BlockFace.SOUTH,"South"),
-        new SpecialBlockOrientable.Orientation(BlockFace.WEST,"West"),
-        new SpecialBlockOrientable.Orientation(BlockFace.NORTH,"North"),
-        new SpecialBlockOrientable.Orientation(BlockFace.EAST,"East")
+        new Orientation(BlockFace.SOUTH,"South"),
+        new Orientation(BlockFace.WEST,"West"),
+        new Orientation(BlockFace.NORTH,"North"),
+        new Orientation(BlockFace.EAST,"East")
     };
     
     private SpecialBlockItemFourDirections(String id, 

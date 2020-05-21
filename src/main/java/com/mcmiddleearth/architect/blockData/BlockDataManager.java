@@ -6,93 +6,28 @@
 package com.mcmiddleearth.architect.blockData;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.architect.blockData.attributes.Attribute;
-import com.mcmiddleearth.architect.blockData.attributes.BooleanAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.BrewingStandAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.InWallAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.IntAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.MultiFaceAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.NoteAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.RedstoneWireAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.RotatableAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.SetAttribute;
-import com.mcmiddleearth.architect.blockData.attributes.SubsetAttribute;
+import com.mcmiddleearth.architect.blockData.attributes.*;
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import com.mcmiddleearth.util.DevUtil;
+import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.data.*;
+import org.bukkit.block.data.type.Comparator;
+import org.bukkit.block.data.type.Tripwire;
+import org.bukkit.block.data.type.*;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import lombok.Getter;
-import lombok.Setter;
-import org.bukkit.Axis;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Instrument;
-import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.data.Ageable;
-import org.bukkit.block.data.AnaloguePowerable;
-import org.bukkit.block.data.Attachable;
-import org.bukkit.block.data.Bisected;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Directional;
-import org.bukkit.block.data.Levelled;
-import org.bukkit.block.data.Lightable;
-import org.bukkit.block.data.MultipleFacing;
-import org.bukkit.block.data.Openable;
-import org.bukkit.block.data.Orientable;
-import org.bukkit.block.data.Powerable;
-import org.bukkit.block.data.Rail;
-import org.bukkit.block.data.Snowable;
-import org.bukkit.block.data.Waterlogged;
-import org.bukkit.block.data.type.Bamboo;
-import org.bukkit.block.data.type.Bed;
-import org.bukkit.block.data.type.Bell;
-import org.bukkit.block.data.type.BubbleColumn;
-import org.bukkit.block.data.type.Cake;
-import org.bukkit.block.data.type.Campfire;
-import org.bukkit.block.data.type.Chest;
-import org.bukkit.block.data.type.CommandBlock;
-import org.bukkit.block.data.type.Comparator;
-import org.bukkit.block.data.type.DaylightDetector;
-import org.bukkit.block.data.type.Dispenser;
-import org.bukkit.block.data.type.Door;
-import org.bukkit.block.data.type.EndPortalFrame;
-import org.bukkit.block.data.type.Farmland;
-import org.bukkit.block.data.type.Gate;
-import org.bukkit.block.data.type.Hopper;
-import org.bukkit.block.data.type.Lantern;
-import org.bukkit.block.data.type.Leaves;
-import org.bukkit.block.data.type.NoteBlock;
-import org.bukkit.block.data.type.Piston;
-import org.bukkit.block.data.type.PistonHead;
-import org.bukkit.block.data.type.Repeater;
-import org.bukkit.block.data.type.Sapling;
-import org.bukkit.block.data.type.Scaffolding;
-import org.bukkit.block.data.type.SeaPickle;
-import org.bukkit.block.data.type.Slab;
-import org.bukkit.block.data.type.Snow;
-import org.bukkit.block.data.type.Stairs;
-import org.bukkit.block.data.type.StructureBlock;
-import org.bukkit.block.data.type.Switch;
-import org.bukkit.block.data.type.TNT;
-import org.bukkit.block.data.type.TechnicalPiston;
-import org.bukkit.block.data.type.Tripwire;
-import org.bukkit.block.data.type.TurtleEgg;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 
 /**
  *
@@ -100,8 +35,6 @@ import org.bukkit.scheduler.BukkitRunnable;
  */
 public class BlockDataManager {
     
-    @Getter
-    @Setter
     private int currentAttribute=0;
     
     private final List<Attribute> attributes = new ArrayList<>();
@@ -169,8 +102,7 @@ public class BlockDataManager {
         attributes.add(new BooleanAttribute("Hanging", Lantern.class));
         attributes.add(new BooleanAttribute("Bottom", Scaffolding.class));
         attributes.add(new IntAttribute("Distance", Scaffolding.class));
-        //attributes.add(new SetAttribute("Face")) Grindstone???
-        
+
         
     }
     
@@ -232,7 +164,6 @@ public class BlockDataManager {
     
     public List<String> getBlockInfo(BlockData data, byte rawData) {
         List<String> results = new ArrayList<>();
-        //results.add(data.getMaterial().getKey().toString());
         if(rawData>-1) {
             Material legacy = LegacyMaterialUtil.getLegacyMaterial(data.getMaterial());
             String legacyInfo = (legacy!=null?
@@ -259,13 +190,6 @@ public class BlockDataManager {
     }
     
     public static BlockData getBlockData(int id, byte rawData) {
-        /*World world = Bukkit.getWorld("world");
-        if(world==null) return Bukkit.createBlockData(Material.AIR);
-        Block block = world.getBlockAt(0, 2, 0);
-        BlockState state = block.getState();
-        state.setType(LegacyMaterialUtil.getLegacyMaterial(Material.MAP));
-        state.setRawData(rawData);
-        return new LegacyBlockData(state.getType().getId(),state.getRawData());*/
         return blockIdDataMapping.get(new LegacyBlockData(id,rawData));
     }
     
@@ -298,8 +222,6 @@ public class BlockDataManager {
                                 if(!blockIdDataMapping.containsKey(legacyData)) {
                                     blockIdDataMapping.put(legacyData,
                                                            data.clone());
-                                    //Logger.getLogger(this.getClass().getName())
-                                    //     .info("Created mapping: "+legacyData+" -> "+data.getAsString());                            
                                 }
                             }
                         }
@@ -345,31 +267,9 @@ public class BlockDataManager {
                 attrib.setCurrentSubAttribute(attributeInternalIndex);
             } else {
                 result.add(thisData.clone());
-                //Logger.getGlobal().info("State: "+getBlockInfo(thisData,(byte)0));
             }
             attrib.cycleState();
         }
-        /*} else {
-            for(int i=0; i<attrib.countStates();i++) {
-                attrib.cycleState();
-            }
-        
-        for(Attribute attrib: attributes) {
-            if(attrib.isInstance(data)) {
-                attrib.setBlockData(data);
-                for(int i=0; i<attrib.countAttributes();i++) {
-                    attrib.setCurrent(i);
-                    for (int j = 0; j < attrib.countStates(); j++) {
-                        result.add(data.clone());
-                        attrib.cycleState();
-                    }
-                }
-            }
-        }
-        if(result.isEmpty()) {
-            result.add(data);
-        }
-        return result;*/
     }
     
     private void createBlockStatesTree(Material mat, BlockData blockData, List result) {
@@ -393,7 +293,6 @@ public class BlockDataManager {
                 attrib.setCurrentSubAttribute(attributeInternalIndex);
             } else {
                 result.add(thisData.clone());
-                //Logger.getGlobal().info("State: "+getBlockInfo(thisData,(byte)0));
             }
             attrib.cycleState();
         }
@@ -568,9 +467,6 @@ public class BlockDataManager {
         } catch (IOException ex) {
             Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.SEVERE, null, ex);
         }
-        /*for(Material mat: materials) {
-            Logger.getGlobal().info(mat.name()+": "+mat.getId());
-        }*/
     }
     
     public Attribute getAttributeByName(String name) {
@@ -581,7 +477,12 @@ public class BlockDataManager {
         }
         return null;
     }
-        
-    
-    
+
+    public int getCurrentAttribute() {
+        return currentAttribute;
+    }
+
+    public void setCurrentAttribute(int currentAttribute) {
+        this.currentAttribute = currentAttribute;
+    }
 }
