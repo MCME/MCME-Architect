@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
 import com.destroystokyo.paper.event.block.BlockDestroyEvent;
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
@@ -41,6 +42,7 @@ import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 
 /**
  *
@@ -70,6 +72,18 @@ public class NoPhysicsListener extends WatchedListener{
                 && !NoPhysicsData.hasNoPhysicsException(event.getBlock())) {
             DevUtil.log(4,"no Physics "+event.getBlock().getType().name()+" "+event.getBlock().getX()+" "+event.getBlock().getY()+" "+event.getBlock().getZ()+" "+event.getChangedType());
             event.setCancelled(true);
+            // following code causes the server to set the tripwire all the time and crashes
+            /*if(event.getBlock().getBlockData() instanceof Tripwire) {
+                Block block = event.getBlock();
+                BlockData data = block.getBlockData();
+                DevUtil.log(4,"tripwire powered: "+((Tripwire)data).isPowered());
+                new BukkitRunnable() {
+                    public void run() {
+                        event.getBlock().setBlockData(data,true);
+                        DevUtil.log(4,"reset tripwire: "+event.getBlock().getType().name()+" "+event.getBlock().getX()+" "+event.getBlock().getY()+" "+event.getBlock().getZ()+" "+event.getChangedType());
+                    }
+                }.runTaskLater(ArchitectPlugin.getPluginInstance(),10);
+            }*/
         } else {
             DevUtil.log(4,"allow Physics "+event.getBlock().getType().name()+" "+event.getBlock().getX()+" "+event.getBlock().getY()+" "+event.getBlock().getZ()+" From: "
                     +event.getBlock().getType()+" To: "+event.getChangedType()+" Source: "+event.getSourceBlock().getType()+" "+event.getSourceBlock().getX()+" "+event.getSourceBlock().getY()+" "+event.getSourceBlock().getZ()+" ");

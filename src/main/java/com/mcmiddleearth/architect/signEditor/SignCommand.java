@@ -62,6 +62,7 @@ public class SignCommand extends AbstractArchitectCommand {
         for(int i=2;i<args.length;i++) {
             line = line+" "+args[i];
         }
+        line = line.replace("\\_"," ");
         if(line.length()>15) {
             sendLineTooLong(sender);
         }

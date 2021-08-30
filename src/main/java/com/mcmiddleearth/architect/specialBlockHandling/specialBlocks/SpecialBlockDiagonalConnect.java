@@ -78,7 +78,11 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
 
     @Override
     public Block getBlock(Block clicked, BlockFace blockFace, Player player) {
-        return getBlockFromLocation(clicked, player.getLocation());
+        /*if(Math.abs(player.getLocation().getPitch())>45) {
+            return super.getBlock(clicked,blockFace,player);
+        } else {*/
+            return getBlockFromLocation(clicked, player.getLocation());
+        //}
     }
 
     private Block getBlockFromLocation(Block clicked, Location loc) {
@@ -88,7 +92,10 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
         } else {
             result = clicked.getRelative(BlockFace.DOWN);
         }
-        return result = result.getRelative(getBlockFace(loc.getYaw()+180));
+        if(Math.abs(loc.getPitch())<45) {
+            result = result.getRelative(getBlockFace(loc.getYaw() + 180));
+        }
+        return result;
     }
 
     @Override

@@ -202,6 +202,9 @@ public class SpecialBlockInventoryData {
                         case FOUR_DIRECTIONS:
                             blockData = SpecialBlockFourDirections.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
+                        case FOUR_DIRECTIONS_COMPLEX:
+                            blockData = SpecialBlockFourDirectionsComplex.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
                         case OPEN_HALF_DOOR:
                             blockData = SpecialBlockOpenHalfDoor.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
