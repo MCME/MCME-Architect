@@ -28,9 +28,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.logging.Logger;
 
 /**
  *
@@ -52,7 +51,9 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
         super(categories, withoutCategory, inventory, player);
         stressCurrentCategoryItem = false;
         SpecialBlock tempBase = SpecialBlockInventoryData.getSpecialBlockDataFromItem(baseItem);
-        while(tempBase.hasIndirectCollection()) {
+        Set<SpecialBlock> visited = new HashSet<>();
+        while(tempBase.hasIndirectCollection() && !visited.contains(tempBase)) {
+            visited.add(tempBase);
             SpecialBlock nextBase = tempBase.getCollectionBase();
             if(nextBase!=null) {
                 tempBase = nextBase;
