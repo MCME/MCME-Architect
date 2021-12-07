@@ -271,7 +271,7 @@ public class CustomInventory implements Listener {
     
     @EventHandler(priority=EventPriority.HIGHEST, ignoreCancelled=false)
     void onCategoryChange(final InventoryClickEvent event) {
-Logger.getGlobal().info("onCategoryChange");
+//Logger.getGlobal().info("onCategoryChange");
         if(openInventories.containsKey(event.getInventory())
                 && event.getAction().equals(InventoryAction.NOTHING)
                 && event.getSlotType().equals(SlotType.OUTSIDE)) {
