@@ -17,6 +17,8 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
 
 import java.util.Map;
+import java.util.logging.Logger;
+
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -137,18 +139,21 @@ public abstract class CustomInventoryState {
     
     protected void setCategory(int newCategory) {
         while(newCategory>=leftCategory+visibleCategorySlots()) {
+//Logger.getGlobal().info("newCategory: "+newCategory+" leftCategory: "+leftCategory);
+            leftCategory += visibleCategorySlots();
+        }
+        while(newCategory<leftCategory) {
+//Logger.getGlobal().info("newCategory: "+newCategory+" leftCategory: "+leftCategory);
             leftCategory -= visibleCategorySlots();
             if(leftCategory < 0) {
                 leftCategory = 0;
             }
         }
-        while(newCategory<leftCategory) {
-            leftCategory += visibleCategorySlots();
-        }
         currentCategory = newCategory;
     }
     
     public void pageRight() {
+//Logger.getGlobal().info("visibleCategorySlots");
         if(!isLastCategoryVisible()) {
             leftCategory += visibleCategorySlots();
             if(currentCategory<leftCategory) {
@@ -158,6 +163,7 @@ public abstract class CustomInventoryState {
     }
     
     public void pageLeft() {
+//Logger.getGlobal().info("visibleCategorySlots");
         if(!isFirstCategoryVisible()) {
             leftCategory -= visibleCategorySlots();
             if(leftCategory < 0) {
@@ -192,10 +198,13 @@ public abstract class CustomInventoryState {
     
     private int visibleCategorySlots() {
         if(countVisibleCategories()<=CustomInventory.CATEGORY_SLOTS) {
+//Logger.getGlobal().info("visibleCategorySlots: "+CustomInventory.CATEGORY_SLOTS);
             return CustomInventory.CATEGORY_SLOTS;
         } else  if(isFirstCategoryVisible() || isLastCategoryVisible()) {
+//Logger.getGlobal().info("visibleCategorySlots: "+(CustomInventory.CATEGORY_SLOTS-1));
             return CustomInventory.CATEGORY_SLOTS-1;
         } else {
+//Logger.getGlobal().info("visibleCategorySlots: "+(CustomInventory.CATEGORY_SLOTS-2));
             return CustomInventory.CATEGORY_SLOTS-2;
         }
     }
@@ -214,6 +223,7 @@ public abstract class CustomInventoryState {
     }
     
     private boolean isLastCategoryVisible() {
+//Logger.getGlobal().info("isLastCategoryVisible");
         if(countVisibleCategories()<=CustomInventory.CATEGORY_SLOTS) {
             return true;
         } else {
@@ -244,8 +254,10 @@ public abstract class CustomInventoryState {
     }
     
     private int countVisibleCategories() {
+//Logger.getGlobal().info("count visible");
         int result = 0;
         for(int i=0;i<categories.size();i++) {
+//Logger.getGlobal().info("i: "+i);
             CustomInventoryCategory category = categories.get(categoryNames[i]);
             if(category.isVisible(player)) {
                 result++;
