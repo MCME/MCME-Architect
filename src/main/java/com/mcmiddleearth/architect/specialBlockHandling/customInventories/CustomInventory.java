@@ -39,6 +39,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 public class CustomInventory implements Listener {
  
@@ -270,6 +271,7 @@ public class CustomInventory implements Listener {
     
     @EventHandler(priority=EventPriority.HIGHEST, ignoreCancelled=false)
     void onCategoryChange(final InventoryClickEvent event) {
+Logger.getGlobal().info("onCategoryChange");
         if(openInventories.containsKey(event.getInventory())
                 && event.getAction().equals(InventoryAction.NOTHING)
                 && event.getSlotType().equals(SlotType.OUTSIDE)) {
