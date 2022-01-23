@@ -16,10 +16,7 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.listener;
 
-import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.architect.Modules;
-import com.mcmiddleearth.architect.Permission;
-import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.*;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.mcmiddleearth.architect.specialBlockHandling.MushroomBlocks;
@@ -41,8 +38,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Furnace;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.type.Leaves;
-import org.bukkit.block.data.type.Slab;
+import org.bukkit.block.data.type.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -59,6 +55,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.material.MaterialData;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.awt.*;
 
 /**
  *
@@ -123,6 +121,14 @@ public class SpecialBlockListener extends WatchedListener{
                         || data.getType().equals(SpecialBlockType.DOOR_VANILLA)
                         || (!data.getType().equals(SpecialBlockType.BLOCK_ON_WATER)
                                 && !event.getAction().equals(Action.RIGHT_CLICK_BLOCK))
+                        || (event.getAction().equals(Action.RIGHT_CLICK_BLOCK)
+                                && !event.getPlayer().isSneaking()
+                                && !PluginData.getOrCreateWorldConfig(event.getPlayer().getWorld().getName())
+                                         .getNoInteraction(event.getClickedBlock().getBlockData())
+                                && (event.getClickedBlock().getBlockData() instanceof Door
+                                 || event.getClickedBlock().getBlockData() instanceof TrapDoor
+                                 || event.getClickedBlock().getBlockData() instanceof Switch
+                                 || event.getClickedBlock().getBlockData() instanceof Gate))
                         || (event.hasBlock() && event.getClickedBlock().getType().equals(Material.FLOWER_POT))) {
             return;
         }
