@@ -130,8 +130,7 @@ public class ArchitectPlugin extends JavaPlugin {
         //setCommandExecutor("speed", new SpeedCommand());
 //        setCommandExecutor("newafkk", new NewAfkCommand());
         
-        new BlockDataManager().createBlockIdDataMapping();
-        
+
         rpSwitchTask = new RPSwitchTask().runTaskTimer(this, 500, 20);
         ItemBlockManager.startEntityGlowTask();
         

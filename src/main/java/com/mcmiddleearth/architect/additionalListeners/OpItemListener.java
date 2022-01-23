@@ -121,13 +121,13 @@ public class OpItemListener implements Listener {
                 //Logger.getLogger(ArchitectPlugin.class.getName())
                 //      .log(Level.INFO, "Check item: "+item.getType());
                 Object nmsItem = NMSUtil.getCraftBukkitDeclaredField("inventory.CraftItemStack","handle",item);
-                Object tag = NMSUtil.invokeNMS("ItemStack", "getTag", new Class[]{}, nmsItem);
-                if(NBTTagUtil.hasKey(tag, "Enchantments")) {
+                Object tag = NMSUtil.invokeNMS("world.item.ItemStack", "getTag", new Class[]{}, nmsItem);
+                if(NBTTagUtil.hasKey(tag, "world.item.enchantment.Enchantments")) {
                     Object enchantments = NBTTagUtil.getTagList(tag, "Enchantments");
                     for(int i = 0;
-                            i < (int) NMSUtil.invokeNMS("NBTTagList", "size", new Class[]{},
+                            i < (int) NMSUtil.invokeNMS("nbt.NBTTagList", "size", new Class[]{},
                                     enchantments); i++) {
-                        Object enchant = NMSUtil.invokeNMS("NBTTagList", "getCompound",
+                        Object enchant = NMSUtil.invokeNMS("nbt.NBTTagList", "getCompound",
                                 new Class[]{int.class}, enchantments, i);
                         String name = NBTTagUtil.getString(enchant,"id");
                         int level = NBTTagUtil.getInt(enchant,"lvl");
@@ -149,8 +149,8 @@ public class OpItemListener implements Listener {
     
     private void block(Object nmsItem) {
         try {
-            NMSUtil.invokeNMS("ItemStack", "setTag",
-                    new Class[]{NMSUtil.getNMSClass("NBTTagCompound")}, nmsItem,(Object) null);
+            NMSUtil.invokeNMS("world.item.ItemStack", "setTag",
+                    new Class[]{NMSUtil.getNMSClass("nbt.NBTTagCompound")}, nmsItem,(Object) null);
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(OpItemListener.class.getName()).log(Level.SEVERE, null, ex);
         }
