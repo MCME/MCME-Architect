@@ -121,7 +121,7 @@ public class OpItemListener implements Listener {
                 //Logger.getLogger(ArchitectPlugin.class.getName())
                 //      .log(Level.INFO, "Check item: "+item.getType());
                 Object nmsItem = NMSUtil.getCraftBukkitDeclaredField("inventory.CraftItemStack","handle",item);
-                Object tag = NMSUtil.invokeNMS("world.item.ItemStack", "getTag", new Class[]{}, nmsItem);
+                Object tag = NMSUtil.invokeNMS("world.item.ItemStack", "s", new Class[]{}, nmsItem);
                 if(NBTTagUtil.hasKey(tag, "world.item.enchantment.Enchantments")) {
                     Object enchantments = NBTTagUtil.getTagList(tag, "Enchantments");
                     for(int i = 0;
