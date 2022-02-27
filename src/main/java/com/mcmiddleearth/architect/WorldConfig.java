@@ -277,8 +277,7 @@ public class WorldConfig {
             return result == null ? InventoryAccess.TRUE : result;
         }
         String configValue = section.getString(inventory.getType().name());
-        if (configValue == null && !defaultValue) {
-            defaultValue = true;
+        if (configValue == null) {
             section = defaultConfig.getConfigurationSection(INVENTORY_ACCESS);
             if (section == null) {
                 return InventoryAccess.TRUE;
