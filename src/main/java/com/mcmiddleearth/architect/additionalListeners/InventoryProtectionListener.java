@@ -28,12 +28,12 @@ public class InventoryProtectionListener implements Listener {
             for(int i = 0; i< storageContent.length;i++) {
                 copiedContent[i] = (storageContent[i]==null?null:storageContent[i].clone());
             }
-            openInventories.put(((Player)event.getPlayer()).getUniqueId(),new SavedInventory(inv, copiedContent));
+            openInventories.put(event.getPlayer().getUniqueId(),new SavedInventory(inv, copiedContent));
         }
     }
 
     @EventHandler
-    public void openChest(InventoryCloseEvent event) {
+    public void closeChest(InventoryCloseEvent event) {
         if(!(event.getPlayer() instanceof Player)) return;
         SavedInventory savedInventory = openInventories.get(event.getPlayer().getUniqueId());
         if(savedInventory!=null) {
