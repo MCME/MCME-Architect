@@ -377,6 +377,9 @@ permissions:
     architect.weather: 
         descriptions: Allows to change server weather 
         default: op
-    architect.checknbt: 
+    architect.checknbt:
         descriptions: Allows to check item NBTs
+        default: op
+    architect.inventory.ignoreProtection:
+        descriptions: Allows to edit inventory content without build permission
         default: op

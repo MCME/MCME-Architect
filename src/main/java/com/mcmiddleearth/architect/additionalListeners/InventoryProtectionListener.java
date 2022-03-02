@@ -1,5 +1,6 @@
 package com.mcmiddleearth.architect.additionalListeners;
 
+import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.util.TheGafferUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -22,7 +23,8 @@ public class InventoryProtectionListener implements Listener {
     public void openChest(InventoryOpenEvent event) {
         Inventory inv = event.getInventory();
         if(!(inv instanceof PlayerInventory) && (event.getPlayer() instanceof Player) && inv.getLocation()!=null
-                && !TheGafferUtil.hasGafferPermission(((Player)event.getPlayer()),inv.getLocation())) {
+                && !(TheGafferUtil.hasGafferPermission(((Player)event.getPlayer()),inv.getLocation())
+                    || (((Player)event.getPlayer()).hasPermission(Permission.IGNORE_INVENTORY_PROTECTION.getPermissionNode())))) {
             ItemStack[] storageContent = inv.getStorageContents();
             ItemStack[] copiedContent = new ItemStack[storageContent.length];
             for(int i = 0; i< storageContent.length;i++) {
@@ -38,6 +40,7 @@ public class InventoryProtectionListener implements Listener {
         SavedInventory savedInventory = openInventories.get(event.getPlayer().getUniqueId());
         if(savedInventory!=null) {
             savedInventory.getInventory().setStorageContents(savedInventory.getItems());
+            openInventories.remove(event.getPlayer().getUniqueId());
         }
 
     }
