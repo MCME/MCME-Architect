@@ -93,6 +93,8 @@ public enum Permission {
     IGNORE_INVENTORY_PROTECTION ("architect.inventory.ignoreProtection"),
     COPY_PASTE            ("architect.copypaste"),
     COPY_PASTE_UNLIMITED  ("architect.copypaste.unlimited"),
+
+    VIEW_DISTANCE         ("architect.viewdistance"),
     
     CHECK_NBT  ("architect.checknbt");
 
