@@ -87,6 +87,10 @@ commands:
       description: rotate your clipboard along y-axis
       usage: /rt [90|180|270]
       aliases: rt
+   viewdistance:
+      description: change your client side view distance
+      usage: /viewdistance [#viewdistance] | default
+      aliases: viewdist
 permissions:
     architect.*:
         description: Allows to use all features of Architect plugin
@@ -173,6 +177,7 @@ permissions:
             architect.help: true
             architect.noPhysicsList.view: true
             architect.signEditor: true
+            architect.viewdistance: true
     architect.copypaste:
         description: Allows to use /copy /paste and /rot
         default: op
@@ -262,10 +267,7 @@ permissions:
     architect.itemBlock.region.ignore:
         description: Allows to ignore itemblock limit of a region
         default: op
-    architect.itemTexture:
-        description: Allow to open special build inventories
-        default: op
-    architect.get.armor: 
+    architect.get.armor:
         descriptions: Allows to get coloured leather armor
         default: op
     architect.get.logs: 
@@ -377,6 +379,12 @@ permissions:
     architect.weather: 
         descriptions: Allows to change server weather 
         default: op
-    architect.checknbt: 
+    architect.checknbt:
         descriptions: Allows to check item NBTs
+        default: op
+    architect.inventory.ignoreProtection:
+        descriptions: Allows to edit inventory content without build permission
+        default: op
+    architect.viewdistance:
+        descriptions: Allows to change client view distance
         default: op

@@ -186,7 +186,12 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     public static int getContentDamage(ArmorStand armorStand) {
-        return ((Damageable)armorStand.getHelmet().getItemMeta()).getDamage();
+        ItemStack helmet = armorStand.getHelmet();
+        ItemMeta meta = helmet.getItemMeta();
+        if(meta != null) {
+            return ((Damageable) armorStand.getHelmet().getItemMeta()).getDamage();
+        }
+        return 0;
     }
     
     public static int[] getCoordinatesFromArmorStand(ArmorStand armorStand) {

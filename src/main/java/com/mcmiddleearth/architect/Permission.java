@@ -90,8 +90,11 @@ public enum Permission {
     CUNK_UPDATE           ("architect.chunkupdate"),
     CUNK_UPDATE_AUTO      ("architect.chunkupdate.auto"),
     ARCHITECT_HELP        ("architect.help"),
+    IGNORE_INVENTORY_PROTECTION ("architect.inventory.ignoreProtection"),
     COPY_PASTE            ("architect.copypaste"),
     COPY_PASTE_UNLIMITED  ("architect.copypaste.unlimited"),
+
+    VIEW_DISTANCE         ("architect.viewdistance"),
     
     CHECK_NBT  ("architect.checknbt");
 

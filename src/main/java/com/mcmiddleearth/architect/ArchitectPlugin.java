@@ -5,6 +5,8 @@
  */
 package com.mcmiddleearth.architect;
 
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
 import com.mcmiddleearth.architect.additionalCommands.ArchitectCommand;
 import com.mcmiddleearth.architect.additionalCommands.FbtCommand;
@@ -14,7 +16,6 @@ import com.mcmiddleearth.architect.armorStand.ArmorStandEditorCommand;
 import com.mcmiddleearth.architect.armorStand.ArmorStandListener;
 import com.mcmiddleearth.architect.bannerEditor.BannerEditorCommand;
 import com.mcmiddleearth.architect.bannerEditor.BannerListener;
-import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateCommand;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateListener;
 import com.mcmiddleearth.architect.copyPaste.*;
@@ -39,6 +40,9 @@ import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockComma
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockListener;
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
 import com.mcmiddleearth.architect.specialBlockHandling.listener.*;
+import com.mcmiddleearth.architect.viewDistance.ViewDistanceCommand;
+import com.mcmiddleearth.architect.viewDistance.ViewDistanceListener;
+import com.mcmiddleearth.architect.viewDistance.ViewDistanceManager;
 import com.mcmiddleearth.architect.voxelStencilEditor.SlCommand;
 import com.mcmiddleearth.architect.voxelStencilEditor.VvCommand;
 import com.mcmiddleearth.architect.weSchematicsViewer.SchListCommand;
@@ -98,7 +102,11 @@ public class ArchitectPlugin extends JavaPlugin {
         pluginManager.registerEvents(new OpItemListener(), this);
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
         pluginManager.registerEvents(new ItemBlockListener(), this);
+        pluginManager.registerEvents(new InventoryProtectionListener(), this);
 //        pluginManager.registerEvents(new AfkListener(), this);
+
+        ProtocolManager manager = ProtocolLibrary.getProtocolManager();
+        manager.addPacketListener(new ViewDistanceListener(this));
 
         // all CommandExecutors should be subclasses of AbstractArchitectCommand
         // AbstractArchitectCommand methods are used by command /architect help
@@ -127,11 +135,11 @@ public class ArchitectPlugin extends JavaPlugin {
         setCommandExecutor("undo", new UndoCommand());
         setCommandExecutor("redo", new RedoCommand());
         setCommandExecutor("flip", new FlipCommand());
+        setCommandExecutor("viewdistance", new ViewDistanceCommand());
         //setCommandExecutor("speed", new SpeedCommand());
 //        setCommandExecutor("newafkk", new NewAfkCommand());
         
-        new BlockDataManager().createBlockIdDataMapping();
-        
+
         rpSwitchTask = new RPSwitchTask().runTaskTimer(this, 500, 20);
         ItemBlockManager.startEntityGlowTask();
         
@@ -163,6 +171,7 @@ public class ArchitectPlugin extends JavaPlugin {
         GetData.load();
         RpManager.init();
         ItemBlockManager.init();
+        ViewDistanceManager.loadViewDistances();
     }
 
     public static ArchitectPlugin getPluginInstance() {

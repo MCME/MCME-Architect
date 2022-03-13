@@ -20,6 +20,8 @@ import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlo
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundGroup;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.ArmorStand;
@@ -163,5 +165,46 @@ Logger.getGlobal().info("****************");*/
 
     public float getYaw() {
         return yaw;
+    }
+
+    @Override
+    public SoundGroup getSoundGroup() {
+        return new SoundGroup() {
+
+            @Override
+            public float getVolume() {
+                return 0;
+            }
+
+            @Override
+            public float getPitch() {
+                return 0;
+            }
+
+            @Override
+            public Sound getBreakSound() {
+                return Sound.ENTITY_ARMOR_STAND_BREAK;
+            }
+
+            @Override
+            public Sound getStepSound() {
+                return Sound.ENTITY_ARMOR_STAND_PLACE;
+            }
+
+            @Override
+            public Sound getPlaceSound() {
+                return Sound.ENTITY_ARMOR_STAND_PLACE;
+            }
+
+            @Override
+            public Sound getHitSound() {
+                return Sound.ENTITY_ARMOR_STAND_HIT;
+            }
+
+            @Override
+            public Sound getFallSound() {
+                return Sound.ENTITY_ARMOR_STAND_FALL;
+            }
+        };
     }
 }

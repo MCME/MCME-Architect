@@ -22,6 +22,7 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.NBTTagUtil;
 import com.mcmiddleearth.pluginutil.NMSUtil;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.Bukkit;
@@ -121,13 +122,17 @@ public class OpItemListener implements Listener {
                 //Logger.getLogger(ArchitectPlugin.class.getName())
                 //      .log(Level.INFO, "Check item: "+item.getType());
                 Object nmsItem = NMSUtil.getCraftBukkitDeclaredField("inventory.CraftItemStack","handle",item);
-                Object tag = NMSUtil.invokeNMS("ItemStack", "getTag", new Class[]{}, nmsItem);
+                Object tag = NMSUtil.invokeNMS("world.item.ItemStack", "s", new Class[]{}, nmsItem);
+/*if(tag!=null) {Set keys = (Set) NMSUtil.invokeNMS("nbt.NBTTagCompound","d",new Class[]{},tag);
+for(Object key: keys) {
+    Logger.getGlobal().info((String)key);
+}}*/
                 if(NBTTagUtil.hasKey(tag, "Enchantments")) {
                     Object enchantments = NBTTagUtil.getTagList(tag, "Enchantments");
                     for(int i = 0;
-                            i < (int) NMSUtil.invokeNMS("NBTTagList", "size", new Class[]{},
+                            i < (int) NMSUtil.invokeNMS("nbt.NBTTagList", "size", new Class[]{},
                                     enchantments); i++) {
-                        Object enchant = NMSUtil.invokeNMS("NBTTagList", "getCompound",
+                        Object enchant = NMSUtil.invokeNMS("nbt.NBTTagList", "a"/*getCompound*/,
                                 new Class[]{int.class}, enchantments, i);
                         String name = NBTTagUtil.getString(enchant,"id");
                         int level = NBTTagUtil.getInt(enchant,"lvl");
@@ -149,8 +154,8 @@ public class OpItemListener implements Listener {
     
     private void block(Object nmsItem) {
         try {
-            NMSUtil.invokeNMS("ItemStack", "setTag",
-                    new Class[]{NMSUtil.getNMSClass("NBTTagCompound")}, nmsItem,(Object) null);
+            NMSUtil.invokeNMS("world.item.ItemStack", "c"/*setTag*/,
+                    new Class[]{NMSUtil.getNMSClass("nbt.NBTTagCompound")}, nmsItem,(Object) null);
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(OpItemListener.class.getName()).log(Level.SEVERE, null, ex);
         }

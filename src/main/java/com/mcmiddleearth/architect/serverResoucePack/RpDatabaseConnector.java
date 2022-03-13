@@ -75,8 +75,8 @@ public class RpDatabaseConnector {
             @Override
             public void run() {
                 checkConnection();
-                Logger.getGlobal().info("ArchitectTasks: " + Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
-                Logger.getGlobal().info("ArchitectWorker: " + Bukkit.getScheduler().getActiveWorkers().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
+                //Logger.getGlobal().info("ArchitectTasks: " + Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
+                //Logger.getGlobal().info("ArchitectWorker: " + Bukkit.getScheduler().getActiveWorkers().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
             }
         }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(),0,1200);
     }
@@ -96,8 +96,8 @@ public class RpDatabaseConnector {
     private synchronized void checkConnection() {
         try {
             if(connected && dbConnection.isValid(5)) {
-                ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO,
-                        "Successfully checked connection to rp database.");
+                //ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO,
+                //        "Successfully checked connection to rp database.");
             } else {
                 if(dbConnection!=null) {
                     dbConnection.close();

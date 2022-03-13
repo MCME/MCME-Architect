@@ -73,7 +73,8 @@ public enum Modules {
     ARMOR_STAND_ROLLBACK   ("modules.command.armorStandRollback"),
     RANDOMISER             ("modules.command.randomiser"),
     COPY_PASTE             ("modules.command.copypaste"),
-    
+    VIEW_DISTANCE          ("modules.command.viewdistance"),
+
     VOXEL_BIOME_BRUSH_FIX  ("modules.voxelBiomeBrushFix"),
     
     CHUNK_UPDATE           ("modules.chunkupdate.manual"),
@@ -86,7 +87,8 @@ public enum Modules {
     LILY_PAD_PROTECTION       ("modules.protection.lilyPad"),
     REDSTONE_PROTECTION       ("modules.protection.redstone"),
     HANGING_ENTITY_PROTECTION ("modules.protection.hangingEntity");
-    
+
+
     private final String moduleKey;
 
     Modules(String key) {

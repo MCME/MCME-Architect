@@ -28,7 +28,7 @@ public class SignListener implements Listener {
     
     @EventHandler
     public void playerInteract(PlayerInteractEvent event) {
-        if(!event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
+        if(!event.getAction().equals(Action.LEFT_CLICK_BLOCK)) {
             return;
         }
         Player player = event.getPlayer();
