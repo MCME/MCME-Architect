@@ -33,7 +33,10 @@ public class ViewDistanceCommand extends AbstractArchitectCommand {
             PluginData.getMessageUtil().sendNoPermissionError(cs);
             return true;
         }
-        if(args[0].equalsIgnoreCase("default") ) {
+        if(args.length == 0 ) {
+            PluginData.getMessageUtil().sendErrorMessage(player, "You need to specify a view distance (e.g. '/viewdistance 32' or '/viewdistance default'.");
+        }
+        else if(args[0].equalsIgnoreCase("default")) {
             ViewDistanceManager.unsetViewDistance(player);
             PluginData.getMessageUtil().sendInfoMessage(player,"Setting your client view distance to server view distance ("
                      + Bukkit.getViewDistance()+").");
