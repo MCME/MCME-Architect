@@ -116,7 +116,12 @@ public class RpCommand extends AbstractArchitectCommand {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "That variant is not available. Try 'light' or 'dark'.");
                         return true;
                     }
+                    if(data.getVariant().equals(args[1])) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "You are already using variant "+args[1]);
+                        return true;
+                    }
                     data.setVariant(args[1]);
+                    RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()),(Player)cs,true);
                     PluginData.getMessageUtil().sendInfoMessage(cs, "RP variant set to "
                                     +ccStressed+args[1]+ccInfo+". If this variant is not available for a RP you'll see default variant.");
                     break;
