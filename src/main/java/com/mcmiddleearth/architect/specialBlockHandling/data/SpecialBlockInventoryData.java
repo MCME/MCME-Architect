@@ -483,6 +483,9 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
             } else {
                 config.set("damage",null);
             }
+            if(config.isInt("cmd")) {
+                im.setCustomModelData(config.getInt("cmd"));
+            }
             im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp,name)}));
             im.setUnbreakable(true);
             im.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);

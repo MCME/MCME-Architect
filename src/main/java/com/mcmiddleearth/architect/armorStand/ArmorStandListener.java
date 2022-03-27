@@ -15,11 +15,13 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -31,6 +33,14 @@ import org.bukkit.util.EulerAngle;
  * @author Eriol_Eandur
  */
 public class ArmorStandListener implements Listener {
+
+    @EventHandler
+    public void placeArmorStand(EntitySpawnEvent event) {
+        if(PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.ARMOR_STAND_EDITOR)
+            && event.getEntity().getType().equals(EntityType.ARMOR_STAND)) {
+            event.getEntity().setGravity(false);
+        }
+    }
 
     @EventHandler
     public void blockFishingRod(PlayerFishEvent event) {
@@ -221,6 +231,7 @@ public class ArmorStandListener implements Listener {
             case ZROTATE:
                 switch(part) {
                     case HEAD:
+                    case ALL:
                         armorStand.setHeadPose(rotate(modifiedMode,rightClick,stepInDegree,armorStand.getHeadPose()));
                         break;
                     case RARM:
@@ -312,6 +323,35 @@ public class ArmorStandListener implements Listener {
             case COPY:
                 config.copyArmorStand(player, armorStand);
                 sendCopyMessage(player);
+                break;
+            case STRAIGHT:
+                switch(part) {
+                    case HEAD:
+                        armorStand.setHeadPose(new EulerAngle(0,0,0));
+                        break;
+                    case RARM:
+                        armorStand.setRightArmPose(new EulerAngle(0,0,0));
+                        break;
+                    case LARM:
+                        armorStand.setLeftArmPose(new EulerAngle(0,0,0));
+                        break;
+                    case LLEG:
+                        armorStand.setLeftLegPose(new EulerAngle(0,0,0));
+                        break;
+                    case RLEG:
+                        armorStand.setRightLegPose(new EulerAngle(0,0,0));
+                        break;
+                    case BODY:
+                        armorStand.setBodyPose(new EulerAngle(0,0,0));
+                    case ALL:
+                        armorStand.setHeadPose(new EulerAngle(0,0,0));
+                        armorStand.setRightArmPose(new EulerAngle(0,0,0));
+                        armorStand.setLeftArmPose(new EulerAngle(0,0,0));
+                        armorStand.setLeftLegPose(new EulerAngle(0,0,0));
+                        armorStand.setRightLegPose(new EulerAngle(0,0,0));
+                        armorStand.setBodyPose(new EulerAngle(0,0,0));
+                        break;
+                }
                 break;
         }
         return true;

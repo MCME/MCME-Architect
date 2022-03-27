@@ -15,7 +15,8 @@ public enum ArmorStandPart {
     RARM        ("ra"),
     LLEG        ("ll"),
     RLEG        ("rl"),
-    BODY        ("b");
+    BODY        ("b"),
+    ALL         ("all");
     
     private final String name;
 
@@ -46,6 +47,8 @@ public enum ArmorStandPart {
                 return "left leg";
             case RLEG:
                 return "right leg";
+            case ALL:
+                return "all";
         }
         return "";
     }
