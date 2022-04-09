@@ -211,7 +211,7 @@ public class InventoryListener implements Listener{
         +"\n Top Inventory"+(event.getPlayer().getOpenInventory().getTopInventory()));*/
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    /*@EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryClick(InventoryClickEvent event) {
         if(event.getClickedInventory() != null && event.getClickedInventory().getHolder() != null
                 && (event.getClickedInventory().getHolder() instanceof Player)
@@ -219,7 +219,7 @@ public class InventoryListener implements Listener{
 
         }
         Logger.getGlobal().info("CAncelled: "+event.isCancelled());
-    }
+    }*/
 
     /*@EventHandler
     public void prepare(CraftItemEvent event) {

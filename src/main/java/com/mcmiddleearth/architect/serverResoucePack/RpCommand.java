@@ -217,6 +217,9 @@ public class RpCommand extends AbstractArchitectCommand {
             sendHelpMessage((Player)cs,page);
             return true;
         }
+        if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("e")) {
+            args[0] = "h";
+        }
         String rpName = RpManager.matchRpName(args[0]);
         if(rpName.equals("")) {
             sendRPNotFoundMessage(cs);
@@ -280,9 +283,8 @@ public class RpCommand extends AbstractArchitectCommand {
     @Override
     protected void sendHelpMessage(Player player, int page) {
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"Resource Pack Switcher -";
-        help = new String[][]{{"/rp e","",": Eriador"},
-                                       {"/rp r","",": Rohan"},
-                                       {"/rp g","",": Gondor"},
+        help = new String[][]{         {"/rp r","",": Rohan"},
+                                       {"/rp h","",": Human (merged Gondor/Eriador"},
                                        {"/rp l","",": Lothlorien"},
                                        {"/rp d","",": Dwarven (Moria)"},
                                        {"/rp m","",": Mordor"}};

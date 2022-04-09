@@ -140,6 +140,13 @@ public class SpecialBlockInventoryData {
                 if(section.contains("damageCurrent")) {
                     currentCategoryItem.setDurability((short)section.getInt("damageCurrent"));
                 }
+                if(section.contains("cmdCurrent")) {
+                    ItemMeta meta = currentCategoryItem.getItemMeta();
+                    if(meta!=null) {
+                        meta.setCustomModelData(section.getInt("cmdCurrent"));
+                        currentCategoryItem.setItemMeta(meta);
+                    }
+                }
                 boolean useSubcategories = section.getBoolean("useSubcategories",false);
                 inventory.setCategoryItems(categoryKey, null, true, categoryItem, currentCategoryItem, useSubcategories);
             }

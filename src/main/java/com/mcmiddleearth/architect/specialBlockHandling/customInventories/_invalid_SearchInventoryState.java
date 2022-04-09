@@ -185,14 +185,15 @@ Logger.getGlobal().info("found items: "+foundItems.size());
         }
     }
         
-    private ItemStack newPagingItem(Material material, short damage, String display) {
-        ItemStack item = new ItemStack(material,1,damage);
+    private ItemStack newPagingItem(Material material, int cmd, String display) {
+        ItemStack item = new ItemStack(material,1);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(display);
         meta.setUnbreakable(true);
         meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-    item.setItemMeta(meta);
+        meta.setCustomModelData(cmd);
+        item.setItemMeta(meta);
         return item;
     }
 

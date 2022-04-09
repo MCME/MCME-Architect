@@ -68,9 +68,9 @@ public class SpecialHeadInventoryData {
             if(!heads.isEmpty()) {
                 ItemStack categoryItem = heads.values().iterator().next();
                 inventory.setCategoryItems(name, null, true, 
-                                           categoryItem.clone(), 
-                                           new ItemStack(CustomInventoryState.pagingMaterial,1,
-                                                 CustomInventoryState.pageDown),false);
+                                           categoryItem.clone(),
+                        CustomInventoryState.newPagingItem(CustomInventoryState.pagingMaterial,
+                                                 CustomInventoryState.pageDown, "page down"),false);
             }
         }
     }
