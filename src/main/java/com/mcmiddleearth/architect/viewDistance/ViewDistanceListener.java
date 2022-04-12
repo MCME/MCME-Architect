@@ -21,11 +21,11 @@ public class ViewDistanceListener extends PacketAdapter {
         }
         PacketContainer packet = event.getPacket();
         if(packet.getType().equals(PacketType.Play.Server.LOGIN)) {
-            packet.getIntegers().write(2, 64);
+            packet.getIntegers().write(2, ViewDistanceManager.getViewDistance(event.getPlayer()));
         } else if(packet.getType().equals(PacketType.Play.Server.UNLOAD_CHUNK)) {
             event.setCancelled(true);
         } else if(packet.getType().equals(PacketType.Play.Server.VIEW_DISTANCE)) {
-            packet.getIntegers().write(0, 64);
+            packet.getIntegers().write(0, ViewDistanceManager.getViewDistance(event.getPlayer()));
         }
 
         /*if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.VIEW_DISTANCE)

@@ -52,6 +52,7 @@ public class WorldConfig {
     private static final String NO_INTERACTION = "noInteraction";
     private static final String DOUBLE_SLAB_REPLACEMENTS = "doubleSlabReplacements";
     private static final String DISABLED_BLOCK_STATES = "disabledBlockStates";
+    private static final String VIEW_DISTANCE = "viewDistance";
 
     private static final int defaultItemBlockBaseLimit = 5;
     
@@ -66,7 +67,8 @@ public class WorldConfig {
     private final List<BlockData> disabledBlockStates = new ArrayList<>();
     
     private final Map<String,Integer> allowedEnchants = new HashMap<>();
-    
+
+    private int viewDistance = 255;
     
     private final Map<String,Map<BlockData,BlockData>> doubleSlabReplacements = new HashMap<>();
     
@@ -102,6 +104,7 @@ public class WorldConfig {
         }
         convertNoPhysicsList();
         loadNoInteraction();
+        loadViewDistance();
         loadAllowedEnchants();
         loadDoubleSlabReplacements();
         loadDisabledBlockStates();
@@ -118,6 +121,7 @@ public class WorldConfig {
             config.set(modul.getModuleKey(), true);
         }
         config.set(NO_PHYSICS_LIST, new ArrayList<>());
+        config.set(VIEW_DISTANCE,255);
         createInventoryAccess(config);
         createNoInteraction(config);
         createAllowedEnchants(config);
@@ -491,6 +495,25 @@ public class WorldConfig {
         list.add("minecraft:blue_stained_glass_pane[east=false,north=false,south=false,west=false]");
         config.set(DISABLED_BLOCK_STATES, list);
     }
+
+    public int getViewDistance() {
+        return viewDistance;
+    }
+
+    private void loadViewDistance() {
+        if(worldConfig.contains(VIEW_DISTANCE)) {
+            viewDistance = worldConfig.getInt(VIEW_DISTANCE);
+        } else {
+            if(defaultConfig.contains(VIEW_DISTANCE)) {
+                viewDistance = defaultConfig.getInt(VIEW_DISTANCE);
+            } else {
+                defaultConfig.set(VIEW_DISTANCE,255);
+                saveDefaultConfig();
+                viewDistance = defaultConfig.getInt(VIEW_DISTANCE);
+            }
+        }
+    }
+
 
     public static File getWorldConfigDir() {
         return worldConfigDir;
