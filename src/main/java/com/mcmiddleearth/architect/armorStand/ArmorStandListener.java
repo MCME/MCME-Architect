@@ -20,6 +20,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerFishEvent;
@@ -39,6 +40,7 @@ public class ArmorStandListener implements Listener {
         if(PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.ARMOR_STAND_EDITOR)
             && event.getEntity().getType().equals(EntityType.ARMOR_STAND)) {
             event.getEntity().setGravity(false);
+            event.getEntity().setInvulnerable(true);
         }
     }
 
@@ -46,6 +48,14 @@ public class ArmorStandListener implements Listener {
     public void blockFishingRod(PlayerFishEvent event) {
         if(PluginData.isModuleEnabled(event.getPlayer().getWorld(),Modules.ARMOR_STAND_PROTECTION)
                 && (event.getCaught() instanceof ArmorStand)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void blockCombustion(EntityCombustEvent event) {
+        if((event.getEntity() instanceof ArmorStand)
+                && PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.ARMOR_STAND_PROTECTION)) {
             event.setCancelled(true);
         }
     }
