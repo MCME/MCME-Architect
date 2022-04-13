@@ -50,6 +50,7 @@ public class WorldConfig {
     private static final String INVENTORY_ACCESS = "inventoryAccess";
     private static final String ALLOWED_ENCHANTS = "allowedEnchantments";
     private static final String NO_INTERACTION = "noInteraction";
+    private static final String NO_CONNECTION = "noConnection";
     private static final String DOUBLE_SLAB_REPLACEMENTS = "doubleSlabReplacements";
     private static final String DISABLED_BLOCK_STATES = "disabledBlockStates";
     private static final String VIEW_DISTANCE = "viewDistance";
@@ -64,6 +65,8 @@ public class WorldConfig {
 
     private final List<BlockData> noInteraction = new ArrayList<>();
 
+    private final List<BlockData> noConnection = new ArrayList<>();
+
     private final List<BlockData> disabledBlockStates = new ArrayList<>();
     
     private final Map<String,Integer> allowedEnchants = new HashMap<>();
@@ -74,7 +77,9 @@ public class WorldConfig {
     
     static {
         if (!worldConfigDir.exists()) {
-            worldConfigDir.mkdirs();
+            if(!worldConfigDir.mkdirs()) {
+                Logger.getLogger(WorldConfig.class.getName()).log(Level.SEVERE, "Can't create world config folder.");
+            }
         }
     }
 
@@ -82,7 +87,9 @@ public class WorldConfig {
         this.defaultConfig = defaultConfig;
         this.worldName = worldName;
         if (!worldConfigDir.exists()) {
-            worldConfigDir.mkdirs();
+            if(!worldConfigDir.mkdirs()) {
+                Logger.getLogger(WorldConfig.class.getName()).log(Level.SEVERE, "Can't create world config folder.");
+            }
         }
         if (!defaultConfigFile.exists()) {
             Logger.getGlobal().info("*****************************************************************");
@@ -104,6 +111,7 @@ public class WorldConfig {
         }
         convertNoPhysicsList();
         loadNoInteraction();
+        loadNoConnection();
         loadViewDistance();
         loadAllowedEnchants();
         loadDoubleSlabReplacements();
@@ -124,6 +132,7 @@ public class WorldConfig {
         config.set(VIEW_DISTANCE,255);
         createInventoryAccess(config);
         createNoInteraction(config);
+        createNoConnection(config);
         createAllowedEnchants(config);
         createDoubleSlabReplacements(config);
         createDisabledBlockStates(config);
@@ -179,7 +188,6 @@ public class WorldConfig {
             }
         }
         if (convert) {
-            convertedList.sort(null);
             worldConfig.set(NO_PHYSICS_LIST, convertedList);
             saveWorldConfig();
         }
@@ -240,10 +248,8 @@ public class WorldConfig {
     }
     
     private void checkDeleteWorldNPConfig() {
-        Set<String> worldNP = new HashSet<>();
-        worldNP.addAll(worldConfig.getStringList(NO_PHYSICS_LIST));
-        Set<String> defaultNP = new HashSet<>();
-        defaultNP.addAll(defaultConfig.getStringList(NO_PHYSICS_LIST));
+        Set<String> worldNP = new HashSet<>(worldConfig.getStringList(NO_PHYSICS_LIST));
+        Set<String> defaultNP = new HashSet<>(defaultConfig.getStringList(NO_PHYSICS_LIST));
         for (String search : worldNP) {
             if (!defaultNP.contains(search)) {
                 return;
@@ -271,7 +277,6 @@ public class WorldConfig {
         if (inventory.getType().name().equals("SHULKER_BOX")) {
             InventoryAccess result = getShulkerAccess(section, inventory);
             if (result == null && !defaultValue) {
-                defaultValue = true;
                 section = defaultConfig.getConfigurationSection(INVENTORY_ACCESS);
                 if (section == null) {
                     return InventoryAccess.TRUE;
@@ -296,11 +301,12 @@ public class WorldConfig {
 
     private InventoryAccess getShulkerAccess(ConfigurationSection section, Inventory inventory) {
         String key = inventory.getType().name();
-        String configValue = null;
+        String configValue;
         if (section.isConfigurationSection(key)) {
             ConfigurationSection shulkerConfig
                     = section.getConfigurationSection(key);
-            configValue = shulkerConfig.getString("id" + ((ShulkerBox) inventory.getHolder())
+            assert shulkerConfig != null;
+            configValue = shulkerConfig.getString("id" + ((ShulkerBox) Objects.requireNonNull(inventory.getHolder()))
                     .getType().getId());
             if (configValue == null) {
                 configValue = shulkerConfig.getString("default");
@@ -339,7 +345,7 @@ public class WorldConfig {
     }
 
     public boolean getNoInteraction(BlockData data) {
-        return noInteraction.stream().anyMatch((search) -> (data.matches(search)));
+        return noInteraction.stream().anyMatch(data::matches);
     }
     
     private void loadNoInteraction() {
@@ -347,13 +353,11 @@ public class WorldConfig {
         if(worldConfig.contains(NO_INTERACTION)) {
             data = worldConfig.getStringList(NO_INTERACTION);
         } else {
-            if(defaultConfig.contains(NO_INTERACTION)) {
-                data = defaultConfig.getStringList(NO_INTERACTION);
-            } else {
+            if (!defaultConfig.contains(NO_INTERACTION)) {
                 createNoInteraction(defaultConfig);
                 saveDefaultConfig();
-                data = defaultConfig.getStringList(NO_INTERACTION);
             }
+            data = defaultConfig.getStringList(NO_INTERACTION);
         }
         noInteraction.clear();
         for(String entry: data) {
@@ -381,7 +385,41 @@ public class WorldConfig {
         list.add("minecraft:comparator");
         config.set(NO_INTERACTION, list);
     }
-    
+
+    public boolean getNoConnection(BlockData data) {
+        return noConnection.stream().anyMatch(data::matches);
+    }
+
+    private void loadNoConnection() {
+        List<String> data;
+        if(worldConfig.contains(NO_CONNECTION)) {
+            data = worldConfig.getStringList(NO_CONNECTION);
+        } else {
+            if (!defaultConfig.contains(NO_CONNECTION)) {
+                createNoConnection(defaultConfig);
+                saveDefaultConfig();
+            }
+            data = defaultConfig.getStringList(NO_CONNECTION);
+        }
+        noConnection.clear();
+        for(String entry: data) {
+            try {
+                BlockData blockData = Bukkit.createBlockData(entry);
+                noConnection.add(blockData);
+            } catch(IllegalArgumentException ex) {
+                Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Illegal block data for no connection block.");
+            }
+        }
+    }
+
+    private void createNoConnection(ConfigurationSection config) {
+        List<String> list = new ArrayList<>();
+        list.add("minecraft:red_sandstone_wall");
+        list.add("minecraft:andesite_wall");
+        list.add("minecraft:prismarine_wall");
+        config.set(NO_CONNECTION, list);
+    }
+
     public boolean isAllowedEnchantment(String enchantment, int level) {
 //Logger.getGlobal().info("Ench Test: "+enchantment+" "+level);
         Integer allowedLevel = allowedEnchants.get(enchantment);
@@ -393,15 +431,14 @@ public class WorldConfig {
         if(worldConfig.contains(ALLOWED_ENCHANTS)) {
             data = worldConfig.getConfigurationSection(ALLOWED_ENCHANTS);
         } else {
-            if(defaultConfig.contains(ALLOWED_ENCHANTS)) {
-                data = defaultConfig.getConfigurationSection(ALLOWED_ENCHANTS);
-            } else {
+            if (!defaultConfig.contains(ALLOWED_ENCHANTS)) {
                 createAllowedEnchants(defaultConfig);
                 saveDefaultConfig();
-                data = defaultConfig.getConfigurationSection(ALLOWED_ENCHANTS);
             }
+            data = defaultConfig.getConfigurationSection(ALLOWED_ENCHANTS);
         }
         allowedEnchants.clear();
+        assert data != null;
         for(String key: data.getKeys(false)) {
             allowedEnchants.put("minecraft:"+key.toLowerCase(),data.getInt(key));
         }
@@ -425,22 +462,23 @@ public class WorldConfig {
         if(worldConfig.contains(DOUBLE_SLAB_REPLACEMENTS)) {
             data = worldConfig.getConfigurationSection(DOUBLE_SLAB_REPLACEMENTS);
         } else {
-            if(defaultConfig.contains(DOUBLE_SLAB_REPLACEMENTS)) {
-                data = defaultConfig.getConfigurationSection(DOUBLE_SLAB_REPLACEMENTS);
-            } else {
+            if (!defaultConfig.contains(DOUBLE_SLAB_REPLACEMENTS)) {
                 createDoubleSlabReplacements(defaultConfig);
                 saveDefaultConfig();
-                data = defaultConfig.getConfigurationSection(DOUBLE_SLAB_REPLACEMENTS);
             }
+            data = defaultConfig.getConfigurationSection(DOUBLE_SLAB_REPLACEMENTS);
         }
         doubleSlabReplacements.clear();
+        assert data != null;
         for(String key: data.getKeys(false)) {
             Map<BlockData,BlockData> replacements = new HashMap<>();
             ConfigurationSection section = data.getConfigurationSection(key);
+            assert section != null;
             for(String replacementKey: section.getKeys(false)) {
                 ConfigurationSection replacement = section.getConfigurationSection(replacementKey);
-                BlockData from = Bukkit.createBlockData(replacement.getString("from"));
-                BlockData to = Bukkit.createBlockData(replacement.getString("to"));
+                assert replacement != null;
+                BlockData from = Bukkit.createBlockData(Objects.requireNonNull(replacement.getString("from")));
+                BlockData to = Bukkit.createBlockData(Objects.requireNonNull(replacement.getString("to")));
                 replacements.put(from, to);
             }
             doubleSlabReplacements.put(key,replacements);
@@ -469,13 +507,11 @@ public class WorldConfig {
         if(worldConfig.contains(DISABLED_BLOCK_STATES)) {
             data = worldConfig.getStringList(DISABLED_BLOCK_STATES);
         } else {
-            if(defaultConfig.contains(DISABLED_BLOCK_STATES)) {
-                data = defaultConfig.getStringList(DISABLED_BLOCK_STATES);
-            } else {
+            if (!defaultConfig.contains(DISABLED_BLOCK_STATES)) {
                 createDisabledBlockStates(defaultConfig);
                 saveDefaultConfig();
-                data = defaultConfig.getStringList(DISABLED_BLOCK_STATES);
             }
+            data = defaultConfig.getStringList(DISABLED_BLOCK_STATES);
         }
         disabledBlockStates.clear();
 //Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.INFO,"interactionDAta: "+data.size());
@@ -504,13 +540,11 @@ public class WorldConfig {
         if(worldConfig.contains(VIEW_DISTANCE)) {
             viewDistance = worldConfig.getInt(VIEW_DISTANCE);
         } else {
-            if(defaultConfig.contains(VIEW_DISTANCE)) {
-                viewDistance = defaultConfig.getInt(VIEW_DISTANCE);
-            } else {
-                defaultConfig.set(VIEW_DISTANCE,255);
+            if (!defaultConfig.contains(VIEW_DISTANCE)) {
+                defaultConfig.set(VIEW_DISTANCE, 255);
                 saveDefaultConfig();
-                viewDistance = defaultConfig.getInt(VIEW_DISTANCE);
             }
+            viewDistance = defaultConfig.getInt(VIEW_DISTANCE);
         }
     }
 

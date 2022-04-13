@@ -41,6 +41,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Objects;
+
 /**
  *
  * @author Eriol_Eandur
@@ -56,7 +58,7 @@ public class DoorListener extends WatchedListener{
     public void noOpenHalfDoors(PlayerInteractEvent event) {
         if(event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
             Player p = event.getPlayer();
-            Material blockType = event.getClickedBlock().getType();
+            Material blockType = Objects.requireNonNull(event.getClickedBlock()).getType();
             if (DoorUtil.isDoor(blockType)) {
                 if(PluginData.isModuleEnabled(event.getClickedBlock().getWorld(), Modules.HALF_DOORS)) {
                     DevUtil.log(2,"noOpenHalfDoors fired cancelled: " + event.isCancelled());
