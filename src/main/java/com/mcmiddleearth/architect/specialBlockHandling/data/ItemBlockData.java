@@ -30,6 +30,7 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Objects;
+import java.util.logging.Logger;
 
 /**
  *
@@ -67,9 +68,11 @@ public class ItemBlockData implements BlockData {
     public static ItemBlockData createItemBlockData(String data) {
         String[] firstSplit = data.split("::");
         String blockData = firstSplit[1];
-        String[] itemBlockData = firstSplit[0].split("[:\\[,\\]]");
+        String[] itemBlockData = firstSplit[0].split("[:=\\[,\\]]");
+Logger.getGlobal().info("itemBlockData: "+itemBlockData[1]);
         SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlock(itemBlockData[1]);
-        if(specialBlock != null && specialBlock instanceof SpecialBlockItemBlock) {
+Logger.getGlobal().info("specialBlock: "+specialBlock);
+        if(specialBlock instanceof SpecialBlockItemBlock) {
             int currentDamage;
             if (itemBlockData[3].equals("?")) {
                 currentDamage = -1;
