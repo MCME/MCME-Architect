@@ -284,7 +284,7 @@ public class RpCommand extends AbstractArchitectCommand {
     protected void sendHelpMessage(Player player, int page) {
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"Resource Pack Switcher -";
         help = new String[][]{         {"/rp r","",": Rohan"},
-                                       {"/rp h","",": Human (merged Gondor/Eriador"},
+                                       {"/rp h","",": Human (merged Gondor/Eriador)"},
                                        {"/rp l","",": Lothlorien"},
                                        {"/rp d","",": Dwarven (Moria)"},
                                        {"/rp m","",": Mordor"}};
