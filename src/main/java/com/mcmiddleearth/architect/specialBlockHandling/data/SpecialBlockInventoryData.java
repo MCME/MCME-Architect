@@ -182,6 +182,9 @@ public class SpecialBlockInventoryData {
                         case BLOCK_ON_WATER_CONNECT:
                             blockData = SpecialBlockOnWaterConnect.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
+                        case BRANCH:
+                            blockData = SpecialBlockBranch.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
                         case BLOCK_CONNECT:
                             blockData = SpecialBlockConnect.loadFromConfig(section, fullName(rpName,itemKey));
                             break;

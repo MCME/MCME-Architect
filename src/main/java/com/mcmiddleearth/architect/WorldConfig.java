@@ -306,8 +306,8 @@ public class WorldConfig {
             ConfigurationSection shulkerConfig
                     = section.getConfigurationSection(key);
             assert shulkerConfig != null;
-            configValue = shulkerConfig.getString("id" + ((ShulkerBox) Objects.requireNonNull(inventory.getHolder()))
-                    .getType().getId());
+            configValue = null;//shulkerConfig.getString("id" + ((ShulkerBox) Objects.requireNonNull(inventory.getHolder()))
+                    //.getType().getId());
             if (configValue == null) {
                 configValue = shulkerConfig.getString("default");
             }

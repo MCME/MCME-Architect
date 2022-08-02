@@ -28,6 +28,7 @@ public enum SpecialBlockType {
     BLOCK_ON_WATER_CONNECT,//("placed on top of clicked water block"),
     BLOCK_CONNECT, //connects to other blocks like vanilla
     DIAGONAL_CONNECT, //connects to diagonally adjacent blocks made e.g. for branches
+    BRANCH, //branch system with connection horizontal, diagonal and steep branches
     OPEN_HALF_DOOR, //("open half doors")
     FOUR_DIRECTIONS,//("fourFaced"),
     FOUR_DIRECTIONS_COMPLEX,//("fourFaced") with additional block configuration file for stick editor
