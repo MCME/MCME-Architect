@@ -50,6 +50,7 @@ public class SpecialBlock {
     private final BlockData blockData;
     protected final SpecialBlockType type;
     private String nextBlockId;
+    private int priority;
     
     private final Map<String,String> collection = new HashMap<>();
     
@@ -90,6 +91,10 @@ public class SpecialBlock {
 
     public void loadNextBlock(ConfigurationSection config, String rpName) {
         nextBlockId = SpecialBlockInventoryData.fullName(rpName,config.getString("nextBlock",null));
+    }
+
+    public void loadPriority(ConfigurationSection config) {
+        priority = config.getInt("priority",1);
     }
 
     public void loadBlockCollection(ConfigurationSection config, String rpName) {
@@ -153,6 +158,8 @@ public class SpecialBlock {
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
     }
+
+    public void handleBlockBreak(BlockState state) {}
     
     protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
         final BlockState state = blockPlace.getState();
@@ -234,5 +241,9 @@ public class SpecialBlock {
 
     public Map<String, String> getCollection() {
         return collection;
+    }
+
+    public int getPriority() {
+        return priority;
     }
 }

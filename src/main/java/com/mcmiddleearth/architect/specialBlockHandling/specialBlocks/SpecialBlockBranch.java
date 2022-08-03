@@ -1,14 +1,13 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.util.DevUtil;
-import jdk.jpackage.internal.Log;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -47,6 +46,10 @@ public class SpecialBlockBranch extends SpecialBlock {
     private static final int thick = 1;
     private static final int steep = 0;
     private static final int diagonal = 1;
+
+    private static final int vertical = 2;
+    private static final int horizontal = 3;
+
 
     private final BlockData[][][] blockDataSloped;
     private final BlockData[][] blockDataHorizontal;
@@ -121,10 +124,12 @@ public class SpecialBlockBranch extends SpecialBlock {
         this.width = width;
     }
 
-    private BlockState getBlockState(Block blockPlace, BlockFace playerFace, Location playerLoc, int width, int slope) {
+    private BlockState getBlockState(Block blockPlace, BlockFace playerFace, int width, int slope) {
         BlockData blockData;
-        if(playerLoc.getPitch()<22.5 && playerLoc.getPitch()>-22.5) {
+        if(slope == horizontal) {
             blockData = getBlockData(fourFaces, blockDataHorizontal[width], playerFace);
+        } else if(slope == vertical) {
+            blockData = blockDataWall;
         } else {
             blockData = getBlockData(eightFaces, blockDataSloped[width][slope], playerFace);
         }
@@ -139,7 +144,10 @@ public class SpecialBlockBranch extends SpecialBlock {
 
     @Override
     public Block getBlock(Block clicked, BlockFace blockFace, Player player) {
-        Block block = clicked.getRelative(getPlayerFace(player.getLocation()));
+        Block block = clicked;
+        if(Math.abs(player.getLocation().getPitch())<80) {
+            block = block.getRelative(getPlayerFace(player.getLocation()));
+        }
         if(player.getLocation().getPitch()>22.5) {
             block = block.getRelative(BlockFace.UP);
         }
@@ -147,11 +155,69 @@ public class SpecialBlockBranch extends SpecialBlock {
     }
 
     private Block getClicked(Block blockPlace, Player player) {
-        Block clicked = blockPlace.getRelative(getPlayerFace(player.getLocation()).getOppositeFace(),1);
+        Block clicked = blockPlace;
+        if(Math.abs(player.getLocation().getPitch())<80) {
+            clicked = clicked.getRelative(getPlayerFace(player.getLocation()).getOppositeFace(),1);
+        }
         if(player.getLocation().getPitch()>22.5) {
             clicked = clicked.getRelative(BlockFace.DOWN);
         }
         return clicked;
+    }
+
+    @Override
+    public void handleBlockBreak(BlockState state) {
+        Logger.getGlobal().info("Handle block break!");
+        Block block = state.getBlock();
+        if(!state.getBlockData().equals(block.getBlockData())) {
+Logger.getGlobal().info("Found Branch block break!");
+            // find out if we break a block with vertical part
+            if(isVertical(state.getBlockData())) {
+                Block connection = block.getRelative(BlockFace.DOWN, 1);
+                if (connection.getBlockData().matches(blockDataWall)) {
+Logger.getGlobal().info("Found vertical connection: " + connection.getLocation());
+                    Wall wall = (Wall) connection.getBlockData();
+                    wall.setUp(false);
+                    if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
+                        connection.setBlockData(wall, false);
+                    }
+                }
+            } else {
+                //find out if we break a block with diagonal slope and main orientation (north, east, south or west)
+                BlockFace direction = getDiagonalSlopedMainOrientation(state.getBlockData());
+                if (direction != null) {
+Logger.getGlobal().info("Direction: " + direction.name());
+                    Block connection = block.getRelative(direction.getOppositeFace(), 1).getRelative(BlockFace.DOWN, 1);
+                    if (connection.getBlockData().matches(blockDataWall)) {
+Logger.getGlobal().info("Found connection: " + connection.getLocation());
+                        Wall wall = (Wall) connection.getBlockData();
+                        wall.setHeight(direction, Wall.Height.NONE);
+                        if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
+                            connection.setBlockData(wall, false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isVertical(BlockData data) {
+        if (data.matches(blockDataWall)) {
+            Wall wall = (Wall) data;
+            return wall.isUp();
+        }
+        return false;
+    }
+
+    private BlockFace getDiagonalSlopedMainOrientation(BlockData search) {
+        for(int i = thin; i <=thick; i++) {
+            for (int j = 0; j < eightFaces.length; j += 2) {
+                if(search.matches(blockDataSloped[i][diagonal][j])) {
+                    return eightFaces[j].face;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -173,14 +239,18 @@ Logger.getGlobal().info("Clicked: "+clicked.getLocation());
         }
         int slope = this.slope;
         if(slope < 0) {
-            if (playerLoc.getPitch() > 67.5 || playerLoc.getPitch() < -67.5) {
+            if(Math.abs(playerLoc.getPitch())<22.5) {
+                slope = horizontal;
+            } else if(Math.abs(playerLoc.getPitch()) > 80) {
+                slope = vertical;
+            } else if(Math.abs(playerLoc.getPitch()) > 67.5) {
                 slope = steep;
             } else {
                 slope = diagonal;
             }
         }
 
-        final BlockState state = getBlockState(blockPlace, playerFace, playerLoc, width, slope);
+        final BlockState state = getBlockState(blockPlace, playerFace, width, slope);
         final int finalWidth = width;
         final int finalSlope = slope;
 Logger.getGlobal().info("config Width: "+this.width+" ConfigSlope: "+this.slope);
@@ -189,7 +259,7 @@ Logger.getGlobal().info("Width: "+width+" Slope: "+slope);
             @Override
             public void run() {
                 blockPlace.setBlockData(state.getBlockData(), false);
-                final BlockState tempState = getBlockState(blockPlace, playerFace, playerLoc, finalWidth, finalSlope);
+                final BlockState tempState = getBlockState(blockPlace, playerFace, finalWidth, finalSlope);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -204,12 +274,21 @@ Logger.getGlobal().info("Width: "+width+" Slope: "+slope);
 Logger.getGlobal().info("Detected fork!");
             Wall wall = (Wall) clicked.getBlockData();
             Wall.Height height = (width==thin?Wall.Height.TALL:Wall.Height.LOW);
-            if(slope == diagonal) {
+            if(slope == diagonal && isMainDirection(playerFace)) {
                 wall.setHeight(playerFace,height);
-                clicked.setBlockData(wall, false);
-            } else if(slope == steep){
+                if(PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
+                    clicked.setBlockData(wall, false);
+                }
+            } else if(slope == steep && isMainDirection(playerFace)){
                 wall.setHeight(playerFace,Wall.Height.NONE);
-                clicked.setBlockData(wall, false);
+                if(PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
+                    clicked.setBlockData(wall, false);
+                }
+            } else if(slope == vertical) {
+                wall.setUp(true);
+                if(PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
+                    clicked.setBlockData(wall, false);
+                }
             }
         }
     }
@@ -219,7 +298,12 @@ Logger.getGlobal().info("Detected fork!");
         if(search.matches(blockDataVerticalThin)) return true;
         if(search.matches(blockDataWall)) {
             Wall wall = (Wall) search;
-            return wall.getHeight(blockFace).equals(Wall.Height.TALL);
+            if(wall.isUp()) return false;
+            if(wall.getHeight(BlockFace.NORTH).equals(Wall.Height.LOW)) return false;
+            if(wall.getHeight(BlockFace.EAST).equals(Wall.Height.LOW)) return false;
+            if(wall.getHeight(BlockFace.SOUTH).equals(Wall.Height.LOW)) return false;
+            if(wall.getHeight(BlockFace.WEST).equals(Wall.Height.LOW)) return false;
+            return true;
         }
         for(BlockData data: blockDataHorizontal[thin]) {
             if(search.equals(data)) return true;
@@ -248,6 +332,18 @@ Logger.getGlobal().info("Detected fork!");
             }
         }
         return false;
+    }
+
+    private static boolean isMainDirection(BlockFace face) {
+        switch(face) {
+            case EAST:
+            case WEST:
+            case SOUTH:
+            case NORTH:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private static BlockData rotateData(BlockData data) {
