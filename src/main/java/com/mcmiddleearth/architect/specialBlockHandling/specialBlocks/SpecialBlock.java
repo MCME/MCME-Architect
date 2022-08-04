@@ -129,11 +129,13 @@ public class SpecialBlock {
         return SpecialBlockInventoryData.getSpecialBlock(nextBlockId);
     }
 
-    public Block getBlock(Block clicked, BlockFace blockFace, Player player) {
+    public Block getBlock(Block clicked, BlockFace blockFace,
+                          Location interactionPoint, Player player) {
         return clicked.getRelative(blockFace);
     }
 
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
+                           final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         final BlockState state = getBlockState(blockPlace, blockFace, playerLoc);
         new BukkitRunnable() {

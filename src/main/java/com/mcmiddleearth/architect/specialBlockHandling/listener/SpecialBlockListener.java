@@ -149,7 +149,7 @@ public class SpecialBlockListener extends WatchedListener{
             PluginData.getMessageUtil().sendErrorMessage(player, "Special block data not found, item is probably outdated.");
             return;
         }
-        Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), player);
+        Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), event.getInteractionPoint(), player);
         /*if(data instanceof SpecialBlockOnWater) {
             blockPlace = player.getTargetBlockExact(4, FluidCollisionMode.ALWAYS).getRelative(BlockFace.UP);
         } else {
@@ -166,7 +166,7 @@ public class SpecialBlockListener extends WatchedListener{
         if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
             return;
         }
-        data.placeBlock(blockPlace, event.getBlockFace(), player);
+        data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
     }
 
     /**

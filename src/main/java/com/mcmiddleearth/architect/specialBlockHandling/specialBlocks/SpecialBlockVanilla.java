@@ -83,7 +83,8 @@ public class SpecialBlockVanilla extends SpecialBlock {
     }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
     }
     
     @Override

@@ -63,7 +63,8 @@ public class SpecialBlockDoorFourBlocks extends SpecialBlockDoor {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, lowerMaterial, lowerPowered, false, false, false);
         placeDoor(blockPlace.getRelative(BlockFace.UP,2), playerLoc, upperMaterial, upperPowered, false, false, false);

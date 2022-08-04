@@ -143,27 +143,47 @@ public class SpecialBlockBranch extends SpecialBlock {
     }
 
     @Override
-    public Block getBlock(Block clicked, BlockFace blockFace, Player player) {
+    public Block getBlock(Block clicked, BlockFace blockFace,
+                          Location interactionPoint, Player player) {
         Block block = clicked;
-        if(Math.abs(player.getLocation().getPitch())<80) {
-            block = block.getRelative(getPlayerFace(player.getLocation()));
+        int slope = getSlope(player.getLocation());
+        BlockFace playerFace = getPlayerFace(player.getLocation());
+        if(slope != vertical) {
+            block = block.getRelative(playerFace);
         }
-        if(player.getLocation().getPitch()>22.5) {
+Logger.getGlobal().info("Interaction Point: "+interactionPoint);
+        if(slope != horizontal || interactionPoint.getY()-interactionPoint.getBlockY()>0.5) {
             block = block.getRelative(BlockFace.UP);
+        }
+        if(slope == steep) {
+            block = block.getRelative(BlockFace.UP);
+            BlockFace diagonal = getDiagonalSlopedMainOrientation(clicked.getBlockData());
+            if(diagonal!=null) {
+                block = block.getRelative(diagonal);
+            }
+        } else if(slope == diagonal) {
+            BlockFace steep = getSteepSlopedMainOrientation(clicked.getBlockData());
+            if(steep!=null) {
+                block = block.getRelative(playerFace.getOppositeFace());
+            }
         }
         return block;
     }
 
-    private Block getClicked(Block blockPlace, Player player) {
+    /*private Block getClicked(Block blockPlace, Location interactionPoint, Player player) {
         Block clicked = blockPlace;
-        if(Math.abs(player.getLocation().getPitch())<80) {
+        int slope = getSlope(player.getLocation());
+        if(slope != vertical) {
             clicked = clicked.getRelative(getPlayerFace(player.getLocation()).getOppositeFace(),1);
         }
-        if(player.getLocation().getPitch()>22.5) {
+        if(slope != horizontal || interactionPoint.getY()-interactionPoint.getBlockY()>0.5) {
+            clicked = clicked.getRelative(BlockFace.DOWN);
+        }
+        if(slope == steep) {
             clicked = clicked.getRelative(BlockFace.DOWN);
         }
         return clicked;
-    }
+    }*/
 
     @Override
     public void handleBlockBreak(BlockState state) {
@@ -220,77 +240,100 @@ Logger.getGlobal().info("Found connection: " + connection.getLocation());
         return null;
     }
 
-    @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
-        Location playerLoc = player.getLocation();
-        BlockFace playerFace = getPlayerFace(playerLoc);
-Logger.getGlobal().info("blockFace: "+blockFace.name()+" playerFace: "+playerFace.name());
-Logger.getGlobal().info("player loc: "+player.getLocation());
-        Block clicked = getClicked(blockPlace, player);
-Logger.getGlobal().info("BlockPlace: "+blockPlace.getLocation());
-Logger.getGlobal().info("Clicked: "+clicked.getLocation());
-        int width = this.width;
-        if(width < 0) {
-            if(isThin(clicked, playerFace) || player.isSneaking()) {
-                width = thin;
-            } else {
-                width = thick;
+    private BlockFace getSteepSlopedMainOrientation(BlockData search) {
+        for(int i = thin; i <=thick; i++) {
+            for (int j = 0; j < eightFaces.length; j += 2) {
+                if(search.matches(blockDataSloped[i][steep][j])) {
+                    return eightFaces[j].face;
+                }
             }
         }
+        return null;
+    }
+
+    @Override
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
+        //Block clicked = getClicked(blockPlace, interactionPoint, player);
+        if(width >= 0 && player.isSneaking()) {
+            if(clicked.getBlockData().matches(blockDataWall)) {
+                SpecialBlockDiagonalConnect.editDiagonal(blockPlace, clicked, player);
+            }
+        } else {
+            Location playerLoc = player.getLocation();
+            BlockFace playerFace = getPlayerFace(playerLoc);
+            Logger.getGlobal().info("blockFace: " + blockFace.name() + " playerFace: " + playerFace.name());
+            Logger.getGlobal().info("player loc: " + player.getLocation());
+            Logger.getGlobal().info("BlockPlace: " + blockPlace.getLocation());
+            Logger.getGlobal().info("Clicked: " + clicked.getLocation());
+            int width = this.width;
+            if (width < 0) {
+                if (isThin(clicked, playerFace) || player.isSneaking()) {
+                    width = thin;
+                } else {
+                    width = thick;
+                }
+            }
+            int slope = getSlope(playerLoc);
+
+            final BlockState state = getBlockState(blockPlace, playerFace, width, slope);
+            final int finalWidth = width;
+            final int finalSlope = slope;
+            Logger.getGlobal().info("config Width: " + this.width + " ConfigSlope: " + this.slope);
+            Logger.getGlobal().info("Width: " + width + " Slope: " + slope);
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    blockPlace.setBlockData(state.getBlockData(), false);
+                    final BlockState tempState = getBlockState(blockPlace, playerFace, finalWidth, finalSlope);
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            blockPlace.setBlockData(tempState.getBlockData(), false);
+                            ChunkUpdateUtil.sendUpdates(blockPlace, player);
+                        }
+                    }.runTaskLater(ArchitectPlugin.getPluginInstance(), 5);
+                }
+            }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+
+            if (clicked.getBlockData().matches(blockDataWall)) {
+                Logger.getGlobal().info("Detected fork!");
+                Wall wall = (Wall) clicked.getBlockData();
+                Wall.Height height = (width == thin ? Wall.Height.TALL : Wall.Height.LOW);
+                if (slope == diagonal && isMainDirection(playerFace)) {
+                    wall.setHeight(playerFace, height);
+                    if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
+                        clicked.setBlockData(wall, false);
+                    }
+                } else if (slope == steep && isMainDirection(playerFace)) {
+                    wall.setHeight(playerFace, Wall.Height.NONE);
+                    if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
+                        clicked.setBlockData(wall, false);
+                    }
+                } else if (slope == vertical) {
+                    wall.setUp(true);
+                    if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
+                        clicked.setBlockData(wall, false);
+                    }
+                }
+            }
+        }
+    }
+
+    private int getSlope(Location playerLoc) {
         int slope = this.slope;
-        if(slope < 0) {
-            if(Math.abs(playerLoc.getPitch())<22.5) {
-                slope = horizontal;
-            } else if(Math.abs(playerLoc.getPitch()) > 80) {
-                slope = vertical;
-            } else if(Math.abs(playerLoc.getPitch()) > 67.5) {
+        if (Math.abs(playerLoc.getPitch()) < 22.5) {
+            slope = horizontal;
+        } else if (Math.abs(playerLoc.getPitch()) > 80) {
+            slope = vertical;
+        } else if (slope < 0) {
+            if (Math.abs(playerLoc.getPitch()) > 67.5) {
                 slope = steep;
             } else {
                 slope = diagonal;
             }
         }
-
-        final BlockState state = getBlockState(blockPlace, playerFace, width, slope);
-        final int finalWidth = width;
-        final int finalSlope = slope;
-Logger.getGlobal().info("config Width: "+this.width+" ConfigSlope: "+this.slope);
-Logger.getGlobal().info("Width: "+width+" Slope: "+slope);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                blockPlace.setBlockData(state.getBlockData(), false);
-                final BlockState tempState = getBlockState(blockPlace, playerFace, finalWidth, finalSlope);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        blockPlace.setBlockData(tempState.getBlockData(),false);
-                        ChunkUpdateUtil.sendUpdates(blockPlace, player);
-                    }
-                }.runTaskLater(ArchitectPlugin.getPluginInstance(), 5);
-            }
-        }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
-
-        if(clicked.getBlockData().matches(blockDataWall)) {
-Logger.getGlobal().info("Detected fork!");
-            Wall wall = (Wall) clicked.getBlockData();
-            Wall.Height height = (width==thin?Wall.Height.TALL:Wall.Height.LOW);
-            if(slope == diagonal && isMainDirection(playerFace)) {
-                wall.setHeight(playerFace,height);
-                if(PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                    clicked.setBlockData(wall, false);
-                }
-            } else if(slope == steep && isMainDirection(playerFace)){
-                wall.setHeight(playerFace,Wall.Height.NONE);
-                if(PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                    clicked.setBlockData(wall, false);
-                }
-            } else if(slope == vertical) {
-                wall.setUp(true);
-                if(PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                    clicked.setBlockData(wall, false);
-                }
-            }
-        }
+        return slope;
     }
 
     private boolean isThin(Block block, BlockFace blockFace) {

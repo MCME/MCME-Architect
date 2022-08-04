@@ -20,6 +20,7 @@ import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.FluidCollisionMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -48,7 +49,8 @@ public class SpecialBlockOnWater extends SpecialBlock {
     }
 
     @Override
-    public Block getBlock(Block clicked, BlockFace blockFace, Player player) {
+    public Block getBlock(Block clicked, BlockFace blockFace,
+                          Location interactionPoint, Player player) {
         return player.getTargetBlockExact(4, FluidCollisionMode.ALWAYS).getRelative(BlockFace.UP);
 
     }

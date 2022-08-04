@@ -45,7 +45,8 @@ public class SpecialBlockBurningFurnace extends SpecialBlock {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, BlockFace blockFace, Player player) {
+    public void placeBlock(final Block blockPlace, BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, Player player) {
         final Location playerLoc = player.getLocation();
         final BlockState state = blockPlace.getState();
         state.setType(Material.FURNACE);

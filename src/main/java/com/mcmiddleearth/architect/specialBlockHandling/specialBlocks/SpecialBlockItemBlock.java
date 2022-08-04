@@ -115,10 +115,11 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         if (ItemBlockManager.allowPlace(blockPlace, player)) {
-            super.placeBlock(blockPlace, blockFace, player);
+            super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
             placeArmorStand(blockPlace, blockFace, playerLoc,contentDamage[NumericUtil.getRandom(0, contentDamage.length-1)]);
         } else {
             PluginData.getMessageUtil().sendErrorMessage(player, "Too many entities (paintings, item frames, item blocks and armorstands) in this chunk already. (Limit: "
