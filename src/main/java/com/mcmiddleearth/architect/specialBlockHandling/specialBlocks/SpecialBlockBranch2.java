@@ -174,9 +174,9 @@ Logger.getGlobal().info("Interaction Point: "+interactionPoint);
                             block = block.getRelative(diagonal);
                         }
                     }
-                    if (isDiagonalFace(playerFace)) {
+                    /*if (isDiagonalFace(playerFace)) {
                         block = block.getRelative(playerFace);
-                    }
+                    }*/
                 }
             } else {
             //lower part clicked
@@ -186,11 +186,22 @@ Logger.getGlobal().info("Interaction Point: "+interactionPoint);
                 if (steepClicked != null) {
                     block = block.getRelative(steepClicked.getOppositeFace());
                 }
+                steepClicked = getSteepSlopedDiagonalOrientation(clicked.getBlockData());
+                if (steepClicked != null) {
+                    block = block.getRelative(steepClicked.getOppositeFace());
+                }
+                BlockFace diagonalClicked = getDiagonalSlopedDiagonalOrientation(clicked.getBlockData());
+                if (diagonalClicked != null) {
+                    block = block.getRelative(diagonalClicked.getOppositeFace());
+                }
                 if (slope == steep) {
                     block = block.getRelative(playerFace.getOppositeFace());
                 } else if (slope == diagonal) {
+                    if(diagonalClicked!=null) {
+
+                    }
                     if (isDiagonalFace(playerFace)) {
-                        block = block.getRelative(BlockFace.DOWN);
+                        block = block.getRelative(playerFace.getOppositeFace());
                     }
                 }
             }
@@ -370,9 +381,31 @@ Logger.getGlobal().info("Found connection: " + connection.getLocation());
         return null;
     }
 
+    private BlockFace getDiagonalSlopedDiagonalOrientation(BlockData search) {
+        for(int i = thin; i <=thick; i++) {
+            for (int j = 1; j < eightFaces.length; j += 2) {
+                if(search.matches(blockDataSloped[i][diagonal][j])) {
+                    return eightFaces[j].face;
+                }
+            }
+        }
+        return null;
+    }
+
     private BlockFace getSteepSlopedMainOrientation(BlockData search) {
         for(int i = thin; i <=thick; i++) {
             for (int j = 0; j < eightFaces.length; j += 2) {
+                if(search.matches(blockDataSloped[i][steep][j])) {
+                    return eightFaces[j].face;
+                }
+            }
+        }
+        return null;
+    }
+
+    private BlockFace getSteepSlopedDiagonalOrientation(BlockData search) {
+        for(int i = thin; i <=thick; i++) {
+            for (int j = 1; j < eightFaces.length; j += 2) {
                 if(search.matches(blockDataSloped[i][steep][j])) {
                     return eightFaces[j].face;
                 }
