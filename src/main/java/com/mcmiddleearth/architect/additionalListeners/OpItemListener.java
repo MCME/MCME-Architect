@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import jdk.jpackage.internal.Log;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -112,9 +114,12 @@ public class OpItemListener implements Listener {
         }.runTaskLater(ArchitectPlugin.getPluginInstance(),2);
     }
     private void checkItem(ItemStack item) {
+//Logger.getGlobal().info("check item 1");
         if(item==null) return;
+//Logger.getGlobal().info("check item 1a");
         if(PluginData.isModuleEnabled(Bukkit.getWorlds().get(0), Modules.BLOCK_OP_ITEMS)) {
             try {
+//Logger.getGlobal().info("check item 2");
                 //Class clazz = item.getClass();
                 //Field field = clazz.getDeclaredField("handle");
                 //field.setAccessible(true);
@@ -122,12 +127,18 @@ public class OpItemListener implements Listener {
                 //Logger.getLogger(ArchitectPlugin.class.getName())
                 //      .log(Level.INFO, "Check item: "+item.getType());
                 Object nmsItem = NMSUtil.getCraftBukkitDeclaredField("inventory.CraftItemStack","handle",item);
-                Object tag = NMSUtil.invokeNMS("world.item.ItemStack", "s", new Class[]{}, nmsItem);
+                Object tag = NMSUtil.invokeNMS("world.item.ItemStack", "t", new Class[]{}, nmsItem);
 /*if(tag!=null) {Set keys = (Set) NMSUtil.invokeNMS("nbt.NBTTagCompound","d",new Class[]{},tag);
 for(Object key: keys) {
     Logger.getGlobal().info((String)key);
 }}*/
+/*Logger.getGlobal().info("Class: "+tag.getClass().getName());
+Set<String> keys = (Set<String>) NMSUtil.invokeNMS("nbt.NBTTagCompound","d",new Class[]{},tag);
+for(String key: keys) {
+    Logger.getGlobal().info("key: "+key);
+}*/
                 if(NBTTagUtil.hasKey(tag, "Enchantments")) {
+//Logger.getGlobal().info("Has enchantment");
                     Object enchantments = NBTTagUtil.getTagList(tag, "Enchantments");
                     for(int i = 0;
                             i < (int) NMSUtil.invokeNMS("nbt.NBTTagList", "size", new Class[]{},
@@ -137,6 +148,7 @@ for(Object key: keys) {
                         String name = NBTTagUtil.getString(enchant,"id");
                         int level = NBTTagUtil.getInt(enchant,"lvl");
                         if(!PluginData.isEnchantmentAllowed(name, level)) {
+                            Logger.getGlobal().info("not allowed! "+name+" "+level);
                             block(nmsItem);
                             return;
                         }

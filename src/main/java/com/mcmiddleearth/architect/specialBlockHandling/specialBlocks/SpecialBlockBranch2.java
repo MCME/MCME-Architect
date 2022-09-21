@@ -156,7 +156,7 @@ public class SpecialBlockBranch2 extends SpecialBlock {
         if(slope != vertical) {
             block = block.getRelative(playerFace);
         }
-Logger.getGlobal().info("Interaction Point: "+interactionPoint);
+//Logger.getGlobal().info("Interaction Point: "+interactionPoint);
         if(negativeSlope) {
             if (isUpperPlace(interactionPoint, blockFace)) {
                 if (slope == steep) {
@@ -303,12 +303,12 @@ Logger.getGlobal().info("Interaction Point: "+interactionPoint);
         Logger.getGlobal().info("Handle block break!");
         Block block = state.getBlock();
         if(!state.getBlockData().equals(block.getBlockData())) {
-Logger.getGlobal().info("Found Branch block break!");
+//Logger.getGlobal().info("Found Branch block break!");
             // find out if we break a block with vertical part
             if(isVertical(state.getBlockData())) {
                 Block connection = block.getRelative(BlockFace.DOWN, 1);
                 if (connection.getBlockData().matches(blockDataWall)) {
-Logger.getGlobal().info("Found vertical connection: " + connection.getLocation());
+//Logger.getGlobal().info("Found vertical connection: " + connection.getLocation());
                     Wall wall = (Wall) connection.getBlockData();
                     wall.setUp(false);
                     if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
@@ -319,10 +319,10 @@ Logger.getGlobal().info("Found vertical connection: " + connection.getLocation()
                 //find out if we break a block with diagonal slope and main orientation (north, east, south or west)
                 BlockFace direction = getDiagonalSlopedMainOrientation(state.getBlockData());
                 if (direction != null) {
-Logger.getGlobal().info("Direction: " + direction.name());
+//Logger.getGlobal().info("Direction: " + direction.name());
                     Block connection = block.getRelative(direction.getOppositeFace(), 1).getRelative(BlockFace.DOWN, 1);
                     if (connection.getBlockData().matches(blockDataWall)) {
-Logger.getGlobal().info("Found connection: " + connection.getLocation());
+//Logger.getGlobal().info("Found connection: " + connection.getLocation());
                         Wall wall = (Wall) connection.getBlockData();
                         wall.setHeight(direction, Wall.Height.NONE);
                         if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
