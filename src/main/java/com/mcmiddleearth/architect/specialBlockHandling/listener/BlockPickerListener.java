@@ -35,6 +35,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
+import java.awt.*;
 import java.util.List;
 
 /**
@@ -99,7 +100,10 @@ public class BlockPickerListener implements Listener {
                     event.getClickedBlock():event.getPlayer().getTargetBlock(null, 1000));
             Player player = event.getPlayer();
             if(player.isSneaking()) {
-                PluginData.getMessageUtil().sendInfoMessage(player, block.getBlockData().getAsString());
+                //PluginData.getMessageUtil().sendInfoMessage(player, block.getBlockData().getAsString());
+                FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                        .addClickable(block.getBlockData().getAsString(), block.getBlockData().getAsString());
+                message.send(player);
             } else {
                 List<String> info = new BlockDataManager().getBlockInfo(block.getBlockData(),block.getData());
                 PluginData.getMessageUtil().sendInfoMessage(player, "Data for block at ("+ChatColor.GREEN
