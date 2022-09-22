@@ -23,6 +23,8 @@ import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.pluginutil.EventUtil;
+import com.mcmiddleearth.pluginutil.message.FancyMessage;
+import com.mcmiddleearth.pluginutil.message.MessageType;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -35,7 +37,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-import java.awt.*;
 import java.util.List;
 
 /**
@@ -111,7 +112,10 @@ public class BlockPickerListener implements Listener {
                                                     +block.getLocation().getBlockY()+", "
                                                     +block.getLocation().getBlockZ()+ChatColor.AQUA+")");
                 for(String line: info) {
-                    PluginData.getMessageUtil().sendIndentedInfoMessage(player, line);
+                    new FancyMessage(PluginData.getMessageUtil())
+                            .addClickable(PluginData.getMessageUtil().infoNoPrefix()+line, block.getBlockData().getAsString())
+                            .send(player);
+                    //PluginData.getMessageUtil().sendIndentedInfoMessage(player, line);
                 }
             }
             ChunkUpdateUtil.sendUpdates(block, player);
