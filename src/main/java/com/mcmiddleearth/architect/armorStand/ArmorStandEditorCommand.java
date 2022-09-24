@@ -16,12 +16,8 @@ import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 
@@ -239,6 +235,8 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                         if(part!=null) {
                             playerConfig.setPart(part);
                         }
+                    } else if(args[0].toLowerCase().startsWith(ArmorStandEditorMode.STRAIGHT.getName())) {
+                        playerConfig.setPart(ArmorStandPart.ALL);
                     }
                     sendInfoMessage(cs, playerConfig);
                 }
@@ -323,6 +321,9 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                             break;
                         case COPY:
                             PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> copy armor stand");
+                            break;
+                        case STRAIGHT:
+                            PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> straighten armor stand");
                             break;
                     }
     }

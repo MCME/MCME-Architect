@@ -17,15 +17,12 @@
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
 import com.destroystokyo.paper.event.block.BlockDestroyEvent;
-import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
-import com.mcmiddleearth.architect.watcher.WatcherEvent;
 import com.mcmiddleearth.pluginutil.BlockUtil;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.TheGafferUtil;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -41,8 +38,6 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockRedstoneEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 
 /**
  *
@@ -108,6 +103,9 @@ public class NoPhysicsListener extends WatchedListener{
                 && NoPhysicsData.isNoPhysicsBlock(block)
                 && !NoPhysicsData.hasNoPhysicsException(block)) {*/
             DevUtil.log(4,"place no physics block"+block.getType().name()+" "+block.getX()+" "+block.getZ());
+            if(PluginData.getNoConnection(block)) {
+                return;
+            }
             if(((block.getBlockData() instanceof Fence)
                     && PluginData.isModuleEnabled(block.getWorld(), Modules.NO_PHYSICS_CONNECT_FENCES))
                || ((block.getBlockData() instanceof GlassPane)
@@ -243,6 +241,9 @@ public class NoPhysicsListener extends WatchedListener{
                 && !NoPhysicsData.hasNoPhysicsException(event.getBlock())) {*/
             DevUtil.log(4,"break no physics block"+event.getBlock().getType().name()+" "+event.getBlock().getX()+" "+event.getBlock().getZ());
             Block block = event.getBlock();
+            if(PluginData.getNoConnection(block)) {
+                return;
+            }
             if((block.getBlockData() instanceof Slab)
                 && ((Waterlogged) block.getBlockData()).isWaterlogged()
                 && ((Slab) block.getBlockData()).getType().equals(Slab.Type.DOUBLE)
@@ -380,12 +381,9 @@ public class NoPhysicsListener extends WatchedListener{
                 && data.getHeight(BlockFace.SOUTH).equals(Wall.Height.NONE)) {
             return false;
         }
-        if(data.getHeight(BlockFace.NORTH).equals(data.getHeight(BlockFace.SOUTH))
-                && data.getHeight(BlockFace.EAST).equals(Wall.Height.NONE)
-                && data.getHeight(BlockFace.WEST).equals(Wall.Height.NONE)) {
-            return false;
-        }
-        return true;
+        return !data.getHeight(BlockFace.NORTH).equals(data.getHeight(BlockFace.SOUTH))
+                || !data.getHeight(BlockFace.EAST).equals(Wall.Height.NONE)
+                || !data.getHeight(BlockFace.WEST).equals(Wall.Height.NONE);
     }
 
     private static boolean canBecomeDoubleChest(Block block, Material match) {

@@ -23,6 +23,8 @@ import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.pluginutil.EventUtil;
+import com.mcmiddleearth.pluginutil.message.FancyMessage;
+import com.mcmiddleearth.pluginutil.message.MessageType;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -99,7 +101,10 @@ public class BlockPickerListener implements Listener {
                     event.getClickedBlock():event.getPlayer().getTargetBlock(null, 1000));
             Player player = event.getPlayer();
             if(player.isSneaking()) {
-                PluginData.getMessageUtil().sendInfoMessage(player, block.getBlockData().getAsString());
+                //PluginData.getMessageUtil().sendInfoMessage(player, block.getBlockData().getAsString());
+                FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                        .addClickable(block.getBlockData().getAsString(), block.getBlockData().getAsString());
+                message.send(player);
             } else {
                 List<String> info = new BlockDataManager().getBlockInfo(block.getBlockData(),block.getData());
                 PluginData.getMessageUtil().sendInfoMessage(player, "Data for block at ("+ChatColor.GREEN
@@ -107,7 +112,10 @@ public class BlockPickerListener implements Listener {
                                                     +block.getLocation().getBlockY()+", "
                                                     +block.getLocation().getBlockZ()+ChatColor.AQUA+")");
                 for(String line: info) {
-                    PluginData.getMessageUtil().sendIndentedInfoMessage(player, line);
+                    new FancyMessage(PluginData.getMessageUtil())
+                            .addClickable(PluginData.getMessageUtil().infoNoPrefix()+line, block.getBlockData().getAsString())
+                            .send(player);
+                    //PluginData.getMessageUtil().sendIndentedInfoMessage(player, line);
                 }
             }
             ChunkUpdateUtil.sendUpdates(block, player);

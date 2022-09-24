@@ -1,6 +1,8 @@
 package com.mcmiddleearth.architect.additionalListeners;
 
+import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
+import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.util.TheGafferUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -22,6 +24,9 @@ public class InventoryProtectionListener implements Listener {
     @EventHandler
     public void openChest(InventoryOpenEvent event) {
         Inventory inv = event.getInventory();
+        if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.CHEST_INVENTORY_PROTECTION)) {
+            return;
+        }
         if(!(inv instanceof PlayerInventory) && (event.getPlayer() instanceof Player) && inv.getLocation()!=null
                 && !(TheGafferUtil.hasGafferPermission(((Player)event.getPlayer()),inv.getLocation())
                     || (((Player)event.getPlayer()).hasPermission(Permission.IGNORE_INVENTORY_PROTECTION.getPermissionNode())))) {
@@ -36,6 +41,9 @@ public class InventoryProtectionListener implements Listener {
 
     @EventHandler
     public void closeChest(InventoryCloseEvent event) {
+        if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.CHEST_INVENTORY_PROTECTION)) {
+            return;
+        }
         if(!(event.getPlayer() instanceof Player)) return;
         SavedInventory savedInventory = openInventories.get(event.getPlayer().getUniqueId());
         if(savedInventory!=null) {

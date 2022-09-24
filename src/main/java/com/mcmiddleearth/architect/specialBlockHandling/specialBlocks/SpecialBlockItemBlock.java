@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 /**
  *
@@ -102,17 +103,23 @@ public class SpecialBlockItemBlock extends SpecialBlock {
             }
         }
         Material contentItem = matchMaterial(config.getString("contentItem",""));
-        Integer[] contentDamage = getContentDamage(config.getString("contentDamage","0"));
+        Integer[] contentDamage;
+        if (config.isSet("contentCmd")) {
+            contentDamage = getContentDamage(config.getString("contentCmd","0"));
+        } else {
+            contentDamage = getContentDamage(config.getString("contentDamage", "0"));
+        }
         double contentHeight = config.getDouble("contentHeight",0);
         return new SpecialBlockItemBlock(id, data, contentItem, 
                                          contentDamage, contentHeight);
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         if (ItemBlockManager.allowPlace(blockPlace, player)) {
-            super.placeBlock(blockPlace, blockFace, player);
+            super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
             placeArmorStand(blockPlace, blockFace, playerLoc,contentDamage[NumericUtil.getRandom(0, contentDamage.length-1)]);
         } else {
             PluginData.getMessageUtil().sendErrorMessage(player, "Too many entities (paintings, item frames, item blocks and armorstands) in this chunk already. (Limit: "
@@ -121,6 +128,7 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     public void placeArmorStand(Block blockPlace, BlockFace blockFace, Location playerLoc, int currentDamage) {
+//Logger.getGlobal().info("Place item block: "+currentDamage);
         Location loc = getArmorStandLocation(blockPlace, blockFace, playerLoc);
         removeArmorStands(blockPlace.getLocation());
         final ArmorStand armor = (ArmorStand) blockPlace.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
@@ -133,10 +141,12 @@ public class SpecialBlockItemBlock extends SpecialBlock {
             public void run() {
                 ItemStack item = new ItemStack(contentItem,1);
                 ItemMeta meta = item.getItemMeta();
-                if(meta instanceof Damageable) {
+                if(meta instanceof Damageable && item.getType().equals(Material.DIAMOND_CHESTPLATE)) {
                     ((Damageable) meta).setDamage(currentDamage);
-                    item.setItemMeta(meta);
+                } else {
+                    meta.setCustomModelData(currentDamage);
                 }
+                item.setItemMeta(meta);
                 armor.setHelmet(item);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 2);

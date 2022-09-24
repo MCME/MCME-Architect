@@ -70,12 +70,12 @@ public class SearchInventoryState {
         if(!isFirstItemVisible()) {
             //inventory.setItem(slotIndex, newPagingItem(pagingMaterial,pageUp, "page up"));
             inventory.setItem(8,
-                              newPagingItem(CustomInventoryState.pagingMaterial,
+                              CustomInventoryState.newPagingItem(CustomInventoryState.pagingMaterial,
                                             CustomInventoryState.pageUp, "page up"));
         }
         if(!isLastItemVisible()) {
             inventory.setItem(SearchInventory.ITEM_SLOTS-1,
-                              newPagingItem(CustomInventoryState.pagingMaterial,
+                              CustomInventoryState.newPagingItem(CustomInventoryState.pagingMaterial,
                                             CustomInventoryState.pageDown, "page down"));
             slotIndex++;
         }
@@ -135,15 +135,16 @@ public class SearchInventoryState {
         }
     }
         
-    private ItemStack newPagingItem(Material material, short damage, String display) {
-        ItemStack item = new ItemStack(material,1,damage);
+    /*public static ItemStack newPagingItem(Material material, int cmd, String display) {
+        ItemStack item = new ItemStack(material,1);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(display);
         meta.setUnbreakable(true);
         meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        meta.setCustomModelData(cmd);
         item.setItemMeta(meta);
         return item;
-    }
+    }*/
 
 }

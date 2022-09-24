@@ -28,11 +28,13 @@ import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.ConversionUtil_1_13;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ZipUtil;
+import net.minecraft.world.item.ItemSaddle;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -140,6 +142,13 @@ public class SpecialBlockInventoryData {
                 if(section.contains("damageCurrent")) {
                     currentCategoryItem.setDurability((short)section.getInt("damageCurrent"));
                 }
+                if(section.contains("cmdCurrent")) {
+                    ItemMeta meta = currentCategoryItem.getItemMeta();
+                    if(meta!=null) {
+                        meta.setCustomModelData(section.getInt("cmdCurrent"));
+                        currentCategoryItem.setItemMeta(meta);
+                    }
+                }
                 boolean useSubcategories = section.getBoolean("useSubcategories",false);
                 inventory.setCategoryItems(categoryKey, null, true, categoryItem, currentCategoryItem, useSubcategories);
             }
@@ -174,6 +183,9 @@ public class SpecialBlockInventoryData {
                             break;
                         case BLOCK_ON_WATER_CONNECT:
                             blockData = SpecialBlockOnWaterConnect.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH:
+                            blockData = SpecialBlockBranch2.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
                         case BLOCK_CONNECT:
                             blockData = SpecialBlockConnect.loadFromConfig(section, fullName(rpName,itemKey));
@@ -256,6 +268,7 @@ public class SpecialBlockInventoryData {
                     }
                     ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
                     if(blockData !=null && inventoryItem!=null && !inventoryItem.getType().equals(Material.AIR)) {
+                        blockData.loadPriority(section);
                         blockData.loadNextBlock(section,rpName);
                         blockData.loadBlockCollection(section,rpName);
                         blockList.add(blockData);
@@ -378,6 +391,7 @@ public class SpecialBlockInventoryData {
         //Material material = block.getType();
         //byte dataValue = block.getData();
         List<SpecialBlock> vanillaMatches = new ArrayList<>();
+        List<SpecialBlock> specialMatches = new ArrayList<>();
         for(SpecialBlock data: blockList) {
 /*if(data.getId().contains("redstone_dust_power4_center")) {
 Logger.getGlobal().info("data " + data.getBlockData().getAsString(true));
@@ -388,10 +402,17 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
                 if(data instanceof SpecialBlockVanilla) {
                     vanillaMatches.add(data);
                 } else {
-                    return searchInventories.get(rpName).getItem(data.getId());
+                    specialMatches.add(data);
                 }
             }
         }
+        SpecialBlock result = null;
+        for(SpecialBlock data: specialMatches) {
+            if(result == null || data.getPriority() > result.getPriority()) {
+                result = data;
+            }
+        }
+        if(result != null) return searchInventories.get(rpName).getItem(result.getId());
         if(!vanillaMatches.isEmpty()) {
             return searchInventories.get(rpName).getItem(vanillaMatches.get(0).getId());
         }
@@ -482,6 +503,9 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
                 ((Damageable)im).setDamage(dam);
             } else {
                 config.set("damage",null);
+            }
+            if(config.isInt("cmd")) {
+                im.setCustomModelData(config.getInt("cmd"));
             }
             im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp,name)}));
             im.setUnbreakable(true);

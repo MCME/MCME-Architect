@@ -26,6 +26,8 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
@@ -80,7 +82,12 @@ public class SpecialBlockItemFourDirections extends SpecialBlockItemOrientable {
         dataFaces[3] = (config.isInt("dataValueWest")?(byte) config.getInt("dataValueWest"):data);*/
         BlockData[] data = SpecialBlockOrientable.loadBlockDataFromConfig(config, fourFaces);
         Material materialContent = matchMaterial(config.getString("contentItem",""));
-        Integer[] contentDamage = getContentDamage(config.getString("contentDamage","0"));
+        Integer[] contentDamage;
+        if (config.isSet("contentCmd")) {
+            contentDamage = getContentDamage(config.getString("contentCmd","0"));
+        } else {
+            contentDamage = getContentDamage(config.getString("contentDamage", "0"));
+        }
         double contentHeight = config.getDouble("contentHeight",0);
         return new SpecialBlockItemFourDirections(id, data, 
                                                      materialContent, 

@@ -93,9 +93,9 @@ public class SpecialSavedInventoryData {
         ItemStack item = (ItemStack) categoryConfig.get("item");
         UUID owner = UUID.fromString(categoryConfig.getString("owner"));
         boolean isPrivate = categoryConfig.getBoolean("isPrivate");
-        inventory.setCategoryItems(categoryName, owner, isPrivate, item, 
-                                   new ItemStack(CustomInventoryState.pagingMaterial,1,
-                                                 CustomInventoryState.pageDown), false);
+        inventory.setCategoryItems(categoryName, owner, isPrivate, item,
+                CustomInventoryState.newPagingItem(CustomInventoryState.pagingMaterial,
+                                                 CustomInventoryState.pageDown, "page down"), false);
         List<?> itemConfig = config.getList("items");
         for(Object itemData: itemConfig) {
             inventory.add((ItemStack)itemData, categoryName, false);
@@ -172,7 +172,7 @@ public class SpecialSavedInventoryData {
 //Logger.getGlobal().info("savedInv: "+inventories.keySet().iterator().next());
 
         if(inv==null) {
-            inv = inventories.get("Gondor");
+            inv = inventories.get("Human");
         }
         if(inv!=null) {
             inv.open(p,null);

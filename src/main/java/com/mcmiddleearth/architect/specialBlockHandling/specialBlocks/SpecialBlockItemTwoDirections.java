@@ -25,6 +25,8 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
@@ -81,7 +83,12 @@ public class SpecialBlockItemTwoDirections extends SpecialBlockItemOrientable {
         //return new SpecialBlockTwoAxis(id, materialAxis, dataAxis);*/
         BlockData[] data = SpecialBlockOrientable.loadBlockDataFromConfig(config, twoAxis);
         Material materialContent = matchMaterial(config.getString("contentItem",""));
-        Integer[] contentDamage = getContentDamage(config.getString("contentDamage","0"));
+        Integer[] contentDamage;
+        if (config.isSet("contentCmd")) {
+            contentDamage = getContentDamage(config.getString("contentCmd","0"));
+        } else {
+            contentDamage = getContentDamage(config.getString("contentDamage", "0"));
+        }
             /*Material[] materialContentAxis = new Material[2];
         materialContentAxis[0] = matchMaterial(config.getString("contentItemX",""));
         materialContentAxis[1] = matchMaterial(config.getString("contentItemZ",""));

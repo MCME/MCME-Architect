@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.command;
 
+import com.google.common.base.Joiner;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
@@ -168,7 +169,8 @@ public class InvCommand extends AbstractArchitectCommand {
                     PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
                     return true;
                 }*/
-                SpecialHeadInventoryData.openSearchInventory(p,args[1].substring(2));
+                SpecialHeadInventoryData.openSearchInventory(p, Joiner.on(" ")
+                        .join(Arrays.copyOfRange(args,1, args.length)).substring(2));
                 return true;
             }
             SpecialHeadInventoryData.openInventory(p);
@@ -241,9 +243,14 @@ public class InvCommand extends AbstractArchitectCommand {
         boolean search = false;
         String searchText = "";
         if(args.length>adaptIndex(1,rpIndex) && (args[0].startsWith("b") || args[0].startsWith("i"))) {
-            if(args[adaptIndex(1,rpIndex)].startsWith("s:")) {
+            int searchIndex = adaptIndex(1,rpIndex);
+            if(args[searchIndex].startsWith("s:")) {
                 search=true;
-                searchText = args[adaptIndex(1,rpIndex)].substring(2);
+                if(rpIndex>searchIndex) {
+                    searchText = Joiner.on(" ").join(Arrays.copyOfRange(args,searchIndex,rpIndex)).substring(2);
+                } else {
+                    searchText = Joiner.on(" ").join(Arrays.copyOfRange(args,searchIndex,args.length)).substring(2);
+                }
                 /*if(args.length<=adaptIndex(2,rpIndex)) {
                     PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
                     return true;
@@ -297,7 +304,7 @@ public class InvCommand extends AbstractArchitectCommand {
             for(int i = 0; i<=NumericUtil.getInt(args[2]);i+=NumericUtil.getInt(args[3])) {
                 for(int j=0; j<NumericUtil.getInt(args[2]);j+=NumericUtil.getInt(args[3])) {
                     
-                    data.placeBlock(start.getRelative(i,0,j), BlockFace.UP, (Player)sender);
+                    data.placeBlock(start.getRelative(i,0,j), BlockFace.UP, start, start.getLocation(), (Player)sender);
                 }
             }
         }

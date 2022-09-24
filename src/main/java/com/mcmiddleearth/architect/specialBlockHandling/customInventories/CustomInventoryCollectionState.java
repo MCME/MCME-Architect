@@ -44,7 +44,7 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
     private final int maskSlot = CustomInventory.CATEGORY_SLOTS + 13;
     private final int backSlot = CustomInventory.CATEGORY_SLOTS + 31;
 
-    private final ItemStack maskItem = new ItemStack(Material.GOLDEN_HELMET,1);
+    private final ItemStack maskItem = new ItemStack(Material.PAPER,1);
 
     public CustomInventoryCollectionState(Map<String, CustomInventoryCategory> categories, CustomInventoryCategory withoutCategory,
                                           Inventory inventory, Player player, ItemStack baseItem) {
@@ -65,7 +65,8 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
         ItemMeta meta = Bukkit.getServer().getItemFactory().getItemMeta(Material.GOLDEN_HELMET);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
         meta.setUnbreakable(true);
-        ((Damageable)meta).setDamage(35);
+        //((Damageable)meta).setDamage(35);
+        meta.setCustomModelData(35);
         maskItem.setItemMeta(meta);
         String foundCat = null;
         for(Map.Entry<String,CustomInventoryCategory> cat: categories.entrySet()) {

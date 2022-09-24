@@ -31,10 +31,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.logging.Logger;
 
 /**
  *
@@ -207,6 +210,16 @@ public class InventoryListener implements Listener{
                 +"\n Bottom Inventory"+(event.getPlayer().getOpenInventory().getBottomInventory())
         +"\n Top Inventory"+(event.getPlayer().getOpenInventory().getTopInventory()));*/
     }
+
+    /*@EventHandler(priority = EventPriority.MONITOR)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if(event.getClickedInventory() != null && event.getClickedInventory().getHolder() != null
+                && (event.getClickedInventory().getHolder() instanceof Player)
+                && PluginData.isModuleEnabled(((Player)event.getClickedInventory().getHolder()).getWorld(), Modules.SPECIAL_BLOCKS_GET)) {
+
+        }
+        Logger.getGlobal().info("CAncelled: "+event.isCancelled());
+    }*/
 
     /*@EventHandler
     public void prepare(CraftItemEvent event) {

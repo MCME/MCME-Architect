@@ -116,7 +116,12 @@ public class RpCommand extends AbstractArchitectCommand {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "That variant is not available. Try 'light' or 'dark'.");
                         return true;
                     }
+                    if(data.getVariant().equals(args[1])) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "You are already using variant "+args[1]);
+                        return true;
+                    }
                     data.setVariant(args[1]);
+                    RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()),(Player)cs,true);
                     PluginData.getMessageUtil().sendInfoMessage(cs, "RP variant set to "
                                     +ccStressed+args[1]+ccInfo+". If this variant is not available for a RP you'll see default variant.");
                     break;
@@ -212,6 +217,9 @@ public class RpCommand extends AbstractArchitectCommand {
             sendHelpMessage((Player)cs,page);
             return true;
         }
+        if(args[0].equalsIgnoreCase("g") || args[0].equalsIgnoreCase("e")) {
+            args[0] = "h";
+        }
         String rpName = RpManager.matchRpName(args[0]);
         if(rpName.equals("")) {
             sendRPNotFoundMessage(cs);
@@ -275,9 +283,8 @@ public class RpCommand extends AbstractArchitectCommand {
     @Override
     protected void sendHelpMessage(Player player, int page) {
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"Resource Pack Switcher -";
-        help = new String[][]{{"/rp e","",": Eriador"},
-                                       {"/rp r","",": Rohan"},
-                                       {"/rp g","",": Gondor"},
+        help = new String[][]{         {"/rp r","",": Rohan"},
+                                       {"/rp h","",": Human (merged Gondor/Eriador)"},
                                        {"/rp l","",": Lothlorien"},
                                        {"/rp d","",": Dwarven (Moria)"},
                                        {"/rp m","",": Mordor"}};

@@ -120,10 +120,7 @@ public class PluginData {
     public static void configureWorld(World world) {
         getOrCreateWorldConfig(world.getName());
         boolean allowMonsters = true;
-        boolean allowAnimals = true;
-        if (PluginData.isModuleEnabled(world, Modules.ANIMAL_SPAWN_BLOCKING)) {
-            allowAnimals = false;
-        }
+        boolean allowAnimals = !PluginData.isModuleEnabled(world, Modules.ANIMAL_SPAWN_BLOCKING);
         if (PluginData.isModuleEnabled(world, Modules.MONSTER_SPAWN_BLOCKING)) {
             allowMonsters = false;
         }
@@ -150,12 +147,17 @@ public class PluginData {
         WorldConfig config = getOrCreateWorldConfig(loc.getWorld().getName());
         return config.getInventoryAccess(inventory);
     }
-    
+
     public static boolean getNoInteraction(Block block) {
         WorldConfig config = getOrCreateWorldConfig(block.getWorld().getName());
         return config.getNoInteraction(block.getBlockData());
     }
-    
+
+    public static boolean getNoConnection(Block block) {
+        WorldConfig config = getOrCreateWorldConfig(block.getWorld().getName());
+        return config.getNoConnection(block.getBlockData());
+    }
+
     public static int getItemBlockBaseLimit(Block block) {
         WorldConfig config = getOrCreateWorldConfig(block.getWorld().getName());
         return config.getItemBlockBaseLimit();

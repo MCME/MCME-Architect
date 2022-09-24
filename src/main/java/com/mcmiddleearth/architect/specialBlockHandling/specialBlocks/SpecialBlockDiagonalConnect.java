@@ -77,7 +77,8 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
     }
 
     @Override
-    public Block getBlock(Block clicked, BlockFace blockFace, Player player) {
+    public Block getBlock(Block clicked, BlockFace blockFace,
+                          Location interactionPoint, Player player) {
         /*if(Math.abs(player.getLocation().getPitch())>45) {
             return super.getBlock(clicked,blockFace,player);
         } else {*/
@@ -85,7 +86,7 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
         //}
     }
 
-    private Block getBlockFromLocation(Block clicked, Location loc) {
+    private static Block getBlockFromLocation(Block clicked, Location loc) {
         Block result;
         if(loc.getPitch()>0) {
             result = clicked.getRelative(BlockFace.UP);
@@ -99,48 +100,53 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
     }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
         if(!player.isSneaking()) {
-            super.placeBlock(blockPlace,blockFace,player);
+            super.placeBlock(blockPlace,blockFace,clicked,interactionPoint,player);
         } else {
             Location loc = player.getLocation().clone();
             loc.setPitch(-loc.getPitch());
             loc.setYaw(loc.getYaw()+180);
-            Block clicked = getBlockFromLocation(blockPlace, loc);
-                //String blockId = SpecialBlockInventoryData.getSpecialBlockDataFromItem(
-                //        SpecialBlockInventoryData.getItem(clicked, SpecialBlockInventoryData.rpName(getId()))).getId();
+            //Block clicked = getBlockFromLocation(blockPlace, loc);
+            //String blockId = SpecialBlockInventoryData.getSpecialBlockDataFromItem(
+            //        SpecialBlockInventoryData.getItem(clicked, SpecialBlockInventoryData.rpName(getId()))).getId();
 //Logger.getGlobal().info("block id: "+blockId);
-           //if(getId().equals(SpecialBlockInventoryData.getSpecialBlockDataFromItem(
+            //if(getId().equals(SpecialBlockInventoryData.getSpecialBlockDataFromItem(
             //        SpecialBlockInventoryData.getItem(clicked, SpecialBlockInventoryData.rpName(getId()))).getId())) {
             if(getBlockDatas()[0].getMaterial().equals(clicked.getType())) {
-                BlockDataManager manager = new BlockDataManager();
-                String searchFor = getBlockFaceFromLoc(player.getLocation(),true).name();
-                BlockData data = clicked.getBlockData();
-                Attribute attrib = manager.getAttribute(data);
-                int i = 0;
-                if (attrib != null) {
-                    int countAttribs = manager.countAttributes(data);
-                    while(!attrib.getName().equalsIgnoreCase(searchFor) && i < countAttribs) {
-                        manager.nextAttribute(data);
-                        attrib = manager.getAttribute(data);
-                        i++;
-                    }
-                    attrib.cycleState();
-                    if(PluginData.isAllowedBlock(player, data)) {
-                        clicked.setBlockData(data, false);
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                clicked.setBlockData(data, false);
-                            }
-                        }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
-                    }
-                }
+                editDiagonal(blockPlace, clicked, player);
             }
         }
     }
 
-    private BlockFace getBlockFaceFromLoc(Location loc, boolean alwaysOpposite) {
+    public static void editDiagonal(Block blockPlace, Block clicked, Player player) {
+        BlockDataManager manager = new BlockDataManager();
+        String searchFor = getBlockFaceFromLoc(player.getLocation(),true).name();
+        BlockData data = clicked.getBlockData();
+        Attribute attrib = manager.getAttribute(data);
+        int i = 0;
+        if (attrib != null) {
+            int countAttribs = manager.countAttributes(data);
+            while(!attrib.getName().equalsIgnoreCase(searchFor) && i < countAttribs) {
+                manager.nextAttribute(data);
+                attrib = manager.getAttribute(data);
+                i++;
+            }
+            attrib.cycleState();
+            if(PluginData.isAllowedBlock(player, data)) {
+                clicked.setBlockData(data, false);
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        clicked.setBlockData(data, false);
+                    }
+                }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+            }
+        }
+    }
+
+    private static BlockFace getBlockFaceFromLoc(Location loc, boolean alwaysOpposite) {
         BlockFace face;
         if(Math.abs(loc.getPitch())>45) {
             face = BlockFace.UP;

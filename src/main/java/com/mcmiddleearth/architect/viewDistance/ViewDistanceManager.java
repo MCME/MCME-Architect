@@ -5,6 +5,7 @@ import com.comphenix.protocol.ProtocolLib;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -30,8 +31,10 @@ public class ViewDistanceManager {
     }
 
     public static Integer getViewDistance(Player player) {
-        return viewDistances.get(player.getUniqueId());
-
+        if(isViewdistanceSet(player)) {
+            return viewDistances.get(player.getUniqueId());
+        }
+        return PluginData.getOrCreateWorldConfig(player.getWorld().getName()).getViewDistance();
     }
 
     public static void setViewDistance(Player player, int viewDistance) {
@@ -42,7 +45,7 @@ public class ViewDistanceManager {
 
     public static void unsetViewDistance(Player player) {
         viewDistances.remove(player.getUniqueId());
-        sendViewDistancePacket(player, Bukkit.getServer().getViewDistance());
+        sendViewDistancePacket(player, getViewDistance(player));
         saveViewDistances();
     }
 

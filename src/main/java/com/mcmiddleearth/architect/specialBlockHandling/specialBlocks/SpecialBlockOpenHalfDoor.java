@@ -69,7 +69,8 @@ public class SpecialBlockOpenHalfDoor extends SpecialBlockFourDirections {
     
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         final BlockState state = getBlockState(blockPlace, blockFace, playerLoc);
         new BukkitRunnable() {

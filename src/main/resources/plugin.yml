@@ -5,7 +5,7 @@ author: Eriol_Eandur
 load: STARTUP
 softdepend: [ProtocolLib,Essentials,dynmap]
 depend: [PluginUtils]
-api-version: 1.15
+api-version: 1.18
 
 commands:
    parrot:
@@ -37,7 +37,7 @@ commands:
       usage: see /armor help
    rp:
       description: Switch resource packs by command
-      usage: /rp Gondor|Eriador|Lothlorien|Rohan|Moria|Mordor
+      usage: /rp Human|Lothlorien|Rohan|Moria|Mordor
    itemblock:
       description: Remove all item block armor stands in a radius
       usage: /itemblock remove <radius>

@@ -152,7 +152,7 @@ public class SpecialItemInventoryData {
     public static boolean openSearchInventory(Player p, String resourcePack, String search) {
         SearchInventory inv = searchInventories.get(resourcePack);
         if(inv==null) {
-            inv = searchInventories.get("Gondor");
+            inv = searchInventories.get("Human");
         }
         if(inv!=null && !inv.isEmpty()) {
             inv.open(p, search);

@@ -18,6 +18,7 @@ package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
@@ -44,7 +45,8 @@ public class SpecialBlockBisected extends SpecialBlockOrientable {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
         BlockFace tempFace = blockFace;
         switch(blockFace) {
             case NORTH:
@@ -59,7 +61,7 @@ public class SpecialBlockBisected extends SpecialBlockOrientable {
                     tempFace = BlockFace.DOWN;
                 }
         }
-        super.placeBlock(blockPlace, tempFace, player);
+        super.placeBlock(blockPlace, tempFace, clicked, interactionPoint, player);
     }
 
     public static SpecialBlockBisected loadFromConfig(ConfigurationSection config, String id) {

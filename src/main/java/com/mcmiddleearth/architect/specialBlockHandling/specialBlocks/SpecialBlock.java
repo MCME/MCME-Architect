@@ -50,6 +50,7 @@ public class SpecialBlock {
     private final BlockData blockData;
     protected final SpecialBlockType type;
     private String nextBlockId;
+    private int priority;
     
     private final Map<String,String> collection = new HashMap<>();
     
@@ -92,6 +93,10 @@ public class SpecialBlock {
         nextBlockId = SpecialBlockInventoryData.fullName(rpName,config.getString("nextBlock",null));
     }
 
+    public void loadPriority(ConfigurationSection config) {
+        priority = config.getInt("priority",1);
+    }
+
     public void loadBlockCollection(ConfigurationSection config, String rpName) {
         try {
             ConfigurationSection section = config.getConfigurationSection("collection");
@@ -124,11 +129,13 @@ public class SpecialBlock {
         return SpecialBlockInventoryData.getSpecialBlock(nextBlockId);
     }
 
-    public Block getBlock(Block clicked, BlockFace blockFace, Player player) {
+    public Block getBlock(Block clicked, BlockFace blockFace,
+                          Location interactionPoint, Player player) {
         return clicked.getRelative(blockFace);
     }
 
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
+                           final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         final BlockState state = getBlockState(blockPlace, blockFace, playerLoc);
         new BukkitRunnable() {
@@ -153,6 +160,8 @@ public class SpecialBlock {
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
     }
+
+    public void handleBlockBreak(BlockState state) {}
     
     protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
         final BlockState state = blockPlace.getState();
@@ -234,5 +243,9 @@ public class SpecialBlock {
 
     public Map<String, String> getCollection() {
         return collection;
+    }
+
+    public int getPriority() {
+        return priority;
     }
 }

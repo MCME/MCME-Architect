@@ -110,7 +110,7 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                     info = info + ccHigh+"Type: "+ccStressed+weRegion.getClass().getSimpleName();
                 }
                 return new ResponsePrompt(info);
-            case "set":
+            case "setborder":
                 Region newWeRegion = WEUtil.getSelection(getPlayer(cc));
                 if(newWeRegion!=null) {
                     getRegion(cc).setRegion(newWeRegion.clone());
@@ -119,7 +119,6 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 } else {
                     return new ResponsePrompt(ccError+"Make a WE selection first");
                 }
-            case "setborder":
             case "setminy":
             case "setmaxy":
             case "addpoint":

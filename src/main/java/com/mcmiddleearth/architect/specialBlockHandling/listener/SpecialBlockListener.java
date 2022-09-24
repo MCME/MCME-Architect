@@ -23,6 +23,7 @@ import com.mcmiddleearth.architect.specialBlockHandling.MushroomBlocks;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
+import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockBranch;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockOnWater;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
@@ -57,6 +58,7 @@ import org.bukkit.material.MaterialData;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.awt.*;
+import java.util.logging.Logger;
 
 /**
  *
@@ -147,7 +149,7 @@ public class SpecialBlockListener extends WatchedListener{
             PluginData.getMessageUtil().sendErrorMessage(player, "Special block data not found, item is probably outdated.");
             return;
         }
-        Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), player);
+        Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), event.getInteractionPoint(), player);
         /*if(data instanceof SpecialBlockOnWater) {
             blockPlace = player.getTargetBlockExact(4, FluidCollisionMode.ALWAYS).getRelative(BlockFace.UP);
         } else {
@@ -164,9 +166,54 @@ public class SpecialBlockListener extends WatchedListener{
         if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
             return;
         }
-        data.placeBlock(blockPlace, event.getBlockFace(), player);
+        data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
     }
-    
+
+    /**
+     * If module SPECIAL_BLOCK_PLACE is enabled in world config file
+     * handles breaking of special blocks from the MCME custom inventories.
+     * @param event
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void breakSpecialBlock(BlockBreakEvent event) {
+//Logger.getGlobal().info("Block break");
+        if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
+            return;
+        }
+//Logger.getGlobal().info("enabled");
+        final Player player = event.getPlayer();
+        String rpName = RpManager.getCurrentRpName(event.getPlayer());
+        ItemStack handItem = event.getPlayer().getInventory().getItemInMainHand();
+        String rpNameItem = SpecialBlockInventoryData.getRpName(handItem);
+        if(!rpNameItem.equals("") && !rpNameItem.equals(rpName)) {
+            PluginData.getMessageUtil().sendErrorMessage(player, "WARNING: Resource pack of your hand item doesn't match your server RP setting.");
+        }
+//Logger.getGlobal().info("rp: "+rpName+ " "+rpNameItem);
+        if(!rpNameItem.equals("")) {
+            rpName = rpNameItem;
+        }
+        if(!rpName.equals("")) {
+            SpecialBlock data = SpecialBlockInventoryData.getSpecialBlock(
+                    SpecialBlockInventoryData.getSpecialBlockId(
+                            SpecialBlockInventoryData.getItem(event.getBlock(), rpName)));
+            if (data == null) return;
+//Logger.getGlobal().info("Found special block data: "+data.getId());
+            if (!TheGafferUtil.hasGafferPermission(player, event.getBlock().getLocation())) {
+                return;
+            }
+//Logger.getGlobal().info("Has permission!");
+            BlockState state = event.getBlock().getState();
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    data.handleBlockBreak(state);
+                }
+            }.runTaskLater(ArchitectPlugin.getPluginInstance(), 6);
+        }
+    }
+
+
+
     /**
      * If module SPECIAL_BLOCK_PLACE is enabled in world config file
      * prevents changes of item durability.

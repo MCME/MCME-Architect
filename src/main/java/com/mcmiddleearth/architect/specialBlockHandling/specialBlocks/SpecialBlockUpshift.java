@@ -60,8 +60,9 @@ public class SpecialBlockUpshift extends SpecialBlock {
         return new SpecialBlockUpshift(id, data);
     }
     
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
-        super.placeBlock(blockPlace.getRelative(BlockFace.UP),blockFace,player);
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
+        super.placeBlock(blockPlace.getRelative(BlockFace.UP),blockFace,clicked,interactionPoint,player);
     }
     
 }

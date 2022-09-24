@@ -32,11 +32,11 @@ import org.bukkit.inventory.meta.ItemMeta;
  */
 public abstract class CustomInventoryState {
     
-    final static public Material pagingMaterial = Material.GOLDEN_HELMET;
-    final static public short pageUp = 1;
-    final static public short pageDown = 2;
-    final static public short pageLeft = 3;
-    final static public short pageRight = 4;
+    final static public Material pagingMaterial = Material.PAPER;
+    final static public int pageUp = 1;
+    final static public int pageDown = 2;
+    final static public int pageLeft = 3;
+    final static public int pageRight = 4;
     
     protected final Map<String,CustomInventoryCategory> categories;
 
@@ -266,13 +266,14 @@ public abstract class CustomInventoryState {
         return result;
     }
     
-    protected ItemStack newPagingItem(Material material, short damage, String display) {
-        ItemStack item = new ItemStack(material,1,damage);
+    public static ItemStack newPagingItem(Material material, int cmd, String display) {
+        ItemStack item = new ItemStack(material,1);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(display);
         meta.setUnbreakable(true);
         meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        meta.setCustomModelData(cmd);
         item.setItemMeta(meta);
         return item;
     }

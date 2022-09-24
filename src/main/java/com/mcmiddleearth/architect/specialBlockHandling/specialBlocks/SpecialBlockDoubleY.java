@@ -109,12 +109,13 @@ public class SpecialBlockDoubleY extends SpecialBlock{
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+                           final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
-        super.placeBlock(blockPlace, BlockFace.DOWN,player);
+        super.placeBlock(blockPlace, BlockFace.DOWN, clicked, interactionPoint, player);
         Block upper = blockPlace.getRelative(BlockFace.UP);
         if(upper.isEmpty()) {
-            super.placeBlock(upper, BlockFace.UP,player);
+            super.placeBlock(upper, BlockFace.UP, clicked, interactionPoint, player);
         }
     }
     
