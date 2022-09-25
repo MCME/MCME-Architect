@@ -9,10 +9,7 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.mcmiddleearth.architect.WorldGeneration.SuperflatChunkGenerator;
 import com.mcmiddleearth.architect.WorldGeneration.WorldGenerationManager;
-import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
-import com.mcmiddleearth.architect.additionalCommands.ArchitectCommand;
-import com.mcmiddleearth.architect.additionalCommands.FbtCommand;
-import com.mcmiddleearth.architect.additionalCommands.ParrotCommand;
+import com.mcmiddleearth.architect.additionalCommands.*;
 import com.mcmiddleearth.architect.additionalListeners.*;
 import com.mcmiddleearth.architect.armorStand.ArmorStandEditorCommand;
 import com.mcmiddleearth.architect.armorStand.ArmorStandListener;
@@ -139,6 +136,7 @@ public class ArchitectPlugin extends JavaPlugin {
         setCommandExecutor("redo", new RedoCommand());
         setCommandExecutor("flip", new FlipCommand());
         setCommandExecutor("viewdistance", new ViewDistanceCommand());
+        setCommandExecutor("weselect", new WeSelectCommand());
         //setCommandExecutor("speed", new SpeedCommand());
 //        setCommandExecutor("newafkk", new NewAfkCommand());
         

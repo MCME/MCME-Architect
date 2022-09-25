@@ -109,7 +109,7 @@ public class AdditionalProtectionListener extends WatchedListener{
     
    @EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
     public void flowerPotProtection(PlayerInteractEvent event) {
-        if(!isFlowerPot(event.getClickedBlock().getType())) {
+        if(event.getClickedBlock()==null || !isFlowerPot(event.getClickedBlock().getType())) {
             return;
         }
         Player player = event.getPlayer();
