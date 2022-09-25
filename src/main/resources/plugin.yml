@@ -91,6 +91,10 @@ commands:
       description: change your client side view distance
       usage: /viewdistance [#viewdistance] | default
       aliases: viewdist
+   weselect:
+      description: selects we commands to use with block picker
+      usage: /weselect <we_command>
+      aliases: [wes]
 permissions:
     architect.*:
         description: Allows to use all features of Architect plugin
