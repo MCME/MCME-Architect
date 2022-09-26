@@ -112,8 +112,8 @@ public class BlockPickerListener implements Listener {
                                                     +block.getLocation().getBlockY()+", "
                                                     +block.getLocation().getBlockZ()+ChatColor.AQUA+")");
                 for(String line: info) {
-                    new FancyMessage(PluginData.getMessageUtil())
-                            .addClickable(PluginData.getMessageUtil().infoNoPrefix()+line, block.getBlockData().getAsString())
+                    new FancyMessage(MessageType.INFO,PluginData.getMessageUtil())
+                            .addClickable(line, block.getBlockData().getAsString())
                             .send(player);
                     //PluginData.getMessageUtil().sendIndentedInfoMessage(player, line);
                 }
