@@ -19,18 +19,12 @@ package com.mcmiddleearth.architect.additionalCommands;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
-import com.mcmiddleearth.architect.specialBlockHandling.listener.BlockPickerListener;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  *
@@ -63,26 +57,40 @@ public class WeSelectCommand extends AbstractArchitectCommand {
             weSelectShift.put(uuid, "");
             }
 
-            if(args[0].equalsIgnoreCase("reset")){
+            if(args[0].equalsIgnoreCase("help")){
+                int page = 1;
+                if(args.length>1 && NumericUtil.isInt(args[1])) page = NumericUtil.getInt(args[1]);
+                sendHelpMessage(player,page);
+            }else if(args[0].equalsIgnoreCase("reset")){
                 weSelect.replace(uuid,"");
                 weSelectShift.replace(uuid,"");
+                sendStringReset(sender);
             } else if(args[0].equalsIgnoreCase("show")){
-                // send Message
+                sendShow(sender,weSelectShift.get(uuid),weSelect.get(uuid));
             } else if(args[0].equalsIgnoreCase("shift")) {
                 if(args.length > 2){
                     String args_added = "";
                     for(int i = 1; i < args.length;i++) args_added = args_added + " " + args[i];
                     args_added = args_added.substring(1);
                     weSelectShift.replace(uuid,args_added);
-                }else weSelectShift.replace(uuid,args[0]);
+                    sendStringSet(sender,args_added,true);
+                }else {
+                    weSelectShift.replace(uuid, args[0]);
+                    sendStringSet(sender,args[0],true);
+                }
             } else {
                 if(args.length > 1){
                     String args_added = "";
                     for(int i = 0;i < args.length; i++) args_added = args_added + " " + args[i];
                     args_added = args_added.substring(1);
                     weSelect.replace(uuid,args_added);
-                }else weSelect.replace(uuid,args[0]);
+                    sendStringSet(sender,args_added,false);
+                }else {
+                    weSelect.replace(uuid, args[0]);
+                    sendStringSet(sender,args[0],false);
+                }
             }
+            return true;
         }
         sendNotEnabledErrorMessage(player);
         return true;
@@ -105,15 +113,17 @@ public class WeSelectCommand extends AbstractArchitectCommand {
     }
 
     private void sendStringReset(CommandSender cs){
-
+        PluginData.getMessageUtil().sendInfoMessage(cs,"The command was reset.");
     }
 
-    private void sendShow(CommandSender cs,String shift, String no_sneaking){
-
+    private void sendShow(CommandSender cs,String sneaking, String no_sneaking){
+        PluginData.getMessageUtil().sendInfoMessage(cs,"You set the command: '"+no_sneaking+"' to left click.");
+        PluginData.getMessageUtil().sendInfoMessage(cs,"You set the command: '"+sneaking+"' to shift left click");
     }
 
-    private void sendStringSet(CommandSender cs,boolean shift){
-
+    private void sendStringSet(CommandSender cs, String command, boolean shift){
+        if(shift) PluginData.getMessageUtil().sendInfoMessage(cs,"You set the command: '"+command+"' to left click.");
+        else PluginData.getMessageUtil().sendInfoMessage(cs,"You set the command: '"+command+"' to shift left click");
     }
 
     @Override
@@ -123,12 +133,25 @@ public class WeSelectCommand extends AbstractArchitectCommand {
 
     @Override
     public String getShortDescription() {
-        return ": ....";
+        return ": WE-Select Command.";
     }
 
     @Override
     public String getUsageDescription() {
-        return ": ....";
+        return ": Set command before left-clicking block info in chat. # can work as placeholder for the info.";
     }
-    
+
+    @Override
+    protected void sendHelpMessage(Player player, int page){
+        List<String[]> helpList = new ArrayList<>();
+        helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"WeSelect Command -";
+        help = new String[][]{
+                {"/weselect show","",": Shows the currently set commands."},
+                {"/weselect reset","",": Resets the commands to nothing."},
+                {"/weselect ","<command>",": Sets the command for normal left click."},
+                {"/weselect shift ","<command>",": Sets the command for shift left lick."}};
+        helpList.addAll(Arrays.asList(help));
+        help = helpList.toArray(help);
+        super.sendHelpMessage(player,page);
+    }
 }
