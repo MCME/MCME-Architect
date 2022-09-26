@@ -108,6 +108,7 @@ public class BlockPickerListener implements Listener {
                     preSet = preSet.replace(placeholder,block.getBlockData().getAsString());
                     FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
                             .addClickable(block.getBlockData().getAsString(),preSet);
+                    message.send(player);
                 }else{
                     FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
                             .addClickable(block.getBlockData().getAsString(), preSet+block.getBlockData().getAsString());
