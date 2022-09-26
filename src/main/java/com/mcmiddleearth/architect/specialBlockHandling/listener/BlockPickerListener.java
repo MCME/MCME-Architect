@@ -111,7 +111,7 @@ public class BlockPickerListener implements Listener {
                     message.send(player);
                 }else{
                     FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
-                            .addClickable(block.getBlockData().getAsString(), preSet+block.getBlockData().getAsString());
+                            .addClickable(block.getBlockData().getAsString(), preSet+" "+block.getBlockData().getAsString());
                     message.send(player);
                 }
             } else {
@@ -131,7 +131,7 @@ public class BlockPickerListener implements Listener {
                 }else{
                     for(String line: info) {
                         new FancyMessage(MessageType.INFO,PluginData.getMessageUtil())
-                                .addClickable(line, preSet+block.getBlockData().getAsString())
+                                .addClickable(line, preSet+" "+block.getBlockData().getAsString())
                                 .send(player);
                     }
                 }
