@@ -28,7 +28,7 @@ import java.util.*;
 
 /**
  *
- * @author Eriol_Eandur
+ * @author Jubo
  */
 public class WeSelectCommand extends AbstractArchitectCommand {
 
@@ -44,7 +44,7 @@ public class WeSelectCommand extends AbstractArchitectCommand {
         Player player = (Player)sender;
         if(PluginData.isModuleEnabled(player.getWorld(), Modules.SPECIAL_BLOCKS_FLINT))
         {
-            if(!PluginData.hasPermission(player, Permission.ARCHITECT_WESELECT)) {
+            if(!PluginData.hasPermission(player, Permission.WE_SELECT)) {
                 PluginData.getMessageUtil().sendNoPermissionError(sender);
                 return true;
             }
@@ -128,7 +128,7 @@ public class WeSelectCommand extends AbstractArchitectCommand {
 
     @Override
     public String getHelpPermission() {
-        return Permission.ARCHITECT_WESELECT.getPermissionNode();
+        return Permission.WE_SELECT.getPermissionNode();
     }
 
     @Override
