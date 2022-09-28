@@ -146,6 +146,7 @@ permissions:
             architect.armorStandEditor.trusted: true
             architect.chunkupdate: true
             architect.get.private: true
+            architect.weselect: true
     architect.ranks.adventurer: 
         descriptions: Permission for MCME Adventurers
         default: op
