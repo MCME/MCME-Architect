@@ -18,6 +18,7 @@ package com.mcmiddleearth.architect.specialBlockHandling.listener;
 
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.additionalCommands.WeSelectCommand;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
@@ -44,7 +45,8 @@ import java.util.List;
  * @author Eriol_Eandur
  */
 public class BlockPickerListener implements Listener {
-    
+
+    private static final String placeholder = "#";
     /**
      * If module SPECIAL_BLOCK_FLINT is enabled in world config file
      * gives a player a block in inventory when right-clicking the corresponding
@@ -101,25 +103,40 @@ public class BlockPickerListener implements Listener {
                     event.getClickedBlock():event.getPlayer().getTargetBlock(null, 1000));
             Player player = event.getPlayer();
             if(player.isSneaking()) {
-                //PluginData.getMessageUtil().sendInfoMessage(player, block.getBlockData().getAsString());
-                FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
-                        .addClickable(block.getBlockData().getAsString(), block.getBlockData().getAsString());
-                message.send(player);
+                String preSet = WeSelectCommand.getWeSelect(player.getUniqueId(),true);
+                if(preSet.contains(placeholder)){
+                    preSet = preSet.replace(placeholder,block.getBlockData().getAsString());
+                    FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                            .addClickable(block.getBlockData().getAsString(),preSet);
+                    message.send(player);
+                }else{
+                    FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                            .addClickable(block.getBlockData().getAsString(), preSet+" "+block.getBlockData().getAsString());
+                    message.send(player);
+                }
             } else {
+                String preSet = WeSelectCommand.getWeSelect(player.getUniqueId(),false);
                 List<String> info = new BlockDataManager().getBlockInfo(block.getBlockData(),block.getData());
                 PluginData.getMessageUtil().sendInfoMessage(player, "Data for block at ("+ChatColor.GREEN
-                                                    +block.getLocation().getBlockX()+", "
-                                                    +block.getLocation().getBlockY()+", "
-                                                    +block.getLocation().getBlockZ()+ChatColor.AQUA+")");
-                for(String line: info) {
-                    new FancyMessage(PluginData.getMessageUtil())
-                            .addClickable(PluginData.getMessageUtil().infoNoPrefix()+line, block.getBlockData().getAsString())
-                            .send(player);
-                    //PluginData.getMessageUtil().sendIndentedInfoMessage(player, line);
+                        +block.getLocation().getBlockX()+", "
+                        +block.getLocation().getBlockY()+", "
+                        +block.getLocation().getBlockZ()+ChatColor.AQUA+")");
+                if(preSet.contains("#")){
+                    preSet = preSet.replace(placeholder,block.getBlockData().getAsString());
+                    for(String line: info) {
+                        new FancyMessage(MessageType.INFO,PluginData.getMessageUtil())
+                                .addClickable(line, preSet)
+                                .send(player);
+                    }
+                }else{
+                    for(String line: info) {
+                        new FancyMessage(MessageType.INFO,PluginData.getMessageUtil())
+                                .addClickable(line, preSet+" "+block.getBlockData().getAsString())
+                                .send(player);
+                    }
                 }
             }
             ChunkUpdateUtil.sendUpdates(block, player);
         }
     }
-
 }
