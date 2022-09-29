@@ -25,6 +25,7 @@ import com.mcmiddleearth.architect.bannerEditor.BannerEditorMode;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.blockData.attributes.Attribute;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
+import com.mcmiddleearth.architect.specialBlockHandling.command.SwitchStickCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
 import com.mcmiddleearth.pluginutil.EventUtil;
@@ -75,7 +76,9 @@ public class BlockCycleListener implements Listener {
             if(!PluginData.checkBuildPermissions(p,block.getLocation(),Permission.CYCLE_BLOCKS)) {
                 return;
             }
-            
+            if(!SwitchStickCommand.getSwitchSick(p.getUniqueId())){
+                return;
+            }
             BlockDataManager blockDataManager = getOrCreateBlockDataManager(p);
             blockDataManager.nextAttribute(block.getBlockData());
             Attribute attrib = blockDataManager.getAttribute(block.getBlockData());
@@ -110,6 +113,9 @@ public class BlockCycleListener implements Listener {
             if(armorStand!=null) {
                 cycleItemBlock(armorStand);
             } else {
+                if(!SwitchStickCommand.getSwitchSick(p.getUniqueId())){
+                    return;
+                }
                 BlockData data = block.getBlockData();
                 BlockDataManager blockDataManager = getOrCreateBlockDataManager(p);
                 Attribute attrib = blockDataManager.getAttribute(data);

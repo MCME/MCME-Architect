@@ -95,6 +95,10 @@ commands:
       description: selects we commands to use with block picker
       usage: /weselect <we_command>
       aliases: [wes]
+   switchstick:
+      description: disables the stick for block interaction
+      usage: /switchstick
+      aliases: swst
 permissions:
     architect.*:
         description: Allows to use all features of Architect plugin
@@ -183,6 +187,7 @@ permissions:
             architect.noPhysicsList.view: true
             architect.signEditor: true
             architect.viewdistance: true
+            architect.switchstick: true
     architect.copypaste:
         description: Allows to use /copy /paste and /rot
         default: op
