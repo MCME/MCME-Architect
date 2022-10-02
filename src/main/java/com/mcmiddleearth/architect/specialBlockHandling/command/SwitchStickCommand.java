@@ -18,8 +18,6 @@ import java.util.*;
  */
 public class SwitchStickCommand extends AbstractArchitectCommand {
 
-    private final static Map<UUID,Boolean> switchStick = new HashMap<>();
-
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
         if (!(sender instanceof Player)) {
@@ -52,13 +50,6 @@ public class SwitchStickCommand extends AbstractArchitectCommand {
         }
         sendNotEnabledErrorMessage(sender);
         return true;
-    }
-
-    public static Boolean getSwitchSick(UUID uuid){
-        /*if(!switchStick.containsKey(uuid)){
-            switchStick.put(uuid,false);
-        }*/
-        return !switchStick.containsKey(uuid) || switchStick.get(uuid);
     }
 
     private void sendNotEnabledErrorMessage(CommandSender sender) {
