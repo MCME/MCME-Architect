@@ -33,13 +33,9 @@ public class SwitchStickCommand extends AbstractArchitectCommand {
             }
             UUID uuid = player.getUniqueId();
 
-            if(args[0].equalsIgnoreCase("help")){
-                int page = 1;
-                if(args.length>1 && NumericUtil.isInt(args[1])) page = NumericUtil.getInt(args[1]);
-                sendHelpMessage(player,page);
-            }else {
+            if(args.length < 1) {
                 if (!switchStick.containsKey(uuid)) {
-                    switchStick.put(uuid, true);
+                    switchStick.put(uuid, false);
                 }
                 if (switchStick.get(uuid)) {
                     switchStick.replace(uuid, false);
@@ -48,6 +44,10 @@ public class SwitchStickCommand extends AbstractArchitectCommand {
                     switchStick.replace(uuid, true);
                     sendStickSwitchedMessage(sender,true);
                 }
+            }else if(args[0].equalsIgnoreCase("help")){
+                int page = 1;
+                if(args.length>1 && NumericUtil.isInt(args[1])) page = NumericUtil.getInt(args[1]);
+                sendHelpMessage(player,page);
             }
             return true;
         }
