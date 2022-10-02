@@ -60,7 +60,7 @@ public class PluginData {
     private static int entityLimitRadius = 80;
 
     private static final File switchStickDir = new File(ArchitectPlugin.getPluginInstance().getDataFolder() + File.separator + "SwitchStick");
-    private static final File switckStickFile = new File(switchStickDir,"switchstick.yml");
+    private static final File switckStickFile = new File(switchStickDir,"switchStickConfig.yml");
     private static final YamlConfiguration Stickconfig = YamlConfiguration.loadConfiguration(switckStickFile);;
     
     private final static String ENITIY_LIMIT_SECTION = "EntityLimit";
