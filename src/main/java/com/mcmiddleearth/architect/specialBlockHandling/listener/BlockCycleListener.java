@@ -25,8 +25,8 @@ import com.mcmiddleearth.architect.bannerEditor.BannerEditorMode;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.blockData.attributes.Attribute;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
-import com.mcmiddleearth.architect.specialBlockHandling.command.SwitchStickCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SwitchStickData;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import org.bukkit.Material;
@@ -76,7 +76,8 @@ public class BlockCycleListener implements Listener {
             if(!PluginData.checkBuildPermissions(p,block.getLocation(),Permission.CYCLE_BLOCKS)) {
                 return;
             }
-            if(!SwitchStickCommand.getSwitchSick(p.getUniqueId())){
+            if(new SwitchStickData().isSwitchStick(p.getUniqueId().toString())){
+                sendStickDisabledMessage(p);
                 return;
             }
             BlockDataManager blockDataManager = getOrCreateBlockDataManager(p);
@@ -113,7 +114,8 @@ public class BlockCycleListener implements Listener {
             if(armorStand!=null) {
                 cycleItemBlock(armorStand);
             } else {
-                if(!SwitchStickCommand.getSwitchSick(p.getUniqueId())){
+                if(new SwitchStickData().isSwitchStick(p.getUniqueId().toString())){
+                    sendStickDisabledMessage(p);
                     return;
                 }
                 BlockData data = block.getBlockData();
@@ -172,6 +174,9 @@ public class BlockCycleListener implements Listener {
     private void sendNotEnabledErrorMessage(Player player) {
         PluginData.getMessageUtil().sendErrorMessage(player, "Block editor is not enabled for this world.");
     }
-        
+
+    private void sendStickDisabledMessage(Player player) {
+        PluginData.getMessageUtil().sendErrorMessage(player,"The stick is disabled. You can turn it on with /switchstick.");
+    }
 
 }

@@ -35,6 +35,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -57,8 +58,26 @@ public class PluginData {
     
     private static int entityStandLimit = 1000;
     private static int entityLimitRadius = 80;
+
+    private static final File switchStickDir = new File(ArchitectPlugin.getPluginInstance().getDataFolder() + File.separator + "SwitchStick");
     
     private final static String ENITIY_LIMIT_SECTION = "EntityLimit";
+
+    static{
+        if(!ArchitectPlugin.getPluginInstance().getDataFolder().exists()){
+            ArchitectPlugin.getPluginInstance().getDataFolder().mkdirs();
+        }
+
+        if(!switchStickDir.exists()){
+            switchStickDir.mkdirs();
+            File switchStickConfig = new File(switchStickDir,"switchStickConfig.yml");
+            try {
+                switchStickConfig.createNewFile();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
     
     public static boolean isModuleEnabled(World world, Modules modul) {
         WorldConfig config = getOrCreateWorldConfig(world.getName());
@@ -248,5 +267,9 @@ public class PluginData {
 
     public static int getEntityLimitRadius() {
         return entityLimitRadius;
+    }
+
+    public static File getSwitchStickDir() {
+        return switchStickDir;
     }
 }
