@@ -50,11 +50,11 @@ public class WeSelectCommand extends AbstractArchitectCommand {
             }
             UUID uuid = player.getUniqueId();
 
-            if (!weSelect.containsKey(player)) {
+            if (!weSelect.containsKey(uuid)) {
                 weSelect.put(uuid,"");
             }
-            if(!weSelectShift.containsKey(player)) {
-            weSelectShift.put(uuid, "");
+            if(!weSelectShift.containsKey(uuid)) {
+                weSelectShift.put(uuid, "");
             }
 
             if(args[0].equalsIgnoreCase("help")){
@@ -75,8 +75,8 @@ public class WeSelectCommand extends AbstractArchitectCommand {
                     weSelectShift.replace(uuid,args_added);
                     sendStringSet(sender,args_added,true);
                 }else {
-                    weSelectShift.replace(uuid, args[0]);
-                    sendStringSet(sender,args[0],true);
+                    weSelectShift.replace(uuid, args[1]);
+                    sendStringSet(sender,args[1],true);
                 }
             } else {
                 if(args.length > 1){
@@ -122,7 +122,7 @@ public class WeSelectCommand extends AbstractArchitectCommand {
     }
 
     private void sendStringSet(CommandSender cs, String command, boolean shift){
-        if(shift) PluginData.getMessageUtil().sendInfoMessage(cs,"You set the command: '"+command+"' to left click.");
+        if(!shift) PluginData.getMessageUtil().sendInfoMessage(cs,"You set the command: '"+command+"' to left click.");
         else PluginData.getMessageUtil().sendInfoMessage(cs,"You set the command: '"+command+"' to shift left click");
     }
 

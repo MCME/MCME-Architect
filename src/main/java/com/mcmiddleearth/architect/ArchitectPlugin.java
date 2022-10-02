@@ -34,6 +34,7 @@ import com.mcmiddleearth.architect.signEditor.SignCommand;
 import com.mcmiddleearth.architect.signEditor.SignListener;
 import com.mcmiddleearth.architect.specialBlockHandling.command.GetCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.command.InvCommand;
+import com.mcmiddleearth.architect.specialBlockHandling.command.SwitchStickCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.data.*;
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockListener;
@@ -137,6 +138,7 @@ public class ArchitectPlugin extends JavaPlugin {
         setCommandExecutor("flip", new FlipCommand());
         setCommandExecutor("viewdistance", new ViewDistanceCommand());
         setCommandExecutor("weselect", new WeSelectCommand());
+        setCommandExecutor("switchstick", new SwitchStickCommand());
         //setCommandExecutor("speed", new SpeedCommand());
 //        setCommandExecutor("newafkk", new NewAfkCommand());
         
