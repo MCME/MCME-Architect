@@ -55,7 +55,7 @@ public class SwitchStickCommand extends AbstractArchitectCommand {
         return true;
     }
 
-    public static Boolean getSwitchSick(UUID uuid){
+    public static Boolean getSwitchStick(UUID uuid){
         if(!switchStick.containsKey(uuid)){
             switchStick.put(uuid,false);
         }
