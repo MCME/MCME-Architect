@@ -45,7 +45,7 @@ import java.util.*;
 public class PluginData {
     
     private static final Map<String,WorldConfig> worldConfigs = new HashMap<>();
-    
+
     private static YamlConfiguration defaultWorldConfig = new YamlConfiguration();
     
     private static final String defaultKey = "-default";
@@ -60,6 +60,8 @@ public class PluginData {
     private static int entityLimitRadius = 80;
 
     private static final File switchStickDir = new File(ArchitectPlugin.getPluginInstance().getDataFolder() + File.separator + "SwitchStick");
+    private static final File switckStickFile = new File(switchStickDir,"switchStickConfig.yml");
+    private static final YamlConfiguration Stickconfig = YamlConfiguration.loadConfiguration(switckStickFile);;
     
     private final static String ENITIY_LIMIT_SECTION = "EntityLimit";
 
@@ -77,6 +79,7 @@ public class PluginData {
                 throw new RuntimeException(e);
             }
         }
+
     }
     
     public static boolean isModuleEnabled(World world, Modules modul) {
@@ -271,5 +274,22 @@ public class PluginData {
 
     public static File getSwitchStickDir() {
         return switchStickDir;
+    }
+
+    public static boolean isSwitchStick(String uuid){
+        return Stickconfig.contains(uuid);
+    }
+
+    public static void saveStickEntry(String uuid, Object bool){
+        if((Boolean) bool){
+            Stickconfig.set(uuid,bool);
+        }else{
+            Stickconfig.set(uuid,null);
+        }
+        try {
+            Stickconfig.save(switckStickFile);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
