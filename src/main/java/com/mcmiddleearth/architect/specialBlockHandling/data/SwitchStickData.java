@@ -31,7 +31,7 @@ public class SwitchStickData {
     }
 
     public void saveEntry(String uuid, Object bool){
-        if(switchStick.containsKey(uuid)){
+        if(!switchStick.containsKey(uuid)){
             switchStick.put(uuid,bool);
         }else{
             switchStick.replace(uuid,bool);
