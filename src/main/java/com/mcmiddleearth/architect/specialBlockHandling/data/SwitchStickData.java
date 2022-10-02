@@ -8,7 +8,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  *
@@ -19,17 +18,24 @@ public class SwitchStickData {
     private File file;
     private FileConfiguration config;
 
+    private static Map<String,Object> switchStick = new HashMap<>();
+
     public SwitchStickData(){
         this.file = new File(PluginData.getSwitchStickDir(),"switchstick.yml");
         config = YamlConfiguration.loadConfiguration(file);
     }
 
-    public boolean isSwitchStick(String uuid){
-        return config.contains(uuid);
+    public static boolean isSwitchStick(String uuid){
+        switchStick = PluginData.getSwitchStickMap();
+        return switchStick.containsKey(uuid);
     }
 
     public void saveEntry(String uuid, Object bool){
-
+        if(switchStick.containsKey(uuid)){
+            switchStick.put(uuid,bool);
+        }else{
+            switchStick.replace(uuid,bool);
+        }
         if((Boolean) bool){
             config.set(uuid,bool);
         }else{

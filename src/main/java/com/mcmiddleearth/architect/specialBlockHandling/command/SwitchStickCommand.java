@@ -34,7 +34,7 @@ public class SwitchStickCommand extends AbstractArchitectCommand {
             SwitchStickData stickData = new SwitchStickData();
 
             if(args.length < 1) {
-                if(stickData.isSwitchStick(uuid.toString())){
+                if(SwitchStickData.isSwitchStick(uuid.toString())){
                     stickData.saveEntry(uuid.toString(),false);
                     sendStickSwitchedMessage(sender,false);
                 }else{

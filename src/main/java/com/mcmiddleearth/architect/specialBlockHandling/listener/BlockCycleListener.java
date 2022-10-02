@@ -76,7 +76,7 @@ public class BlockCycleListener implements Listener {
             if(!PluginData.checkBuildPermissions(p,block.getLocation(),Permission.CYCLE_BLOCKS)) {
                 return;
             }
-            if(new SwitchStickData().isSwitchStick(p.getUniqueId().toString())){
+            if(!SwitchStickData.isSwitchStick(p.getUniqueId().toString())){
                 sendStickDisabledMessage(p);
                 return;
             }
@@ -114,7 +114,7 @@ public class BlockCycleListener implements Listener {
             if(armorStand!=null) {
                 cycleItemBlock(armorStand);
             } else {
-                if(new SwitchStickData().isSwitchStick(p.getUniqueId().toString())){
+                if(!SwitchStickData.isSwitchStick(p.getUniqueId().toString())){
                     sendStickDisabledMessage(p);
                     return;
                 }

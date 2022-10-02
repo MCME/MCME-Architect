@@ -45,6 +45,8 @@ import java.util.*;
 public class PluginData {
     
     private static final Map<String,WorldConfig> worldConfigs = new HashMap<>();
+
+    private static Map<String,Object> switchStick = new HashMap<>();
     
     private static YamlConfiguration defaultWorldConfig = new YamlConfiguration();
     
@@ -77,6 +79,7 @@ public class PluginData {
                 throw new RuntimeException(e);
             }
         }
+
     }
     
     public static boolean isModuleEnabled(World world, Modules modul) {
@@ -130,6 +133,7 @@ public class PluginData {
         for(World world: Bukkit.getWorlds()) {
             configureWorld(world);
         }
+        switchStick = YamlConfiguration.loadConfiguration(new File(switchStickDir,"switchstick.yml")).getValues(false);
     }
     
     public static boolean hasPermission(CommandSender player, Permission perm) {
@@ -272,4 +276,6 @@ public class PluginData {
     public static File getSwitchStickDir() {
         return switchStickDir;
     }
+
+    public static Map<String,Object> getSwitchStickMap(){return switchStick;}
 }
