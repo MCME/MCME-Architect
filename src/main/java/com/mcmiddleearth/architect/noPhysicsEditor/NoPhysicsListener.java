@@ -39,6 +39,8 @@ import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockRedstoneEvent;
 
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
@@ -85,10 +87,12 @@ public class NoPhysicsListener extends WatchedListener{
         }            
     }
     
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
     private void onPlaceNoPhysicsListBlock(BlockPlaceEvent event) {
+//Logger.getGlobal().info("Cancelled: "+event.isCancelled()+" can build: "+event.canBuild());
         if(event.canBuild() 
                 && TheGafferUtil.hasGafferPermission(event.getPlayer(),event.getBlock().getLocation())) {
+//Logger.getGlobal().info("connect");
             connectNoPhysicsBlocks(event.getBlock());
         }
     }

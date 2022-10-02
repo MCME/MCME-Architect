@@ -188,6 +188,7 @@ public class SpecialBlockInventoryData {
                             blockData = SpecialBlockBranch2.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
                         case BLOCK_CONNECT:
+//Logger.getGlobal().info("Block connect:"+itemKey);
                             blockData = SpecialBlockConnect.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
                         case DIAGONAL_CONNECT:

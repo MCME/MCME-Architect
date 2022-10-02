@@ -55,7 +55,9 @@ public class SpecialBlockConnect extends SpecialBlock {
         }
     }
 
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Player player) {
+    @Override
+    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
+                           final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         final BlockState state = getBlockState(blockPlace, blockFace, playerLoc);
         new BukkitRunnable() {
@@ -63,12 +65,12 @@ public class SpecialBlockConnect extends SpecialBlock {
             public void run() {
                 //state.update(true, false);
                 blockPlace.setBlockData(state.getBlockData(), false);
-                DevUtil.log("Special block place: ID "+state.getType()+" - DV "+state.getRawData());
+                DevUtil.log("Special block connect place: ID "+state.getType()+" - DV "+state.getRawData());
                 final BlockState tempState = getBlockState(blockPlace, blockFace, playerLoc);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        DevUtil.log("Special block place x2: loc: "+tempState.getX()+" "+tempState.getY()+" "+tempState.getZ()+" - ID "+state.getType()+" - DV "+state.getRawData());
+                        DevUtil.log("Special block connect place x2: loc: "+tempState.getX()+" "+tempState.getY()+" "+tempState.getZ()+" - ID "+state.getType()+" - DV "+state.getRawData());
                         //tempState.update(true, false);
                         blockPlace.setBlockData(tempState.getBlockData(),false);
                         // We just want VANILLA block type to connect.
