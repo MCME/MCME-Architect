@@ -4,7 +4,6 @@ import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
-import com.mcmiddleearth.architect.specialBlockHandling.data.SwitchStickData;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -31,14 +30,13 @@ public class SwitchStickCommand extends AbstractArchitectCommand {
                 return true;
             }
             UUID uuid = player.getUniqueId();
-            SwitchStickData stickData = new SwitchStickData();
 
             if(args.length < 1) {
-                if(SwitchStickData.isSwitchStick(uuid.toString())){
-                    stickData.saveEntry(uuid.toString(),false);
+                if(PluginData.isSwitchStick(uuid.toString())){
+                    PluginData.saveStickEntry(uuid.toString(),false);
                     sendStickSwitchedMessage(sender,false);
                 }else{
-                    stickData.saveEntry(uuid.toString(),true);
+                    PluginData.saveStickEntry(uuid.toString(),true);
                     sendStickSwitchedMessage(sender,true);
                 }
             }else if(args[0].equalsIgnoreCase("help")){

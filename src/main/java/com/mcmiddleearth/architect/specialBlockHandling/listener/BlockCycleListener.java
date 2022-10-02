@@ -26,7 +26,6 @@ import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.blockData.attributes.Attribute;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
-import com.mcmiddleearth.architect.specialBlockHandling.data.SwitchStickData;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import org.bukkit.Material;
@@ -76,7 +75,7 @@ public class BlockCycleListener implements Listener {
             if(!PluginData.checkBuildPermissions(p,block.getLocation(),Permission.CYCLE_BLOCKS)) {
                 return;
             }
-            if(!SwitchStickData.isSwitchStick(p.getUniqueId().toString())){
+            if(!PluginData.isSwitchStick(p.getUniqueId().toString())){
                 sendStickDisabledMessage(p);
                 return;
             }
@@ -114,7 +113,7 @@ public class BlockCycleListener implements Listener {
             if(armorStand!=null) {
                 cycleItemBlock(armorStand);
             } else {
-                if(!SwitchStickData.isSwitchStick(p.getUniqueId().toString())){
+                if(!PluginData.isSwitchStick(p.getUniqueId().toString())){
                     sendStickDisabledMessage(p);
                     return;
                 }
