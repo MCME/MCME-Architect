@@ -286,7 +286,7 @@ public class SpecialBlockListener extends WatchedListener{
         }
     }
         
-    @EventHandler(priority = EventPriority.LOWEST) 
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void blockPlayerInteraction(PlayerInteractEvent event) { //used for item blocks
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.BLOCK_PLAYER_INTERACTION)
                 || !(event.getPlayer() instanceof Player)) {
@@ -298,7 +298,7 @@ public class SpecialBlockListener extends WatchedListener{
         }
     }
     
-    @EventHandler(priority = EventPriority.LOWEST) //TODO make configurable
+    @EventHandler(priority = EventPriority.HIGHEST) //TODO make configurable
     public void blockVanillaOrientations(BlockPlaceEvent event) {
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
             return;
@@ -316,7 +316,7 @@ public class SpecialBlockListener extends WatchedListener{
      * prevents player from changing armor stands used for item blocks.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.LOWEST) 
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void blockArmorAtItemBlocks(PlayerInteractAtEntityEvent event) { //used for item blocks
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)
                 || !(event.getPlayer() instanceof Player)) {
