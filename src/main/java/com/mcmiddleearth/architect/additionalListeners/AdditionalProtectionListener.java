@@ -145,7 +145,7 @@ public class AdditionalProtectionListener extends WatchedListener{
         }
     }
 
-    @EventHandler(priority=EventPriority.NORMAL)
+    @EventHandler(priority=EventPriority.HIGH)
     public void entityInteract(EntityChangeBlockEvent event) {
         if(event.getEntity() instanceof Boat) {
             if((PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.LILY_PAD_PROTECTION))) {
@@ -154,7 +154,7 @@ public class AdditionalProtectionListener extends WatchedListener{
         }
     }
 
-    @EventHandler(priority=EventPriority.NORMAL)
+    @EventHandler(priority=EventPriority.HIGH)
     public void restoneInteract(PlayerInteractEvent event) {
         if(event.hasBlock() && event.getClickedBlock().getType().equals(Material.REDSTONE_WIRE)) {
             if((PluginData.isModuleEnabled(event.getPlayer().getWorld(),Modules.REDSTONE_PROTECTION))) {
