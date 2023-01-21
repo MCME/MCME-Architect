@@ -128,7 +128,8 @@ public class RpDynmapUtil {
                                                                getZPoints(region), false);
             areaMarker.setFillStyle(areaOpacity, areaColor);
             areaMarker.setLineStyle(borderWidth, borderOpacity, borderColor);
-            areaMarker.setDescription(region.getName()+": Weight: "+region.getWeight());
+            //areaMarker.setRangeY(region.getWeight()*10, region.getWeight()*10);
+            areaMarker.setDescription(region.getName()+" (RP: "+region.getRp()+", Weight: "+region.getWeight()+")");
         }
     }
     

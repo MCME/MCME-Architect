@@ -71,6 +71,7 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 if(NumericUtil.isInt(words[1]) && NumericUtil.getInt(words[1])>0) {
                     getRegion(cc).setWeight(NumericUtil.getInt(words[1]));
                     RpManager.saveRpRegion(getRegion(cc));
+                    RpManager.updateDynmapRegions();
                     return new ResponsePrompt("Region weight set to: "+words[1]);
                 } else {
                     return new ResponsePrompt("Weight must be a number greater 0.");
@@ -83,6 +84,7 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 if(!rp.equalsIgnoreCase("")) {
                     getRegion(cc).setRp(rp);
                     RpManager.saveRpRegion(getRegion(cc));
+                    RpManager.updateDynmapRegions();
                     return new ResponsePrompt("RP changed to: "+rp);
                 } else {
                     return new ResponsePrompt("No RP found for name: "+words[1]);
@@ -115,6 +117,7 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 if(newWeRegion!=null) {
                     getRegion(cc).setRegion(newWeRegion.clone());
                     RpManager.saveRpRegion(getRegion(cc));
+                    RpManager.updateDynmapRegions();
                     return new ResponsePrompt("Region borders changed to current selection.");
                 } else {
                     return new ResponsePrompt(ccError+"Make a WE selection first");
@@ -143,8 +146,8 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                         default:
                             return new ResponsePrompt(ccError+"Invalid subcommand.");
                     }
-                    RpManager.updateDynmapRegions();
                     RpManager.saveRpRegion(getRegion(cc));
+                    RpManager.updateDynmapRegions();
                     return new ResponsePrompt("Region borders edited.");
                 }
                 if(words.length<2) {
@@ -194,6 +197,7 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 region.setName(words[1]);
                 RpManager.saveRpRegion(region);
                 RpManager.addRegion(region);
+                RpManager.updateDynmapRegions();
                 return new ResponsePrompt("Region was renamed to: "+words[1]);
             case "quit":
                 return Prompt.END_OF_CONVERSATION;

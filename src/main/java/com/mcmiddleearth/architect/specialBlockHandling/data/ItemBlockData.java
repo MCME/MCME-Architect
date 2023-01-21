@@ -18,16 +18,16 @@ package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundGroup;
+import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockSupport;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -209,5 +209,25 @@ Logger.getGlobal().info("****************");*/
                 return Sound.ENTITY_ARMOR_STAND_FALL;
             }
         };
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Block block) {
+        return false;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Location location) {
+        return false;
+    }
+
+    @Override
+    public boolean isFaceSturdy(@NotNull BlockFace blockFace, @NotNull BlockSupport blockSupport) {
+        return false;
+    }
+
+    @Override
+    public boolean isRandomlyTicked() {
+        return false;
     }
 }

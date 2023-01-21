@@ -101,7 +101,7 @@ public class SpecialBlockListener extends WatchedListener{
      * handles placement of blocks from the MCME custom inventories.
      * @param event 
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     public void placeSpecialBlock(PlayerInteractEvent event) {
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)
                 || event.getHand() == null
