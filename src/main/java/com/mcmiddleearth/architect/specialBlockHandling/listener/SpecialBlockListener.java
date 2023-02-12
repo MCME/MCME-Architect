@@ -57,6 +57,8 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.material.MaterialData;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
@@ -101,7 +103,7 @@ public class SpecialBlockListener extends WatchedListener{
      * handles placement of blocks from the MCME custom inventories.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.LOW)
+    @EventHandler
     public void placeSpecialBlock(PlayerInteractEvent event) {
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)
                 || event.getHand() == null
@@ -171,13 +173,16 @@ public class SpecialBlockListener extends WatchedListener{
      * handles breaking of special blocks from the MCME custom inventories.
      * @param event
      */
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.LOW)
     public void breakSpecialBlock(BlockBreakEvent event) {
-//Logger.getGlobal().info("Block break");
+Logger.getGlobal().info("Block break");
+event.setCancelled(true);
+if(true) return;
+
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
             return;
         }
-//Logger.getGlobal().info("enabled");
+Logger.getGlobal().info("enabled");
         final Player player = event.getPlayer();
         String rpName = RpManager.getCurrentRpName(event.getPlayer());
         ItemStack handItem = event.getPlayer().getInventory().getItemInMainHand();
@@ -185,7 +190,7 @@ public class SpecialBlockListener extends WatchedListener{
         if(!rpNameItem.equals("") && !rpNameItem.equals(rpName)) {
             PluginData.getMessageUtil().sendErrorMessage(player, "WARNING: Resource pack of your hand item doesn't match your server RP setting.");
         }
-//Logger.getGlobal().info("rp: "+rpName+ " "+rpNameItem);
+Logger.getGlobal().info("rp: "+rpName+ " "+rpNameItem);
         if(!rpNameItem.equals("")) {
             rpName = rpNameItem;
         }
@@ -194,8 +199,10 @@ public class SpecialBlockListener extends WatchedListener{
                     SpecialBlockInventoryData.getSpecialBlockId(
                             SpecialBlockInventoryData.getItem(event.getBlock(), rpName)));
             if (data == null) return;
-//Logger.getGlobal().info("Found special block data: "+data.getId());
+Logger.getGlobal().info("Found special block data: "+data.getId());
             if (!TheGafferUtil.hasGafferPermission(player, event.getBlock().getLocation())) {
+Logger.getGlobal().warning("Cancel block break!");
+                event.setCancelled(true);
                 return;
             }
 //Logger.getGlobal().info("Has permission!");
