@@ -196,29 +196,23 @@ public class CopyPasteManager {
     }
     
     private static boolean saveUndoData(Player player, IStoragePlot plot) {
-        Logger.getGlobal().info("saving undo data.");
         return saveData(player, undoData, plot);
     }
     
     private static boolean saveRedoData(Player player, IStoragePlot plot) {
-        Logger.getGlobal().info("saving redo data.");
         return saveData(player, redoData, plot);
     }
     
     private static boolean saveData(Player player, Map<UUID,List<UndoData>> map, IStoragePlot plot) {
-        List<UndoData> list = map.get(player.getUniqueId());
-        if(list==null) {
-            list = new ArrayList<>();
-            map.put(player.getUniqueId(), list);
-        }
+        List<UndoData> list = map.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>());
         try{
             UndoData data = new UndoData(plot);
             list.add(data);
             if(list.size()>maxSize) {
                 list.remove(0);
             }
-            Logger.getGlobal().info("Data size is: "+ getUndoDataSize(player,map)
-                                                                         +" byte from "+list.size()+" entries (max "+maxSize+").");
+            //Logger.getGlobal().info("Data size is: "+ getUndoDataSize(player,map)
+            //                                                             +" byte from "+list.size()+" entries (max "+maxSize+").");
         } catch (CopyPasteException ex) {
             return false;
         }

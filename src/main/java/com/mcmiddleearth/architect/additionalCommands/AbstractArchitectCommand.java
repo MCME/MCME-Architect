@@ -26,6 +26,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 /**
  *
@@ -34,10 +35,10 @@ import org.bukkit.entity.Player;
 public abstract class AbstractArchitectCommand implements TabExecutor{
 
     @Override
-    public List<String> onTabComplete(CommandSender sender,
-                                               Command command,
-                                               java.lang.String alias,
-                                               java.lang.String[] args) {
+    public List<String> onTabComplete(@NotNull CommandSender sender,
+                                      Command command,
+                                      java.lang.String alias,
+                                      java.lang.String[] args) {
         return new ArrayList<>();
     }
     

@@ -23,6 +23,7 @@ import com.mcmiddleearth.pluginutil.NumericUtil;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -36,7 +37,7 @@ public class WeSelectCommand extends AbstractArchitectCommand {
     private final static Map<UUID,String> weSelectShift = new HashMap<>();
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
         if (!(sender instanceof Player)) {
             PluginData.getMessageUtil().sendPlayerOnlyCommandError(sender);
             return true;

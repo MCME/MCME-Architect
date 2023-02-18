@@ -175,14 +175,14 @@ public class SpecialBlockListener extends WatchedListener{
      */
     @EventHandler(priority = EventPriority.LOW)
     public void breakSpecialBlock(BlockBreakEvent event) {
-Logger.getGlobal().info("Block break");
-event.setCancelled(true);
-if(true) return;
+//Logger.getGlobal().info("Block break");
+//event.setCancelled(true);
+//if(true) return;
 
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
             return;
         }
-Logger.getGlobal().info("enabled");
+//Logger.getGlobal().info("enabled");
         final Player player = event.getPlayer();
         String rpName = RpManager.getCurrentRpName(event.getPlayer());
         ItemStack handItem = event.getPlayer().getInventory().getItemInMainHand();
@@ -190,7 +190,7 @@ Logger.getGlobal().info("enabled");
         if(!rpNameItem.equals("") && !rpNameItem.equals(rpName)) {
             PluginData.getMessageUtil().sendErrorMessage(player, "WARNING: Resource pack of your hand item doesn't match your server RP setting.");
         }
-Logger.getGlobal().info("rp: "+rpName+ " "+rpNameItem);
+//Logger.getGlobal().info("rp: "+rpName+ " "+rpNameItem);
         if(!rpNameItem.equals("")) {
             rpName = rpNameItem;
         }
@@ -199,9 +199,9 @@ Logger.getGlobal().info("rp: "+rpName+ " "+rpNameItem);
                     SpecialBlockInventoryData.getSpecialBlockId(
                             SpecialBlockInventoryData.getItem(event.getBlock(), rpName)));
             if (data == null) return;
-Logger.getGlobal().info("Found special block data: "+data.getId());
+//Logger.getGlobal().info("Found special block data: "+data.getId());
             if (!TheGafferUtil.hasGafferPermission(player, event.getBlock().getLocation())) {
-Logger.getGlobal().warning("Cancel block break!");
+//Logger.getGlobal().warning("Cancel block break!");
                 event.setCancelled(true);
                 return;
             }

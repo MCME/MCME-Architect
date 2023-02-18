@@ -73,11 +73,11 @@ commands:
       aliases: [pst, ps]
    undo:
       description: rolls back your last /paste command(s)
-      usage: /un <#>
+      usage: /un <#steps>
       aliases: [un, ud]
    redo:
       description: restores a previously undone /paste command(s)
-      usage: /re <#>
+      usage: /re <#steps>
       aliases: [re, rd]
    flip:
       description: flips your clipboard

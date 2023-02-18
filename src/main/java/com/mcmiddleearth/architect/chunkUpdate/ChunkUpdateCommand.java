@@ -77,7 +77,7 @@ public class ChunkUpdateCommand extends AbstractArchitectCommand {
         }
         Location low = ((Player) sender).getLocation().add(new Vector(-radius, 0 , -radius));
         Location high = ((Player) sender).getLocation().add(new Vector(radius, 0 , radius));
-        NMSUtil.updatePlayerChunks(low,high);
+        //NMSUtil.updatePlayerChunks(low,high);
         sendChunkUpdateMessage((Player)sender);
         return true;
     }

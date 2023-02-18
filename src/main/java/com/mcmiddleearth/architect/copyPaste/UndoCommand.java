@@ -10,11 +10,12 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
 import com.mcmiddleearth.pluginutil.NumericUtil;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.logging.Logger;
 
 /**
  *
@@ -23,7 +24,7 @@ import org.bukkit.entity.Player;
 public class UndoCommand extends AbstractArchitectCommand {
 
     @Override
-    public boolean onCommand(CommandSender cs, Command cmd, String c, String[] args) {
+    public boolean onCommand(@NotNull CommandSender cs, @NotNull Command cmd, @NotNull String c, String[] args) {
         if (!(cs instanceof Player)) {
             PluginData.getMessageUtil().sendPlayerOnlyCommandError(cs);
             return true;
