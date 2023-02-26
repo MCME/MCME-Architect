@@ -98,7 +98,7 @@ commands:
    switchstick:
       description: disables the stick for block interaction
       usage: /switchstick
-      aliases: swst
+      aliases: [swst,ss]
 permissions:
     architect.*:
         description: Allows to use all features of Architect plugin

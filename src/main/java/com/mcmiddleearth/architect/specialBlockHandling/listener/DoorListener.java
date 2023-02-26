@@ -78,7 +78,7 @@ public class DoorListener extends WatchedListener{
      * Opens double doors simulaneously.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.LOW) 
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void interactAdjacentDoors(PlayerInteractEvent event) {
         if(event.getAction().equals(Action.RIGHT_CLICK_BLOCK)
                 && event.getHand().equals(EquipmentSlot.HAND)

@@ -112,66 +112,6 @@ public class GetCommand extends AbstractArchitectCommand {
         }
         if(args.length<2 || args[1].equals("-o")) {
             if(!GetData.exists(args[0])) {
-                    //|| (!GetData.isOwn(p, args[0]) && GetData.isPrivate(args[0]))) {
-
-// DELETE in final version //
-                        // old get commands for pre-release 
-                if(args[0].toLowerCase().startsWith("l")) {
-                    if(!PluginData.hasPermission(p, Permission.GET_LOGS)) {
-                        PluginData.getMessageUtil().sendNoPermissionError(cs);
-                    } else {
-                        getLogs(p);
-                        PluginData.getMessageUtil().sendInfoMessage(p, "Given six sided logs!");
-                    }
-                    return true;
-                } else if(args[0].toLowerCase().startsWith("d")) {
-                    if(!PluginData.hasPermission(p, Permission.GET_DOORS)) {
-                        PluginData.getMessageUtil().sendNoPermissionError(cs);
-                    } else {
-                        getDoors(p);
-                        PluginData.getMessageUtil().sendInfoMessage(p, "Given half doors!");
-                    }
-                    return true;
-                } else if(args[0].toLowerCase().startsWith("p")) {
-                    if(!PluginData.hasPermission(p, Permission.GET_PLANTS)) {
-                        PluginData.getMessageUtil().sendNoPermissionError(cs);
-                    } else {
-                        getPlants(p);
-                        PluginData.getMessageUtil().sendInfoMessage(p, "Given plants!");
-                    }
-                    return true;
-                } else if(args[0].toLowerCase().startsWith("f")) {
-                    if(!PluginData.hasPermission(p, Permission.GET_PLANTS)) {
-                        PluginData.getMessageUtil().sendNoPermissionError(cs);
-                    } else {
-                        getFlowers(p);
-                        PluginData.getMessageUtil().sendInfoMessage(p, "Given flowers/gems!");
-                    }
-                    return true;
-                } else if(args[0].toLowerCase().startsWith("mu")) {
-                    if(!PluginData.hasPermission(p, Permission.GET_PLANTS)) {
-                        PluginData.getMessageUtil().sendNoPermissionError(cs);
-                    } else {
-                        if(args.length>1 && args[1].equalsIgnoreCase("red")) {
-                            getHugeMushroomsSpecial(p,Material.RED_MUSHROOM_BLOCK);
-                        } else if(args.length>1 && args[1].equalsIgnoreCase("brown")) {
-                            getHugeMushroomsSpecial(p,Material.BROWN_MUSHROOM_BLOCK);
-                        } else  {
-                            getHugeMushrooms(p);
-                        }
-                        PluginData.getMessageUtil().sendInfoMessage(p, "Given mushroom blocks!");
-                    }
-                    return true;
-                } else if(args[0].toLowerCase().startsWith("m")) {
-                    if(!PluginData.hasPermission(p, Permission.GET_MISC)) {
-                        PluginData.getMessageUtil().sendNoPermissionError(cs);
-                    } else {
-                        getMiscellaneous(p);
-                        PluginData.getMessageUtil().sendInfoMessage(p, "Given miscellaneous blocks!");
-                    }
-                    return true;
-                }
-// END DELETE in final version //                
                 sendItemSetNotFoundError(cs);
             } else {
                 giveItems(p, GetData.getItems(args[0]), args.length>1);

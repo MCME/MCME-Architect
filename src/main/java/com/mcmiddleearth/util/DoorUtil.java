@@ -23,6 +23,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.type.Door;
+import org.bukkit.plugin.Plugin;
 // 1.13 removed import org.bukkit.material.Door;
 
 /**
@@ -31,26 +32,12 @@ import org.bukkit.block.data.type.Door;
  */
 public class DoorUtil {
     
-    /* 1.13 removed public static boolean isUpperDoorPart(Block block) { //doesnt'work for powered doors -> should work now
-        // 1.13 removed return block.getData()==8 || block.getData()==9; 
-        BlockData data = block.getBlockData();
-        return (data instanceof Door?((Door)data).getHalf().equals(Bisected.Half.TOP):false);
-               
-    }*/
-
     public static boolean isDoor(Material blockType) {
-        /* 1.13 removed return blockType.equals(Material.OAK_DOOR)
-                || blockType.equals(Material.IRON_DOOR)
-                || blockType.equals(Material.SPRUCE_DOOR)
-                || blockType.equals(Material.BIRCH_DOOR)
-                || blockType.equals(Material.JUNGLE_DOOR)
-                || blockType.equals(Material.ACACIA_DOOR)
-                || blockType.equals(Material.DARK_OAK_DOOR);*/
         return blockType.createBlockData() instanceof Door;
     }
 
     public static boolean isThinWall(Block block) {
-        if(isUpperDoorBlock(block)) {
+        /*if(isUpperDoorBlock(block)) {
             return isDoorBlock(block) && PluginData.getNoInteraction(block);//!(block.getType().equals(Material.IRON_DOOR_BLOCK) 
                                           //|| block.getType().equals(Material.BIRCH_DOOR))
                                       //&& block.getData()>9;                                //check powered state
@@ -59,7 +46,8 @@ public class DoorUtil {
             return isUpperDoorBlock(block) && PluginData.getNoInteraction(block);//!(block.getType().equals(Material.BIRCH_DOOR) 
                                                //|| block.getType().equals(Material.IRON_DOOR_BLOCK))
                                            //&& block.getData()>9;                                //check powered state
-        }
+        }*/
+        return block instanceof Door && PluginData.getNoInteraction(block);
     }
     public static boolean isUpperDoorBlock(Block block) {
         return isDoorBlock(block)
@@ -72,7 +60,8 @@ public class DoorUtil {
     }
     
     public static boolean isDoorBlock(Block block) {
-        return block.getState().getBlockData() instanceof Door;
+        return block.getState().getBlockData() instanceof Door
+                && !PluginData.getNoInteraction(block);
     }
     
     public static boolean isFullDoorAbove(Block block) {

@@ -25,14 +25,14 @@ public enum ArmorStandEditorMode {
     BASE        ("b","",": Selects switch base plate mode"),
     MARKER      ("ma","",": Selects switch marker mode"),
     ARMS        ("a","",": Selects switch arms mode"),
-    SIZE        ("si","",": Selects switch size mode"),
+    STRAIGHT    ("str", "[part]", ": Selects straighten mode."),
+    SIZE        ("s","",": Selects switch size mode"),
     VISIBLE     ("v","",": Selects switch visibility mode"),
     GRAVITY     ("g","",": Selects switch gravity mode"),
     PASTE       ("p","",": Selects paste mode"),
     COPY        ("c","",": Selects copy mode"),
     LOCK        ("l","",": Selects switch lock mode"),
-    ROLLBACK    ("rollback","",": Not implemented"),
-    STRAIGHT    ("str", "[part]", ": Selects straighten mode.");
+    ROLLBACK    ("rollback","",": Not implemented");
     
     private final String name;
     private final String helpText;
