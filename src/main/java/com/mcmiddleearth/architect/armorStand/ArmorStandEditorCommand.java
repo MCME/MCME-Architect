@@ -263,10 +263,10 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                             PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> remove/place helmet item");
                             break;
                         case HAND:
-                            PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> remove/place item in hand");
+                            PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> remove/place item in main hand");
                             break;
                         case OFF_HAND:
-                            PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> remove/place item in off hand. NOT FUNCTIONAL YET");
+                            PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> remove/place item in off hand.");
                             break;
                         case GRAVITY:
                             PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> switch gravity");

@@ -26,6 +26,7 @@ import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.EulerAngle;
 
@@ -149,7 +150,7 @@ public class ArmorStandListener implements Listener {
         ArmorStandGuard.setModifiedFlag(armorStand);
         ArmorStandEditorConfig config = ArmorStandEditorCommand.getPlayerConfig(player);
         ArmorStandEditorMode mode = config.getEditorMode();
-        if(ArmorStandUtil.isLocked(armorStand) 
+        if(ArmorStandUtil.isLocked(armorStand)
                 && !(mode.equals(ArmorStandEditorMode.LOCK) 
                   && player.getItemInHand().getType().equals(Material.STICK))) {
             sendLockedMessage(player);
@@ -158,6 +159,7 @@ public class ArmorStandListener implements Listener {
         int stepInDegree = config.getRotationStep();
         if(!(player.getItemInHand().getType().equals(Material.STICK)
                 || mode.equals(ArmorStandEditorMode.HAND)
+                || mode.equals(ArmorStandEditorMode.OFF_HAND)
                 || mode.equals(ArmorStandEditorMode.HELMET))) {
             return false;
         }
@@ -166,14 +168,28 @@ public class ArmorStandListener implements Listener {
 //Logger.getGlobal().info("mode: "+mode.name());
         switch(mode) {
             case HAND:
+            case OFF_HAND:
+                EntityEquipment equipment = armorStand.getEquipment();
                 if(!rightClick) {
-                    armorStand.setItemInHand(null);
+                    if(mode.equals(ArmorStandEditorMode.HAND))
+                        equipment.setItemInMainHand(null);//armorStand.setItemInHand(null);
+                    else
+                        equipment.setItemInOffHand(null);//armorStand.setItemInHand(null);
                     break;
                 }
-                ItemStack oldItem = armorStand.getItemInHand();
+                ItemStack oldItem;
+                if(mode.equals(ArmorStandEditorMode.HAND))
+                    oldItem = equipment.getItemInMainHand();
+                else
+                    oldItem = equipment.getItemInOffHand();
+                //oldItem= armorStand.getItemInHand();
                 ItemStack newItem = new ItemStack(player.getInventory().getItemInMainHand());
                 newItem.setAmount(1);
-                armorStand.setItemInHand(newItem);
+                if(mode.equals(ArmorStandEditorMode.HAND))
+                    equipment.setItemInMainHand(newItem);//armorStand.setItemInHand(null);
+                else
+                    equipment.setItemInOffHand(newItem);//armorStand.setItemInHand(null);
+                //armorStand.setItemInHand(newItem);
                 if(player.getGameMode().equals(GameMode.SURVIVAL)) {
                     int amount = player.getInventory().getItemInMainHand().getAmount();
                     if(amount==1) {

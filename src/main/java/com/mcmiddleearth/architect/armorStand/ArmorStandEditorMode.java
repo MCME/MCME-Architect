@@ -11,8 +11,8 @@ package com.mcmiddleearth.architect.armorStand;
  */
 public enum ArmorStandEditorMode {
     HELMET      ("he","",": Selects helmet item mode"),
-    HAND        ("h","",": Selects hand item mode"),
-    OFF_HAND    ("o","",": not implemented"),
+    HAND        ("h","",": Selects main hand item mode"),
+    OFF_HAND    ("o","",": Selects off hand item mode"),
     XMOVE       ("mx","",": Selects x-movement mode"),
     YMOVE       ("my","",": Selects y-movement mode"),
     ZMOVE       ("mz","",": Selects z-movement mode"),
