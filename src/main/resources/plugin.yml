@@ -5,7 +5,7 @@ author: Eriol_Eandur
 load: STARTUP
 softdepend: [ProtocolLib,Essentials,dynmap]
 depend: [PluginUtils]
-api-version: 1.19
+api-version: 1.18
 
 commands:
    parrot:
