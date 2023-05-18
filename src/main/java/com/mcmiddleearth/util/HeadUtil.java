@@ -18,23 +18,24 @@ package com.mcmiddleearth.util;
 
 import com.google.common.io.BaseEncoding;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
-import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.UUID;
-import java.util.logging.Level;
-import org.bukkit.Material;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Skull;
 import org.bukkit.block.data.Rotatable;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+
+import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.UUID;
+import java.util.logging.Level;
 
 /**
  *
@@ -82,11 +83,10 @@ public class HeadUtil {
             profileField = skullData.getClass().getDeclaredField("profile");
             profileField.setAccessible(true);
             profileField.set(skullData, profile);
-            //skullData.setRawData((byte)1);
-            Rotatable data = ((Rotatable)skullData.getBlockData());
-            data.setRotation(BlockFace.SOUTH_SOUTH_WEST);
+            skullData.update(true, false);
+            Rotatable data = ((Rotatable)block.getState().getBlockData());
+            data.setRotation(BlockFace.SOUTH_SOUTH_EAST);
             skullData.getBlock().setBlockData(data);
-            //skullData.update(true, false);
         } catch (NoSuchFieldException | SecurityException e) {
             Bukkit.getLogger().log(Level.SEVERE, "No such method exception during reflection.", e);
         } catch (IllegalArgumentException | IllegalAccessException e) {
