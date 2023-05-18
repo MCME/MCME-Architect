@@ -39,6 +39,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Furnace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
@@ -310,8 +311,12 @@ public class SpecialBlockListener extends WatchedListener{
         if(event.getBlockPlaced().getType().equals(Material.PUMPKIN) 
                 || event.getBlockPlaced().getType().equals(Material.END_PORTAL_FRAME) ) {
             BlockState state = event.getBlock().getState();
-            state.setRawData((byte)0);
-            state.getBlock().setBlockData(state.getBlockData(),false);//update(true,false);
+            BlockData data = state.getBlockData();
+            if(data instanceof Directional) {
+                ((Directional) data).setFacing(BlockFace.NORTH);
+            }
+            //state.setRawData((byte)0);
+            state.getBlock().setBlockData(data,false);//update(true,false);
         }
     }
     
