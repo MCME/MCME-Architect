@@ -62,7 +62,7 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
             }
         }
         baseBlock = tempBase;
-        ItemMeta meta = Bukkit.getServer().getItemFactory().getItemMeta(Material.GOLDEN_HELMET);
+        ItemMeta meta = maskItem.getItemMeta();//Bukkit.getServer().getItemFactory().getItemMeta(Material.GOLDEN_HELMET);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
         meta.setUnbreakable(true);
         //((Damageable)meta).setDamage(35);
