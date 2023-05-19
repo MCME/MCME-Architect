@@ -82,11 +82,10 @@ public class HeadUtil {
             profileField = skullData.getClass().getDeclaredField("profile");
             profileField.setAccessible(true);
             profileField.set(skullData, profile);
-            //skullData.setRawData((byte)1);
-            Rotatable data = ((Rotatable)skullData.getBlockData());
-            data.setRotation(BlockFace.SOUTH_SOUTH_WEST);
+            skullData.update(true, false);
+            Rotatable data = ((Rotatable)block.getState().getBlockData());
+            data.setRotation(BlockFace.SOUTH_SOUTH_EAST);
             skullData.getBlock().setBlockData(data);
-            //skullData.update(true, false);
         } catch (NoSuchFieldException | SecurityException e) {
             Bukkit.getLogger().log(Level.SEVERE, "No such method exception during reflection.", e);
         } catch (IllegalArgumentException | IllegalAccessException e) {

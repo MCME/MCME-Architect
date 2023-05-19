@@ -279,6 +279,10 @@ public class CustomHeadManagerData {
         new HeadDataBuilderPlayer(submitter, owner, name);
     }
 
+    public static void submitHeadFromItem(Player submitter, String name) {
+        new HeadDataBuilderItem(submitter, name);
+    }
+
     public static void upload(Player sender, String filename, boolean uploadToReviewFolder) {
         new HeadDataBuilderText(sender, filename, uploadToReviewFolder).start();
     }

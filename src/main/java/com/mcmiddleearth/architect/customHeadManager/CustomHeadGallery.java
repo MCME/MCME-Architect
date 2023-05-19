@@ -188,7 +188,7 @@ public class CustomHeadGallery {
         block = block.getRelative(0, -1, -1);
         for(int i = 0; i<(collection.getAbsoluteName().length)/4+1;i++) {
             blockState = block.getState();
-            blockState.setType(Material.OAK_SIGN);
+            blockState.setType(Material.OAK_WALL_SIGN);
             blockState.update(true, false);
             blockState = block.getState();
             for(int line = 0; line < 4 ; line++) {
