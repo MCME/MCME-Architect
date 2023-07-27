@@ -17,25 +17,18 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import org.mariadb.jdbc.MySQLDataSource;
+
+import java.sql.*;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -47,8 +40,6 @@ public class RpDatabaseConnector {
     private final String dbName;
     private final String dbIp;
     private final int port;
-
-    private final MySQLDataSource dataBase;
 
     private Connection dbConnection;
 
@@ -69,7 +60,6 @@ public class RpDatabaseConnector {
         dbName = config.getString("dbName","development");
         dbIp = config.getString("ip", "localhost");
         port = config.getInt("port",3306);
-        dataBase = new MySQLDataSource(dbIp,port,dbName);
         connect();
         keepAliveTask = new BukkitRunnable() {
             @Override
@@ -113,7 +103,9 @@ public class RpDatabaseConnector {
 
     private synchronized void connect() {
         try {
-            dbConnection = dataBase.getConnection(dbUser, dbPassword);
+            dbConnection = DriverManager.getConnection(
+                    "jdbc:mysql://"+dbIp+":"+port+"/"+dbName,
+                    dbUser, dbPassword);
 
             checkTables();
 
@@ -141,6 +133,9 @@ public class RpDatabaseConnector {
         }
         if(dbConnection!=null) {
             try {
+                insertPlayerRpSettings.close();
+                updatePlayerRpSettings.close();
+                selectPlayerRpSettings.close();
                 dbConnection.close();
             } catch (SQLException ex) {
                 Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
@@ -183,6 +178,7 @@ public class RpDatabaseConnector {
                     data.setCurrentRpUrl(result.getString("currentURL"));
                     data.setVariant(result.getString("variant"));
                     data.setResolution(result.getInt("resolution"));
+                    result.close();
                     dataMap.put(uuid,data);
                 } catch (SQLException ex) {
                     Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
@@ -212,10 +208,13 @@ public class RpDatabaseConnector {
             selectPlayerRpSettings.setString(1, player.getUniqueId().toString());
             ResultSet result = selectPlayerRpSettings.executeQuery();
             if(result.next()) {
+                result.close();
                 updateRpSettings(player, data);
             } else {
+                result.close();
                 insertRpSettings(player, data);
             }
+
         } catch (SQLException ex) {
             Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
             connected = false;

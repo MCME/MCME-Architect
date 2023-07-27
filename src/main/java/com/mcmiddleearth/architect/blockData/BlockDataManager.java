@@ -118,10 +118,19 @@ public class BlockDataManager {
         attributes.add(new SetAttribute("Thickness", PointedDripstone.class, PointedDripstone.Thickness.class));
         attributes.add(new IntAttribute("Charges", RespawnAnchor.class));
         attributes.add(new SetAttribute("Phase", SculkSensor.class, SculkSensor.Phase.class));
+
+        //1.19 additions
+        attributes.add(new BooleanAttribute("CanSummon", SculkShrieker.class));
+        attributes.add(new BooleanAttribute("Shrieking", SculkShrieker.class));
+        attributes.add(new BooleanAttribute("Bloom", SculkCatalyst.class));
+
+        // ChiseledBookshelf
+        // Redstone Rail
+        // SculkCatalyst
+        // SculkShrieker
+
         //Jukebox - has_record read-only
         //Lectern - has_book read-ony
-        //RespawnAnchor - Charges
-        //SculkSensor - sculk_sensor_phase
 
 
     }
@@ -310,6 +319,9 @@ public class BlockDataManager {
             List<Material> sortedMaterials = materials;
             new BukkitRunnable() {
 
+                private final int maxZLength = 500;
+                private final int width = 40;
+                private int startX;
                 private int y, x, z;
                 private int matCounter = -1;
                 private int stateCounter = 0;
@@ -324,6 +336,7 @@ public class BlockDataManager {
                         return;
                     }
                     if(matCounter==-1) {
+                        startX = block.getX();
                         y = block.getY();
                         z = block.getZ();
                     }
@@ -348,10 +361,14 @@ public class BlockDataManager {
                     Logger.getGlobal().log(Level.INFO, 
                                        "Material: {0} placing {1} blockstates, total blockstates: {2}", 
                                        new Object[]{mat.name(), newStates, stateCounter});
-                    x = block.getX();
+                    x = startX;
                     rowStarted = false;
                     placeBlockStates(cachedStatesTree,writer,true);
                     cachedStatesTree = new ArrayList();
+                    if(z > block.getZ()+maxZLength) {
+                        z = block.getZ();
+                        startX = startX + width;
+                    }
                     if(matCounter==sortedMaterials.size()-1) {
                         cancel();
                         try {
@@ -371,7 +388,7 @@ public class BlockDataManager {
                         if(entry instanceof List) {
                             placeBlockStates((List)entry, writer, false);
                             if(!placeInOneRow && rowStarted) {
-                                x = block.getX();
+                                x = startX;
                                 z += 2;
                                 rowStarted = false;
                             }
@@ -401,7 +418,7 @@ public class BlockDataManager {
                         }
                     }
                     if(endWithNewRow || (!placeInOneRow && rowStarted)) {// || openRow) {
-                        x = block.getX();
+                        x = startX;
                         z += 2;
                         rowStarted = false;
                     }

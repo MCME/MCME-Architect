@@ -28,6 +28,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 
 /**
@@ -47,12 +48,14 @@ public class ArmorStandUtil {
         Map<String,Object> result = serializeEntity(armor);
 
         Map<String,Object> items = new HashMap<>();
-        items.put("boots", armor.getBoots().serialize());
-        items.put("chestplate", armor.getChestplate().serialize());
-        items.put("helmet", armor.getHelmet().serialize());
-        items.put("leggins", armor.getLeggings().serialize());
-        items.put("hand", armor.getItemInHand().serialize());
-        
+        EntityEquipment equipment = armor.getEquipment();
+        items.put("boots", equipment.getBoots().serialize());
+        items.put("chestplate", equipment.getChestplate().serialize());
+        items.put("helmet", equipment.getHelmet().serialize());
+        items.put("leggins", equipment.getLeggings().serialize());
+        items.put("hand", equipment.getItemInMainHand().serialize());
+        items.put("offhand", equipment.getItemInOffHand().serialize());
+
         Map<String,Object> pose = new HashMap<>();
         pose.put("body", serializeEulerAngle(armor.getBodyPose()));
         pose.put("leftArm", serializeEulerAngle(armor.getLeftArmPose()));
@@ -93,11 +96,14 @@ public class ArmorStandUtil {
 
                 Map<String,Object> items = getMap(data,"items");//(Map<String,Object>) data.get("items");
                 if(items!=null) {
-                    armor.setBoots(ItemStack.deserialize(getMap(items,"boots")));//(Map<String,Object>)items.get("boots")));
-                    armor.setLeggings(ItemStack.deserialize(getMap(items,"leggins")));//(Map<String,Object>)items.get("leggins")));
-                    armor.setChestplate(ItemStack.deserialize(getMap(items,"chestplate")));//(Map<String,Object>)items.get("chestplate")));
-                    armor.setHelmet(ItemStack.deserialize(getMap(items,"helmet")));//(Map<String,Object>)items.get("helmet")));
-                    armor.setItemInHand(ItemStack.deserialize(getMap(items,"hand")));//(Map<String,Object>)items.get("hand")));
+                    EntityEquipment equipment = armor.getEquipment();
+                    equipment.setBoots(ItemStack.deserialize(getMap(items,"boots")));//(Map<String,Object>)items.get("boots")));
+                    equipment.setLeggings(ItemStack.deserialize(getMap(items,"leggins")));//(Map<String,Object>)items.get("leggins")));
+                    equipment.setChestplate(ItemStack.deserialize(getMap(items,"chestplate")));//(Map<String,Object>)items.get("chestplate")));
+                    equipment.setHelmet(ItemStack.deserialize(getMap(items,"helmet")));//(Map<String,Object>)items.get("helmet")));
+                    equipment.setItemInMainHand(ItemStack.deserialize(getMap(items,"hand")));//(Map<String,Object>)items.get("hand")));
+                    if(items.get("offhand")!=null)
+                        equipment.setItemInOffHand(ItemStack.deserialize(getMap(items,"offhand")));//(Map<String,Object>)items.get("hand")));
                 }
                 
                 try {

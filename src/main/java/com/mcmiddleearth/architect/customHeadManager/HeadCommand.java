@@ -100,15 +100,19 @@ public class HeadCommand extends AbstractArchitectCommand {
         if(args[0].equalsIgnoreCase("submit")) {
             String headName="";
             if(args.length>2) {
-                UUID ownerId=null;
-                try {
-                    ownerId = UUID.fromString(args[1]);
-                }
-                catch(IllegalArgumentException e) {}
-                if(ownerId==null) {
-                    CustomHeadManagerData.submitHead(player, args[1], args[2]);
+                if(args[1].equalsIgnoreCase("handitem")) {
+                    CustomHeadManagerData.submitHeadFromItem(player, args[2]);
+                    return true;
                 } else {
-                    CustomHeadManagerData.submitHead(player, ownerId, args[2]);
+                    UUID ownerId = null;
+                    try {
+                        ownerId = UUID.fromString(args[1]);
+                    } catch (IllegalArgumentException ignored) {}
+                    if (ownerId == null) {
+                        CustomHeadManagerData.submitHead(player, args[1], args[2]);
+                    } else {
+                        CustomHeadManagerData.submitHead(player, ownerId, args[2]);
+                    }
                 }
             } else {
                 CustomHeadManagerData.submitHead(player, player.getUniqueId(), args[1]);

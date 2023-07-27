@@ -16,21 +16,21 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.listener;
 
-import com.mcmiddleearth.architect.*;
+import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Modules;
+import com.mcmiddleearth.architect.Permission;
+import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.mcmiddleearth.architect.specialBlockHandling.MushroomBlocks;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockBranch;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockOnWater;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.TheGafferUtil;
-import org.bukkit.FluidCollisionMode;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -39,6 +39,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Furnace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.*;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
@@ -57,7 +58,6 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.material.MaterialData;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.awt.*;
 import java.util.logging.Logger;
 
 /**
@@ -174,9 +174,12 @@ public class SpecialBlockListener extends WatchedListener{
      * handles breaking of special blocks from the MCME custom inventories.
      * @param event
      */
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.LOW)
     public void breakSpecialBlock(BlockBreakEvent event) {
 //Logger.getGlobal().info("Block break");
+//event.setCancelled(true);
+//if(true) return;
+
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
             return;
         }
@@ -199,6 +202,8 @@ public class SpecialBlockListener extends WatchedListener{
             if (data == null) return;
 //Logger.getGlobal().info("Found special block data: "+data.getId());
             if (!TheGafferUtil.hasGafferPermission(player, event.getBlock().getLocation())) {
+//Logger.getGlobal().warning("Cancel block break!");
+                event.setCancelled(true);
                 return;
             }
 //Logger.getGlobal().info("Has permission!");
@@ -219,14 +224,14 @@ public class SpecialBlockListener extends WatchedListener{
      * prevents changes of item durability.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.HIGH)
     public void blockChangeDurability(PlayerItemDamageEvent event) {
         if(PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
                 event.setCancelled(true);
         }
     }
     
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.HIGH)
     public void blockPressurePlate(EntityInteractEvent event) {
         if(PluginData.isModuleEnabled(event.getBlock().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
                 event.setCancelled(true);
@@ -241,7 +246,7 @@ public class SpecialBlockListener extends WatchedListener{
      * Instead a corresponding full block is placed.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.HIGHEST) 
+    @EventHandler(priority = EventPriority.HIGH)
     public void avoidDoubleSlab(BlockPlaceEvent event) {
         if(PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)
                 && event.getBlockPlaced().getBlockData() instanceof Slab
@@ -268,7 +273,7 @@ public class SpecialBlockListener extends WatchedListener{
      * prevents vanilla leave placement with various distance attribute.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.HIGHEST) 
+    @EventHandler(priority = EventPriority.HIGH)
     public void avoidVanillaLeaves(BlockPlaceEvent event) {
         if(PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)
                 && event.getBlockPlaced().getBlockData() instanceof Leaves) {
@@ -286,7 +291,7 @@ public class SpecialBlockListener extends WatchedListener{
         }
     }
         
-    @EventHandler(priority = EventPriority.LOWEST) 
+    @EventHandler(priority = EventPriority.HIGH)
     public void blockPlayerInteraction(PlayerInteractEvent event) { //used for item blocks
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.BLOCK_PLAYER_INTERACTION)
                 || !(event.getPlayer() instanceof Player)) {
@@ -298,7 +303,7 @@ public class SpecialBlockListener extends WatchedListener{
         }
     }
     
-    @EventHandler(priority = EventPriority.LOWEST) //TODO make configurable
+    @EventHandler(priority = EventPriority.HIGH) //TODO make configurable
     public void blockVanillaOrientations(BlockPlaceEvent event) {
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
             return;
@@ -306,8 +311,12 @@ public class SpecialBlockListener extends WatchedListener{
         if(event.getBlockPlaced().getType().equals(Material.PUMPKIN) 
                 || event.getBlockPlaced().getType().equals(Material.END_PORTAL_FRAME) ) {
             BlockState state = event.getBlock().getState();
-            state.setRawData((byte)0);
-            state.getBlock().setBlockData(state.getBlockData(),false);//update(true,false);
+            BlockData data = state.getBlockData();
+            if(data instanceof Directional) {
+                ((Directional) data).setFacing(BlockFace.NORTH);
+            }
+            //state.setRawData((byte)0);
+            state.getBlock().setBlockData(data,false);//update(true,false);
         }
     }
     
@@ -316,7 +325,7 @@ public class SpecialBlockListener extends WatchedListener{
      * prevents player from changing armor stands used for item blocks.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.LOWEST) 
+    @EventHandler(priority = EventPriority.HIGH)
     public void blockArmorAtItemBlocks(PlayerInteractAtEntityEvent event) { //used for item blocks
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)
                 || !(event.getPlayer() instanceof Player)) {

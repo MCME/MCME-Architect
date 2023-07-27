@@ -119,9 +119,8 @@ public class RpManager {
     
     public static void updateDynmapRegions() {
         RpDynmapUtil.clearMarkers();
-        regions.values().forEach((region) -> {
-            RpDynmapUtil.createMarker(region);
-        });
+        regions.values().stream().sorted(Comparator.comparingInt(RpRegion::getWeight))
+               .forEach(RpDynmapUtil::createMarker);
     }
     
     public static boolean removeRegion(String name) {

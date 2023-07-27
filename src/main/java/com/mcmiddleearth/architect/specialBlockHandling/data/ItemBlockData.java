@@ -18,16 +18,17 @@ package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.SoundGroup;
+import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockSupport;
+import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -93,22 +94,22 @@ Logger.getGlobal().info("specialBlock: "+specialBlock);
     }
     
     @Override
-    public Material getMaterial() {
+    public @NotNull Material getMaterial() {
         return blockData.getMaterial();
     }
 
     @Override
-    public String getAsString() {
+    public @NotNull String getAsString() {
         return NAMESPACE+":"+specialItemBlock.getId()+"[currentDamage:"+currentDamage+",yaw:"+yaw+"]::"+blockData.getAsString(false);
     }
 
     @Override
-    public String getAsString(boolean bln) {
+    public @NotNull String getAsString(boolean bln) {
         return getAsString();
     }
 
     @Override
-    public BlockData merge(BlockData bd) {
+    public @NotNull BlockData merge(@NotNull BlockData bd) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -150,7 +151,7 @@ Logger.getGlobal().info("****************");*/
     }
 
     @Override
-    public BlockData clone() {
+    public @NotNull BlockData clone() {
         return new ItemBlockData(blockData.clone(),specialItemBlock,currentDamage,yaw);
     }
 
@@ -171,7 +172,7 @@ Logger.getGlobal().info("****************");*/
     }
 
     @Override
-    public SoundGroup getSoundGroup() {
+    public @NotNull SoundGroup getSoundGroup() {
         return new SoundGroup() {
 
             @Override
@@ -185,29 +186,75 @@ Logger.getGlobal().info("****************");*/
             }
 
             @Override
-            public Sound getBreakSound() {
+            public @NotNull Sound getBreakSound() {
                 return Sound.ENTITY_ARMOR_STAND_BREAK;
             }
 
             @Override
-            public Sound getStepSound() {
+            public @NotNull Sound getStepSound() {
                 return Sound.ENTITY_ARMOR_STAND_PLACE;
             }
 
             @Override
-            public Sound getPlaceSound() {
+            public @NotNull Sound getPlaceSound() {
                 return Sound.ENTITY_ARMOR_STAND_PLACE;
             }
 
             @Override
-            public Sound getHitSound() {
+            public @NotNull Sound getHitSound() {
                 return Sound.ENTITY_ARMOR_STAND_HIT;
             }
 
             @Override
-            public Sound getFallSound() {
+            public @NotNull Sound getFallSound() {
                 return Sound.ENTITY_ARMOR_STAND_FALL;
             }
         };
     }
+
+    @Override
+    public int getLightEmission() {
+        return 0;
+    }
+
+    @Override
+    public boolean isOccluding() {
+        return false;
+    }
+
+    @Override
+    public boolean requiresCorrectToolForDrops() {
+        return false;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Block block) {
+        return false;
+    }
+
+    @Override
+    public boolean isSupported(@NotNull Location location) {
+        return false;
+    }
+
+    @Override
+    public boolean isFaceSturdy(@NotNull BlockFace blockFace, @NotNull BlockSupport blockSupport) {
+        return false;
+    }
+
+    @Override
+    public boolean isRandomlyTicked() {
+        return false;
+    }
+
+    @Override
+    public boolean isPreferredTool(@NotNull ItemStack itemStack) {
+        return false;
+    }
+
+    @Override
+    public @NotNull PistonMoveReaction getPistonMoveReaction() {
+        return PistonMoveReaction.IGNORE;
+    }
+
 }

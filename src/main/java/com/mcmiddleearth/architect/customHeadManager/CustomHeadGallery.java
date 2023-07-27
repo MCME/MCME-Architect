@@ -188,9 +188,12 @@ public class CustomHeadGallery {
         block = block.getRelative(0, -1, -1);
         for(int i = 0; i<(collection.getAbsoluteName().length)/4+1;i++) {
             blockState = block.getState();
-            blockState.setType(Material.OAK_SIGN);
+            blockState.setType(Material.OAK_WALL_SIGN);
             blockState.update(true, false);
             blockState = block.getState();
+            /*org.bukkit.block.data.type.Sign sign = (org.bukkit.block.data.type.Sign) blockState.getBlockData();
+            sign.setRotation(BlockFace.NORTH);
+            blockState.setBlockData(sign);*/
             for(int line = 0; line < 4 ; line++) {
                 if(4*i+line<collection.getAbsoluteName().length) {
                     ((Sign) blockState).setLine(line, collection.getAbsoluteName()[4*i+line]+'/');
