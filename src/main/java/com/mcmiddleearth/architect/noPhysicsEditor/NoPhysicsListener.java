@@ -17,12 +17,14 @@
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
 import com.destroystokyo.paper.event.block.BlockDestroyEvent;
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.pluginutil.BlockUtil;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.TheGafferUtil;
+import io.papermc.paper.event.entity.EntityInsideBlockEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -38,6 +40,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockRedstoneEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.logging.Logger;
 
@@ -63,6 +66,14 @@ public class NoPhysicsListener extends WatchedListener{
     }
 
     @EventHandler
+    private void noPlayerInteraction(EntityInsideBlockEvent event) {
+        if(PluginData.isModuleEnabled(event.getBlock().getWorld(), Modules.NO_PHYSICS_LIST_ENABLED)
+            && event.getBlock().getType().equals(Material.TRIPWIRE)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     private void noPhysicsList(BlockPhysicsEvent event) {
         if(PluginData.isModuleEnabled(event.getBlock().getWorld(), Modules.NO_PHYSICS_LIST_ENABLED)
                 && NoPhysicsData.isNoPhysicsBlock(event.getBlock())
@@ -70,17 +81,19 @@ public class NoPhysicsListener extends WatchedListener{
             DevUtil.log(4,"no Physics "+event.getBlock().getType().name()+" "+event.getBlock().getX()+" "+event.getBlock().getY()+" "+event.getBlock().getZ()+" "+event.getChangedType());
             event.setCancelled(true);
             // following code causes the server to set the tripwire all the time and crashes
+            //-> use EntityInsideBlockEvent!
             /*if(event.getBlock().getBlockData() instanceof Tripwire) {
                 Block block = event.getBlock();
                 BlockData data = block.getBlockData();
                 DevUtil.log(4,"tripwire powered: "+((Tripwire)data).isPowered());
                 new BukkitRunnable() {
                     public void run() {
-                        event.getBlock().setBlockData(data,true);
+                        event.getBlock().setBlockData(data,true); //no crash with false
                         DevUtil.log(4,"reset tripwire: "+event.getBlock().getType().name()+" "+event.getBlock().getX()+" "+event.getBlock().getY()+" "+event.getBlock().getZ()+" "+event.getChangedType());
                     }
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(),10);
             }*/
+            //end server crashing code
         } else {
             DevUtil.log(4,"allow Physics "+event.getBlock().getType().name()+" "+event.getBlock().getX()+" "+event.getBlock().getY()+" "+event.getBlock().getZ()+" From: "
                     +event.getBlock().getType()+" To: "+event.getChangedType()+" Source: "+event.getSourceBlock().getType()+" "+event.getSourceBlock().getX()+" "+event.getSourceBlock().getY()+" "+event.getSourceBlock().getZ()+" ");
