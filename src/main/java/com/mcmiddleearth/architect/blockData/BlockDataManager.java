@@ -320,7 +320,7 @@ public class BlockDataManager {
             new BukkitRunnable() {
 
                 private final int maxZLength = 500;
-                private final int width = 40;
+                private final int width = 70;
                 private int startX;
                 private int y, x, z;
                 private int matCounter = -1;
