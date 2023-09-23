@@ -165,5 +165,17 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
         }
         return true;
     }
+
+    public BlockFace getOrientation(Block block) {
+        BlockData search = block.getBlockData();
+        for(int i = 0; i<orientations.length; i++) {
+            Orientation orientation = orientations[i];
+            BlockData data = blockData[i];
+            if(search.matches(data)) {
+                return orientation.face;
+            }
+        }
+        return null;
+    }
     
 }

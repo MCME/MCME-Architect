@@ -29,6 +29,11 @@ public enum SpecialBlockType {
     BLOCK_CONNECT, //connects to other blocks like vanilla
     DIAGONAL_CONNECT, //connects to diagonally adjacent blocks made e.g. for branches
     BRANCH, //branch system with connection horizontal, diagonal and steep branches
+    BRANCH_HORIZONTAL,
+    BRANCH_DIAGONAL,
+    BRANCH_STEEP,
+    BRANCH_TWIGS_UPPER,
+    BRANCH_TWIGS_LOWER,
     OPEN_HALF_DOOR, //("open half doors")
     FOUR_DIRECTIONS,//("fourFaced"),
     FOUR_DIRECTIONS_COMPLEX,//("fourFaced") with additional block configuration file for stick editor

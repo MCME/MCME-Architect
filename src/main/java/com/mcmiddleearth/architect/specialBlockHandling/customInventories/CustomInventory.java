@@ -33,6 +33,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.inventory.InventoryType.SlotType;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -48,7 +49,7 @@ public class CustomInventory implements Listener {
     public static final int ITEM_SLOTS = 45;
 
     private final String name;
-   
+
     private final Map<String, CustomInventoryCategory> categories = new LinkedHashMap<>();
 
     private final CustomInventoryCategory withoutCategory = new CustomInventoryCategory(null, true, null,
@@ -95,8 +96,12 @@ public class CustomInventory implements Listener {
                                                                  usesSubcategories));
         }
     }
-    
+
     public void open(Player player, ItemStack collectionBase) {
+        open(player,collectionBase,false);
+    }
+
+    public void open(Player player, ItemStack collectionBase, boolean directGet) {
         int size = CATEGORY_SLOTS + ITEM_SLOTS;//Math.min((items.get(startCategory).size()/9+1)*9,54);
         Inventory inventory = Bukkit.createInventory(player, size, name);
         CustomInventoryState state;
@@ -108,7 +113,7 @@ public class CustomInventory implements Listener {
             }
             state = new CustomInventoryCategoryState(categories, withoutCategory, inventory, player);
         } else {
-            state = new CustomInventoryCollectionState(categories, withoutCategory, inventory, player, collectionBase);
+            state = new CustomInventoryCollectionState(categories, withoutCategory, inventory, player, collectionBase, directGet);
         }
         openInventories.put(inventory, state);
         state.update();
@@ -170,6 +175,14 @@ public class CustomInventory implements Listener {
                 }
                 if(event.getRawSlot() == ((CustomInventoryCollectionState)state).getMaskSlot()) {
                     return;
+                }
+                if(event.getCurrentItem()!=null && event.isLeftClick() && ((CustomInventoryCollectionState) state).isDirectGet()) {
+                    /*ItemStack item = new ItemStack(event.getCurrentItem());
+                    item.setAmount(1);
+                    ((CustomInventoryCollectionState) state).setDirectGet(false);*/
+                    event.getWhoClicked().getInventory().setItem(EquipmentSlot.HAND, new ItemStack(Material.AIR));
+                    Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->
+                        event.getWhoClicked().closeInventory(),1);
                 }
             }
 //Logger.getGlobal().info("onInventoryClick: "+event.isLeftClick() +" "+event.isShiftClick());
@@ -307,7 +320,7 @@ public class CustomInventory implements Listener {
     }
     
     private ItemStack setMenueItemMeta(ItemStack item, String category) {
-        return setItemNameAndLore(item,category,new String[]{menueItemId,category});
+        return setItemNameAndLore(item,null,new String[]{menueItemId,category});
     }
 
     public boolean contains(String id) {

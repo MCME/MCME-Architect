@@ -30,7 +30,7 @@ import org.bukkit.configuration.ConfigurationSection;
  */
 public class SpecialBlockFourDirections extends SpecialBlockOrientable {
     
-    private static final Orientation[] fourFaces = new Orientation[] {
+    protected static final Orientation[] fourFaces = new Orientation[] {
         new Orientation(BlockFace.SOUTH,"South"),
         new Orientation(BlockFace.WEST,"West"),
         new Orientation(BlockFace.NORTH,"North"),

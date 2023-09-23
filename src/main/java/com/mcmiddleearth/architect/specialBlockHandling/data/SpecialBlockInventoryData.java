@@ -187,6 +187,21 @@ public class SpecialBlockInventoryData {
                         case BRANCH:
                             blockData = SpecialBlockBranch2.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
+                        case BRANCH_HORIZONTAL:
+                            blockData = SpecialBlockBranchHorizontal.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_DIAGONAL:
+                            blockData = SpecialBlockBranchDiagonal.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_STEEP:
+                            blockData = SpecialBlockBranchSteep.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS_UPPER:
+                            blockData = SpecialBlockBranchTwigsUpper.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS_LOWER:
+                            blockData = SpecialBlockBranchTwigsLower.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
                         case BLOCK_CONNECT:
 //Logger.getGlobal().info("Block connect:"+itemKey);
                             blockData = SpecialBlockConnect.loadFromConfig(section, fullName(rpName,itemKey));
@@ -303,27 +318,35 @@ public class SpecialBlockInventoryData {
     public static boolean openInventory(Player p, String resourcePack) {
         return openInventory(p,resourcePack,null);
     }
-    
+
     private static boolean openInventory(Player p, String resourcePack, ItemStack collectionBase) {
+        return openInventory(p, resourcePack, collectionBase, false);
+    }
+
+    private static boolean openInventory(Player p, String resourcePack, ItemStack collectionBase, boolean directGet) {
         CustomInventory inv = inventories.get(resourcePack);
         if(inv==null) {
             DevUtil.log("block inventory not found for "+resourcePack);
         }
         if(inv!=null && !inv.isEmpty()) {
-            inv.open(p,collectionBase);
+            inv.open(p,collectionBase, directGet);
             return true;
         }
         return false;
     }
-    
+
     public static boolean openInventory(Player p, ItemStack collectionBase) {
+        return openInventory(p, collectionBase, false);
+    }
+
+    public static boolean openInventory(Player p, ItemStack collectionBase, boolean directGet) {
 //Logger.getGlobal().info(collectionBase.toString());
         SpecialBlock baseBlock = matchSpecialBlock(collectionBase);
 //Logger.getGlobal().info("open Inventory: "+baseBlock);
         if(baseBlock != null) {
             String rpName = SpecialBlockInventoryData.rpName(baseBlock.getId());
 //Logger.getGlobal().info("open Inventory rp: "+rpName);
-            return openInventory(p, rpName, searchInventories.get(rpName).getItem(baseBlock.getId()));
+            return openInventory(p, rpName, searchInventories.get(rpName).getItem(baseBlock.getId()),directGet);
         }
         return false;
     }

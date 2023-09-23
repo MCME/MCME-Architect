@@ -26,6 +26,7 @@ import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInvento
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -108,7 +109,12 @@ public class InventoryListener implements Listener{
                         }
                     };
                     Bukkit.getPluginManager().registerEvents(listener, ArchitectPlugin.getPluginInstance());*/
-                    SpecialHeadInventoryData.openInventory(player);
+                    String blockId = SpecialBlockInventoryData.getSpecialBlockId(handItem);
+                    if(blockId == null) {
+                        SpecialHeadInventoryData.openInventory(player);
+                    } else {
+                        SpecialBlockInventoryData.openInventory(player,handItem,true);
+                    }
                     return;
                 }
                 String rpName = RpManager.getCurrentRpName(player);//1.13 removed: PluginData.getRpName(ResourceRegionsUtil.getResourceRegionsUrl(p));
