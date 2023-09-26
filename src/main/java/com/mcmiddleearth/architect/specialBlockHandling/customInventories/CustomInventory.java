@@ -23,6 +23,7 @@ package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -107,11 +108,17 @@ public class CustomInventory implements Listener {
         CustomInventoryState state;
         if(collectionBase == null) {
             Set<String> categoryNames = categories.keySet();
-            String startCategory = categoryNames.iterator().next();
+            Iterator<String> iterator = categoryNames.iterator();
+            String startCategory = iterator.next();
+Logger.getGlobal().info("Start: "+startCategory);
+            if(startCategory.equals("Blocks") || startCategory.equals("Heads")) {
+                startCategory = iterator.next();
+            }
             if(startCategory == null) {
                 startCategory = "";
             }
             state = new CustomInventoryCategoryState(categories, withoutCategory, inventory, player);
+            state.setCategory(startCategory);
         } else {
             state = new CustomInventoryCollectionState(categories, withoutCategory, inventory, player, collectionBase, directGet);
         }
@@ -260,6 +267,22 @@ public class CustomInventory implements Listener {
             ItemMeta meta = event.getCurrentItem().getItemMeta();
             if(meta!=null && meta.hasLore() && meta.getLore().size()>1 && meta.getLore().get(0).equals(menueItemId)) {
                 //setCategory(event.getInventory(),meta.getLore().get(1));
+                String category = meta.getLore().get(1);
+                if(category.equals("Heads") || category.equals("Blocks")) {
+                    Bukkit.getScheduler().scheduleSyncDelayedTask(ArchitectPlugin.getPluginInstance(),
+                            ()-> {
+                        event.getInventory().close();
+                        Bukkit.getScheduler().scheduleSyncDelayedTask(ArchitectPlugin.getPluginInstance(),
+                                ()-> {
+                                    if(category.equals("Heads")) {
+                                        SpecialHeadInventoryData.openInventory((Player) event.getWhoClicked());
+                                    } else {
+                                        SpecialBlockInventoryData.openInventory((Player) event.getWhoClicked(),
+                                                SpecialBlockInventoryData.getRpName((Player) event.getWhoClicked()));
+                                    }
+                                },1);
+                            }, 1);
+                }
                 state.setCategory(meta.getLore().get(1));
                 state.update();
             }

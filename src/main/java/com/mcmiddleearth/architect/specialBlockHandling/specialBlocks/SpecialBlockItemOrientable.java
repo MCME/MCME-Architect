@@ -25,6 +25,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 /**
@@ -55,9 +56,9 @@ public abstract class SpecialBlockItemOrientable extends SpecialBlockItemBlock {
     
 
     @Override
-    protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
         final BlockState state = blockPlace.getState();
-        state.setBlockData(getBlockData(getBlockFace(playerLoc.getYaw())));
+        state.setBlockData(getBlockData(getBlockFace(player.getLocation().getYaw())));
         return state;
     }
     

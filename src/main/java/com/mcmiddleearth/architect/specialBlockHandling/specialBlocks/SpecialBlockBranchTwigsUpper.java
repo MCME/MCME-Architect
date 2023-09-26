@@ -34,12 +34,12 @@ public class SpecialBlockBranchTwigsUpper extends SpecialBlockFourDirections imp
     }
 
     @Override
-    public Shift getUpper(BlockFace orientation) {
+    public Shift getUpper(BlockFace orientation, Player player) {
         return new Shift(0,0,0);
     }
 
     @Override
-    public Shift getLower(BlockFace orientation) {
+    public Shift getLower(BlockFace orientation, Player player) {
         return switch(orientation) {
             case SOUTH -> new Shift(0,-1,0);
             case EAST -> new Shift(0,-1,0);
@@ -49,5 +49,11 @@ public class SpecialBlockBranchTwigsUpper extends SpecialBlockFourDirections imp
         };
     }
 
+    @Override
+    public boolean isDiagonal() { return false;}
 
+    @Override
+    public BlockFace getDownwardOrientation(BlockFace blockFace) {
+        return blockFace.getOppositeFace();
+    }
 }

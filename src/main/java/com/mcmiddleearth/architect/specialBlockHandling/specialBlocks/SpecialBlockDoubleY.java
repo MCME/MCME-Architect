@@ -120,7 +120,7 @@ public class SpecialBlockDoubleY extends SpecialBlock{
     }
     
     @Override
-    protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
         final BlockState state = blockPlace.getState();
         if(blockFace==BlockFace.UP) {
             state.setBlockData(upperData);

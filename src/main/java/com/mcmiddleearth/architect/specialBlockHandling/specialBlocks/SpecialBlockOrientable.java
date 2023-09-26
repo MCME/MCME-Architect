@@ -27,6 +27,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
 /**
  *
@@ -61,7 +62,7 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
     }
     
     @Override
-    protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
         final BlockState state = blockPlace.getState();
         BlockData data = getBlockData(blockFace);
         if(data!=null) {

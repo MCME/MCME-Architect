@@ -23,6 +23,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
 /**
  *
@@ -30,7 +31,7 @@ import org.bukkit.configuration.ConfigurationSection;
  */
 public class SpecialBlockFourDirections extends SpecialBlockOrientable {
     
-    protected static final Orientation[] fourFaces = new Orientation[] {
+    public static final Orientation[] fourFaces = new Orientation[] {
         new Orientation(BlockFace.SOUTH,"South"),
         new Orientation(BlockFace.WEST,"West"),
         new Orientation(BlockFace.NORTH,"North"),
@@ -78,9 +79,9 @@ public class SpecialBlockFourDirections extends SpecialBlockOrientable {
     }
     
     @Override
-    public BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
         final BlockState state = blockPlace.getState();
-        state.setBlockData(getBlockData(getBlockFace(playerLoc.getYaw())));
+        state.setBlockData(getBlockData(getBlockFace(player.getLocation().getYaw())));
         return state;
         /* 1.13 removed
         switch(getBlockFace(playerLoc.getYaw())) {

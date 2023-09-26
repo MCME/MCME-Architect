@@ -8,22 +8,28 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirections implements IBranch {
+public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirectionsVariants implements IBranch {
 
-    protected SpecialBlockBranchHorizontal(String id, BlockData[] data) {
-        super(id, data);
+    protected SpecialBlockBranchHorizontal(String id, String[] variants, BlockData[][] data) {
+        this(id, variants, data, SpecialBlockType.BRANCH_HORIZONTAL);
     }
 
-    protected SpecialBlockBranchHorizontal(String id, BlockData[] data, SpecialBlockType type) {
-        super(id, data, type);
+    protected SpecialBlockBranchHorizontal(String id, String[] variants, BlockData[][] data, SpecialBlockType type) {
+        super(id, variants, data, type);
     }
 
     public static SpecialBlockBranchHorizontal loadFromConfig(ConfigurationSection config, String id) {
-        BlockData[] data = loadBlockDataFromConfig(config, fourFaces);
+        BlockData[][] data = loadBlockDataFromConfig(config, SpecialBlockFourDirections.fourFaces,
+                                                             variants);
         if(data==null) {
             return null;
         }
-        return new SpecialBlockBranchHorizontal(id, data);
+        return new SpecialBlockBranchHorizontal(id, variants, data);
+    }
+
+    @Override
+    protected int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+        return (isThin(clicked, player)?1:0); //0=Thick, 1=Thin
     }
 
     @Override
@@ -34,12 +40,15 @@ public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirections imp
     }
 
     @Override
-    public IBranch.Shift getLower(BlockFace orientation) {
+    public IBranch.Shift getLower(BlockFace orientation, Player player) {
         return new Shift(0,0,0);
     }
 
     @Override
-    public IBranch.Shift getUpper(BlockFace orientation) {
+    public IBranch.Shift getUpper(BlockFace orientation, Player player) { return getLower(orientation, player); }
+
+    @Override
+    public IBranch.Shift getPlacedUpper(BlockFace orientation, Player player) {
         return switch(orientation) {
             case SOUTH -> new Shift(0,-1,-1);
             case EAST -> new Shift(-1,-1,0);
@@ -49,5 +58,20 @@ public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirections imp
         };
     }
 
+    @Override
+    public IBranch.Shift getPlacedLower(BlockFace blockFace, Player player) {
+        Shift shift = getPlacedUpper(blockFace, player);
+        shift.setY(0);
+        return shift;
+    }
+
+
+    @Override
+    public BlockFace getDownwardOrientation(BlockFace orientation) {
+        return orientation;
+    }
+
+    @Override
+    public boolean isDiagonal() { return false;}
 
 }

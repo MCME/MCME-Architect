@@ -28,6 +28,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
 /**
  *
@@ -117,7 +118,7 @@ public class SpecialBlockMatchOrientation extends SpecialBlockFourDirections {
     }
     
     @Override
-    public BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
         // 1.13 removed BlockState state = blockPlace.getState();
         int[] score = new int[4];
         score[0] = getScore(blockPlace, BlockFace.SOUTH);
@@ -139,11 +140,11 @@ public class SpecialBlockMatchOrientation extends SpecialBlockFourDirections {
 //Logger.getGlobal().info("maxIndex "+maxIndex);
 //Logger.getGlobal().info("max "+max);
         if(max>0) {
-            Location loc = playerLoc.clone();
+            Location loc = player.getLocation().clone();
             loc.setYaw(-90*maxIndex);
-            return super.getBlockState(blockPlace, blockFace, loc);
+            return super.getBlockState(blockPlace, clicked, blockFace, player);
         } else {
-            return super.getBlockState(blockPlace, blockFace, playerLoc);
+            return super.getBlockState(blockPlace, clicked, blockFace, player);
         }
     }
     

@@ -91,13 +91,13 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
     }
     
     @Override
-    public BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
         /*final BlockState state = blockPlace.getState();
         BlockFace face = getBlockFaceFromLoc(playerLoc,false);
         state.setBlockData(getBlockData(face));
         return state;*/
         final BlockState state = blockPlace.getState();
-        state.setBlockData(getBlockData(getBlockFace(playerLoc.getYaw())));
+        state.setBlockData(getBlockData(getBlockFace(player.getLocation().getYaw())));
         return state;
     }
 

@@ -69,9 +69,9 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
     }
     
     @Override
-    public BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
         final BlockState state = blockPlace.getState();
-        BlockFace face = getBlockFaceFromLoc(playerLoc,false);
+        BlockFace face = getBlockFaceFromLoc(player.getLocation(),false);
         state.setBlockData(getBlockData(face));
         return state;
     }

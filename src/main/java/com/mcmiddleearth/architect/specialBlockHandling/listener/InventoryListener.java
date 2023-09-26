@@ -117,13 +117,7 @@ public class InventoryListener implements Listener{
                     }
                     return;
                 }
-                String rpName = RpManager.getCurrentRpName(player);//1.13 removed: PluginData.getRpName(ResourceRegionsUtil.getResourceRegionsUrl(p));
-                if (rpName == null || rpName.equals("")) {
-                    rpName = SpecialBlockInventoryData.getRpName(handItem);
-                    if (rpName.equals("")) {
-                        rpName = SpecialBlockInventoryData.getRpName(offHandItem);
-                    }
-                }
+                String rpName = SpecialBlockInventoryData.getRpName(player);
                 if (!SpecialBlockInventoryData.openInventory(player, rpName)) {
                     sendNoInventoryError(player, rpName);
                 }

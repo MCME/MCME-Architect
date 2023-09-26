@@ -79,7 +79,7 @@ public class SpecialBlockMobSpawnerBlock extends SpecialBlock {
         }
         super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
         final Location loc = blockPlace.getLocation();
-        final BlockState state = getBlockState(blockPlace, blockFace, playerLoc);
+        final BlockState state = getBlockState(blockPlace, clicked, blockFace, player);
         state.setType(Material.SPAWNER);
         state.getBlock().setBlockData(state.getBlockData(),false);//.update(true, false);
         final BlockState spawner = blockPlace.getState();

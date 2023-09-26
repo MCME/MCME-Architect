@@ -24,6 +24,7 @@ import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.SearchInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.*;
+import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.ConversionUtil_1_13;
 import com.mcmiddleearth.util.DevUtil;
@@ -126,6 +127,8 @@ public class SpecialBlockInventoryData {
     private static void loadFromFile(String rpName, File file) {
         Logger.getGlobal().info("Loading items into to inventory for resource pack "+rpName+" from "+file.getName());
         CustomInventory inventory = inventories.get(rpName);
+        //inventory.setCategoryItems("Heads",null, true,
+        //                            new ItemStack(Material.STONE), new ItemStack(Material.STONE),false);
         SearchInventory searchInventory = searchInventories.get(rpName);
         YamlConfiguration config = new YamlConfiguration();
         try {
@@ -195,6 +198,9 @@ public class SpecialBlockInventoryData {
                             break;
                         case BRANCH_STEEP:
                             blockData = SpecialBlockBranchSteep.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS:
+                            blockData = SpecialBlockBranchTwigs.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
                         case BRANCH_TWIGS_UPPER:
                             blockData = SpecialBlockBranchTwigsUpper.loadFromConfig(section, fullName(rpName,itemKey));
@@ -444,13 +450,37 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         //1.13 removed: return getHandItem(new ItemStack(block.getType(),1,(short)0,block.getData()));
     }
 
-    public static ItemStack getItem(SpecialBlock block) {
+   public static ItemStack getItem(SpecialBlock block) {
         SearchInventory inventory = searchInventories.get(rpName(block.getId()));
         if (inventory != null) {
             return inventory.getItem(block.getId()).clone();
         } else {
             return null;
         }
+    }
+
+    public static SpecialBlock getSpecialBlockDataFromBlock(Block block, Player player, Class classFilter) {
+        String rpName = RpManager.getCurrentRpName(player);
+        SpecialBlock result = null;
+        List<SpecialBlock> matches = new ArrayList<>();
+        for(SpecialBlock data: blockList) {
+            if(rpName(data.getId()).equals(rpName)
+                    && data.matches(block)) {
+                matches.add(data);
+            }
+        }
+//Logger.getGlobal().info("SpecialBlockInventoryData.getSpecialBlockDataFromBlock: "+block+" "+item);
+        for(SpecialBlock specialBlockData: matches) {
+Logger.getGlobal().info("SpecialBlock: "+specialBlockData);
+Logger.getGlobal().info("Filter: "+classFilter);
+if(classFilter!=null) Logger.getGlobal().info("instance: "+classFilter.isInstance(specialBlockData));
+            if(classFilter==null || classFilter.isInstance(specialBlockData)) {
+                if(result==null || result.getPriority()<specialBlockData.getPriority()) {
+                    result = specialBlockData;
+                }
+            }
+        }
+        return result;
     }
     
     private static ItemStack getHandItem(ItemStack item) {
@@ -562,6 +592,19 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
             }
         }
         return rpN;
+    }
+
+    public static String getRpName(Player player) {
+        ItemStack handItem = player.getInventory().getItemInMainHand();
+        ItemStack offHandItem = player.getInventory().getItemInOffHand();
+        String rpName = RpManager.getCurrentRpName(player);
+        if (rpName == null || rpName.equals("")) {
+            rpName = SpecialBlockInventoryData.getRpName(handItem);
+            if (rpName.equals("")) {
+                rpName = SpecialBlockInventoryData.getRpName(offHandItem);
+            }
+        }
+        return rpName;
     }
 
     /*public static void setRecipes(String rpName) {

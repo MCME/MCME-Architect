@@ -32,6 +32,7 @@ public enum SpecialBlockType {
     BRANCH_HORIZONTAL,
     BRANCH_DIAGONAL,
     BRANCH_STEEP,
+    BRANCH_TWIGS,
     BRANCH_TWIGS_UPPER,
     BRANCH_TWIGS_LOWER,
     OPEN_HALF_DOOR, //("open half doors")

@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -9,36 +10,22 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import java.util.logging.Logger;
+public class SpecialBlockBranchDiagonal extends SpecialBlockBranchInclined {
 
-public class SpecialBlockBranchDiagonal extends SpecialBlockEightFaces implements IBranch {
-
-    public SpecialBlockBranchDiagonal(String id, BlockData[] data) {
-        super(id, data);
+    public SpecialBlockBranchDiagonal(String id, String[] variants, BlockData[][] data) {
+        super(id, data, variants, SpecialBlockType.BRANCH_DIAGONAL);
     }
 
     public static SpecialBlockBranchDiagonal loadFromConfig(ConfigurationSection config, String id) {
-        BlockData[] data = loadBlockDataFromConfig(config, eightFaces);
+        BlockData[][] data = loadBlockDataFromConfig(config, SpecialBlockEightFaces.eightFaces, variants);
         if(data==null) {
             return null;
         }
-        return new SpecialBlockBranchDiagonal(id,data);
+        return new SpecialBlockBranchDiagonal(id, variants, data);
     }
 
     @Override
-    public Block getBlock(Block clicked, BlockFace blockFace, Location interactionPoint, Player player) {
-        Block target = super.getBlock(clicked, blockFace, interactionPoint, player);
-        return getBranchBlock(target, clicked, blockFace, interactionPoint,
-                              player, getBlockFaceFine(player.getLocation().getYaw()));
-    }
-
-    @Override
-    protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
-        return super.getBlockState(blockPlace, blockFace, getBranchOrientation(playerLoc));
-    }
-
-    @Override
-    public Shift getLower(BlockFace orientation) {
+    public Shift getLower(BlockFace orientation, Player player) {
         return switch(orientation) {
             case SOUTH_EAST -> new Shift(1,0,1);
             case NORTH_EAST -> new Shift(1,0,-1);
@@ -49,7 +36,7 @@ public class SpecialBlockBranchDiagonal extends SpecialBlockEightFaces implement
     }
 
     @Override
-    public Shift getUpper(BlockFace orientation) {
+    public Shift getUpper(BlockFace orientation, Player player) {
         return switch(orientation) {
             case SOUTH -> new Shift(0,0,-1);
             case EAST -> new Shift(-1,0,0);
@@ -59,5 +46,11 @@ public class SpecialBlockBranchDiagonal extends SpecialBlockEightFaces implement
         };
     }
 
+    @Override
+    public boolean isDiagonal() { return true;}
 
+    @Override
+    public BlockFace getDownwardOrientation(BlockFace blockFace) {
+        return blockFace.getOppositeFace();
+    }
 }

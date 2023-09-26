@@ -1,20 +1,32 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
-import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.logging.Logger;
 
 public interface IBranch {
 
-    Shift getLower(BlockFace orientation);
-    Shift getUpper(BlockFace orientation);
+    String[] variants = new String[]{"Thick", "Thin"};
+
+    Shift getLower(BlockFace orientation, Player player);
+    Shift getUpper(BlockFace orientation, Player player);
+    boolean isDiagonal();
+
+    BlockFace getDownwardOrientation(BlockFace blockFace);
+
     //BlockFace getOrientation(Location playerLoc, BlockFace clickedFace);
+
+    default Shift getPlacedLower(BlockFace orientation, Player player) {
+        return getLower(orientation, player);
+    }
+
+    default Shift getPlacedUpper(BlockFace orientation, Player player) {
+        return getUpper(orientation, player);
+    }
 
     default Location getBranchOrientation(Location playerLoc) {
         if(playerLoc.getPitch()>=0) {
@@ -35,39 +47,47 @@ public interface IBranch {
                 //side face clicked -> revert target adjustment of SpecialBlock.getBlock();
                 target = target.getRelative(clickedFace.getOppositeFace())
                                .getRelative(BlockFace.UP);
-                if(isLowerHalf(clickedFace, interactionPoint)) {
+                if(isDiagonal() && isLowerHalf(clickedFace, interactionPoint)) {
                     //lower half clicked -> place at block below
                     target = target.getRelative(BlockFace.DOWN);
                     matchBelow = true;
                 }
             }
-            ItemStack item = SpecialBlockInventoryData.getItem(clicked, RpManager.getCurrentRpName(player));
-            if (item != null) {
-                SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlockDataFromItem(item);
-                if (specialBlock instanceof IBranch branch) {
-                    BlockFace otherOrientation = orientation;
-                    if (branch instanceof SpecialBlockOrientable orientable) {
-                        BlockFace temp = orientable.getOrientation(clicked);
-                        if (temp != null) {
-                            otherOrientation = temp;
-                        }
+Logger.getGlobal().info("Target: "+target.getLocation());
+            SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,IBranch.class);
+Logger.getGlobal().info("Clicked: "+specialBlock);
+Logger.getGlobal().info("is Inclined branch block: "+(specialBlock instanceof SpecialBlockBranchInclined));
+Logger.getGlobal().info("is variant block: "+(specialBlock instanceof SpecialBlockOrientableVariants));
+Logger.getGlobal().info("is IBranch: "+(specialBlock instanceof IBranch));
+            if (specialBlock instanceof IBranch branch) {
+                BlockFace otherOrientation = orientation;
+Logger.getGlobal().info("This or: "+otherOrientation);
+                if (branch instanceof SpecialBlockOrientableVariants orientable) {
+                    BlockFace temp = orientable.getOrientation(clicked);
+Logger.getGlobal().info("Other or: "+temp);
+                    if (temp != null) {
+                        otherOrientation = temp;
                     }
-                    Shift otherShift;
-                    if(!matchBelow) {
-                        otherShift = branch.getUpper(otherOrientation);
-                    } else {
-                        otherShift = branch.getLower(otherOrientation);
-                    }
-                    Shift thisShift = this.getLower(orientation);
-                    return target.getRelative(otherShift.getX() - thisShift.getX(),
-                            otherShift.getY() - thisShift.getY(),
-                            otherShift.getZ() - thisShift.getZ());
                 }
+                Shift otherShift;
+                if(!matchBelow) {
+                    otherShift = branch.getPlacedUpper(otherOrientation, player);
+                } else {
+                    otherShift = branch.getPlacedLower(otherOrientation, player);
+                }
+                Shift thisShift = this.getLower(orientation, player);
+                target = target.getRelative(otherShift.getX() - thisShift.getX(),
+                        otherShift.getY() - thisShift.getY(),
+                        otherShift.getZ() - thisShift.getZ());
+Logger.getGlobal().info("Target shifted connect: "+target.getLocation());
+                return target;
             }
-            Shift thisShift = this.getLower(orientation);
-            return target.getRelative(-thisShift.getX(),
+            Shift thisShift = this.getLower(orientation, player);
+            target = target.getRelative(-thisShift.getX(),
                     -thisShift.getY(),
                     -thisShift.getZ());
+Logger.getGlobal().info("Target shifted unconnected: "+target.getLocation());
+            return target;
         } else if(clickedFace.equals(BlockFace.DOWN)
                 || (player.getLocation().getPitch()<0 && isSideFace(clickedFace))) {
             boolean matchAbove = false;
@@ -75,43 +95,60 @@ public interface IBranch {
                 //side face clicked -> revert target adjustment of SpecialBlock.getBlock();
                 target = target.getRelative(clickedFace.getOppositeFace())
                                .getRelative(BlockFace.DOWN);
-                if(isUpperHalf(clickedFace, interactionPoint)) {
+                if(isDiagonal() && isUpperHalf(clickedFace, interactionPoint)) {
                     //upper half clicked -> place at block above
                     target = target.getRelative(BlockFace.UP);
                     matchAbove = true;
                 }
             }
-            ItemStack item = SpecialBlockInventoryData.getItem(clicked, RpManager.getCurrentRpName(player));
-            orientation = orientation.getOppositeFace();
-            if (item != null) {
-                SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlockDataFromItem(item);
-                if (specialBlock instanceof IBranch branch) {
-                    BlockFace otherOrientation = orientation;
-                    if (branch instanceof SpecialBlockOrientable orientable) {
-                        BlockFace temp = orientable.getOrientation(clicked);
-                        if (temp != null) {
-                            otherOrientation = temp;
-                        }
-                    }
-                    Shift otherShift;
-                    if(!matchAbove) {
-                        otherShift = branch.getLower(otherOrientation);
-                    } else {
-                        otherShift = branch.getUpper(otherOrientation);
-                    }
-                    Shift thisShift = this.getUpper(orientation);
-                    return target.getRelative(otherShift.getX() - thisShift.getX(),
-                            otherShift.getY() - thisShift.getY(),
-                            otherShift.getZ() - thisShift.getZ());
-                }
+            if(!isDiagonal()) {
+                target = target.getRelative(BlockFace.UP);
             }
-            Shift thisShift = this.getUpper(orientation);
-            return target.getRelative(-thisShift.getX(),
+Logger.getGlobal().info("Target: "+target.getLocation());
+            SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player, IBranch.class);
+Logger.getGlobal().info("Clicked: "+specialBlock);
+            orientation = getDownwardOrientation(orientation);
+            if (specialBlock instanceof IBranch branch) {
+                BlockFace otherOrientation = orientation;
+Logger.getGlobal().info("This or: "+otherOrientation);
+                if (branch instanceof SpecialBlockOrientableVariants orientable) {
+                    BlockFace temp = orientable.getOrientation(clicked);
+Logger.getGlobal().info("Other or: "+temp);
+                    if (temp != null) {
+                        otherOrientation = temp;
+                    }
+                }
+                Shift otherShift;
+                if(!matchAbove) {
+                    otherShift = branch.getPlacedLower(otherOrientation, player);
+                } else {
+                    otherShift = branch.getPlacedUpper(otherOrientation, player);
+                }
+                Shift thisShift = this.getUpper(orientation, player);
+                target = target.getRelative(otherShift.getX() - thisShift.getX(),
+                        otherShift.getY() - thisShift.getY(),
+                        otherShift.getZ() - thisShift.getZ());
+Logger.getGlobal().info("Target shifted connect: "+target.getLocation());
+                return target;
+            }
+            Shift thisShift = this.getUpper(orientation, player);
+            target = target.getRelative(-thisShift.getX(),
                     -thisShift.getY(),
                     -thisShift.getZ());
+Logger.getGlobal().info("Target shifted unconnected: "+target.getLocation());
+            return target;
         } else {
+Logger.getGlobal().info("return original Target: "+target.getLocation());
             return target;
         }
+    }
+
+    default boolean isThin(Block block, Player player) {
+        SpecialBlock specialBlockData = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(block, player, IBranch.class);
+        if(specialBlockData instanceof IBranch && specialBlockData instanceof SpecialBlockOrientableVariants) {
+            return ((SpecialBlockOrientableVariants)specialBlockData).getVariantName(block).equals("Thin");
+        }
+        return false;
     }
 
     private boolean isUpperHalf(BlockFace clickedFace, Location interactionPoint) {
@@ -141,7 +178,15 @@ public interface IBranch {
                 || blockFace.equals(BlockFace.NORTH_NORTH_WEST);
     }
 
-    public record Shift(int x, int y, int z) {
+    public class Shift {
+
+        private int x,y,z;
+
+        public Shift(int x, int y, int z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
 
         public int getX() {
             return x;
@@ -153,6 +198,18 @@ public interface IBranch {
 
         public int getZ() {
             return z;
+        }
+
+        public void setY(int y) {
+            this.y = y;
+        }
+
+        public void setX(int x) {
+            this.x = x;
+        }
+
+        public void setZ(int z) {
+            this.z = z;
         }
     }
 }
