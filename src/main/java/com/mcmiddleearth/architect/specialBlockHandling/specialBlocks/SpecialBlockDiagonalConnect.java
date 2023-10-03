@@ -41,7 +41,7 @@ import java.util.logging.Logger;
  */
 public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
 
-    private static final Orientation[] fiveFaces = new Orientation[] {
+    protected static final Orientation[] fiveFaces = new Orientation[] {
         new Orientation(BlockFace.UP,"Up"),
         new Orientation(BlockFace.SOUTH,"South"),
         new Orientation(BlockFace.WEST,"West"),
@@ -69,7 +69,8 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
     }
     
     @Override
-    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                    Player player, Location interactionPoint) {
         final BlockState state = blockPlace.getState();
         BlockFace face = getBlockFaceFromLoc(player.getLocation(),false);
         state.setBlockData(getBlockData(face));

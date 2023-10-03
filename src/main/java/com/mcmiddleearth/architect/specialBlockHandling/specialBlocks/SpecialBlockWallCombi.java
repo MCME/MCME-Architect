@@ -74,7 +74,8 @@ public class SpecialBlockWallCombi extends SpecialBlockOrientable {
     }
     
     @Override
-    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                    Player player, Location interactionPoint) {
         final BlockState state = blockPlace.getState();
         float yaw = player.getLocation().getYaw();
         while(yaw>180)  yaw -= 360;

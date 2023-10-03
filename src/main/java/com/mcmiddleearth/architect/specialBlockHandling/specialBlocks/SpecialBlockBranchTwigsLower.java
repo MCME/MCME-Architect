@@ -34,12 +34,12 @@ public class SpecialBlockBranchTwigsLower extends SpecialBlockFourDirections imp
     }
 
     @Override
-    public Shift getUpper(BlockFace orientation, Player player) {
+    public Shift getUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return new Shift(0,0,0);
     }
 
     @Override
-    public Shift getLower(BlockFace orientation, Player player) {
+    public Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return switch(orientation) {
             case SOUTH -> new Shift(0,0,-1);
             case EAST -> new Shift(-1,0,0);
@@ -57,4 +57,8 @@ public class SpecialBlockBranchTwigsLower extends SpecialBlockFourDirections imp
         return blockFace.getOppositeFace();
     }
 
+    @Override
+    public boolean isThin(Block block, Player player, Location interactionPoint) {
+        return true;
+    }
 }

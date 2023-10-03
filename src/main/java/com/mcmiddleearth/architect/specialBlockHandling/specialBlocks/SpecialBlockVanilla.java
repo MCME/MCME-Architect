@@ -88,7 +88,8 @@ public class SpecialBlockVanilla extends SpecialBlock {
     }
     
     @Override
-    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                       Player player, Location interactionPoint) {
         return blockPlace.getState();
     }
 

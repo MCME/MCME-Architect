@@ -25,6 +25,8 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
@@ -36,14 +38,26 @@ public abstract class SpecialBlockBranchInclined extends SpecialBlockOrientableV
     }
 
     @Override
-    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                       Player player, Location interactionPoint) {
         BlockFace blockFaceFromYaw = getBlockFaceFine(getBranchOrientation(player.getLocation()).getYaw());
-        return super.getBlockState(blockPlace, clicked, blockFaceFromYaw, player);
+        return super.getBlockState(blockPlace, clicked, blockFaceFromYaw, player, interactionPoint);
     }
 
     @Override
-    protected int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
-        return (isThin(clicked, player)?1:0); //0=Thick, 1=Thin
+    protected int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player, Location interactionPoint) {
+        SpecialBlock specialBlockData = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player, IBranch.class);
+//Logger.getGlobal().info("GET VARIANT inclined: "+specialBlockData);
+        if(specialBlockData!=null) {
+            return (((IBranch) specialBlockData).isThin(clicked, player, interactionPoint) ? 1 : 0); //0=Thick, 1=Thin
+        }else {
+            return 0;
+        }
+    }
+
+    @Override
+    public boolean isThin(Block block, Player player, Location interactionPoint) {
+        return getVariantName(block).equals("Thin");
     }
 
     @Override

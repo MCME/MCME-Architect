@@ -25,7 +25,7 @@ public class SpecialBlockBranchDiagonal extends SpecialBlockBranchInclined {
     }
 
     @Override
-    public Shift getLower(BlockFace orientation, Player player) {
+    public Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return switch(orientation) {
             case SOUTH_EAST -> new Shift(1,0,1);
             case NORTH_EAST -> new Shift(1,0,-1);
@@ -36,7 +36,7 @@ public class SpecialBlockBranchDiagonal extends SpecialBlockBranchInclined {
     }
 
     @Override
-    public Shift getUpper(BlockFace orientation, Player player) {
+    public Shift getUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return switch(orientation) {
             case SOUTH -> new Shift(0,0,-1);
             case EAST -> new Shift(-1,0,0);
@@ -53,4 +53,6 @@ public class SpecialBlockBranchDiagonal extends SpecialBlockBranchInclined {
     public BlockFace getDownwardOrientation(BlockFace blockFace) {
         return blockFace.getOppositeFace();
     }
+
+
 }

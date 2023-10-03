@@ -16,7 +16,6 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
@@ -24,18 +23,12 @@ import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.SearchInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.*;
-import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.ConversionUtil_1_13;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ZipUtil;
-import net.minecraft.world.item.ItemSaddle;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -44,8 +37,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
-import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -207,6 +199,9 @@ public class SpecialBlockInventoryData {
                             break;
                         case BRANCH_TWIGS_LOWER:
                             blockData = SpecialBlockBranchTwigsLower.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_CONNECT:
+                            blockData = SpecialBlockBranchConnect.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
                         case BLOCK_CONNECT:
 //Logger.getGlobal().info("Block connect:"+itemKey);
@@ -471,15 +466,16 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         }
 //Logger.getGlobal().info("SpecialBlockInventoryData.getSpecialBlockDataFromBlock: "+block+" "+item);
         for(SpecialBlock specialBlockData: matches) {
-Logger.getGlobal().info("SpecialBlock: "+specialBlockData);
-Logger.getGlobal().info("Filter: "+classFilter);
-if(classFilter!=null) Logger.getGlobal().info("instance: "+classFilter.isInstance(specialBlockData));
+//Logger.getGlobal().info("SpecialBlock: "+specialBlockData+" Priority: "+specialBlockData.getPriority());
+//Logger.getGlobal().info("Filter: "+classFilter);
+//if(classFilter!=null) Logger.getGlobal().info("instance: "+classFilter.isInstance(specialBlockData));
             if(classFilter==null || classFilter.isInstance(specialBlockData)) {
                 if(result==null || result.getPriority()<specialBlockData.getPriority()) {
                     result = specialBlockData;
                 }
             }
         }
+//Logger.getGlobal().info("Result SpecialBlock: "+result+" Priority: "+(result!=null?result.getPriority():""));
         return result;
     }
     
@@ -560,6 +556,16 @@ if(classFilter!=null) Logger.getGlobal().info("instance: "+classFilter.isInstanc
             }
             if(config.isInt("cmd")) {
                 im.setCustomModelData(config.getInt("cmd"));
+            }
+            if(config.isInt("color")) {
+                if(im instanceof LeatherArmorMeta armorMeta) {
+                    armorMeta.setColor(Color.fromRGB(config.getInt("color")));
+                } else if(im instanceof PotionMeta potionMeta) {
+                    potionMeta.setColor(Color.fromRGB(config.getInt("color")));
+                } else if(im instanceof FireworkEffectMeta fireworkMeta) {
+                    fireworkMeta.setEffect(FireworkEffect.builder()
+                            .withColor(Color.fromRGB(config.getInt("color"))).build());
+                }
             }
             im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp,name)}));
             im.setUnbreakable(true);

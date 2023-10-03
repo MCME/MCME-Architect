@@ -4,7 +4,6 @@ import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -25,7 +24,7 @@ public class SpecialBlockBranchSteep extends SpecialBlockBranchInclined {
     }
 
     @Override
-    public Shift getLower(BlockFace orientation, Player player) {
+    public Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return switch(orientation) {
             case SOUTH -> new Shift(0,-1,1);
             case SOUTH_EAST -> new Shift(1,-1,1);
@@ -40,7 +39,7 @@ public class SpecialBlockBranchSteep extends SpecialBlockBranchInclined {
     }
 
     @Override
-    public Shift getUpper(BlockFace orientation, Player player) {
+    public Shift getUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return new Shift(0,0,0);
     }
 

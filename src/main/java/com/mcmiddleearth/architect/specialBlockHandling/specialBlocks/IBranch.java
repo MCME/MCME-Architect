@@ -12,20 +12,20 @@ public interface IBranch {
 
     String[] variants = new String[]{"Thick", "Thin"};
 
-    Shift getLower(BlockFace orientation, Player player);
-    Shift getUpper(BlockFace orientation, Player player);
+    Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint);
+    Shift getUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint);
     boolean isDiagonal();
 
     BlockFace getDownwardOrientation(BlockFace blockFace);
 
     //BlockFace getOrientation(Location playerLoc, BlockFace clickedFace);
 
-    default Shift getPlacedLower(BlockFace orientation, Player player) {
-        return getLower(orientation, player);
+    default Shift getPlacedLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        return getLower(orientation, clicked, player, interactionPoint);
     }
 
-    default Shift getPlacedUpper(BlockFace orientation, Player player) {
-        return getUpper(orientation, player);
+    default Shift getPlacedUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        return getUpper(orientation, clicked, player, interactionPoint);
     }
 
     default Location getBranchOrientation(Location playerLoc) {
@@ -53,40 +53,42 @@ public interface IBranch {
                     matchBelow = true;
                 }
             }
-Logger.getGlobal().info("Target: "+target.getLocation());
-            SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,IBranch.class);
-Logger.getGlobal().info("Clicked: "+specialBlock);
-Logger.getGlobal().info("is Inclined branch block: "+(specialBlock instanceof SpecialBlockBranchInclined));
-Logger.getGlobal().info("is variant block: "+(specialBlock instanceof SpecialBlockOrientableVariants));
-Logger.getGlobal().info("is IBranch: "+(specialBlock instanceof IBranch));
+//Logger.getGlobal().info("Target: "+target.getLocation());
+            SpecialBlock specialBlock = getSpecialBlockForPlacement(clicked,player);
+//Logger.getGlobal().info("Clicked: "+specialBlock);
+//Logger.getGlobal().info("is Inclined branch block: "+(specialBlock instanceof SpecialBlockBranchInclined));
+//Logger.getGlobal().info("is variant block: "+(specialBlock instanceof SpecialBlockOrientableVariants));
+//Logger.getGlobal().info("is IBranch: "+(specialBlock instanceof IBranch));
             if (specialBlock instanceof IBranch branch) {
                 BlockFace otherOrientation = orientation;
-Logger.getGlobal().info("This or: "+otherOrientation);
+//Logger.getGlobal().info("This or: "+otherOrientation);
                 if (branch instanceof SpecialBlockOrientableVariants orientable) {
                     BlockFace temp = orientable.getOrientation(clicked);
-Logger.getGlobal().info("Other or: "+temp);
+//Logger.getGlobal().info("Other or: "+temp);
                     if (temp != null) {
                         otherOrientation = temp;
                     }
                 }
                 Shift otherShift;
                 if(!matchBelow) {
-                    otherShift = branch.getPlacedUpper(otherOrientation, player);
+                    otherShift = branch.getPlacedUpper(otherOrientation, clicked, player, interactionPoint);
                 } else {
-                    otherShift = branch.getPlacedLower(otherOrientation, player);
+                    otherShift = branch.getPlacedLower(otherOrientation, clicked, player, interactionPoint);
                 }
-                Shift thisShift = this.getLower(orientation, player);
+                Shift thisShift = this.getLower(orientation, clicked, player, interactionPoint);
+//Logger.getGlobal().info("This shift: "+thisShift);
+//Logger.getGlobal().info("This shift: "+otherShift);
                 target = target.getRelative(otherShift.getX() - thisShift.getX(),
                         otherShift.getY() - thisShift.getY(),
                         otherShift.getZ() - thisShift.getZ());
-Logger.getGlobal().info("Target shifted connect: "+target.getLocation());
+//Logger.getGlobal().info("Target shifted connect: "+target.getLocation());
                 return target;
             }
-            Shift thisShift = this.getLower(orientation, player);
+            Shift thisShift = this.getLower(orientation, clicked, player, interactionPoint);
             target = target.getRelative(-thisShift.getX(),
                     -thisShift.getY(),
                     -thisShift.getZ());
-Logger.getGlobal().info("Target shifted unconnected: "+target.getLocation());
+//Logger.getGlobal().info("Target shifted unconnected: "+target.getLocation());
             return target;
         } else if(clickedFace.equals(BlockFace.DOWN)
                 || (player.getLocation().getPitch()<0 && isSideFace(clickedFace))) {
@@ -104,52 +106,53 @@ Logger.getGlobal().info("Target shifted unconnected: "+target.getLocation());
             if(!isDiagonal()) {
                 target = target.getRelative(BlockFace.UP);
             }
-Logger.getGlobal().info("Target: "+target.getLocation());
-            SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player, IBranch.class);
-Logger.getGlobal().info("Clicked: "+specialBlock);
+//Logger.getGlobal().info("Target: "+target.getLocation());
+            SpecialBlock specialBlock = getSpecialBlockForPlacement(clicked,player);
+//Logger.getGlobal().info("Clicked: "+specialBlock);
             orientation = getDownwardOrientation(orientation);
             if (specialBlock instanceof IBranch branch) {
                 BlockFace otherOrientation = orientation;
-Logger.getGlobal().info("This or: "+otherOrientation);
+//Logger.getGlobal().info("This or: "+otherOrientation);
                 if (branch instanceof SpecialBlockOrientableVariants orientable) {
                     BlockFace temp = orientable.getOrientation(clicked);
-Logger.getGlobal().info("Other or: "+temp);
+//Logger.getGlobal().info("Other or: "+temp);
                     if (temp != null) {
                         otherOrientation = temp;
                     }
                 }
                 Shift otherShift;
                 if(!matchAbove) {
-                    otherShift = branch.getPlacedLower(otherOrientation, player);
+                    otherShift = branch.getPlacedLower(otherOrientation, clicked, player, interactionPoint);
                 } else {
-                    otherShift = branch.getPlacedUpper(otherOrientation, player);
+                    otherShift = branch.getPlacedUpper(otherOrientation, clicked, player, interactionPoint);
                 }
-                Shift thisShift = this.getUpper(orientation, player);
+                Shift thisShift = this.getUpper(orientation, clicked, player, interactionPoint);
                 target = target.getRelative(otherShift.getX() - thisShift.getX(),
                         otherShift.getY() - thisShift.getY(),
                         otherShift.getZ() - thisShift.getZ());
-Logger.getGlobal().info("Target shifted connect: "+target.getLocation());
+//Logger.getGlobal().info("Target shifted connect: "+target.getLocation());
                 return target;
             }
-            Shift thisShift = this.getUpper(orientation, player);
+            Shift thisShift = this.getUpper(orientation, clicked, player, interactionPoint);
             target = target.getRelative(-thisShift.getX(),
                     -thisShift.getY(),
                     -thisShift.getZ());
-Logger.getGlobal().info("Target shifted unconnected: "+target.getLocation());
+//Logger.getGlobal().info("Target shifted unconnected: "+target.getLocation());
             return target;
         } else {
-Logger.getGlobal().info("return original Target: "+target.getLocation());
+//Logger.getGlobal().info("return original Target: "+target.getLocation());
             return target;
         }
     }
 
-    default boolean isThin(Block block, Player player) {
+    boolean isThin(Block block, Player player, Location interactionPoint);
+    /*default boolean isThin(Block block, Player player, Location interactionPoint) {
         SpecialBlock specialBlockData = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(block, player, IBranch.class);
         if(specialBlockData instanceof IBranch && specialBlockData instanceof SpecialBlockOrientableVariants) {
             return ((SpecialBlockOrientableVariants)specialBlockData).getVariantName(block).equals("Thin");
         }
         return false;
-    }
+    }*/
 
     private boolean isUpperHalf(BlockFace clickedFace, Location interactionPoint) {
         return isSideFace(clickedFace) && interactionPoint.getY()-interactionPoint.getBlockY() >= 0.5;
@@ -176,6 +179,17 @@ Logger.getGlobal().info("return original Target: "+target.getLocation());
                 || blockFace.equals(BlockFace.WEST_NORTH_WEST)
                 || blockFace.equals(BlockFace.NORTH_WEST)
                 || blockFace.equals(BlockFace.NORTH_NORTH_WEST);
+    }
+
+    private SpecialBlock getSpecialBlockForPlacement(Block clicked, Player player) {
+        SpecialBlock result = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,SpecialBlockBranchInclined.class);
+        if(result==null) {
+            result = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,SpecialBlockBranchHorizontal.class);
+        }
+        if(result==null) {
+            result = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,IBranch.class);
+        }
+        return result;
     }
 
     public class Shift {
@@ -210,6 +224,11 @@ Logger.getGlobal().info("return original Target: "+target.getLocation());
 
         public void setZ(int z) {
             this.z = z;
+        }
+
+        @Override
+        public String toString() {
+            return "("+getX()+"|"+getY()+"|"+getZ()+")";
         }
     }
 }

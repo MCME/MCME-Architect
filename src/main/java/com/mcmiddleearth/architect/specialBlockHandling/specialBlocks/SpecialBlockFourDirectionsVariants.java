@@ -46,11 +46,12 @@ public abstract class SpecialBlockFourDirectionsVariants extends SpecialBlockOri
     }*/
     
     @Override
-    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                    Player player, Location interactionPoint) {
         final BlockState state = blockPlace.getState();
         BlockFace blockFaceFromYaw = getBlockFace(player.getLocation().getYaw());
         //state.setBlockData(getBlockData(getBlockFace(playerLoc.getYaw()),getVariant(blockPlace,blockFace,playerLoc)));
-        return super.getBlockState(blockPlace,clicked,blockFaceFromYaw,player);
+        return super.getBlockState(blockPlace,clicked,blockFaceFromYaw,player, interactionPoint);
     }
     
 }

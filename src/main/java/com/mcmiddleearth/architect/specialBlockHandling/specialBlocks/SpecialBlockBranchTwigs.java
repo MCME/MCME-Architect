@@ -45,8 +45,8 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
     }
 
     @Override
-    public Shift getLower(BlockFace orientation, Player player) {
-        if(getVariant(null, null, null, player)==1) {
+    public Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        if(getVariant(null, null, null, player, interactionPoint)==1) {
             return new Shift(0,1,0); //1 = upper
         } else {
             return switch(orientation) { //0 = lower
@@ -60,8 +60,8 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
     }
 
     @Override
-    public Shift getUpper(BlockFace orientation, Player player) {
-        return getLower(orientation, player);
+    public Shift getUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        return getLower(orientation, clicked, player, interactionPoint);
     }
 
     @Override
@@ -84,8 +84,13 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
     }
 
     @Override
-    public int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    public int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player, Location interactionPoint) {
         return (player.getLocation().getPitch()>=0?0:1); //0=Lower, 1=Upper
+    }
+
+    @Override
+    public boolean isThin(Block block, Player player, Location interactionPoint) {
+        return true;
     }
 
     /*BlockData[] dataLower = new BlockData[orientations.length];

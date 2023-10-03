@@ -60,12 +60,14 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
         this.orientations = orientations;
     }
 
-    protected abstract int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player);
+    protected abstract int getVariant(Block blockPlace, Block clicked, BlockFace blockFace,
+                                      Player player, Location interactionPoint);
 
     @Override
-    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                       Player player, Location interactionPoint) {
         final BlockState state = blockPlace.getState();
-        BlockData data = getBlockData(blockFace, getVariant(blockPlace, clicked, blockFace, player));
+        BlockData data = getBlockData(blockFace, getVariant(blockPlace, clicked, blockFace, player, interactionPoint));
         if(data!=null) {
             state.setBlockData(data);
         } else {
@@ -88,21 +90,26 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
             //cycle block variant
 //Logger.getGlobal().info("Cycle");
             SpecialBlock specialBlockData = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,
-                                                                                    SpecialBlockOrientableVariants.class);
+                    SpecialBlockOrientableVariants.class);//this.getClass());
+            if(specialBlockData==null) {
+                specialBlockData = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,
+                        SpecialBlockOrientableVariants.class);
+            }
+//Logger.getGlobal().info("Block: "+(specialBlockData));
             if(specialBlockData instanceof SpecialBlockOrientableVariants) {
-//Logger.getGlobal().info("Block: "+((SpecialBlockOrientableVariants) specialBlockData).getVariantName(clicked));
-                ((SpecialBlockOrientableVariants)specialBlockData).cycleVariant(clicked);
+//Logger.getGlobal().info("Block VARIANT: "+((SpecialBlockOrientableVariants) specialBlockData).getVariantName(clicked));
+                ((SpecialBlockOrientableVariants)specialBlockData).cycleVariant(blockPlace, clicked, player, interactionPoint);
             }
         } else {
             // place block
-            final BlockState state = getBlockState(blockPlace, clicked, blockFace, player);
+            final BlockState state = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     //state.update(true, false);
                     blockPlace.setBlockData(state.getBlockData(), false);
                     DevUtil.log("Special block place: ID " + state.getType() + " - DV " + state.getRawData());
-                    final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player);
+                    final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
                     new BukkitRunnable() {
                         @Override
                         public void run() {
@@ -204,13 +211,13 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
         return null;
     }
 
-    private void cycleVariant(Block block) {
-        BlockData searchData = block.getBlockData();
+    protected void cycleVariant(Block blockPlace, Block clicked, Player player, Location interactionPoint) {
+        BlockData searchData = clicked.getBlockData();
         for(int i = 0; i< orientations.length; i++) {
             for(int j = 0; j<variants.length; j++) {
                 if(searchData.matches(blockData[j][i])) {
                     int nextVariant = (j+1==variants.length?0:j+1);
-                    block.setBlockData(blockData[nextVariant][i],false);
+                    clicked.setBlockData(blockData[nextVariant][i],false);
 //Logger.getGlobal().info("Set Variant: "+nextVariant + " "+blockData[nextVariant][i]);
                 }
             }

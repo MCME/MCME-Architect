@@ -90,10 +90,11 @@ public class SpecialBlockEightFaces extends SpecialBlockOrientable {
     }*/
     
     @Override
-    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                       Player player, Location interactionPoint) {
         //BlockState state = blockPlace.getState();
         BlockFace blockFaceFromYaw = getBlockFaceFine(player.getLocation().getYaw());
-        return super.getBlockState(blockPlace, clicked, blockFaceFromYaw, player);
+        return super.getBlockState(blockPlace, clicked, blockFaceFromYaw, player, interactionPoint);
         /* 1.13 removed
         switch(blockFaceFromYaw) {
             case SOUTH:

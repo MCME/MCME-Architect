@@ -118,7 +118,8 @@ public class SpecialBlockMatchOrientation extends SpecialBlockFourDirections {
     }
     
     @Override
-    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                    Player player, Location interactionPoint) {
         // 1.13 removed BlockState state = blockPlace.getState();
         int[] score = new int[4];
         score[0] = getScore(blockPlace, BlockFace.SOUTH);
@@ -142,9 +143,9 @@ public class SpecialBlockMatchOrientation extends SpecialBlockFourDirections {
         if(max>0) {
             Location loc = player.getLocation().clone();
             loc.setYaw(-90*maxIndex);
-            return super.getBlockState(blockPlace, clicked, blockFace, player);
+            return super.getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
         } else {
-            return super.getBlockState(blockPlace, clicked, blockFace, player);
+            return super.getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
         }
     }
     

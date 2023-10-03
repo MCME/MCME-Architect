@@ -1,12 +1,15 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+
+import java.util.logging.Logger;
 
 public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirectionsVariants implements IBranch {
 
@@ -28,9 +31,21 @@ public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirectionsVari
     }
 
     @Override
-    protected int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
-        return (isThin(clicked, player)?1:0); //0=Thick, 1=Thin
+    protected int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player, Location interactionPoint) {
+        SpecialBlock specialBlockData = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player, IBranch.class);
+//Logger.getGlobal().info("GET VARIANT horizontal: "+specialBlockData);
+        if(specialBlockData!=null) {
+            return (((IBranch)specialBlockData).isThin(clicked, player, interactionPoint) ? 1 : 0); //0=Thick, 1=Thin
+        } else {
+            return 0;
+        }
     }
+
+    @Override
+    public boolean isThin(Block block, Player player, Location interactionPoint) {
+        return getVariantName(block).equals("Thin");
+    }
+
 
     @Override
     public Block getBlock(Block clicked, BlockFace blockFace, Location interactionPoint, Player player) {
@@ -40,15 +55,17 @@ public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirectionsVari
     }
 
     @Override
-    public IBranch.Shift getLower(BlockFace orientation, Player player) {
+    public IBranch.Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return new Shift(0,0,0);
     }
 
     @Override
-    public IBranch.Shift getUpper(BlockFace orientation, Player player) { return getLower(orientation, player); }
+    public IBranch.Shift getUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        return getLower(orientation, clicked, player, interactionPoint);
+    }
 
     @Override
-    public IBranch.Shift getPlacedUpper(BlockFace orientation, Player player) {
+    public IBranch.Shift getPlacedUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return switch(orientation) {
             case SOUTH -> new Shift(0,-1,-1);
             case EAST -> new Shift(-1,-1,0);
@@ -59,8 +76,8 @@ public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirectionsVari
     }
 
     @Override
-    public IBranch.Shift getPlacedLower(BlockFace blockFace, Player player) {
-        Shift shift = getPlacedUpper(blockFace, player);
+    public IBranch.Shift getPlacedLower(BlockFace blockFace, Block clicked, Player player, Location interactionPoint) {
+        Shift shift = getPlacedUpper(blockFace, clicked, player, interactionPoint);
         shift.setY(0);
         return shift;
     }

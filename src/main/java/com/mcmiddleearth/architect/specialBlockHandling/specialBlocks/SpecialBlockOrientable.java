@@ -62,7 +62,8 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
     }
     
     @Override
-    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace, Player player) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                       Player player, Location interactionPoint) {
         final BlockState state = blockPlace.getState();
         BlockData data = getBlockData(blockFace);
         if(data!=null) {
