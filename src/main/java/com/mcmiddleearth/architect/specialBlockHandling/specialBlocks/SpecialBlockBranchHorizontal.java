@@ -9,8 +9,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import java.util.logging.Logger;
-
 public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirectionsVariants implements IBranch {
 
     protected SpecialBlockBranchHorizontal(String id, String[] variants, BlockData[][] data) {
@@ -54,7 +52,30 @@ public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirectionsVari
                               player, getBlockFace(player.getLocation().getYaw()));
     }
 
+    public IBranch.Shift getUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        return new Shift(0,0,0);
+    }
+
+    public IBranch.Shift getPlacedUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        return new Shift(0,-1,0);
+    }
+
+    public IBranch.Shift getPlacedLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        return new Shift(0,0,0);
+    }
+
     @Override
+    public IBranch.Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+        return switch(orientation) {
+            case SOUTH -> new Shift(0,0,1);
+            case EAST -> new Shift(1,0,0);
+            case NORTH -> new Shift(0,0,-1);
+            case WEST -> new Shift(-1,0,0);
+            default -> new Shift(0,0,0);
+        };
+    }
+
+    /*Override
     public IBranch.Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return new Shift(0,0,0);
     }
@@ -80,7 +101,7 @@ public class SpecialBlockBranchHorizontal extends SpecialBlockFourDirectionsVari
         Shift shift = getPlacedUpper(blockFace, clicked, player, interactionPoint);
         shift.setY(0);
         return shift;
-    }
+    }*/
 
 
     @Override

@@ -91,10 +91,10 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
 //Logger.getGlobal().info("Cycle");
             SpecialBlock specialBlockData = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,
                     SpecialBlockOrientableVariants.class);//this.getClass());
-            if(specialBlockData==null) {
+            /*if(specialBlockData==null) {
                 specialBlockData = SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player,
                         SpecialBlockOrientableVariants.class);
-            }
+            }*/
 //Logger.getGlobal().info("Block: "+(specialBlockData));
             if(specialBlockData instanceof SpecialBlockOrientableVariants) {
 //Logger.getGlobal().info("Block VARIANT: "+((SpecialBlockOrientableVariants) specialBlockData).getVariantName(clicked));

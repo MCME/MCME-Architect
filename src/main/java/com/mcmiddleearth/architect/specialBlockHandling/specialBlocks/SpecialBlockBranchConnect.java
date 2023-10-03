@@ -1,9 +1,5 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
-import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.architect.PluginData;
-import com.mcmiddleearth.architect.blockData.BlockDataManager;
-import com.mcmiddleearth.architect.blockData.attributes.Attribute;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import org.bukkit.Bukkit;
@@ -15,9 +11,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Wall;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants implements IBranch {
 
@@ -54,11 +48,11 @@ public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants im
     }
 
     @Override
-    public boolean isThin(Block block, Player player, Location interactionPoint) {
-        BlockData blockData = block.getBlockData();
-        if(SpecialBlockInventoryData.getSpecialBlockDataFromBlock(block, player, SpecialBlockBranchConnect.class)!=null
+    public boolean isThin(Block clicked, Player player, Location interactionPoint) {
+        BlockData blockData = clicked.getBlockData();
+        if(SpecialBlockInventoryData.getSpecialBlockDataFromBlock(clicked, player, SpecialBlockBranchConnect.class)!=null
                 && blockData instanceof Wall wall) {
-            Shift shift = getUpper(null, null, player, interactionPoint);
+            Shift shift = getUpper(null, clicked, player, interactionPoint);
             if(shift.getX()==-1 && shift.getZ()==0) {
                 return wall.getHeight(BlockFace.WEST).equals(Wall.Height.TALL);
             } else if(shift.getX()==1 && shift.getZ()==0) {
@@ -143,38 +137,48 @@ public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants im
     }
 
     @Override
-    public Shift getUpper(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
-        Block block = clicked;
-Logger.getGlobal().info("Get upper: " + block);
-Logger.getGlobal().info("Interaction: " + interactionPoint);
-        if(block!=null && block.getBlockData() instanceof Wall wall && !wall.isUp()) {
-Logger.getGlobal().info("is Wall and no up");
-            double xRelative = interactionPoint.getX()-interactionPoint.getBlockX();
-            double zRelative = interactionPoint.getZ()-interactionPoint.getBlockZ();
+    public Shift getUpper(BlockFace orientation, @NotNull Block clicked, Player player, Location interactionPoint) {
+//Logger.getGlobal().info("Get upper!");
+//Logger.getGlobal().info("Clicked: " + clicked.getBlockData().getMaterial()+ " loc: ("+ clicked.getLocation().getBlockX()+" "+ clicked.getLocation().getBlockY()+" "+ clicked.getLocation().getBlockZ()+")");
+//Logger.getGlobal().info("Interaction: " + interactionPoint.getX()+" "+interactionPoint.getY()+" "+interactionPoint.getZ());
+//Logger.getGlobal().info("Interaction block: " + clicked.getX()+ " "+clicked.getY()+" "+clicked.getZ());
+//if(orientation!=null) Logger.getGlobal().info("Orientation: " + orientation.name());
+        if(clicked.getBlockData() instanceof Wall wall && !wall.isUp()) {
+//Logger.getGlobal().info("is Wall and no up");
+            double xRelative = interactionPoint.getX()-clicked.getX();
+            double zRelative = interactionPoint.getZ()-clicked.getZ();
             if(zRelative>=xRelative) {
                 if(zRelative<1-xRelative) {
-                    return new Shift(-1,0,0);
+                    return new Shift((!wall.getHeight(BlockFace.WEST).equals(Wall.Height.NONE)?-1:0),0,
+                                     (!wall.getHeight(BlockFace.WEST).equals(Wall.Height.NONE)?0:(zRelative>0.5?1:-1)));
+                            //(-1,0,0)
                 } else {
-                    return new Shift(0,0,1);
+                    return new Shift((!wall.getHeight(BlockFace.SOUTH).equals(Wall.Height.NONE)?0:(xRelative>0.5?1:-1)),0,
+                                     (!wall.getHeight(BlockFace.SOUTH).equals(Wall.Height.NONE)?1:0));
+                            //(0,0,1);
                 }
             } else {
                 if(zRelative<1-xRelative) {
-                    return new Shift(0,0,-1);
+                    return new Shift((!wall.getHeight(BlockFace.NORTH).equals(Wall.Height.NONE)?0:(xRelative>0.5?1:-1)),0,
+                                     (!wall.getHeight(BlockFace.NORTH).equals(Wall.Height.NONE)?-1:0));
+                            //(0,0,-1);
                 } else {
-                    return new Shift(1,0,0);
+                    return new Shift((!wall.getHeight(BlockFace.EAST).equals(Wall.Height.NONE)?1:0),0,
+                                     (!wall.getHeight(BlockFace.EAST).equals(Wall.Height.NONE)?0:(zRelative>0.5?1:-1)));
+                            //(1,0,0);
                 }
             }
         } else {
-Logger.getGlobal().info("no Wall or has up");
-            return new Shift(getPart(interactionPoint.getBlockX(), interactionPoint.getX()), 0,
-                    getPart(interactionPoint.getBlockZ(), interactionPoint.getZ()));
+//Logger.getGlobal().info("no Wall or has up");
+            return new Shift(getPart(clicked.getX(), interactionPoint.getX()), 0,
+                    getPart(clicked.getZ(), interactionPoint.getZ()));
         }
     }
 
     private int getPart(int blockCoordinate, double coordinate) {
         int part = (int)((coordinate- blockCoordinate)*4);
 //Logger.getGlobal().info("Block: "+blockCoordinate+" Coord: "+coordinate+" Part: "+part);
-        return (part>1?part-2:part-1);
+        return (part>3?1:(part>1?part-2:part-1));
     }
 
     @Override

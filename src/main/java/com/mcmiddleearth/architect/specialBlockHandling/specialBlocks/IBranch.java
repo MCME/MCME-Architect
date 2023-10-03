@@ -77,7 +77,7 @@ public interface IBranch {
                 }
                 Shift thisShift = this.getLower(orientation, clicked, player, interactionPoint);
 //Logger.getGlobal().info("This shift: "+thisShift);
-//Logger.getGlobal().info("This shift: "+otherShift);
+//Logger.getGlobal().info("Other shift: "+otherShift);
                 target = target.getRelative(otherShift.getX() - thisShift.getX(),
                         otherShift.getY() - thisShift.getY(),
                         otherShift.getZ() - thisShift.getZ());
