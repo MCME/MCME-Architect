@@ -116,12 +116,12 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
             //if(getId().equals(SpecialBlockInventoryData.getSpecialBlockDataFromItem(
             //        SpecialBlockInventoryData.getItem(clicked, SpecialBlockInventoryData.rpName(getId()))).getId())) {
             if(getBlockDatas()[0].getMaterial().equals(clicked.getType())) {
-                editDiagonal(blockPlace, clicked, player);
+                editDiagonal(blockPlace, clicked, player, this);
             }
         }
     }
 
-    public static void editDiagonal(Block blockPlace, Block clicked, Player player) {
+    public static void editDiagonal(Block blockPlace, Block clicked, Player player, SpecialBlock specialBlock) {
         BlockDataManager manager = new BlockDataManager();
         String searchFor = getBlockFaceFromLoc(player.getLocation(),true).name();
         BlockData data = clicked.getBlockData();
@@ -135,16 +135,25 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
                 i++;
             }
             attrib.cycleState();
-            if(PluginData.isAllowedBlock(player, data)) {
-                clicked.setBlockData(data, false);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        clicked.setBlockData(data, false);
-                    }
-                }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+            if(PluginData.isAllowedBlock(player, data) && specialBlock.isAllowedBlockData(data)) {
+                executeCycle(clicked,data);
+            } else {
+                attrib.cycleState();
+                if(PluginData.isAllowedBlock(player, data) && specialBlock.isAllowedBlockData(data)) {
+                    executeCycle(clicked, data);
+                }
             }
         }
+    }
+
+    private static void executeCycle(Block clicked, BlockData data){
+        clicked.setBlockData(data, false);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                clicked.setBlockData(data, false);
+            }
+        }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
     }
 
     private static BlockFace getBlockFaceFromLoc(Location loc, boolean alwaysOpposite) {

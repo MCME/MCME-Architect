@@ -70,7 +70,7 @@ public class ArchitectPlugin extends JavaPlugin {
     public void onEnable() {
         
         getConfig().options().copyDefaults(true);
-        saveConfig();
+        saveDefaultConfig();
         pluginInstance = this;
         //ProtocolLibUtil.init(this);
         //DoorListener.addOpenHalfDoorListener();

@@ -1,12 +1,10 @@
 ServerResourcePacks:
     Human:
-        16px:
-            light:
-                url: https://github.com/MCME/RP-Human/releases/download/v3.0.4/Human.zip
-                sha: 7f838c761529237eaf1d9cdc8cd4c439d9cb0770
-            footprints:
-                url: https://github.com/MCME/RP-Human/releases/download/v3.0.4fp/Human-footprints.zip
-                sha: a8485583bf497c30a4229aeff9dc3a1e9f151feb
+        vanilla:
+            16px:
+                light:
+                    url: https://github.com/MCME/RP-Human/releases/download/v3.0.4/Human.zip
+                    sha: 7f838c761529237eaf1d9cdc8cd4c439d9cb0770
 rpSettingsDatabase:
     user: xxx
     password: xxx

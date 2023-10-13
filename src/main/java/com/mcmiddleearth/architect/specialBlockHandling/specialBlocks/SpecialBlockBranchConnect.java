@@ -13,14 +13,42 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.logging.Logger;
+
 public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants implements IBranch {
 
-    private Material material;
+    private final Material material;
+
+    private final BlockData[] allowedBlockData;
+
+    private final boolean limited;
 
     protected SpecialBlockBranchConnect(String id, BlockData[][] data, String[] variants,
-                                        SpecialBlockOrientable.Orientation[] orientations) {
+                                        SpecialBlockOrientable.Orientation[] orientations, boolean limited) {
         super(id, data, variants, orientations, SpecialBlockType.BRANCH_CONNECT);
         material = data[0][0].getMaterial();
+        this.limited = limited;
+        allowedBlockData = new BlockData[] {
+                Bukkit.createBlockData(material, "[north=none,west=none,south=none,east=none,up=true,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=none,south=none,east=none,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=none,south=none,east=none,up=true,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=low,west=none,south=none,east=none,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=low,west=none,south=tall,east=none,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=none,south=tall,east=none,up=true,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=none,south=tall,east=none,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=low,south=none,east=none,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=tall,south=none,east=none,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=tall,south=none,east=none,up=true,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=low,west=tall,south=none,east=none,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=tall,south=none,east=tall,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=tall,south=none,east=tall,up=true,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=low,west=tall,south=none,east=tall,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=low,south=none,east=tall,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=tall,south=none,east=low,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=tall,south=tall,east=tall,up=false,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=tall,west=tall,south=tall,east=tall,up=true,waterlogged=false]"),
+                Bukkit.createBlockData(material, "[north=low,west=tall,south=tall,east=tall,up=false,waterlogged=false]")
+        };
     }
 
     @Override
@@ -30,14 +58,17 @@ public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants im
 
     public static SpecialBlock loadFromConfig(ConfigurationSection config, String id) {
         BlockData data;
+        boolean limited;
         try {
             String configData = config.getString("blockData", "");
             data = Bukkit.getServer().createBlockData(null,configData);
+            limited = config.getBoolean("limited",false);
         } catch(IllegalArgumentException e) {
             return null;
         }
         return new SpecialBlockBranchConnect(id, new BlockData[][]{{data}}, new String[]{"base"},
-                   new SpecialBlockOrientable.Orientation[]{new SpecialBlockOrientable.Orientation(BlockFace.UP,"blockData")});
+                   new SpecialBlockOrientable.Orientation[]{new SpecialBlockOrientable.Orientation(BlockFace.UP,"blockData")},
+                   limited);
     }
 
     @Override
@@ -81,7 +112,7 @@ public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants im
 
     @Override
     protected void cycleVariant(Block blockPlace, Block clicked, Player player, Location interactionPoint) {
-        SpecialBlockDiagonalConnect.editDiagonal(blockPlace,clicked,player);
+        SpecialBlockDiagonalConnect.editDiagonal(blockPlace,clicked,player,this);
 //Logger.getGlobal().info("cycleVariant");
     /*    if(player.getLocation().getPitch()<0) return; // no edit when looking from below
 
@@ -194,13 +225,38 @@ public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants im
     public boolean matches(Block block) {
 //Logger.getGlobal().info("SpecialBlockBranchConnect.matches(block): this:"+material);
 //Logger.getGlobal().info("SpecialBlockBranchConnect.matches: that:"+block.getType());
-        return block.getType().equals(material);
+        return block.getType().equals(material) && isAllowedBlockData(block.getBlockData());
     }
 
     @Override
     public boolean matches(BlockData data) {
 //Logger.getGlobal().info("SpecialBlockBranchConnect.matches: this:"+material);
 //Logger.getGlobal().info("SpecialBlockBranchConnect.matches: that:"+data.getMaterial());
-        return data.getMaterial().equals(material);}
+            return data.getMaterial().equals(material) && isAllowedBlockData(data);
+    }
+
+    @Override
+    public boolean isAllowedBlockData(BlockData blockData) {
+//Logger.getGlobal().info("Limited: "+limited);
+        if(!limited) return true;
+        if(blockData instanceof Wall) {
+            Wall search = (Wall) blockData.clone();
+            for (int i = 0; i < 4; i++) {
+                for (BlockData allowed : allowedBlockData) {
+                    if(search.equals(allowed)) {
+                        return true;
+                    }
+                }
+                Wall rotated = (Wall) search.clone();
+                rotated.setHeight(BlockFace.NORTH,search.getHeight(BlockFace.EAST));
+                rotated.setHeight(BlockFace.EAST,search.getHeight(BlockFace.SOUTH));
+                rotated.setHeight(BlockFace.SOUTH,search.getHeight(BlockFace.WEST));
+                rotated.setHeight(BlockFace.WEST,search.getHeight(BlockFace.NORTH));
+                search = rotated;
+            }
+        }
+        return false;
+    }
+
 
 }

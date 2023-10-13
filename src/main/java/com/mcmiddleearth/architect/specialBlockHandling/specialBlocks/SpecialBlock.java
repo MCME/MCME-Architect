@@ -249,4 +249,8 @@ public class SpecialBlock {
         return priority;
     }
 
+    public boolean isAllowedBlockData(BlockData data) {
+        return true;
+    }
+
 }
