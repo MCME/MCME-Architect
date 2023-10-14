@@ -110,7 +110,7 @@ public class RpDatabaseConnector {
             checkTables();
 
             insertPlayerRpSettings = dbConnection.prepareStatement("INSERT INTO architect_rp (uuid, auto, variant, resolution, client, currentURL) "
-                                                                  +"VALUES (?,?,?,?,?)");
+                                                                  +"VALUES (?,?,?,?,?,?)");
             updatePlayerRpSettings = dbConnection.prepareStatement("UPDATE architect_rp SET auto=?, variant=?, resolution=?, client=?, currentURL=? "
                                                                   +"WHERE uuid = ?");
             selectPlayerRpSettings = dbConnection.prepareStatement("SELECT auto, variant, resolution, client, currentURL FROM architect_rp "

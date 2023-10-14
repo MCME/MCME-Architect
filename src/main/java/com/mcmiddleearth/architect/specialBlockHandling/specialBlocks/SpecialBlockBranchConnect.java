@@ -97,49 +97,9 @@ public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants im
         return false;
     }
 
-    /*@Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
-                           final Location interactionPoint, final Player player) {
-        if(!player.isSneaking()) {
-            super.placeBlock(blockPlace,blockFace,clicked,interactionPoint,player);
-        } else {
-            if(matches(clicked.getBlockData())) {
-                SpecialBlockDiagonalConnect.editDiagonal(blockPlace, clicked, player);
-            }
-        }
-    }*/
-
-
     @Override
     protected void cycleVariant(Block blockPlace, Block clicked, Player player, Location interactionPoint) {
         SpecialBlockDiagonalConnect.editDiagonal(blockPlace,clicked,player,this);
-//Logger.getGlobal().info("cycleVariant");
-    /*    if(player.getLocation().getPitch()<0) return; // no edit when looking from below
-
-        String searchFor = getBlockFaceFromShift(getUpper(null, player, interactionPoint)).name();
-        BlockDataManager manager = new BlockDataManager();
-        //String searchFor = getBlockFaceFromLoc(player.getLocation(),true).name();
-        BlockData data = clicked.getBlockData();
-        Attribute attrib = manager.getAttribute(data);
-        int i = 0;
-        if (attrib != null) {
-            int countAttribs = manager.countAttributes(data);
-            while(!attrib.getName().equalsIgnoreCase(searchFor) && i < countAttribs) {
-                manager.nextAttribute(data);
-                attrib = manager.getAttribute(data);
-                i++;
-            }
-            attrib.cycleState();
-            if(PluginData.isAllowedBlock(player, data)) {
-                clicked.setBlockData(data, false);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        clicked.setBlockData(data, false);
-                    }
-                }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
-            }
-        }*/
     }
 
     private BlockFace getBlockFaceFromShift(Shift shift) {
