@@ -8,11 +8,12 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+@Deprecated
 public class SpecialBlockBranchTwigsUpper extends SpecialBlockFourDirections implements IBranch {
 
-    protected SpecialBlockBranchTwigsUpper(String id, BlockData[] data) {
+    /*protected SpecialBlockBranchTwigsUpper(String id, BlockData[] data) {
         super(id, data);
-    }
+    }*/
 
     protected SpecialBlockBranchTwigsUpper(String id, BlockData[] data, SpecialBlockType type) {
         super(id, data, type);
@@ -23,7 +24,7 @@ public class SpecialBlockBranchTwigsUpper extends SpecialBlockFourDirections imp
         if(data==null) {
             return null;
         }
-        return new SpecialBlockBranchTwigsUpper(id, data);
+        return new SpecialBlockBranchTwigsUpper(id, data, SpecialBlockType.BRANCH_TWIGS_UPPER);
     }
 
     @Override

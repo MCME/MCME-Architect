@@ -6,8 +6,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 
-import java.util.logging.Logger;
-
 public interface IBranch {
 
     String[] variants = new String[]{"Thick", "Thin"};

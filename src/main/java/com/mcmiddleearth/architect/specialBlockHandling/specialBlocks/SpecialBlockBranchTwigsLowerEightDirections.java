@@ -9,22 +9,22 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 @Deprecated
-public class SpecialBlockBranchTwigsLower extends SpecialBlockFourDirections implements IBranch {
+public class SpecialBlockBranchTwigsLowerEightDirections extends SpecialBlockEightFaces implements IBranch {
 
-    /*protected SpecialBlockBranchTwigsLower(String id, BlockData[] data) {
+    /*protected SpecialBlockBranchTwigsLowerEightDirections(String id, BlockData[] data) {
         super(id, data);
     }*/
 
-    protected SpecialBlockBranchTwigsLower(String id, BlockData[] data, SpecialBlockType type) {
+    protected SpecialBlockBranchTwigsLowerEightDirections(String id, BlockData[] data, SpecialBlockType type) {
         super(id, data, type);
     }
 
-    public static SpecialBlockBranchTwigsLower loadFromConfig(ConfigurationSection config, String id) {
-        BlockData[] data = loadBlockDataFromConfig(config, fourFaces);
+    public static SpecialBlockBranchTwigsLowerEightDirections loadFromConfig(ConfigurationSection config, String id) {
+        BlockData[] data = loadBlockDataFromConfig(config, eightFaces);
         if(data==null) {
             return null;
         }
-        return new SpecialBlockBranchTwigsLower(id, data, SpecialBlockType.BRANCH_TWIGS_LOWER);
+        return new SpecialBlockBranchTwigsLowerEightDirections(id, data, SpecialBlockType.BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS);
     }
 
     @Override

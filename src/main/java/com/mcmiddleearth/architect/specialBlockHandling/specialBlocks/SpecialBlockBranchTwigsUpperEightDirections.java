@@ -9,22 +9,22 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 @Deprecated
-public class SpecialBlockBranchTwigsLower extends SpecialBlockFourDirections implements IBranch {
+public class SpecialBlockBranchTwigsUpperEightDirections extends SpecialBlockEightFaces implements IBranch {
 
-    /*protected SpecialBlockBranchTwigsLower(String id, BlockData[] data) {
-        super(id, data);
+    /*protected SpecialBlockBranchTwigsUpperEightDirections(String id, BlockData[] data, SpecialBlockType type) {
+        super(id, data, type);
     }*/
 
-    protected SpecialBlockBranchTwigsLower(String id, BlockData[] data, SpecialBlockType type) {
+    protected SpecialBlockBranchTwigsUpperEightDirections(String id, BlockData[] data, SpecialBlockType type) {
         super(id, data, type);
     }
 
-    public static SpecialBlockBranchTwigsLower loadFromConfig(ConfigurationSection config, String id) {
-        BlockData[] data = loadBlockDataFromConfig(config, fourFaces);
+    public static SpecialBlockBranchTwigsUpperEightDirections loadFromConfig(ConfigurationSection config, String id) {
+        BlockData[] data = loadBlockDataFromConfig(config, eightFaces);
         if(data==null) {
             return null;
         }
-        return new SpecialBlockBranchTwigsLower(id, data, SpecialBlockType.BRANCH_TWIGS_LOWER);
+        return new SpecialBlockBranchTwigsUpperEightDirections(id, data, SpecialBlockType.BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS);
     }
 
     @Override
@@ -42,10 +42,10 @@ public class SpecialBlockBranchTwigsLower extends SpecialBlockFourDirections imp
     @Override
     public Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
         return switch(orientation) {
-            case SOUTH -> new Shift(0,0,-1);
-            case EAST -> new Shift(-1,0,0);
-            case NORTH -> new Shift(0,0,1);
-            case WEST -> new Shift(1,0,0);
+            case SOUTH -> new Shift(0,-1,0);
+            case EAST -> new Shift(0,-1,0);
+            case NORTH -> new Shift(0,-1,0);
+            case WEST -> new Shift(0,-1,0);
             default -> new Shift(0,0,0);
         };
     }

@@ -33,9 +33,14 @@ public enum SpecialBlockType {
     BRANCH_DIAGONAL,
     BRANCH_STEEP,
     BRANCH_CONNECT,
+    BRANCH_TRUNK_CONNECT,
+    BRANCH_TRUNK_CONNECT_COMPLEX,
     BRANCH_TWIGS,
-    BRANCH_TWIGS_UPPER,
-    BRANCH_TWIGS_LOWER,
+    BRANCH_TWIGS_EIGHT_DIRECTIONS,
+    BRANCH_TWIGS_UPPER, //deprecated
+    BRANCH_TWIGS_LOWER, //deprecated
+    BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS, //deprecated
+    BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS, //deprecated
     OPEN_HALF_DOOR, //("open half doors")
     FOUR_DIRECTIONS,//("fourFaced"),
     FOUR_DIRECTIONS_COMPLEX,//("fourFaced") with additional block configuration file for stick editor

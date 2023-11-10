@@ -25,6 +25,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
@@ -45,8 +47,8 @@ public class SpecialBlockEightFaces extends SpecialBlockOrientable {
     protected SpecialBlockEightFaces(String id,
                         //Material[] material, 
                         //byte[] dataValue,
-                        BlockData[] data) {
-        super(id, data, SpecialBlockType.EIGHT_FACES);
+                        BlockData[] data, SpecialBlockType type) {
+        super(id, data, type);
         orientations = eightFaces;
     }
     
@@ -55,7 +57,7 @@ public class SpecialBlockEightFaces extends SpecialBlockOrientable {
         if(data==null) {
             return null;
         }
-        return new SpecialBlockEightFaces(id,data);
+        return new SpecialBlockEightFaces(id,data,SpecialBlockType.EIGHT_FACES);
     }
     /* 1.13 removed
         Material material = matchMaterial(config.getString("blockMaterial",""));
@@ -94,7 +96,10 @@ public class SpecialBlockEightFaces extends SpecialBlockOrientable {
                                        Player player, Location interactionPoint) {
         //BlockState state = blockPlace.getState();
         BlockFace blockFaceFromYaw = getBlockFaceFine(player.getLocation().getYaw());
-        return super.getBlockState(blockPlace, clicked, blockFaceFromYaw, player, interactionPoint);
+Logger.getGlobal().info("EightFace: "+blockFaceFromYaw.name());
+        BlockState state = super.getBlockState(blockPlace, clicked, blockFaceFromYaw, player, interactionPoint);
+Logger.getGlobal().info("state: "+state);
+        return state;
         /* 1.13 removed
         switch(blockFaceFromYaw) {
             case SOUTH:

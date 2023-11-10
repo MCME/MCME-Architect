@@ -27,7 +27,7 @@ import org.bukkit.configuration.ConfigurationSection;
  */
 public class SpecialBlockFiveFaces extends SpecialBlockOrientable {
     
-    private static final Orientation[] fiveFaces = new Orientation[] {
+    protected static final Orientation[] fiveFaces = new Orientation[] {
             new Orientation(BlockFace.SOUTH,"South"),
             new Orientation(BlockFace.WEST,"West"),
             new Orientation(BlockFace.NORTH,"North"),
@@ -35,12 +35,17 @@ public class SpecialBlockFiveFaces extends SpecialBlockOrientable {
             new Orientation(BlockFace.UP,"Up")
         };
 
-    private SpecialBlockFiveFaces(String id, 
-                        BlockData[] data) {
-        super(id, data, SpecialBlockType.FIVE_FACES);
+    protected SpecialBlockFiveFaces(String id,
+                                    BlockData[] data, SpecialBlockType type) {
+        super(id, data, type);
         orientations = fiveFaces;
         //this.material = material;
         //this.dataValue = dataValue;
+    }
+
+    private SpecialBlockFiveFaces(String id,
+                BlockData[] data) {
+        this(id, data, SpecialBlockType.FIVE_FACES);
     }
     
     public static SpecialBlockFiveFaces loadFromConfig(ConfigurationSection config, String id) {

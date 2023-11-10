@@ -194,14 +194,29 @@ public class SpecialBlockInventoryData {
                         case BRANCH_TWIGS:
                             blockData = SpecialBlockBranchTwigs.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
-                        case BRANCH_TWIGS_UPPER:
+                        case BRANCH_TWIGS_EIGHT_DIRECTIONS:
+                            blockData = SpecialBlockBranchTwigsEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        /*case BRANCH_TWIGS_UPPER:
                             blockData = SpecialBlockBranchTwigsUpper.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
                         case BRANCH_TWIGS_LOWER:
                             blockData = SpecialBlockBranchTwigsLower.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
+                        case BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS:
+                            blockData = SpecialBlockBranchTwigsUpperEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS:
+                            blockData = SpecialBlockBranchTwigsLowerEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;*/
                         case BRANCH_CONNECT:
                             blockData = SpecialBlockBranchConnect.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TRUNK_CONNECT:
+                            blockData = SpecialBlockBranchTrunkConnect.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TRUNK_CONNECT_COMPLEX:
+                            blockData = SpecialBlockBranchTrunkConnectComplex.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
                         case BLOCK_CONNECT:
 //Logger.getGlobal().info("Block connect:"+itemKey);
