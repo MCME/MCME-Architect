@@ -158,7 +158,21 @@ Logger.getGlobal().info("Start: "+startCategory);
         if (openInventories.containsKey(event.getInventory())) { //.getTitle.equals(name)) {
             if(event.getSlotType().equals(InventoryType.SlotType.OUTSIDE)
                     || event.getRawSlot() >= event.getInventory().getSize()
-                    || event.getRawSlot() < CATEGORY_SLOTS) {//items.size()/9+1)*9 
+                    || event.getRawSlot() < CATEGORY_SLOTS) {//items.size()/9+1)*9
+                if(event.getRawSlot()>event.getInventory().getSize() && event.getCursor()!=null) {
+                    if(event.getCursor().isSimilar(event.getCurrentItem())
+                        && event.getCurrentItem()!=null
+                            && event.getCursor().getMaxStackSize()
+                                >= event.getCursor().getAmount()+event.getCurrentItem().getAmount()) {
+                        event.getCursor().setAmount(event.getCursor().getAmount()
+                                + event.getCurrentItem().getAmount());
+                    } else {
+                        ItemStack temp = event.getCursor();
+                        event.getView().setCursor(event.getCurrentItem());
+                        event.setCurrentItem(temp);
+                    }
+                    event.setCancelled(true);
+                }
                 return;
             }
             event.setCancelled(true);
@@ -207,16 +221,17 @@ Logger.getGlobal().info("Start: "+startCategory);
                 return;
             }
             if(event.getCurrentItem() != null) {
+                //pick up SpecialBlock item
                 if(event.getCursor() !=null && event.getCursor().getType().equals(Material.AIR)) {
                     ItemStack item = new ItemStack(event.getCurrentItem());
                     item.setAmount(2);
-                    event.setCursor(item);
+                    event.getView().setCursor(item);
                 } else if(event.getCursor().isSimilar(event.getCurrentItem())) { 
                     if(event.getCursor().getMaxStackSize()>event.getCursor().getAmount()) {
                         event.getCursor().setAmount(event.getCursor().getAmount()+1);
                     }
-                } else {
-                    event.setCursor(new ItemStack(Material.AIR));
+                //} else {
+                //    event.setCursor(new ItemStack(Material.AIR));
                 }
             }
         }

@@ -153,10 +153,12 @@ public interface IBranch {
     }*/
 
     private boolean isUpperHalf(BlockFace clickedFace, Location interactionPoint) {
+        if(interactionPoint==null) return true;
         return isSideFace(clickedFace) && interactionPoint.getY()-interactionPoint.getBlockY() >= 0.5;
     }
 
     private boolean isLowerHalf(BlockFace clickedFace, Location interactionPoint) {
+        if(interactionPoint==null) return false;
         return isSideFace(clickedFace) && interactionPoint.getY()-interactionPoint.getBlockY() < 0.5;
     }
 

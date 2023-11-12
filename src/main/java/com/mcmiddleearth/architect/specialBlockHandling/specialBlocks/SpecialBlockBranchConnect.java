@@ -159,17 +159,21 @@ public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants im
                             //(1,0,0);
                 }
             }
+        /*} else if(clicked.getBlockData() instanceof Wall wall) {
+            int partX = getPart(clicked.getX(), interactionPoint.getX());
+            int partZ = getPart(clicked.getZ(), interactionPoint.getZ());*/
+
+//Logger.getGlobal().info("Wall and has up")
         } else {
-//Logger.getGlobal().info("no Wall or has up");
             return new Shift(getPart(clicked.getX(), interactionPoint.getX()), 0,
                     getPart(clicked.getZ(), interactionPoint.getZ()));
         }
     }
 
     private int getPart(int blockCoordinate, double coordinate) {
-        int part = (int)((coordinate- blockCoordinate)*4);
+        double part = ((coordinate- blockCoordinate)*4);
 //Logger.getGlobal().info("Block: "+blockCoordinate+" Coord: "+coordinate+" Part: "+part);
-        return (part>3?1:(part>1?part-2:part-1));
+        return (part>3?1:(part>=1?0:-1));
     }
 
     @Override

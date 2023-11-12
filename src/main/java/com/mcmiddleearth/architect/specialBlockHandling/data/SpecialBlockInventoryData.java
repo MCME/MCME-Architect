@@ -119,8 +119,8 @@ public class SpecialBlockInventoryData {
     private static void loadFromFile(String rpName, File file) {
         Logger.getGlobal().info("Loading items into to inventory for resource pack "+rpName+" from "+file.getName());
         CustomInventory inventory = inventories.get(rpName);
-        //inventory.setCategoryItems("Heads",null, true,
-        //                            new ItemStack(Material.STONE), new ItemStack(Material.STONE),false);
+        inventory.setCategoryItems("Heads",null, true,
+                                    new ItemStack(Material.PLAYER_HEAD), new ItemStack(Material.PLAYER_HEAD),false);
         SearchInventory searchInventory = searchInventories.get(rpName);
         YamlConfiguration config = new YamlConfiguration();
         try {

@@ -32,6 +32,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
@@ -40,7 +41,7 @@ import java.util.logging.Logger;
  */
 public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
 
-    private static final Orientation[] fourFaces = new Orientation[] {
+    protected static final Orientation[] fourFaces = new Orientation[] {
         new Orientation(BlockFace.SOUTH,"South"),
         new Orientation(BlockFace.WEST,"West"),
         new Orientation(BlockFace.NORTH,"North"),
@@ -61,11 +62,19 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
         if(data==null) {
             return null;
         }
+        EditData[] editData = loadEditDataFromConfig(config, data, fourFaces);
+        if(editData==null) {
+            return null;
+        }
+        return new SpecialBlockFourDirectionsComplex(id, data, editData);
+    }
+
+    public static EditData[] loadEditDataFromConfig(ConfigurationSection config, BlockData[] data, Orientation[] fourFaces) {
         ConfigurationSection editSection = config.getConfigurationSection("editDataNorth");
         if(editSection==null) {
             return null;
         }
-        EditData editData[] = new EditData[4];
+        EditData[] editData = new EditData[4];
         try {
             editData[0] = new EditData(editSection, /*blockDataNorth*/ data[2]);
         } catch(IllegalArgumentException | NullPointerException ex) {
@@ -87,7 +96,7 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
         if(editSection!=null) {
             editData[3].readFrom(editSection);
         }
-        return new SpecialBlockFourDirectionsComplex(id, data, editData);
+        return editData;
     }
     
     @Override
@@ -133,20 +142,21 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
             loc.setYaw(loc.getYaw()+180);*/
             //String blockId = SpecialBlockInventoryData.getSpecialBlockDataFromItem(
                 //        SpecialBlockInventoryData.getItem(clicked, SpecialBlockInventoryData.rpName(getId()))).getId();
-Logger.getGlobal().info("block place: "+clicked.getType());
-Logger.getGlobal().info("this: "+getBlockDatas()[0].getMaterial());
+//Logger.getGlobal().info("block place: "+clicked);
+//Logger.getGlobal().info("matches: "+matches(clicked));
            //if(getId().equals(SpecialBlockInventoryData.getSpecialBlockDataFromItem(
             //        SpecialBlockInventoryData.getItem(clicked, SpecialBlockInventoryData.rpName(getId()))).getId())) {
-            if(getBlockDatas()[0].getMaterial().equals(clicked.getType())) {
+            //if(getBlockDatas()[0].getMaterial().equals(clicked.getType())) {
+            if(matches(clicked.getBlockData())) {
                 /*BlockDataManager manager = new BlockDataManager();
                 String searchFor = getBlockFaceFromLoc(player.getLocation(),true).name();*/
                 BlockData data = clicked.getBlockData();
                 BlockFace editFace = getBlockFace(player.getLocation().getYaw()+180);
                 for(int i = 0; i < 4 ; i++) {
-Logger.getGlobal().info("try: "+i);
+//Logger.getGlobal().info("try: "+i);
                     int[] indices = editData[i].getIndicesFor(data);
                     if (indices.length > 0) {
-Logger.getGlobal().info("found");
+//Logger.getGlobal().info("found");
                         int editIndex;
                         switch (editFace) {
                             case NORTH:
@@ -251,6 +261,24 @@ Logger.getGlobal().info("found");
         }
     }
 
+    @Override
+    public boolean matches(Block block) {
+        return matches(block.getBlockData());
+    }
+
+    @Override
+    public boolean matches(BlockData blockData) {
+        if(super.matches(blockData)) return true;
+        for(EditData searchEditData: editData) {
+            if(searchEditData.matches(blockData)) return true;
+        }
+        return false;
+    }
+
+    protected EditData[] getEditData() {
+        return editData;
+    }
+
     /*private BlockFace getBlockFaceFromLoc(Location loc) {
         BlockFace face;
         if(Math.abs(loc.getPitch())>45) {
@@ -267,6 +295,7 @@ Logger.getGlobal().info("found");
 
     public static class EditData {
 
+        public static final int NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3;
                                                      //N E S W
         private static String[][][][] keys = new String[][][][] {
             {
@@ -394,7 +423,7 @@ Logger.getGlobal().info("found");
         }
 
         public BlockData getBlockData(int[] indices) {
-            return data[indices[0]][indices[1]][indices[2]][indices[3]];
+            return data[indices[NORTH]][indices[EAST]][indices[SOUTH]][indices[WEST]];
         }
 
         public int index(boolean present) {
@@ -467,6 +496,25 @@ Logger.getGlobal().info("found");
                 }
             }
         }
+
+        public boolean matches(BlockData blockData) {
+            for(int i = 0; i< 2; i++) {
+                for(int j = 0; j< 2; j++) {
+                    for(int k = 0; k< 2; k++) {
+                        for (int l = 0; l < 2; l++) {
+                            if(!(i==0 && j==0 && k==0 && l==0)) {
+                                if(blockData.equals(data[i][j][k][l])) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
     }
+
+
 
 }

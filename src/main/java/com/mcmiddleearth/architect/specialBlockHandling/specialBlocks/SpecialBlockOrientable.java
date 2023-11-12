@@ -82,23 +82,17 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
     
     @Override
     public boolean matches(Block block) {
+        return matches(block.getBlockData());
+    }
+
+    @Override
+    public boolean matches(BlockData search) {
         for(BlockData data: blockData) {
-            if(block.getBlockData().equals(data)) {
+            if(search.equals(data)) {
                 return true;
             }
         }
         return false;
-        /* 1.13 removed
-        for(Material mat: material) {
-            if(mat.equals(block.getType())) {
-                for(byte data: dataValue) {
-                    if(data == block.getData()) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;*/
     }
     
     protected BlockData getBlockData(BlockFace face) {

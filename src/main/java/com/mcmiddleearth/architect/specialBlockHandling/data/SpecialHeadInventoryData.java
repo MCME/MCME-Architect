@@ -57,7 +57,7 @@ public class SpecialHeadInventoryData {
         }
         createInventories();
         inventory.setCategoryItems("Blocks",null, true,
-                                    new ItemStack(Material.STONE), new ItemStack(Material.STONE),false);
+                new ItemStack(Material.STONE), new ItemStack(Material.STONE),false);
         for(String name: CustomHeadManagerData.getCollection().getSubCollections().keySet()) {
             CustomHeadCollection collection = CustomHeadManagerData.getCollection()
                                                                    .getSubCollection(name);
