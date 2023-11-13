@@ -25,11 +25,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
-import java.util.logging.Logger;
 
 /**
  *
@@ -46,9 +44,12 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
 
     private final ItemStack maskItem = new ItemStack(Material.PAPER,1);
 
+    private boolean directGet;
+
     public CustomInventoryCollectionState(Map<String, CustomInventoryCategory> categories, CustomInventoryCategory withoutCategory,
-                                          Inventory inventory, Player player, ItemStack baseItem) {
+                                          Inventory inventory, Player player, ItemStack baseItem, boolean directGet) {
         super(categories, withoutCategory, inventory, player);
+        this.directGet = directGet;
         stressCurrentCategoryItem = false;
         SpecialBlock tempBase = SpecialBlockInventoryData.getSpecialBlockDataFromItem(baseItem);
         Set<SpecialBlock> visited = new HashSet<>();
@@ -89,7 +90,7 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
     }
 
     CustomInventoryCollectionState(CustomInventoryState state, ItemStack baseItem) {
-        this(state.categories, state.withoutCategory, state.inventory, state.player, baseItem);
+        this(state.categories, state.withoutCategory, state.inventory, state.player, baseItem, false);
     }
     
     @Override
@@ -202,5 +203,13 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
 
     public int getBackSlot() {
         return backSlot;
+    }
+
+    public boolean isDirectGet() {
+        return directGet;
+    }
+
+    public void setDirectGet(boolean directGet) {
+        this.directGet = directGet;
     }
 }

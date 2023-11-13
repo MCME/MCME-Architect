@@ -75,7 +75,7 @@ public class RpCommand extends AbstractArchitectCommand {
         ChatColor ccStressed = PluginData.getMessageUtil().STRESSED;
         ChatColor ccInfo = PluginData.getMessageUtil().INFO;
         if(args.length>0 && (args[0].equals("auto")
-                          || args[0].equals("px")
+                          || args[0].equals("client")
                           || args[0].equals("variant"))) {
             RpPlayerData data = RpManager.getPlayerData((Player)cs);
             switch(args[0]) {
@@ -123,7 +123,25 @@ public class RpCommand extends AbstractArchitectCommand {
                     data.setVariant(args[1]);
                     RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()),(Player)cs,true);
                     PluginData.getMessageUtil().sendInfoMessage(cs, "RP variant set to "
-                                    +ccStressed+args[1]+ccInfo+". If this variant is not available for a RP you'll see default variant.");
+                            +ccStressed+args[1]+ccInfo+". If this variant is not available for a RP you'll see default variant.");
+                    break;
+                case "client":
+                    if(args.length<2 ) {
+                        PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
+                        return true;
+                    }
+                    if(args[1].startsWith("xxx_") || !RpManager.searchRpKey(args[1])) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "That client type is not available. Try 'vanilla' or 'sodium'.");
+                        return true;
+                    }
+                    if(data.getClient().equals(args[1])) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "You have already set your client type to "+args[1]);
+                        return true;
+                    }
+                    data.setClient(args[1]);
+                    RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()),(Player)cs,true);
+                    PluginData.getMessageUtil().sendInfoMessage(cs, "client type set to "
+                            +ccStressed+args[1]+ccInfo+". If there is no rp for this client type available you'll get the rp for vanilla clients.");
                     break;
             }
             RpManager.savePlayerData((Player)cs);

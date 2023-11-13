@@ -190,28 +190,80 @@ public class RpManager {
     
     private static ConfigurationSection getConfigSection(String rp, Player player) {
         RpPlayerData data;
-        if(player!=null) {
+        if (player != null) {
             data = getPlayerData(player);
         } else {
             data = new RpPlayerData();
         }
-        ConfigurationSection config = getRpConfig().getConfigurationSection(rp);
-        if(config != null) {
-            ConfigurationSection section = config.getConfigurationSection(getResolutionKey(data.getResolution()));
-            if(section==null) {
-                section = config.getConfigurationSection(config.getKeys(false).iterator().next());
-            }
-            ConfigurationSection varSection = section.getConfigurationSection(data.getVariant());
-            String url;
-            if(varSection==null) {
-                return section.getConfigurationSection(section.getKeys(false).iterator().next());
+        ConfigurationSection rpSection = getRpConfig().getConfigurationSection(rp);
+        if (rpSection != null) {
+            if (rpSection.contains("url")) {
+                return rpSection;
             } else {
-                return varSection;
+                if (rpSection.contains(data.getClient())) {
+                    return searchInClientSection(rpSection.getConfigurationSection(data.getClient()), data);
+                } else {
+                    ConfigurationSection search = searchInClientSection(rpSection, data);
+                    if (search != null) {
+                        return search;
+                    } else {
+                        return searchInClientSection(rpSection.getConfigurationSection(rpSection.getKeys(false).iterator().next()), data);
+                    }
+                }
             }
         }
         return null;
     }
-        
+
+    private static ConfigurationSection searchInClientSection(ConfigurationSection clientSection, RpPlayerData data) {
+        if (clientSection != null) {
+            if (clientSection.contains("url")) {
+                return clientSection;
+            } else {
+                if (clientSection.contains(getResolutionKey(data.getResolution()))) {
+                    return searchInResolutionSection(clientSection.getConfigurationSection(getResolutionKey(data.getResolution())), data);
+                } else {
+                    ConfigurationSection search = searchInResolutionSection(clientSection, data);
+                    if (search != null) {
+                        return search;
+                    } else {
+                        return searchInResolutionSection(clientSection.getConfigurationSection(clientSection.getKeys(false).iterator().next()), data);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static ConfigurationSection searchInResolutionSection(ConfigurationSection resolutionSection, RpPlayerData data) {
+        if (resolutionSection != null) {
+            if (resolutionSection.contains("url")) {
+                return resolutionSection;
+            } else {
+                if (resolutionSection.contains(data.getVariant())) {
+                    return searchInVariantSection(resolutionSection.getConfigurationSection(data.getVariant()), data);
+                } else {
+                    ConfigurationSection search = searchInVariantSection(resolutionSection, data);
+                    if (search != null) {
+                        return search;
+                    } else {
+                        return searchInVariantSection(resolutionSection.getConfigurationSection(resolutionSection.getKeys(false).iterator().next()), data);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static ConfigurationSection searchInVariantSection(ConfigurationSection variantSection, RpPlayerData data) {
+        if (variantSection != null) {
+            if (variantSection.contains("url")) {
+                return variantSection;
+            }
+        }
+        return null;
+    }
+
     public static String getCurrentRpName(Player player) {
         return getRpForUrl(getPlayerData(player).getCurrentRpUrl());
     }
@@ -254,13 +306,16 @@ public class RpManager {
     
     public static byte[] getSHAForUrl(String url) {
         for(String rpName: getRpConfig().getKeys(false)) {
-            ConfigurationSection section = getRpConfig().getConfigurationSection(rpName);
-            for(String key: section.getKeys(false)) {
-                ConfigurationSection pxSection = section.getConfigurationSection(key);
-                for(String varKey: pxSection.getKeys(false)) {
-                    ConfigurationSection varSection = pxSection.getConfigurationSection(varKey);
-                    if(varSection.getString("url").equals(url)) {
-                        return stringToSHA(varSection.getString("sha"));
+            ConfigurationSection clientSection = getRpConfig().getConfigurationSection(rpName);
+            for (String clientName : clientSection.getKeys(false)) {
+                ConfigurationSection section = clientSection.getConfigurationSection(clientName);
+                for (String key : section.getKeys(false)) {
+                    ConfigurationSection pxSection = section.getConfigurationSection(key);
+                    for (String varKey : pxSection.getKeys(false)) {
+                        ConfigurationSection varSection = pxSection.getConfigurationSection(varKey);
+                        if (varSection.getString("url").equals(url)) {
+                            return stringToSHA(varSection.getString("sha"));
+                        }
                     }
                 }
             }
@@ -270,13 +325,20 @@ public class RpManager {
     
     public static String getRpForUrl(String url) {
         for(String rpName: getRpConfig().getKeys(false)) {
-            ConfigurationSection section = getRpConfig().getConfigurationSection(rpName);
-            for(String key: section.getKeys(false)) {
-                ConfigurationSection pxSection = section.getConfigurationSection(key);
-                for(String varKey: pxSection.getKeys(false)) {
-                    ConfigurationSection varSection = pxSection.getConfigurationSection(varKey);
-                    if(varSection.getString("url").equals(url)) {
-                        return rpName;
+//Logger.getGlobal().info("RP: "+rpName);
+            ConfigurationSection clientSection = getRpConfig().getConfigurationSection(rpName);
+            for (String clientName : clientSection.getKeys(false)) {
+//Logger.getGlobal().info("Client: "+clientName);
+                ConfigurationSection resolutionSection = clientSection.getConfigurationSection(clientName);
+                for (String key : resolutionSection.getKeys(false)) {
+//Logger.getGlobal().info("Resolution: "+key);
+                    ConfigurationSection pxSection = resolutionSection.getConfigurationSection(key);
+                    for (String varKey : pxSection.getKeys(false)) {
+//Logger.getGlobal().info("Variant: "+varKey);
+                        ConfigurationSection varSection = pxSection.getConfigurationSection(varKey);
+                        if (varSection.getString("url").equals(url)) {
+                            return rpName;
+                        }
                     }
                 }
             }
@@ -295,36 +357,39 @@ public class RpManager {
     public static boolean refreshSHA(CommandSender cs, String rp) {
         ConfigurationSection config = getRpConfig().getConfigurationSection(rp);
         if(config!=null) {
-            for(String resolutionKey: config.getKeys(false)) {
-                ConfigurationSection resolutionSection = config.getConfigurationSection(resolutionKey);
-                for(String variantKey: resolutionSection.getKeys(false)) {
-                    try {
-                        ConfigurationSection variantSection = resolutionSection.getConfigurationSection(variantKey);
-                        URL url = new URL(variantSection.getString("url"));
-                        InputStream fis = url.openStream();
-                        MessageDigest sha1 = MessageDigest.getInstance("SHA1");
+            for(String clientKey: config.getKeys(false)) {
+                ConfigurationSection clientSection = config.getConfigurationSection(clientKey);
+                for(String resolutionKey: clientSection.getKeys(false)) {
+                    ConfigurationSection resolutionSection = clientSection.getConfigurationSection(resolutionKey);
+                    for (String variantKey : resolutionSection.getKeys(false)) {
+                        try {
+                            ConfigurationSection variantSection = resolutionSection.getConfigurationSection(variantKey);
+                            URL url = new URL(variantSection.getString("url"));
+                            InputStream fis = url.openStream();
+                            MessageDigest sha1 = MessageDigest.getInstance("SHA1");
 
-                        byte[] data = new byte[1024];
-                        int read = 0;
-                        long time = System.currentTimeMillis();
-                        while ((read = fis.read(data)) != -1) {
-                            sha1.update(data, 0, read);
-                            if(System.currentTimeMillis()-time>5000) {
-                                time = System.currentTimeMillis();
-                                PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ...");
+                            byte[] data = new byte[1024];
+                            int read = 0;
+                            long time = System.currentTimeMillis();
+                            while ((read = fis.read(data)) != -1) {
+                                sha1.update(data, 0, read);
+                                if (System.currentTimeMillis() - time > 5000) {
+                                    time = System.currentTimeMillis();
+                                    PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ...");
+                                }
                             }
+                            byte[] hashBytes = sha1.digest();
+                            StringBuilder sb = new StringBuilder();
+                            for (byte b : hashBytes) {
+                                sb.append(String.format("%02x", b));
+                            }
+                            String hashString = sb.toString();
+                            variantSection.set("sha", hashString);
+                            ArchitectPlugin.getPluginInstance().saveConfig();
+                        } catch (IOException | NoSuchAlgorithmException ex) {
+                            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                            return false;
                         }
-                        byte[] hashBytes = sha1.digest();
-                        StringBuilder sb = new StringBuilder();
-                        for (byte b : hashBytes) {
-                            sb.append(String.format("%02x", b));
-                        }
-                        String hashString = sb.toString();
-                        variantSection.set("sha", hashString);
-                        ArchitectPlugin.getPluginInstance().saveConfig();
-                    } catch (IOException | NoSuchAlgorithmException ex) {
-                        Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
-                        return false;
                     }
                 }
             }

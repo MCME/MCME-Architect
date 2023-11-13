@@ -30,6 +30,7 @@ public class RpPlayerData implements Serializable {
             
     private boolean autoRp = true;
     private String variant = "light";
+    private String client = "vanilla";
     private int resolution = 16;
     private transient RpRegion currentRegion = null;
     private String currentRpUrl = null;
@@ -50,6 +51,14 @@ public class RpPlayerData implements Serializable {
 
     public void setVariant(String variant) {
         this.variant = variant;
+    }
+
+    public String getClient() {
+        return client;
+    }
+
+    public void setClient(String client) {
+        this.client = client;
     }
 
     public int getResolution() {

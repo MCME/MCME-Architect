@@ -106,6 +106,9 @@ public class SpecialBlockListener extends WatchedListener{
      */
     @EventHandler
     public void placeSpecialBlock(PlayerInteractEvent event) {
+        if(event.getClickedBlock()==null) {
+            return;
+        }
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)
                 || event.getHand() == null
                 || !event.getHand().equals(EquipmentSlot.HAND) 
@@ -132,6 +135,10 @@ public class SpecialBlockListener extends WatchedListener{
                                  || event.getClickedBlock().getBlockData() instanceof Switch
                                  || event.getClickedBlock().getBlockData() instanceof Gate))
                         || (event.hasBlock() && event.getClickedBlock().getType().equals(Material.FLOWER_POT))) {
+            if(data==null) {
+                PluginData.getMessageUtil().sendErrorMessage(player, "Special block data not found, item is probably outdated.");
+                return;
+            }
             return;
         }
         event.setCancelled(true); //cancel Event for main and off hand to avoid perks plugin removing the item
@@ -145,10 +152,6 @@ public class SpecialBlockListener extends WatchedListener{
                 player.getInventory().setItemInOffHand(offHandItem);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
-        if(data==null) {
-            PluginData.getMessageUtil().sendErrorMessage(player, "Special block data not found, item is probably outdated.");
-            return;
-        }
         Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), event.getInteractionPoint(), player);
         /*if(data instanceof SpecialBlockOnWater) {
             blockPlace = player.getTargetBlockExact(4, FluidCollisionMode.ALWAYS).getRelative(BlockFace.UP);

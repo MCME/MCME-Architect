@@ -23,6 +23,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 
 /**
  *
@@ -73,9 +74,10 @@ public class SpecialBlockWallCombi extends SpecialBlockOrientable {
     }
     
     @Override
-    public BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    public BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                    Player player, Location interactionPoint) {
         final BlockState state = blockPlace.getState();
-        float yaw = playerLoc.getYaw();
+        float yaw = player.getLocation().getYaw();
         while(yaw>180)  yaw -= 360;
         while(yaw<-180) yaw += 360;
         if(yaw > 90) {

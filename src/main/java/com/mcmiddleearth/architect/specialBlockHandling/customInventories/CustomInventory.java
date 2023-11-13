@@ -23,6 +23,7 @@ package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -33,6 +34,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.inventory.InventoryType.SlotType;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -48,7 +50,7 @@ public class CustomInventory implements Listener {
     public static final int ITEM_SLOTS = 45;
 
     private final String name;
-   
+
     private final Map<String, CustomInventoryCategory> categories = new LinkedHashMap<>();
 
     private final CustomInventoryCategory withoutCategory = new CustomInventoryCategory(null, true, null,
@@ -95,20 +97,30 @@ public class CustomInventory implements Listener {
                                                                  usesSubcategories));
         }
     }
-    
+
     public void open(Player player, ItemStack collectionBase) {
+        open(player,collectionBase,false);
+    }
+
+    public void open(Player player, ItemStack collectionBase, boolean directGet) {
         int size = CATEGORY_SLOTS + ITEM_SLOTS;//Math.min((items.get(startCategory).size()/9+1)*9,54);
         Inventory inventory = Bukkit.createInventory(player, size, name);
         CustomInventoryState state;
         if(collectionBase == null) {
             Set<String> categoryNames = categories.keySet();
-            String startCategory = categoryNames.iterator().next();
+            Iterator<String> iterator = categoryNames.iterator();
+            String startCategory = iterator.next();
+Logger.getGlobal().info("Start: "+startCategory);
+            if(startCategory.equals("Blocks") || startCategory.equals("Heads")) {
+                startCategory = iterator.next();
+            }
             if(startCategory == null) {
                 startCategory = "";
             }
             state = new CustomInventoryCategoryState(categories, withoutCategory, inventory, player);
+            state.setCategory(startCategory);
         } else {
-            state = new CustomInventoryCollectionState(categories, withoutCategory, inventory, player, collectionBase);
+            state = new CustomInventoryCollectionState(categories, withoutCategory, inventory, player, collectionBase, directGet);
         }
         openInventories.put(inventory, state);
         state.update();
@@ -146,7 +158,21 @@ public class CustomInventory implements Listener {
         if (openInventories.containsKey(event.getInventory())) { //.getTitle.equals(name)) {
             if(event.getSlotType().equals(InventoryType.SlotType.OUTSIDE)
                     || event.getRawSlot() >= event.getInventory().getSize()
-                    || event.getRawSlot() < CATEGORY_SLOTS) {//items.size()/9+1)*9 
+                    || event.getRawSlot() < CATEGORY_SLOTS) {//items.size()/9+1)*9
+                if(event.getRawSlot()>event.getInventory().getSize() && event.getCursor()!=null) {
+                    if(event.getCursor().isSimilar(event.getCurrentItem())
+                        && event.getCurrentItem()!=null
+                            && event.getCursor().getMaxStackSize()
+                                >= event.getCursor().getAmount()+event.getCurrentItem().getAmount()) {
+                        event.getCursor().setAmount(event.getCursor().getAmount()
+                                + event.getCurrentItem().getAmount());
+                    } else {
+                        ItemStack temp = event.getCursor();
+                        event.getView().setCursor(event.getCurrentItem());
+                        event.setCurrentItem(temp);
+                    }
+                    event.setCancelled(true);
+                }
                 return;
             }
             event.setCancelled(true);
@@ -171,6 +197,14 @@ public class CustomInventory implements Listener {
                 if(event.getRawSlot() == ((CustomInventoryCollectionState)state).getMaskSlot()) {
                     return;
                 }
+                if(event.getCurrentItem()!=null && event.isLeftClick() && ((CustomInventoryCollectionState) state).isDirectGet()) {
+                    /*ItemStack item = new ItemStack(event.getCurrentItem());
+                    item.setAmount(1);
+                    ((CustomInventoryCollectionState) state).setDirectGet(false);*/
+                    event.getWhoClicked().getInventory().setItem(EquipmentSlot.HAND, new ItemStack(Material.AIR));
+                    Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->
+                        event.getWhoClicked().closeInventory(),1);
+                }
             }
 //Logger.getGlobal().info("onInventoryClick: "+event.isLeftClick() +" "+event.isShiftClick());
             if(event.getCurrentItem() != null
@@ -187,16 +221,17 @@ public class CustomInventory implements Listener {
                 return;
             }
             if(event.getCurrentItem() != null) {
+                //pick up SpecialBlock item
                 if(event.getCursor() !=null && event.getCursor().getType().equals(Material.AIR)) {
                     ItemStack item = new ItemStack(event.getCurrentItem());
                     item.setAmount(2);
-                    event.setCursor(item);
+                    event.getView().setCursor(item);
                 } else if(event.getCursor().isSimilar(event.getCurrentItem())) { 
                     if(event.getCursor().getMaxStackSize()>event.getCursor().getAmount()) {
                         event.getCursor().setAmount(event.getCursor().getAmount()+1);
                     }
-                } else {
-                    event.setCursor(new ItemStack(Material.AIR));
+                //} else {
+                //    event.setCursor(new ItemStack(Material.AIR));
                 }
             }
         }
@@ -247,6 +282,22 @@ public class CustomInventory implements Listener {
             ItemMeta meta = event.getCurrentItem().getItemMeta();
             if(meta!=null && meta.hasLore() && meta.getLore().size()>1 && meta.getLore().get(0).equals(menueItemId)) {
                 //setCategory(event.getInventory(),meta.getLore().get(1));
+                String category = meta.getLore().get(1);
+                if(category.equals("Heads") || category.equals("Blocks")) {
+                    Bukkit.getScheduler().scheduleSyncDelayedTask(ArchitectPlugin.getPluginInstance(),
+                            ()-> {
+                        event.getInventory().close();
+                        Bukkit.getScheduler().scheduleSyncDelayedTask(ArchitectPlugin.getPluginInstance(),
+                                ()-> {
+                                    if(category.equals("Heads")) {
+                                        SpecialHeadInventoryData.openInventory((Player) event.getWhoClicked());
+                                    } else {
+                                        SpecialBlockInventoryData.openInventory((Player) event.getWhoClicked(),
+                                                SpecialBlockInventoryData.getRpName((Player) event.getWhoClicked()));
+                                    }
+                                },1);
+                            }, 1);
+                }
                 state.setCategory(meta.getLore().get(1));
                 state.update();
             }
@@ -307,7 +358,7 @@ public class CustomInventory implements Listener {
     }
     
     private ItemStack setMenueItemMeta(ItemStack item, String category) {
-        return setItemNameAndLore(item,category,new String[]{menueItemId,category});
+        return setItemNameAndLore(item,null,new String[]{menueItemId,category});
     }
 
     public boolean contains(String id) {

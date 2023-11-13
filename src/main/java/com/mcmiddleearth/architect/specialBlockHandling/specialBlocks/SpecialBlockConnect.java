@@ -58,15 +58,14 @@ public class SpecialBlockConnect extends SpecialBlock {
     @Override
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
-        final Location playerLoc = player.getLocation();
-        final BlockState state = getBlockState(blockPlace, blockFace, playerLoc);
+        final BlockState state = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
         new BukkitRunnable() {
             @Override
             public void run() {
                 //state.update(true, false);
                 blockPlace.setBlockData(state.getBlockData(), false);
                 DevUtil.log("Special block connect place: ID "+state.getType()+" - DV "+state.getRawData());
-                final BlockState tempState = getBlockState(blockPlace, blockFace, playerLoc);
+                final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
                 new BukkitRunnable() {
                     @Override
                     public void run() {

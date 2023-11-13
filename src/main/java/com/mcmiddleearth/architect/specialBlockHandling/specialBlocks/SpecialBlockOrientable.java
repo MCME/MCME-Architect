@@ -27,6 +27,9 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+
+import java.util.logging.Logger;
 
 /**
  *
@@ -61,7 +64,8 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
     }
     
     @Override
-    protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                       Player player, Location interactionPoint) {
         final BlockState state = blockPlace.getState();
         BlockData data = getBlockData(blockFace);
         if(data!=null) {
@@ -78,23 +82,17 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
     
     @Override
     public boolean matches(Block block) {
+        return matches(block.getBlockData());
+    }
+
+    @Override
+    public boolean matches(BlockData search) {
         for(BlockData data: blockData) {
-            if(block.getBlockData().equals(data)) {
+            if(search.equals(data)) {
                 return true;
             }
         }
         return false;
-        /* 1.13 removed
-        for(Material mat: material) {
-            if(mat.equals(block.getType())) {
-                for(byte data: dataValue) {
-                    if(data == block.getData()) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;*/
     }
     
     protected BlockData getBlockData(BlockFace face) {
@@ -114,6 +112,7 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
         BlockData[] data = new BlockData[orientations.length];
         //convert old data
         if(!containsAllBlockData(config, orientations)) {
+            Logger.getGlobal().info("Incomplete data! Trying conversion of 1.12 data.");
             for(int i = 0; i<orientations.length; i++) {
                 Material blockMat =  Material.matchMaterial(config
                                              .getString("blockMaterial"+orientations[i].configKey,""));
@@ -164,6 +163,18 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
             }
         }
         return true;
+    }
+
+    public BlockFace getOrientation(Block block) {
+        BlockData search = block.getBlockData();
+        for(int i = 0; i<orientations.length; i++) {
+            Orientation orientation = orientations[i];
+            BlockData data = blockData[i];
+            if(search.matches(data)) {
+                return orientation.face;
+            }
+        }
+        return null;
     }
     
 }

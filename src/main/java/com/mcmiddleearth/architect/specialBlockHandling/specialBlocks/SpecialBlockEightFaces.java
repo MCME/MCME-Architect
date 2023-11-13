@@ -23,6 +23,9 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+
+import java.util.logging.Logger;
 
 /**
  *
@@ -30,7 +33,7 @@ import org.bukkit.configuration.ConfigurationSection;
  */
 public class SpecialBlockEightFaces extends SpecialBlockOrientable {
     
-    private static final Orientation[] eightFaces = new Orientation[] {
+    public static final Orientation[] eightFaces = new Orientation[] {
             new Orientation(BlockFace.SOUTH,"South"),
             new Orientation(BlockFace.SOUTH_WEST,"SouthWest"),
             new Orientation(BlockFace.WEST,"West"),
@@ -41,14 +44,12 @@ public class SpecialBlockEightFaces extends SpecialBlockOrientable {
             new Orientation(BlockFace.SOUTH_EAST,"SouthEast")
         };
     
-    private SpecialBlockEightFaces(String id, 
+    protected SpecialBlockEightFaces(String id,
                         //Material[] material, 
                         //byte[] dataValue,
-                        BlockData[] data) {
-        super(id, data, SpecialBlockType.EIGHT_FACES);
+                        BlockData[] data, SpecialBlockType type) {
+        super(id, data, type);
         orientations = eightFaces;
-        //this.material = material;
-        //this.dataValue = dataValue;
     }
     
     public static SpecialBlockEightFaces loadFromConfig(ConfigurationSection config, String id) {
@@ -56,7 +57,7 @@ public class SpecialBlockEightFaces extends SpecialBlockOrientable {
         if(data==null) {
             return null;
         }
-        return new SpecialBlockEightFaces(id,data);
+        return new SpecialBlockEightFaces(id,data,SpecialBlockType.EIGHT_FACES);
     }
     /* 1.13 removed
         Material material = matchMaterial(config.getString("blockMaterial",""));
@@ -91,10 +92,14 @@ public class SpecialBlockEightFaces extends SpecialBlockOrientable {
     }*/
     
     @Override
-    protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
-        BlockState state = blockPlace.getState();
-        BlockFace blockFaceFromYaw = getBlockFaceFine(playerLoc.getYaw());
-        return super.getBlockState(blockPlace, blockFaceFromYaw, playerLoc);
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                       Player player, Location interactionPoint) {
+        //BlockState state = blockPlace.getState();
+        BlockFace blockFaceFromYaw = getBlockFaceFine(player.getLocation().getYaw());
+Logger.getGlobal().info("EightFace: "+blockFaceFromYaw.name());
+        BlockState state = super.getBlockState(blockPlace, clicked, blockFaceFromYaw, player, interactionPoint);
+Logger.getGlobal().info("state: "+state);
+        return state;
         /* 1.13 removed
         switch(blockFaceFromYaw) {
             case SOUTH:

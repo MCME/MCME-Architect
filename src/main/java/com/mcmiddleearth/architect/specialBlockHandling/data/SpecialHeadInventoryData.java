@@ -29,6 +29,7 @@ import java.util.Map;
 
 import com.mcmiddleearth.util.HeadUtil;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -55,6 +56,8 @@ public class SpecialHeadInventoryData {
             searchInventory.destroy();
         }
         createInventories();
+        inventory.setCategoryItems("Blocks",null, true,
+                new ItemStack(Material.STONE), new ItemStack(Material.STONE),false);
         for(String name: CustomHeadManagerData.getCollection().getSubCollections().keySet()) {
             CustomHeadCollection collection = CustomHeadManagerData.getCollection()
                                                                    .getSubCollection(name);
@@ -70,7 +73,7 @@ public class SpecialHeadInventoryData {
                 inventory.setCategoryItems(name, null, true, 
                                            categoryItem.clone(),
                         CustomInventoryState.newPagingItem(CustomInventoryState.pagingMaterial,
-                                                 CustomInventoryState.pageDown, "page down"),false);
+                                                 CustomInventoryState.pageDown, name),false);
             }
         }
     }

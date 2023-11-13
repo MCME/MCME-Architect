@@ -16,7 +16,6 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
@@ -28,13 +27,8 @@ import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.ConversionUtil_1_13;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ZipUtil;
-import net.minecraft.world.item.ItemSaddle;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -43,8 +37,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
-import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -126,6 +119,8 @@ public class SpecialBlockInventoryData {
     private static void loadFromFile(String rpName, File file) {
         Logger.getGlobal().info("Loading items into to inventory for resource pack "+rpName+" from "+file.getName());
         CustomInventory inventory = inventories.get(rpName);
+        inventory.setCategoryItems("Heads",null, true,
+                                    new ItemStack(Material.PLAYER_HEAD), new ItemStack(Material.PLAYER_HEAD),false);
         SearchInventory searchInventory = searchInventories.get(rpName);
         YamlConfiguration config = new YamlConfiguration();
         try {
@@ -186,6 +181,42 @@ public class SpecialBlockInventoryData {
                             break;
                         case BRANCH:
                             blockData = SpecialBlockBranch2.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_HORIZONTAL:
+                            blockData = SpecialBlockBranchHorizontal.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_DIAGONAL:
+                            blockData = SpecialBlockBranchDiagonal.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_STEEP:
+                            blockData = SpecialBlockBranchSteep.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS:
+                            blockData = SpecialBlockBranchTwigs.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS_EIGHT_DIRECTIONS:
+                            blockData = SpecialBlockBranchTwigsEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        /*case BRANCH_TWIGS_UPPER:
+                            blockData = SpecialBlockBranchTwigsUpper.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS_LOWER:
+                            blockData = SpecialBlockBranchTwigsLower.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS:
+                            blockData = SpecialBlockBranchTwigsUpperEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS:
+                            blockData = SpecialBlockBranchTwigsLowerEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;*/
+                        case BRANCH_CONNECT:
+                            blockData = SpecialBlockBranchConnect.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TRUNK_CONNECT:
+                            blockData = SpecialBlockBranchTrunkConnect.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
+                        case BRANCH_TRUNK_CONNECT_COMPLEX:
+                            blockData = SpecialBlockBranchTrunkConnectComplex.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
                         case BLOCK_CONNECT:
 //Logger.getGlobal().info("Block connect:"+itemKey);
@@ -303,27 +334,35 @@ public class SpecialBlockInventoryData {
     public static boolean openInventory(Player p, String resourcePack) {
         return openInventory(p,resourcePack,null);
     }
-    
+
     private static boolean openInventory(Player p, String resourcePack, ItemStack collectionBase) {
+        return openInventory(p, resourcePack, collectionBase, false);
+    }
+
+    private static boolean openInventory(Player p, String resourcePack, ItemStack collectionBase, boolean directGet) {
         CustomInventory inv = inventories.get(resourcePack);
         if(inv==null) {
             DevUtil.log("block inventory not found for "+resourcePack);
         }
         if(inv!=null && !inv.isEmpty()) {
-            inv.open(p,collectionBase);
+            inv.open(p,collectionBase, directGet);
             return true;
         }
         return false;
     }
-    
+
     public static boolean openInventory(Player p, ItemStack collectionBase) {
+        return openInventory(p, collectionBase, false);
+    }
+
+    public static boolean openInventory(Player p, ItemStack collectionBase, boolean directGet) {
 //Logger.getGlobal().info(collectionBase.toString());
         SpecialBlock baseBlock = matchSpecialBlock(collectionBase);
 //Logger.getGlobal().info("open Inventory: "+baseBlock);
         if(baseBlock != null) {
             String rpName = SpecialBlockInventoryData.rpName(baseBlock.getId());
 //Logger.getGlobal().info("open Inventory rp: "+rpName);
-            return openInventory(p, rpName, searchInventories.get(rpName).getItem(baseBlock.getId()));
+            return openInventory(p, rpName, searchInventories.get(rpName).getItem(baseBlock.getId()),directGet);
         }
         return false;
     }
@@ -421,13 +460,38 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         //1.13 removed: return getHandItem(new ItemStack(block.getType(),1,(short)0,block.getData()));
     }
 
-    public static ItemStack getItem(SpecialBlock block) {
+   public static ItemStack getItem(SpecialBlock block) {
         SearchInventory inventory = searchInventories.get(rpName(block.getId()));
         if (inventory != null) {
             return inventory.getItem(block.getId()).clone();
         } else {
             return null;
         }
+    }
+
+    public static SpecialBlock getSpecialBlockDataFromBlock(Block block, Player player, Class classFilter) {
+        String rpName = RpManager.getCurrentRpName(player);
+        SpecialBlock result = null;
+        List<SpecialBlock> matches = new ArrayList<>();
+        for(SpecialBlock data: blockList) {
+            if(rpName(data.getId()).equals(rpName)
+                    && data.matches(block)) {
+                matches.add(data);
+            }
+        }
+//Logger.getGlobal().info("SpecialBlockInventoryData.getSpecialBlockDataFromBlock: "+block+" "+item);
+        for(SpecialBlock specialBlockData: matches) {
+//Logger.getGlobal().info("SpecialBlock: "+specialBlockData+" Priority: "+specialBlockData.getPriority());
+//Logger.getGlobal().info("Filter: "+classFilter);
+//if(classFilter!=null) Logger.getGlobal().info("instance: "+classFilter.isInstance(specialBlockData));
+            if(classFilter==null || classFilter.isInstance(specialBlockData)) {
+                if(result==null || result.getPriority()<specialBlockData.getPriority()) {
+                    result = specialBlockData;
+                }
+            }
+        }
+//Logger.getGlobal().info("Result SpecialBlock: "+result+" Priority: "+(result!=null?result.getPriority():""));
+        return result;
     }
     
     private static ItemStack getHandItem(ItemStack item) {
@@ -508,6 +572,16 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
             if(config.isInt("cmd")) {
                 im.setCustomModelData(config.getInt("cmd"));
             }
+            if(config.isInt("color")) {
+                if(im instanceof LeatherArmorMeta armorMeta) {
+                    armorMeta.setColor(Color.fromRGB(config.getInt("color")));
+                } else if(im instanceof PotionMeta potionMeta) {
+                    potionMeta.setColor(Color.fromRGB(config.getInt("color")));
+                } else if(im instanceof FireworkEffectMeta fireworkMeta) {
+                    fireworkMeta.setEffect(FireworkEffect.builder()
+                            .withColor(Color.fromRGB(config.getInt("color"))).build());
+                }
+            }
             im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp,name)}));
             im.setUnbreakable(true);
             im.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
@@ -539,6 +613,19 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
             }
         }
         return rpN;
+    }
+
+    public static String getRpName(Player player) {
+        ItemStack handItem = player.getInventory().getItemInMainHand();
+        ItemStack offHandItem = player.getInventory().getItemInOffHand();
+        String rpName = RpManager.getCurrentRpName(player);
+        if (rpName == null || rpName.equals("")) {
+            rpName = SpecialBlockInventoryData.getRpName(handItem);
+            if (rpName.equals("")) {
+                rpName = SpecialBlockInventoryData.getRpName(offHandItem);
+            }
+        }
+        return rpName;
     }
 
     /*public static void setRecipes(String rpName) {

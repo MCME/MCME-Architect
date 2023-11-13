@@ -136,15 +136,14 @@ public class SpecialBlock {
 
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
-        final Location playerLoc = player.getLocation();
-        final BlockState state = getBlockState(blockPlace, blockFace, playerLoc);
+        final BlockState state = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
         new BukkitRunnable() {
             @Override
             public void run() {
                 //state.update(true, false);
                 blockPlace.setBlockData(state.getBlockData(), false);
                 DevUtil.log("Special block place: ID "+state.getType()+" - DV "+state.getRawData());
-                final BlockState tempState = getBlockState(blockPlace, blockFace, playerLoc);
+                final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -163,7 +162,8 @@ public class SpecialBlock {
 
     public void handleBlockBreak(BlockState state) {}
     
-    protected BlockState getBlockState(Block blockPlace, BlockFace blockFace, Location playerLoc) {
+    protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
+                                       Player player, Location interactionPoint) {
         final BlockState state = blockPlace.getState();
         state.setBlockData(blockData);
         return state;
@@ -248,4 +248,9 @@ public class SpecialBlock {
     public int getPriority() {
         return priority;
     }
+
+    public boolean isAllowedBlockData(BlockData data) {
+        return true;
+    }
+
 }

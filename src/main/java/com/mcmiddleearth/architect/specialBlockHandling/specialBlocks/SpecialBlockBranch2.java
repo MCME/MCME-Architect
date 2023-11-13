@@ -420,7 +420,7 @@ public class SpecialBlockBranch2 extends SpecialBlock {
         //Block clicked = getClicked(blockPlace, interactionPoint, player);
         if(width >= 0 && player.isSneaking()) {
             if(clicked.getBlockData().matches(blockDataWall)) {
-                SpecialBlockDiagonalConnect.editDiagonal(blockPlace, clicked, player);
+                SpecialBlockDiagonalConnect.editDiagonal(blockPlace, clicked, player, this);
             }
         } else {
             Location playerLoc = player.getLocation();

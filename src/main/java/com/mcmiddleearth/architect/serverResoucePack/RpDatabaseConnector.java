@@ -109,11 +109,11 @@ public class RpDatabaseConnector {
 
             checkTables();
 
-            insertPlayerRpSettings = dbConnection.prepareStatement("INSERT INTO architect_rp (uuid, auto, variant, resolution, currentURL) "
-                                                                  +"VALUES (?,?,?,?,?)");
-            updatePlayerRpSettings = dbConnection.prepareStatement("UPDATE architect_rp SET auto=?, variant=?, resolution=?, currentURL=? "
+            insertPlayerRpSettings = dbConnection.prepareStatement("INSERT INTO architect_rp (uuid, auto, variant, resolution, client, currentURL) "
+                                                                  +"VALUES (?,?,?,?,?,?)");
+            updatePlayerRpSettings = dbConnection.prepareStatement("UPDATE architect_rp SET auto=?, variant=?, resolution=?, client=?, currentURL=? "
                                                                   +"WHERE uuid = ?");
-            selectPlayerRpSettings = dbConnection.prepareStatement("SELECT auto, variant, resolution, currentURL FROM architect_rp "
+            selectPlayerRpSettings = dbConnection.prepareStatement("SELECT auto, variant, resolution, client, currentURL FROM architect_rp "
                                                                  + "WHERE uuid = ?");
             insertPlayerRpSettings.setQueryTimeout(10);
             updatePlayerRpSettings.setQueryTimeout(10);
@@ -178,6 +178,8 @@ public class RpDatabaseConnector {
                     data.setCurrentRpUrl(result.getString("currentURL"));
                     data.setVariant(result.getString("variant"));
                     data.setResolution(result.getInt("resolution"));
+                    data.setClient(result.getString("client"));
+                    if(data.getClient()==null) data.setClient("vanilla");
                     result.close();
                     dataMap.put(uuid,data);
                 } catch (SQLException ex) {
@@ -226,8 +228,9 @@ public class RpDatabaseConnector {
         updatePlayerRpSettings.setBoolean(1, data.isAutoRp());
         updatePlayerRpSettings.setString(2, data.getVariant());
         updatePlayerRpSettings.setInt(3, data.getResolution());
-        updatePlayerRpSettings.setString(4, data.getCurrentRpUrl());
-        updatePlayerRpSettings.setString(5, player.getUniqueId().toString());
+        updatePlayerRpSettings.setString(4, data.getClient());
+        updatePlayerRpSettings.setString(5, data.getCurrentRpUrl());
+        updatePlayerRpSettings.setString(6, player.getUniqueId().toString());
         updatePlayerRpSettings.executeUpdate();
     }
 
@@ -236,7 +239,8 @@ public class RpDatabaseConnector {
         insertPlayerRpSettings.setBoolean(2, data.isAutoRp());
         insertPlayerRpSettings.setString(3, data.getVariant());
         insertPlayerRpSettings.setInt(4, data.getResolution());
-        insertPlayerRpSettings.setString(5, data.getCurrentRpUrl());
+        insertPlayerRpSettings.setString(5, data.getClient());
+        insertPlayerRpSettings.setString(6, data.getCurrentRpUrl());
         insertPlayerRpSettings.executeUpdate();
     }
 

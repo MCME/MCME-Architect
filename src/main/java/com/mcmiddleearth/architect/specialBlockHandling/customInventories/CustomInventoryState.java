@@ -226,8 +226,10 @@ public abstract class CustomInventoryState {
 //Logger.getGlobal().info("isLastCategoryVisible");
         if(countVisibleCategories()<=CustomInventory.CATEGORY_SLOTS) {
             return true;
-        } else {
+        } else if(isFirstCategoryVisible()) {
             return countVisibleCategoriesAfter(leftCategory) <= CustomInventory.CATEGORY_SLOTS-1;
+        } else {
+            return countVisibleCategoriesAfter(leftCategory) <= CustomInventory.CATEGORY_SLOTS-2;
         }
     }
     
