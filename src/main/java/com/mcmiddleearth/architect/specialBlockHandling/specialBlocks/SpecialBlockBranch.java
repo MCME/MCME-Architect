@@ -252,6 +252,9 @@ Logger.getGlobal().info("Found connection: " + connection.getLocation());
     }
 
     @Override
+    public boolean isEditOnSneaking() { return width>=0; }
+
+    @Override
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         //Block clicked = getClicked(blockPlace, interactionPoint, player);

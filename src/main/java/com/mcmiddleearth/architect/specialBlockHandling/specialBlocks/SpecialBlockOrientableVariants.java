@@ -83,6 +83,9 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
     }
 
     @Override
+    public boolean isEditOnSneaking() { return true; }
+
+    @Override
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
 //Logger.getGlobal().info("Place variant oriented");
