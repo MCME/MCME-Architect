@@ -22,8 +22,10 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.util.TheGafferUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Lectern;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Sign;
 import org.bukkit.block.data.type.WallSign;
@@ -39,7 +41,9 @@ import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerTakeLecternBookEvent;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitScheduler;
 
 /**
  *
@@ -106,7 +110,7 @@ public class AdditionalProtectionListener extends WatchedListener{
             }
         }
     }
-    
+
    @EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
     public void flowerPotProtection(PlayerInteractEvent event) {
         if(event.getClickedBlock()==null || !isFlowerPot(event.getClickedBlock().getType())) {

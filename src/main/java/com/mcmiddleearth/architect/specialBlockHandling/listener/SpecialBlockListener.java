@@ -116,7 +116,8 @@ public class SpecialBlockListener extends WatchedListener{
                 || event.getAction().equals(Action.PHYSICAL)
                 || event.getAction().equals(Action.LEFT_CLICK_BLOCK)
                 || event.getPlayer().getInventory().getItemInMainHand().getType().equals(Material.AIR)
-                || !(event.getPlayer().getInventory().getItemInMainHand().hasItemMeta())) {
+                //|| !(event.getPlayer().getInventory().getItemInMainHand().hasItemMeta())) {
+                || !(SpecialBlockInventoryData.isSpecialBlockItem(event.getPlayer().getInventory().getItemInMainHand()))) {
             return;
         }
         final Player player = event.getPlayer();

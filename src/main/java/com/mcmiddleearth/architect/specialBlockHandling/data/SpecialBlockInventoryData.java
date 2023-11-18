@@ -591,6 +591,12 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         }
         return new ItemStack(Material.STONE);
     }
+
+    public static boolean isSpecialBlockItem(ItemStack item) {
+        return item.hasItemMeta()
+                && item.getItemMeta().hasLore()
+                && Objects.requireNonNull(item.getItemMeta().getLore()).contains(SPECIAL_BLOCK_TAG);
+    }
     
     public static String fullName(String rpName, String name) {
         return rpName+"/"+name;
