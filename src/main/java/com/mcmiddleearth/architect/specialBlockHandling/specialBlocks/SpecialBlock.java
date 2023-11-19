@@ -253,4 +253,7 @@ public class SpecialBlock {
         return true;
     }
 
+    public boolean isEditOnSneaking() {
+        return false;
+    }
 }

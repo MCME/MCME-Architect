@@ -78,6 +78,7 @@ public enum Permission {
     PAINTING_EDITOR       ("architect.paintingEditor"),
     CYCLE_BLOCKS          ("architect.cycleBlocks"),
     SIGN_EDITOR           ("architect.signEditor"),
+    LECTERN_EDITOR        ("architect.lecternEditor"),
     ARMOR_STAND_EDITOR    ("architect.armorStandEditor"),
     ARMOR_STAND_EDITOR_TRUSTED ("architect.armorStandEditor.trusted"),
     ARMOR_STAND_EDITOR_DELETE  ("architect.armorStandEditor.delete"),

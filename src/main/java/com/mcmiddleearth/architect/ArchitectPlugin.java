@@ -95,6 +95,8 @@ public class ArchitectPlugin extends JavaPlugin {
         pluginManager.registerEvents(new StickBlockBreakListener(), this);
         pluginManager.registerEvents(new BlockCycleListener(), this);
         pluginManager.registerEvents(new BlockPickerListener(), this);
+        pluginManager.registerEvents(new LightBlockListener(), this);
+        pluginManager.registerEvents(new LecternProtectionListener(), this);
         pluginManager.registerEvents(new SignListener(), this);
         pluginManager.registerEvents(new DoorListener(), this);
         pluginManager.registerEvents(new InventoryListener(), this);

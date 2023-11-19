@@ -101,6 +101,9 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
     }
 
     @Override
+    public boolean isEditOnSneaking() { return true; }
+
+    @Override
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         if(!player.isSneaking()) {

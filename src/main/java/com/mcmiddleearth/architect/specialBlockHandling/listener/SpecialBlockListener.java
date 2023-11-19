@@ -116,7 +116,8 @@ public class SpecialBlockListener extends WatchedListener{
                 || event.getAction().equals(Action.PHYSICAL)
                 || event.getAction().equals(Action.LEFT_CLICK_BLOCK)
                 || event.getPlayer().getInventory().getItemInMainHand().getType().equals(Material.AIR)
-                || !(event.getPlayer().getInventory().getItemInMainHand().hasItemMeta())) {
+                //|| !(event.getPlayer().getInventory().getItemInMainHand().hasItemMeta())) {
+                || !(SpecialBlockInventoryData.isSpecialBlockItem(event.getPlayer().getInventory().getItemInMainHand()))) {
             return;
         }
         final Player player = event.getPlayer();
@@ -152,23 +153,29 @@ public class SpecialBlockListener extends WatchedListener{
                 player.getInventory().setItemInOffHand(offHandItem);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+//Logger.getGlobal().info("get Block");
         Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), event.getInteractionPoint(), player);
         /*if(data instanceof SpecialBlockOnWater) {
             blockPlace = player.getTargetBlockExact(4, FluidCollisionMode.ALWAYS).getRelative(BlockFace.UP);
         } else {
             blockPlace = event.getClickedBlock().getRelative(event.getBlockFace());
         }*/
-        if(!blockPlace.isEmpty() 
+        if(!(player.isSneaking() && data.isEditOnSneaking())
+            && (!blockPlace.isEmpty()
                 && !blockPlace.getType().equals(Material.GRASS)
                 && !blockPlace.getType().equals(Material.FIRE)
                 && !blockPlace.getType().equals(Material.LAVA)
                 && !blockPlace.getType().equals(Material.WATER)
-                ) {
+                )) {
             return;
         }
+        Location permissionLocation = ((player.isSneaking() && data.isEditOnSneaking())?
+                                                    event.getClickedBlock().getLocation():
+                                                    blockPlace.getLocation());
         if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
             return;
         }
+//Logger.getGlobal().info("Block place");
         data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
     }
 

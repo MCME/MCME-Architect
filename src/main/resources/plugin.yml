@@ -361,6 +361,9 @@ permissions:
     architect.signEditor: 
         descriptions: Allows to use Sign Stand Editor
         default: op
+    architect.lecternEditor:
+        description: Allows to take books from lecterns
+        default: op
     architect.armorStandEditor: 
         descriptions: Allows to use Armor Stand Editor (except storing and deleting files)
         default: op
