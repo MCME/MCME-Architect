@@ -24,6 +24,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
@@ -32,9 +34,16 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
 
     private static final String[] variants = new String[]{"Lower","Upper"};
 
+    private Shift upperShift = new Shift(0,0,1);
+    private Shift lowerShift = new Shift(0,1,0);
+
     protected SpecialBlockBranchTwigs(String id, String[] variants,
-                                      BlockData[][] data) {
+                                      BlockData[][] data, Shift lowerShift, Shift upperShift) {
         super(id,variants, data, SpecialBlockType.BRANCH_TWIGS);
+        if(lowerShift!=null) {
+            this.lowerShift = lowerShift;
+            this.upperShift = upperShift;
+        }
     }
 
     @Override
@@ -46,17 +55,18 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
 
     @Override
     public Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
+Logger.getGlobal().info("Shift twig: "+lowerShift.getX()+" "+lowerShift.getY()+" "+lowerShift.getZ());
+        Shift shift = lowerShift;
         if(getVariant(null, null, null, player, interactionPoint)==1) {
-            return new Shift(0,1,0); //1 = upper
-        } else {
-            return switch(orientation) { //0 = lower
-                case SOUTH -> new Shift(0,0,1);
-                case EAST -> new Shift(1,0,0);
-                case NORTH -> new Shift(0,0,-1);
-                case WEST -> new Shift(-1,0,0);
-                default -> new Shift(0,0,0);
-            };
+            shift = upperShift;
         }
+        return switch(orientation) { //1 = upper
+            case SOUTH -> rotate(shift,0);//new Shift(0,0,1);
+            case EAST -> rotate(shift,1);//new Shift(1,0,0);
+            case NORTH -> rotate(shift, 2);//new Shift(0,0,-1);
+            case WEST -> rotate(shift, 3);//new Shift(-1,0,0);
+            default -> new Shift(0,0,0);
+        };
     }
 
     @Override
@@ -77,15 +87,27 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
     public static SpecialBlockBranchTwigs loadFromConfig(ConfigurationSection config, String id) {
         BlockData[][] data = loadBlockDataFromConfig(config, SpecialBlockFourDirections.fourFaces,
                                                              variants);
+        Shift lowerShift = null;
+        if(config.contains("lowerShift")) {
+            ConfigurationSection shiftSection = config.getConfigurationSection("lowerShift");
+            assert shiftSection != null;
+            lowerShift = new Shift(shiftSection.getInt("x",0),shiftSection.getInt("y",0),shiftSection.getInt("z",1));
+        }
+        Shift upperShift = null;
+        if(config.contains("upperShift")) {
+            ConfigurationSection shiftSection = config.getConfigurationSection("upperShift");
+            assert shiftSection != null;
+            upperShift = new Shift(shiftSection.getInt("x",0),shiftSection.getInt("y",0),shiftSection.getInt("z",1));
+        }
         if (data == null) {
             return null;
         }
-        return new SpecialBlockBranchTwigs(id, variants, data);
+        return new SpecialBlockBranchTwigs(id, variants, data, lowerShift, upperShift);
     }
 
     @Override
     public int getVariant(Block blockPlace, Block clicked, BlockFace blockFace, Player player, Location interactionPoint) {
-        return (player.getLocation().getPitch()>=0?0:1); //0=Lower, 1=Upper
+        return (player.getLocation().getPitch()>=0?1:0); //0=Lower, 1=Upper
     }
 
     @Override
@@ -202,5 +224,14 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
         }
         return null;
     }*/
+
+    private static Shift rotate(Shift shift, int rotations) {
+        return switch(rotations % 4) {
+            case 1 -> new Shift(shift.getZ(),shift.getY(),-shift.getX());
+            case 2 -> new Shift(-shift.getX(),shift.getY(),-shift.getZ());
+            case 3 -> new Shift(-shift.getZ(),shift.getY(),shift.getX());
+            default -> shift;
+        };
+    }
     
 }
