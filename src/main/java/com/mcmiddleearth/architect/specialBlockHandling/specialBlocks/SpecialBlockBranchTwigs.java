@@ -42,6 +42,8 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
         super(id,variants, data, SpecialBlockType.BRANCH_TWIGS);
         if(lowerShift!=null) {
             this.lowerShift = lowerShift;
+        }
+        if(upperShift!=null) {
             this.upperShift = upperShift;
         }
     }
@@ -55,7 +57,7 @@ public class SpecialBlockBranchTwigs extends SpecialBlockFourDirectionsVariants 
 
     @Override
     public Shift getLower(BlockFace orientation, Block clicked, Player player, Location interactionPoint) {
-Logger.getGlobal().info("Shift twig: "+lowerShift.getX()+" "+lowerShift.getY()+" "+lowerShift.getZ());
+//Logger.getGlobal().info("Shift twig: "+lowerShift.getX()+" "+lowerShift.getY()+" "+lowerShift.getZ());
         Shift shift = lowerShift;
         if(getVariant(null, null, null, player, interactionPoint)==1) {
             shift = upperShift;
