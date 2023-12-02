@@ -160,23 +160,17 @@ public class SpecialBlockListener extends WatchedListener{
         } else {
             blockPlace = event.getClickedBlock().getRelative(event.getBlockFace());
         }*/
-        if(!(player.isSneaking() && data.isEditOnSneaking())
-            && (!blockPlace.isEmpty()
-                && !blockPlace.getType().equals(Material.GRASS)
-                && !blockPlace.getType().equals(Material.FIRE)
-                && !blockPlace.getType().equals(Material.LAVA)
-                && !blockPlace.getType().equals(Material.WATER)
-                )) {
-            return;
+        if((player.isSneaking() && data.isEditOnSneaking())
+            || data.canPlace(blockPlace))  {
+            Location permissionLocation = ((player.isSneaking() && data.isEditOnSneaking())?
+                                                        event.getClickedBlock().getLocation():
+                                                        blockPlace.getLocation());
+            if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
+                return;
+            }
+    //Logger.getGlobal().info("Block place");
+            data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
         }
-        Location permissionLocation = ((player.isSneaking() && data.isEditOnSneaking())?
-                                                    event.getClickedBlock().getLocation():
-                                                    blockPlace.getLocation());
-        if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
-            return;
-        }
-//Logger.getGlobal().info("Block place");
-        data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
     }
 
     /**

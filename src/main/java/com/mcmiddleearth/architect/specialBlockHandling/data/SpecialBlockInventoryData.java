@@ -294,6 +294,9 @@ public class SpecialBlockInventoryData {
                         case UPSHIFT:
                             blockData = SpecialBlockUpshift.loadFromConfig(section, fullName(rpName, itemKey));
                             break;
+                        case MULTI_FACE:
+                            blockData = SpecialBlockMultiFace.loadFromConfig(section, fullName(rpName, itemKey));
+                            break;
                         case VANILLA:
                             blockData = SpecialBlockVanilla.loadFromConfig(section, fullName(rpName, itemKey));
                             break;
