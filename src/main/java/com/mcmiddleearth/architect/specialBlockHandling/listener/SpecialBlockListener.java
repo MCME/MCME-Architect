@@ -153,8 +153,8 @@ public class SpecialBlockListener extends WatchedListener{
                 player.getInventory().setItemInOffHand(offHandItem);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
-//Logger.getGlobal().info("get Block");
         Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), event.getInteractionPoint(), player);
+//Logger.getGlobal().info("get Block: "+blockPlace.getLocation());
         /*if(data instanceof SpecialBlockOnWater) {
             blockPlace = player.getTargetBlockExact(4, FluidCollisionMode.ALWAYS).getRelative(BlockFace.UP);
         } else {
@@ -168,7 +168,7 @@ public class SpecialBlockListener extends WatchedListener{
             if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
                 return;
             }
-    //Logger.getGlobal().info("Block place");
+//Logger.getGlobal().info("Block place");
             data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
         }
     }
