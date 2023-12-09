@@ -153,30 +153,24 @@ public class SpecialBlockListener extends WatchedListener{
                 player.getInventory().setItemInOffHand(offHandItem);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
-//Logger.getGlobal().info("get Block");
         Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), event.getInteractionPoint(), player);
+//Logger.getGlobal().info("get Block: "+blockPlace.getLocation());
         /*if(data instanceof SpecialBlockOnWater) {
             blockPlace = player.getTargetBlockExact(4, FluidCollisionMode.ALWAYS).getRelative(BlockFace.UP);
         } else {
             blockPlace = event.getClickedBlock().getRelative(event.getBlockFace());
         }*/
-        if(!(player.isSneaking() && data.isEditOnSneaking())
-            && (!blockPlace.isEmpty()
-                && !blockPlace.getType().equals(Material.GRASS)
-                && !blockPlace.getType().equals(Material.FIRE)
-                && !blockPlace.getType().equals(Material.LAVA)
-                && !blockPlace.getType().equals(Material.WATER)
-                )) {
-            return;
-        }
-        Location permissionLocation = ((player.isSneaking() && data.isEditOnSneaking())?
-                                                    event.getClickedBlock().getLocation():
-                                                    blockPlace.getLocation());
-        if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
-            return;
-        }
+        if((player.isSneaking() && data.isEditOnSneaking())
+            || data.canPlace(blockPlace))  {
+            Location permissionLocation = ((player.isSneaking() && data.isEditOnSneaking())?
+                                                        event.getClickedBlock().getLocation():
+                                                        blockPlace.getLocation());
+            if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
+                return;
+            }
 //Logger.getGlobal().info("Block place");
-        data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
+            data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
+        }
     }
 
     /**

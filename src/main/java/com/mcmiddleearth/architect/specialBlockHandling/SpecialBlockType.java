@@ -62,6 +62,7 @@ public enum SpecialBlockType {
     DOUBLE_Y_BLOCK,
     UPSHIFT,
     VANILLA,
+    MULTI_FACE,
     DOOR_VANILLA,
     DOOR_THREE_BLOCKS,
     DOOR_FOUR_BLOCKS //("threeAxis");

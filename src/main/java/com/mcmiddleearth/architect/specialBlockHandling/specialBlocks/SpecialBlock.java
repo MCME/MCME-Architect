@@ -168,7 +168,15 @@ public class SpecialBlock {
         state.setBlockData(blockData);
         return state;
     }
-    
+
+    public boolean canPlace(Block blockPlace) {
+        return blockPlace.isEmpty()
+                || blockPlace.getType().equals(Material.GRASS)
+                || blockPlace.getType().equals(Material.FIRE)
+                || blockPlace.getType().equals(Material.LAVA)
+                || blockPlace.getType().equals(Material.WATER);
+    }
+
     protected static Material matchMaterial(String identifier) {
         if(NumericUtil.isInt(identifier)) {
             return LegacyMaterialUtil.getMaterial(NumericUtil.getInt(identifier));
