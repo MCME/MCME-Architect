@@ -54,7 +54,7 @@ public class ViewDistanceManager {
         packet.getIntegers().write(0, viewDistance);
         try {
             ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
-        } catch (InvocationTargetException e) {
+        } catch (Exception e) { //InvocationTargetException e) {
             e.printStackTrace();
         }
     }

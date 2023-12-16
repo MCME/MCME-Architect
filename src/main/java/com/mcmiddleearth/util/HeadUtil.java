@@ -46,7 +46,7 @@ public class HeadUtil {
     public static String headCollectionTag = "MCME Head Collection";
 
     public static ItemStack getCustomHead(String name, UUID uuid, String headTexture) {
-        GameProfile profile = new GameProfile(uuid, null);
+        GameProfile profile = new GameProfile(uuid, name);
         PropertyMap propertyMap = profile.getProperties();
         if(propertyMap == null)
             throw new IllegalStateException("Profile doesn't contain a property map!");

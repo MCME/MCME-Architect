@@ -19,17 +19,20 @@ package com.mcmiddleearth.architect.specialBlockHandling.data;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
 import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockSupport;
-import org.bukkit.block.PistonMoveReaction;
+import org.bukkit.block.*;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.structure.Mirror;
+import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.BoundingBox;
+import org.bukkit.util.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -257,4 +260,43 @@ Logger.getGlobal().info("****************");*/
         return PistonMoveReaction.IGNORE;
     }
 
+    @Override
+    public @NotNull VoxelShape getCollisionShape(@NotNull Location location) {
+        return new VoxelShape() {
+            @Override
+            public @NotNull Collection<BoundingBox> getBoundingBoxes() {
+                return Collections.singleton(new BoundingBox());
+            }
+
+            @Override
+            public boolean overlaps(@NotNull BoundingBox boundingBox) {
+                return false;
+            }
+        };
+    }
+
+    @Override
+    public @NotNull Material getPlacementMaterial() {
+        return Material.AIR;
+    }
+
+    @Override
+    public void rotate(@NotNull StructureRotation structureRotation) {
+
+    }
+
+    @Override
+    public void mirror(@NotNull Mirror mirror) {
+
+    }
+
+    @Override
+    public @NotNull BlockState createBlockState() {
+        return Bukkit.createBlockData(Material.AIR).createBlockState();
+    }
+
+    @Override
+    public float getDestroySpeed(@NotNull ItemStack itemStack, boolean b) {
+        return 0;
+    }
 }

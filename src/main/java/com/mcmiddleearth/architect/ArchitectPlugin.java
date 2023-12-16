@@ -7,7 +7,6 @@ package com.mcmiddleearth.architect;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.mcmiddleearth.architect.WorldGeneration.SuperflatChunkGenerator;
 import com.mcmiddleearth.architect.WorldGeneration.WorldGenerationManager;
 import com.mcmiddleearth.architect.additionalCommands.*;
 import com.mcmiddleearth.architect.additionalListeners.*;
@@ -40,6 +39,7 @@ import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockComma
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockListener;
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
 import com.mcmiddleearth.architect.specialBlockHandling.listener.*;
+import com.mcmiddleearth.architect.specialBlockHandling.recipeBookInventory.TestRecipeBookListener;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceCommand;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceListener;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceManager;
@@ -106,6 +106,9 @@ public class ArchitectPlugin extends JavaPlugin {
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
+
+        pluginManager.registerEvents(new TestRecipeBookListener(), this);
+        TestRecipeBookListener.addPacketListener();
 //        pluginManager.registerEvents(new AfkListener(), this);
 
         ProtocolManager manager = ProtocolLibrary.getProtocolManager();
