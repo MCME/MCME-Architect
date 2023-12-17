@@ -2,14 +2,12 @@ package com.mcmiddleearth.architect.specialBlockHandling.recipeBookInventory;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
 import com.destroystokyo.paper.event.player.PlayerRecipeBookClickEvent;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
 import com.mcmiddleearth.pluginutil.NMSUtil;
 import io.papermc.paper.event.player.PlayerStonecutterRecipeSelectEvent;
 import org.bukkit.Bukkit;
@@ -20,6 +18,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRecipeBookSettingsChangeEvent;
 import org.bukkit.event.player.PlayerRecipeDiscoverEvent;
@@ -27,11 +27,9 @@ import org.bukkit.inventory.CraftingInventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
+import org.bukkit.scheduler.BukkitScheduler;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -73,11 +71,28 @@ public class TestRecipeBookListener implements Listener {
 //Logger.getGlobal().info("CraftingInventory click!");
             event.setCancelled(true);
             if(event.getCurrentItem()!=null) {
-                ItemStack item = event.getCurrentItem().clone();
-                item.setAmount(2);
-                event.getWhoClicked().getOpenInventory().setCursor(item);
+                if(event.getCurrentItem().getType().equals(Material.STONE)) {
+                    Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->{
+                        event.getWhoClicked().getOpenInventory().close();
+                    },1);
+                    resetRecipeBook((Player) event.getWhoClicked(),true);
+                    openInv((Player) event.getWhoClicked());
+                } else if(event.getCurrentItem().getType().equals(Material.DIRT)) {
+                    resetRecipeBook((Player) event.getWhoClicked(),false);
+                    openInv((Player) event.getWhoClicked());
+                } else {
+                    ItemStack item = event.getCurrentItem().clone();
+                    item.setAmount(2);
+                    event.getWhoClicked().getOpenInventory().setCursor(item);
+                }
             }
         }
+    }
+
+    private void openInv(Player player) {
+        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->{
+            player.openInventory(Bukkit.createInventory(player, InventoryType.WORKBENCH));
+        },2);
     }
 
 
@@ -97,6 +112,16 @@ public class TestRecipeBookListener implements Listener {
     }
 
     @EventHandler
+    public void onInventoryOpen(InventoryOpenEvent event) {
+        if(event.getInventory() instanceof CraftingInventory inventory) {
+            ItemStack[] matrix = inventory.getMatrix();
+            matrix[1] = new ItemStack(Material.STONE);
+            matrix[7] = new ItemStack(Material.DIRT);
+            inventory.setMatrix(matrix);
+        }
+    }
+
+    @EventHandler
     public void onRecipeDiscover(PlayerRecipeDiscoverEvent event) {
         //Logger.getGlobal().info("PlayerRecipeDiscover Event!");
     }
@@ -106,18 +131,27 @@ public class TestRecipeBookListener implements Listener {
 
 
         openRecipeBook(event.getPlayer());
-        resetRecipeBook(event.getPlayer());
+        resetRecipeBook(event.getPlayer(), false);
     }
 
-    public static void resetRecipeBook(Player player) {
+    public static void resetRecipeBook(Player player, boolean heads) {
         Bukkit.clearRecipes();
-        Map<NamespacedKey, Recipe> recipes = SpecialBlockInventoryData.getRecipes(RpManager.getCurrentRpName(player));
+Logger.getGlobal().info("1");
+        Map<NamespacedKey, Recipe> recipes;
+        if(!heads) {
+            recipes = SpecialBlockInventoryData.getRecipes(RpManager.getCurrentRpName(player));
+        } else {
+            recipes = SpecialHeadInventoryData.getRecipes();
+        }
         for(Map.Entry<NamespacedKey,Recipe> entry: recipes.entrySet()) {
             Bukkit.addRecipe(entry.getValue(),false);
         }
-        Bukkit.updateRecipes();
-        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->
-            player.discoverRecipes(recipes.keySet()),5);
+Logger.getGlobal().info("2");
+        //Bukkit.updateRecipes();
+        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()-> {
+            player.discoverRecipes(recipes.keySet());
+Logger.getGlobal().info("3");
+        },5);
     }
 
     public static void openRecipeBook(Player player) {
@@ -161,7 +195,7 @@ public class TestRecipeBookListener implements Listener {
     }
 
     public static void addPacketListener() {
-        ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
+        /*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
                 ArchitectPlugin.getPluginInstance(),
                 ListenerPriority.NORMAL,
                 PacketType.Play.Server.RECIPES
@@ -190,6 +224,6 @@ public class TestRecipeBookListener implements Listener {
                     e.printStackTrace();
                 }
             }
-        });
+        });*/
     }
 }

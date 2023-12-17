@@ -91,7 +91,7 @@ public class ArchitectPlugin extends JavaPlugin {
         //pluginManager.registerEvents(new TestListener(), this);
         pluginManager.registerEvents(new VoxelBiomeBrushListener(), this);
         pluginManager.registerEvents(new AdditionalProtectionListener(), this);
-        pluginManager.registerEvents(new CustomHeadListener(), this);
+        //pluginManager.registerEvents(new CustomHeadListener(), this); moved to BlockPickerListener
         pluginManager.registerEvents(new StickBlockBreakListener(), this);
         pluginManager.registerEvents(new BlockCycleListener(), this);
         pluginManager.registerEvents(new BlockPickerListener(), this);
