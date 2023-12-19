@@ -80,9 +80,10 @@ public class TestRecipeBookListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-//Logger.getGlobal().info("Inventory click!");
+Logger.getGlobal().info("Inventory click! Type: "+event.getClick().name());
+Logger.getGlobal().info("Action: "+ event.getAction().name());
         if(event.getClickedInventory() instanceof CraftingInventory inventory) {
-//Logger.getGlobal().info("CraftingInventory click!");
+Logger.getGlobal().info("CraftingInventory click!!");
             event.setCancelled(true);
             if(event.getCurrentItem()!=null) {
                 if(event.getCurrentItem().getType().equals(Material.STONE)) {
@@ -103,7 +104,7 @@ public class TestRecipeBookListener implements Listener {
         }
     }
 
-    private void openInv(Player player, CraftingInventory inventory) {
+    private static void openInv(Player player, CraftingInventory inventory) {
         inventory.setMatrix(new ItemStack[9]);
         Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->{
             player.openWorkbench(null,true);
@@ -257,6 +258,15 @@ Logger.getGlobal().info("Sending packet: "+event.getPacket().getType());
             @Override
             public void onPacketReceiving(PacketEvent event) {
                 Logger.getGlobal().info("Receiving packet: " + event.getPacket().getType());
+                if(event.getPacket().getType().equals(PacketType.Play.Client.RECIPE_SETTINGS)) {
+                    Logger.getGlobal().info("ConfigureRecipeBook!");
+                    Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),() -> {
+                        configureRecipeBook(event.getPlayer());
+                        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->
+                            openInv(event.getPlayer(),
+                                (CraftingInventory) event.getPlayer().getOpenInventory().getTopInventory()),1);
+                    },1);
+                }
             }
         });
     }
