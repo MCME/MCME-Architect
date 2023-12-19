@@ -107,6 +107,7 @@ public class ArchitectPlugin extends JavaPlugin {
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
 
+        TestRecipeBookListener.loadRecipeBook();
         pluginManager.registerEvents(new TestRecipeBookListener(), this);
         TestRecipeBookListener.addPacketListener();
 //        pluginManager.registerEvents(new AfkListener(), this);

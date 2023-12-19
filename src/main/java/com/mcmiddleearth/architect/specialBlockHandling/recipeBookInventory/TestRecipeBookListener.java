@@ -2,10 +2,12 @@ package com.mcmiddleearth.architect.specialBlockHandling.recipeBookInventory;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
 import com.destroystokyo.paper.event.player.PlayerRecipeBookClickEvent;
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
 import com.mcmiddleearth.pluginutil.NMSUtil;
@@ -20,18 +22,17 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRecipeBookSettingsChangeEvent;
 import org.bukkit.event.player.PlayerRecipeDiscoverEvent;
-import org.bukkit.inventory.CraftingInventory;
-import org.bukkit.inventory.InventoryView;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.Recipe;
+import org.bukkit.inventory.*;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.lang.reflect.Array;
-import java.util.Map;
-import java.util.Objects;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class TestRecipeBookListener implements Listener {
@@ -42,10 +43,23 @@ public class TestRecipeBookListener implements Listener {
     }
 
     @EventHandler
+    public void onRecipeBookSettingsChange(PlayerRecipeBookSettingsChangeEvent event) {
+        Logger.getGlobal().info("PlayerRecipeBookSettingsChange Event!");
+        //direct reopen messes up inventory
+        // -> reopen recipe book on inventory close event!
+        //openRecipeBook(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onRecipeDiscover(PlayerRecipeDiscoverEvent event) {
+        //Logger.getGlobal().info("PlayerRecipeDiscover Event!");
+    }
+
+    @EventHandler
     public void onRecipeBookClick(PlayerRecipeBookClickEvent event) {
         Logger.getGlobal().info("PlayerRecipeBookClick Event!");
         event.setCancelled(true);
-        if(event.getPlayer().isSneaking()) {
+        if(event.getPlayer().isSneaking()) {//doesn't work
             event.getPlayer().getOpenInventory().setCursor(new ItemStack(Material.STICK, 2));
         } else {
             Logger.getGlobal().info("Recipe: "+event.getRecipe());
@@ -72,14 +86,14 @@ public class TestRecipeBookListener implements Listener {
             event.setCancelled(true);
             if(event.getCurrentItem()!=null) {
                 if(event.getCurrentItem().getType().equals(Material.STONE)) {
-                    Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->{
+                    /*Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->{
                         event.getWhoClicked().getOpenInventory().close();
-                    },1);
-                    resetRecipeBook((Player) event.getWhoClicked(),true);
-                    openInv((Player) event.getWhoClicked());
+                    },1);*/
+                    updatePlayerRecipes((Player) event.getWhoClicked(),true);
+                    openInv((Player) event.getWhoClicked(),inventory);
                 } else if(event.getCurrentItem().getType().equals(Material.DIRT)) {
-                    resetRecipeBook((Player) event.getWhoClicked(),false);
-                    openInv((Player) event.getWhoClicked());
+                    updatePlayerRecipes((Player) event.getWhoClicked(),false);
+                    openInv((Player) event.getWhoClicked(),inventory);
                 } else {
                     ItemStack item = event.getCurrentItem().clone();
                     item.setAmount(2);
@@ -89,31 +103,32 @@ public class TestRecipeBookListener implements Listener {
         }
     }
 
-    private void openInv(Player player) {
+    private void openInv(Player player, CraftingInventory inventory) {
+        inventory.setMatrix(new ItemStack[9]);
         Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()->{
-            player.openInventory(Bukkit.createInventory(player, InventoryType.WORKBENCH));
+            player.openWorkbench(null,true);
+            Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),() -> {
+                ItemStack[] matrix = inventory.getMatrix();
+                matrix[1] = new ItemStack(Material.STONE);
+                matrix[7] = new ItemStack(Material.DIRT);
+                inventory.setMatrix(matrix);
+            },1);
         },2);
     }
 
 
     @EventHandler
-    public void onRecipeBookSettingsChange(PlayerRecipeBookSettingsChangeEvent event) {
-        Logger.getGlobal().info("PlayerRecipeBookSettingsChange Event!");
-        //direct reopen messes up inventory
-        // -> reopen recipe book on inventory close event!
-        //openRecipeBook(event.getPlayer());
-    }
-
-    @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if(event.getPlayer() instanceof Player player) {
-            openRecipeBook(player);
+            configureRecipeBook(player);
         }
     }
 
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event) {
+Logger.getGlobal().info("Open Inventory");
         if(event.getInventory() instanceof CraftingInventory inventory) {
+Logger.getGlobal().info("Crafting!");
             ItemStack[] matrix = inventory.getMatrix();
             matrix[1] = new ItemStack(Material.STONE);
             matrix[7] = new ItemStack(Material.DIRT);
@@ -122,60 +137,55 @@ public class TestRecipeBookListener implements Listener {
     }
 
     @EventHandler
-    public void onRecipeDiscover(PlayerRecipeDiscoverEvent event) {
-        //Logger.getGlobal().info("PlayerRecipeDiscover Event!");
+    public void onPlayerJoin(PlayerInteractEvent event) {
+        if(EquipmentSlot.HAND.equals(event.getHand())
+                &&event.getPlayer().getInventory().getItemInMainHand().getType().equals(Material.DIAMOND)) {
+            event.setCancelled(true);
+            configureRecipeBook(event.getPlayer());
+            updatePlayerRecipes(event.getPlayer(),false);
+            //updateecipeBook(event.getPlayer(), false);
+        }
     }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-
-
-        openRecipeBook(event.getPlayer());
-        resetRecipeBook(event.getPlayer(), false);
-    }
-
-    public static void resetRecipeBook(Player player, boolean heads) {
-        Bukkit.clearRecipes();
-Logger.getGlobal().info("1");
-        Map<NamespacedKey, Recipe> recipes;
-        if(!heads) {
-            recipes = SpecialBlockInventoryData.getRecipes(RpManager.getCurrentRpName(player));
-        } else {
-            recipes = SpecialHeadInventoryData.getRecipes();
-        }
-        for(Map.Entry<NamespacedKey,Recipe> entry: recipes.entrySet()) {
-            Bukkit.addRecipe(entry.getValue(),false);
-        }
-Logger.getGlobal().info("2");
-        //Bukkit.updateRecipes();
-        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()-> {
-            player.discoverRecipes(recipes.keySet());
-Logger.getGlobal().info("3");
+        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), () -> {
+            configureRecipeBook(event.getPlayer());
+            updatePlayerRecipes(event.getPlayer(), false);
         },5);
     }
 
-    public static void openRecipeBook(Player player) {
-        PacketContainer packet = new PacketContainer(PacketType.Play.Server.RECIPES);
-                /*new PacketType(PacketType.Play.getProtocol(),
-                PacketType.Play.Server.getSender(),
-                63, 61, Bukkit.getServer()));*/
-        /*Logger.getGlobal().info(String.valueOf(packet.getType().getCurrentId()));
-        Logger.getGlobal().info("Ints: " + packet.getIntegers().size());
-        Logger.getGlobal().info("Boolean: " + packet.getBooleans().size());
-        Logger.getGlobal().info("Bytes: " + packet.getBytes().size());
-        Logger.getGlobal().info("Modifiers: " + packet.getModifier().size());
-        Logger.getGlobal().info("Double: " + packet.getDoubles().size());
-        Logger.getGlobal().info("LOng: " + packet.getLongs().size());
-        Logger.getGlobal().info("Modifiers: " + packet.getModifier().size());
-        Logger.getGlobal().info("GameModes: " + packet.getGameModes().size());
-        Logger.getGlobal().info("IntList: " + packet.getIntLists().size());
-        Logger.getGlobal().info("ByteArray: " + packet.getByteArrays().size());
+    public static void loadRecipeBook() {
+        Bukkit.clearRecipes();
+        Map<NamespacedKey, Recipe> recipes = getAllRecipes();
+        for(Map.Entry<NamespacedKey,Recipe> entry: recipes.entrySet()) {
+            Bukkit.addRecipe(entry.getValue(),false);
+        }
+        Bukkit.updateRecipes();
+    }
 
-        Logger.getGlobal().info("Modifier Classe:" + packet.getModifier().read(0).getClass().getName());
-        Logger.getGlobal().info("Modifier Classe:" + packet.getModifier().read(1).getClass().getName());
-        Logger.getGlobal().info("Modifier Classe:" + packet.getModifier().read(2).getClass().getName());
-        Logger.getGlobal().info("Modifier Classe:" + packet.getModifier().read(3).getClass().getName());
-        Logger.getGlobal().info("INtlist size:" + packet.getIntLists().read(0).size() + packet.getIntLists().read(1).size());*/
+    private static Map<NamespacedKey, Recipe> getAllRecipes() {
+        Map<NamespacedKey, Recipe> recipes = SpecialBlockInventoryData.getRecipes("Human");
+        recipes.putAll(SpecialHeadInventoryData.getRecipes());
+        return recipes;
+    }
+
+    public static void updatePlayerRecipes(Player player, boolean heads) {
+        Bukkit.updateRecipes();
+        Logger.getGlobal().info("Undiscover: "+player.undiscoverRecipes(getAllRecipes().keySet()));
+        Map<NamespacedKey, Recipe> recipes;
+        if(heads) {
+            recipes = SpecialHeadInventoryData.getRecipes();
+        } else {
+            recipes = SpecialBlockInventoryData.getRecipes("Human");
+        }
+        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()-> {
+            Logger.getGlobal().info("Discover: "+player.discoverRecipes(recipes.keySet()));
+        },1);
+    }
+
+    public static void configureRecipeBook(Player player) {
+        PacketContainer packet = new PacketContainer(PacketType.Play.Server.RECIPES);
         try {
             Class<?> recipeBookType = NMSUtil.getNMSClass("world.inventory.RecipeBookType");
             Object types = NMSUtil.invokeNMS("world.inventory.RecipeBookType", "values",
@@ -195,13 +205,14 @@ Logger.getGlobal().info("3");
     }
 
     public static void addPacketListener() {
-        /*ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
+        ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
                 ArchitectPlugin.getPluginInstance(),
                 ListenerPriority.NORMAL,
                 PacketType.Play.Server.RECIPES
         ) {
             @Override
             public void onPacketSending(PacketEvent event) {
+Logger.getGlobal().info("Sending packet: "+event.getPacket().getType());
                 PacketContainer packet = event.getPacket();
                 Object action = packet.getModifier().read(0);
                 try {
@@ -224,6 +235,29 @@ Logger.getGlobal().info("3");
                     e.printStackTrace();
                 }
             }
-        });*/
+
+            @Override
+            public void onPacketReceiving(PacketEvent event) {
+                Logger.getGlobal().info("Receiving packet: "+event.getPacket().getType());
+            }
+
+        });
+        ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
+                ArchitectPlugin.getPluginInstance(),
+                ListenerPriority.NORMAL,
+                PacketType.Play.Server.AUTO_RECIPE,
+                PacketType.Play.Server.RECIPE_UPDATE, PacketType.Play.Client.AUTO_RECIPE,
+                /*PacketType.Play.Client.RECIPE_DISPLAYED, */PacketType.Play.Client.RECIPE_SETTINGS
+        ) {
+            @Override
+            public void onPacketSending(PacketEvent event) {
+                Logger.getGlobal().info("Sending packet: " + event.getPacket().getType());
+            }
+
+            @Override
+            public void onPacketReceiving(PacketEvent event) {
+                Logger.getGlobal().info("Receiving packet: " + event.getPacket().getType());
+            }
+        });
     }
 }
