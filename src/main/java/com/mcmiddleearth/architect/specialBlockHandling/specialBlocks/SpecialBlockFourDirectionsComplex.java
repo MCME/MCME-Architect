@@ -26,6 +26,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.block.data.type.Wall;
 import org.bukkit.configuration.ConfigurationSection;
@@ -231,21 +232,28 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
     }
 
     private static BlockData rotateData(BlockData data) {
-        if(data instanceof MultipleFacing) {
-            MultipleFacing multi = (MultipleFacing) data;
+        if(data instanceof MultipleFacing multi) {
             MultipleFacing result = (MultipleFacing) data.clone();
             result.setFace(BlockFace.NORTH, multi.hasFace(BlockFace.WEST));
             result.setFace(BlockFace.EAST, multi.hasFace(BlockFace.NORTH));
             result.setFace(BlockFace.SOUTH, multi.hasFace(BlockFace.EAST));
             result.setFace(BlockFace.WEST, multi.hasFace(BlockFace.SOUTH));
             return result;
-        } else if(data instanceof Wall) {
-            Wall multi = (Wall) data;
+        } else if(data instanceof Wall multi) {
             Wall result = (Wall) data.clone();
             result.setHeight(BlockFace.NORTH, multi.getHeight(BlockFace.WEST));
             result.setHeight(BlockFace.EAST, multi.getHeight(BlockFace.NORTH));
             result.setHeight(BlockFace.SOUTH, multi.getHeight(BlockFace.EAST));
             result.setHeight(BlockFace.WEST, multi.getHeight(BlockFace.SOUTH));
+            return result;
+        } else if(data instanceof Directional directional) {
+            Directional result = (Directional) data.clone();
+            switch(directional.getFacing()) {
+                case NORTH -> result.setFacing(BlockFace.EAST);
+                case EAST -> result.setFacing(BlockFace.SOUTH);
+                case SOUTH -> result.setFacing(BlockFace.WEST);
+                case WEST -> result.setFacing(BlockFace.NORTH);
+            }
             return result;
         }
         return data;
