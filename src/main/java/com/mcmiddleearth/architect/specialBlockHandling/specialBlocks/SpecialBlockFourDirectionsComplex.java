@@ -33,7 +33,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
@@ -192,7 +191,7 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
                             }*/
                             BlockData finalData = data;
                             if (PluginData.isAllowedBlock(player, data)) {
-                                Logger.getGlobal().info("place: " + finalData.toString());
+//Logger.getGlobal().info("place: " + finalData.toString());
                                 clicked.setBlockData(finalData, false);
                                 new BukkitRunnable() {
                                     @Override
