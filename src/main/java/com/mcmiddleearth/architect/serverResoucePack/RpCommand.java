@@ -10,19 +10,25 @@ import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
-import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
+import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import com.mcmiddleearth.util.StreamGobbler;
 import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.regions.Region;
-import java.util.ArrayList;
-import java.util.List;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.logging.Logger;
 
 /**
  *
@@ -32,7 +38,42 @@ public class RpCommand extends AbstractArchitectCommand {
 
     @Override
     public boolean onCommand(CommandSender cs, Command cmd, String c, String[] args) {
-        if(args.length>0 && args[0].equalsIgnoreCase("calcsha") 
+        if(args.length>0 && args[0].equalsIgnoreCase("release")
+                            && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
+                try {
+                    Process process;
+                    boolean isWindows = System.getProperty("os.name")
+                            .toLowerCase().startsWith("windows");
+                    if (isWindows) {
+                        process = Runtime.getRuntime()
+                                .exec(String.format("cmd.exe /c dir %s", "/opt/mcme-network/bungee-mcme/resourcePacks"));
+                    } else {
+                        process = Runtime.getRuntime()
+                                .exec(String.format("/bin/sh -c ls %s", "/opt/mcme-network/bungee-mcme/resourcePacks"));
+                    }
+                    StreamGobbler streamGobbler =
+                            new StreamGobbler(process.getInputStream(), line -> Logger.getGlobal().info(line));
+                    ExecutorService executorService = Executors.newSingleThreadExecutor();
+                    Future<?> future = executorService.submit(streamGobbler);
+                    int exitCode = process.waitFor();
+                    future.get(2, TimeUnit.MINUTES);
+                    Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
+                        if(exitCode==0) {
+                            PluginData.getMessageUtil().sendInfoMessage(cs, "RP release finished. Do /architect reload and then /rp calcsha <rpname>");
+
+                        } else {
+                            PluginData.getMessageUtil().sendErrorMessage(cs, "Error while creating RP release!");
+                        }
+                    });
+                } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            return true;
+        }
+        if(args.length>0 && args[0].equalsIgnoreCase("calcsha")
                          && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) { 
             if(args.length<2) {
                 PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
