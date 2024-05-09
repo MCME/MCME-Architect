@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.listener;
 
 import com.mcmiddleearth.architect.Modules;
+import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.WeSelectCommand;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
@@ -26,9 +27,12 @@ import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInvento
 import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import com.mcmiddleearth.util.HeadUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Skull;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -65,6 +69,19 @@ public class BlockPickerListener implements Listener {
         }
         Block block =  (event.getClickedBlock()!=null?
                         event.getClickedBlock():event.getPlayer().getTargetBlock(null, 1000));
+        BlockState blockState = block.getState();
+        if(blockState instanceof Skull skull) {
+            if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.CUSTOM_HEAD_MANAGER)) {
+                sendNotActivatedMessage(event.getPlayer());
+                return;
+            }
+            if(!PluginData.hasPermission(event.getPlayer(), Permission.CUSTOM_HEAD_USER)) {
+                PluginData.getMessageUtil().sendNoPermissionError(event.getPlayer());
+                return;
+            }
+            event.getPlayer().getInventory().addItem(HeadUtil.pickCustomHead(skull));
+            return;
+        }
         ItemStack handItem = event.getPlayer().getInventory().getItemInMainHand();
         String rpName = "";
         if(handItem.getType().equals(Material.FLINT)) {
@@ -139,4 +156,9 @@ public class BlockPickerListener implements Listener {
             ChunkUpdateUtil.sendUpdates(block, player);
         }
     }
+
+    private void sendNotActivatedMessage(Player player) {
+        PluginData.getMessageUtil().sendErrorMessage(player,"Custom Heads are not enabled for this world.");
+    }
+
 }

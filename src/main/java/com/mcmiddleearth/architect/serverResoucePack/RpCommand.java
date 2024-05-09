@@ -345,6 +345,7 @@ public class RpCommand extends AbstractArchitectCommand {
         help = new String[][]{         {"/rp r","",": Rohan"},
                                        {"/rp h","",": Human (merged Gondor/Eriador)"},
                                        {"/rp l","",": Lothlorien"},
+                                       {"/rp p","",": Paths of the Dead"},
                                        {"/rp d","",": Dwarven (Moria)"},
                                        {"/rp m","",": Mordor"}};
         super.sendHelpMessage(player, page);
