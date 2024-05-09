@@ -10,6 +10,10 @@ import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialSavedInventoryData;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
@@ -21,9 +25,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,37 +46,67 @@ public class RpCommand extends AbstractArchitectCommand {
     public boolean onCommand(CommandSender cs, Command cmd, String c, String[] args) {
         if(args.length>0 && args[0].equalsIgnoreCase("release")
                             && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
-            Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
-                try {
-                    Process process;
-                    boolean isWindows = System.getProperty("os.name")
-                            .toLowerCase().startsWith("windows");
-                    if (isWindows) {
-                        process = Runtime.getRuntime()
-                                .exec(String.format("cmd.exe /c dir %s", "/opt/mcme-network/bungee-mcme/resourcePacks"));
-                    } else {
-                        process = Runtime.getRuntime()
-                                .exec(String.format("/bin/sh -c ls %s", "/opt/mcme-network/bungee-mcme/resourcePacks"));
-                    }
-                    StreamGobbler streamGobbler =
-                            new StreamGobbler(process.getInputStream(), line -> Logger.getGlobal().info(line));
-                    ExecutorService executorService = Executors.newSingleThreadExecutor();
-                    Future<?> future = executorService.submit(streamGobbler);
-                    int exitCode = process.waitFor();
-                    future.get(2, TimeUnit.MINUTES);
-                    Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
-                        if(exitCode==0) {
-                            PluginData.getMessageUtil().sendInfoMessage(cs, "RP release finished. Do /architect reload and then /rp calcsha <rpname>");
-
+            if(args.length>3 && args[1].equalsIgnoreCase("Human")) {
+                Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
+                    try {
+                        Process process;
+                        boolean isWindows = System.getProperty("os.name")
+                                .toLowerCase().startsWith("windows");
+                        String gitHubOwner = "EriolEandur";
+                        String gitHubRepo = "RP-Gondor";
+                        if (isWindows) {
+                            process = Runtime.getRuntime()
+                                    .exec(String.format("cmd.exe /c %s", "/opt/mcme-network/bungee-mcme/resourcePacks"));
                         } else {
-                            PluginData.getMessageUtil().sendErrorMessage(cs, "Error while creating RP release!");
+                            process = Runtime.getRuntime()
+                                    .exec(new String[]{"sh", "releaseHuman.sh", gitHubOwner, gitHubRepo, args[2],
+                                                    args[3], "Version " + args[2] + " for MC 1.19.4 (Vanilla) and MC 1.20.1 (Sodium)",
+                                                    "Human-Vanilla.zip Human-Vanilla-Footprints.zip Human-Sodium.zip Human-Sodium-Footprints.zip"}, null,
+                                            new File("/opt/mcme-network/bungee-mcme/resourcePacks/"));
                         }
-                    });
-                } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
-                    e.printStackTrace();
-                }
-            });
+                        StreamGobbler streamGobbler =
+                                new StreamGobbler(process.getInputStream(), process.getErrorStream(),
+                                        line -> Logger.getGlobal().info(line));
+                        ExecutorService executorService = Executors.newSingleThreadExecutor();
+                        Future<?> future = executorService.submit(streamGobbler);
+                        boolean exit = process.waitFor(5, TimeUnit.MINUTES);
+                        future.get(5, TimeUnit.MINUTES);
+                        process.destroy();
+                        int exitCode = process.waitFor();
+                        if(exit && exitCode==0) {
+                            ConfigurationSection rpConfig = RpManager.getRpConfig();
+                            ConfigurationSection humanConfig = rpConfig.getConfigurationSection("Human");
+                            if(humanConfig !=null) {
+                                String download = "https://github.com/"+gitHubOwner+"/"+gitHubRepo+"/releases/download/";
+                                humanConfig.set("vanilla.16px.light.url", download + args[2] + "/Human-Vanilla.zip");
+                                humanConfig.set("vanilla.16px.footprints.url", download + args[2] + "/Human-Vanilla-Footprints.zip");
+                                humanConfig.set("sodium.16px.light.url", download + args[2] + "/Human-Sodium.zip");
+                                humanConfig.set("sodium.16px.footprints.url", download + args[2] + "/Human-Sodium-Footprints.zip");
+                                ArchitectPlugin.getPluginInstance().saveConfig();
+                                //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
+                                RpManager.refreshSHA(cs, "Human");
+                            }
+                        }
+                        Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
+                            if (exit && exitCode == 0) {
+                                SpecialBlockInventoryData.loadInventories();
+                                SpecialItemInventoryData.loadInventories();
+                                SpecialHeadInventoryData.loadInventory();
+                                SpecialSavedInventoryData.loadInventories();
+                                PluginData.getMessageUtil().sendInfoMessage(cs, "RP release finished. Do /architect reload and then /rp calcsha <rpname>");
 
+                            } else {
+                                PluginData.getMessageUtil().sendErrorMessage(cs, "Error while creating RP release! exit=" + exit + " exitCode=" + exitCode);
+                            }
+                        });
+                    } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+            } else {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp release Human <Version> <Title>"
+                                        +"\nReleasing other packs than Human RP are not yet implemented.");
+            }
             return true;
         }
         if(args.length>0 && args[0].equalsIgnoreCase("calcsha")
