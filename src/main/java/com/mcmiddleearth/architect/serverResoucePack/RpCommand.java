@@ -5,6 +5,7 @@
  */
 package com.mcmiddleearth.architect.serverResoucePack;
 
+import com.google.common.base.Joiner;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
@@ -17,7 +18,10 @@ import com.mcmiddleearth.pluginutil.message.MessageType;
 import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.regions.Region;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -32,7 +36,44 @@ public class RpCommand extends AbstractArchitectCommand {
 
     @Override
     public boolean onCommand(CommandSender cs, Command cmd, String c, String[] args) {
-        if(args.length>0 && args[0].equalsIgnoreCase("calcsha") 
+        if(args.length>0 && args[0].equalsIgnoreCase("release")
+                && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            if(args.length>3) {
+                String title = Joiner.on(" ").join(Arrays.copyOfRange(args, 3, args.length));
+                RpReleaseUtil.releaseResourcePack(args[1], args[2], title, (exit, exitCode) -> {
+                    Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
+                        if (exit && exitCode == 0) {
+                            PluginData.getMessageUtil().sendInfoMessage(cs,
+                                    "RP release finished. You might want to do /rp server "+args[1]+" "+args[2]);
+
+                        } else {
+                            PluginData.getMessageUtil().sendErrorMessage(cs,
+                                    "Error while creating RP release! Process terminated=" + exit + " exitCode=" + exitCode);
+                        }
+                    });
+                });
+            } else {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp release <rpName> <Version> <Title>"
+                        +"\nReleasing is not implemented for all resource packs.");
+            }
+            return true;
+        }
+        if(args.length>0 && args[0].equalsIgnoreCase("server")
+                && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            if(args.length>2) {
+                RpReleaseUtil.setServerResourcePack(cs, args[1], args[2], success -> {
+                    if (success) {
+                        PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
+                                + " set to version: " + args[2]);
+                    } else {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack!");
+                    }
+                });
+            } else {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <version>");
+            }
+            return true;
+        }        if(args.length>0 && args[0].equalsIgnoreCase("calcsha")
                          && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) { 
             if(args.length<2) {
                 PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
@@ -304,6 +345,7 @@ public class RpCommand extends AbstractArchitectCommand {
         help = new String[][]{         {"/rp r","",": Rohan"},
                                        {"/rp h","",": Human (merged Gondor/Eriador)"},
                                        {"/rp l","",": Lothlorien"},
+                                       {"/rp p","",": Paths of the Dead"},
                                        {"/rp d","",": Dwarven (Moria)"},
                                        {"/rp m","",": Mordor"}};
         super.sendHelpMessage(player, page);

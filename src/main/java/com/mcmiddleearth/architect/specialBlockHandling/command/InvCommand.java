@@ -63,7 +63,25 @@ public class InvCommand extends AbstractArchitectCommand {
             }
             final List<String> argList = new ArrayList<>();
             argList.addAll(Arrays.asList(Arrays.copyOfRange(args, 1, args.length)));
-            final CommandSender csFinal = cs;
+            argList.forEach(rpArgument-> {
+                String rpName = RpManager.matchRpName(rpArgument.substring(3));
+                InventoryDownloadUtil.downloadInventory(rpName, (exit, exitCode)-> {
+                    SpecialBlockInventoryData.loadInventories();
+                    SpecialItemInventoryData.loadInventories();
+                    SpecialHeadInventoryData.loadInventory();
+                    SpecialSavedInventoryData.loadInventories();
+                    if (exit && exitCode == 0) {
+                        PluginData.getMessageUtil().sendInfoMessage(cs,
+                                "Custom inventory for RP "+rpName+" updated!");
+
+                    } else {
+                        PluginData.getMessageUtil().sendErrorMessage(cs,
+                                "Error while updating custom inventory for RP "+rpName+"! Process terminated=" + exit + " exitCode=" + exitCode);
+                    }
+                });
+            });
+
+            /* Old Downloader for inventory files included in the RP zip            final CommandSender csFinal = cs;
 //Logger.getGlobal().info("args argList "+args.length + " "+argList.size()+" "+argList.toString());
             BukkitRunnable downloader = new BukkitRunnable() {
                 BukkitRunnable asyncDownloader;
@@ -139,7 +157,7 @@ public class InvCommand extends AbstractArchitectCommand {
                     }
                 }
             };
-            downloader.runTaskTimer(ArchitectPlugin.getPluginInstance(), 0, 100);
+            downloader.runTaskTimer(ArchitectPlugin.getPluginInstance(), 0, 100);*/
             return true;
         }
         if (!(cs instanceof Player)) {
