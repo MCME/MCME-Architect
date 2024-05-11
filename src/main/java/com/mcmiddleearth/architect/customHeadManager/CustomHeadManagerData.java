@@ -24,6 +24,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.*;
 
@@ -141,6 +142,9 @@ public class CustomHeadManagerData {
     }
     
     public static String getHeadName(UUID headId) {
+        if(headId==null) {
+            return "";
+        }
         return collection.getHeadName(headId);
     }
     

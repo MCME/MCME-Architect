@@ -350,7 +350,7 @@ public class RpManager {
         return getRpConfig().getKeys(true).stream().anyMatch((search) -> (search.endsWith(key)));
     }
     
-    private static ConfigurationSection getRpConfig() {
+    public static ConfigurationSection getRpConfig() {
         return ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection("ServerResourcePacks");
     }
 

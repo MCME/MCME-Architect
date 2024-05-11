@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
+import com.google.common.collect.Maps;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadCollection;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
@@ -30,8 +31,10 @@ import java.util.Map;
 import com.mcmiddleearth.util.HeadUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.ItemMeta;
 
 /**
@@ -91,5 +94,13 @@ public class SpecialHeadInventoryData {
         inventory = new CustomInventory(ChatColor.WHITE+ HeadUtil.headCollectionTag);
         searchInventory = new SearchInventory(ChatColor.WHITE+"heads","heads");
     }
-    
+
+    public static Map<NamespacedKey, Recipe> getRecipes() {
+        if(searchInventory!=null) {
+            return searchInventory.getRecipes();
+        }
+        return Maps.newHashMap();
+    }
+
+
 }

@@ -45,6 +45,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.recipe.CraftingBookCategory;
 import org.bukkit.plugin.Plugin;
 
 import javax.xml.stream.events.Namespace;
@@ -73,16 +74,15 @@ public class SearchInventory implements Listener {
             }
         }*/
     }
-   
+
+
     public SearchInventory add(ItemStack item) {//, String name, String... info) {
+        return add(item, null);
+    }
+
+    public SearchInventory add(ItemStack item, Object category) {//, String name, String... info) {
         items.add(item);
-        String key = (item.getItemMeta().getDisplayName()+rpName+recipes.size()).replaceAll("[^0-9a-z/._-]","");
-        NamespacedKey namespacedKey = new NamespacedKey(ArchitectPlugin.getPluginInstance(),key);
-        ShapelessRecipe recipe = new ShapelessRecipe(namespacedKey,item);
-        recipe.setGroup(""+recipes.size());
-        recipe.addIngredient(item);
-        recipes.put(namespacedKey,recipe);
-        //Bukkit.addRecipe(recipe);
+        addRecipe(item, category);
         return this;
     }
    
@@ -233,6 +233,10 @@ public class SearchInventory implements Listener {
         return recipes.get(key);
     }
 
+    public Map<NamespacedKey, Recipe> getRecipes() {
+        return recipes;
+    }
+
     /*public void setRecipes() {
         for(int i = 0 ; i<items.size();i++) {
             ItemStack item = items.get(i);
@@ -246,4 +250,38 @@ public class SearchInventory implements Listener {
             Bukkit.addRecipe(recipe);
         }
     }*/
+
+    private void addRecipe(ItemStack item, Object category) {
+        String key = (item.getItemMeta().getDisplayName()+rpName+recipes.size()).replaceAll("[^0-9a-z/._-]","");
+        NamespacedKey namespacedKey = new NamespacedKey(ArchitectPlugin.getPluginInstance(),key);
+        ShapelessRecipe recipe = new ShapelessRecipe(namespacedKey,item);
+        recipe.setCategory(getCategory(category));
+        recipe.setGroup(""+recipes.size()%10);
+        recipe.addIngredient(item);
+        recipes.put(namespacedKey,recipe);
+        //Bukkit.addRecipe(recipe);
+    }
+
+    private CraftingBookCategory getCategory(Object categoryObject) {
+        if(categoryObject instanceof String category) {
+            //Logger.getGlobal().info("Single!");
+            return getCategory(category);
+        } else if((categoryObject instanceof List list) && ! ((List<?>)categoryObject).isEmpty()) {
+            //Logger.getGlobal().info("List: "+list.size());
+            return getCategory(list.get(0));
+        } else {
+            //Logger.getGlobal().info("Default cat: MISC");
+            return CraftingBookCategory.MISC;
+        }
+    }
+
+    private CraftingBookCategory getCategory(String category) {
+        //Logger.getGlobal().info("Category: "+category);
+        return switch (category) {
+            case "Trees", "Plant", "Crop" -> CraftingBookCategory.EQUIPMENT;
+            case "Block", "Block2" -> CraftingBookCategory.BUILDING;
+            case "Terra" -> CraftingBookCategory.REDSTONE;
+            default -> CraftingBookCategory.MISC;
+        };
+    }
 }

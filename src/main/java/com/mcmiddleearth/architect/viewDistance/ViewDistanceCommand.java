@@ -41,7 +41,7 @@ public class ViewDistanceCommand extends AbstractArchitectCommand {
             PluginData.getMessageUtil().sendInfoMessage(player,"Setting your client view distance to server view distance ("
                      + Bukkit.getViewDistance()+").");
         } else if(NumericUtil.isInt(args[0])) {
-            ViewDistanceManager.setViewDistance(player,NumericUtil.getInt(args[0]));
+            ViewDistanceManager.setViewDistance(player,Math.min(500,NumericUtil.getInt(args[0])));
             PluginData.getMessageUtil().sendInfoMessage(player,"Setting your client view distance to "
                      + ViewDistanceManager.getViewDistance(player));
         } else {

@@ -35,8 +35,9 @@ import org.bukkit.inventory.ItemStack;
  * @author Eriol_Eandur
  */
 public class CustomHeadListener implements Listener {
-    
-    @EventHandler
+
+    //Moved to BlockPickerListener
+    /*@EventHandler
     public void playerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         if(!(player.getInventory().getItemInHand().getType().equals(Material.STICK) 
@@ -60,9 +61,9 @@ public class CustomHeadListener implements Listener {
         PluginData.getMessageUtil().sendInfoMessage(player,"Given head: "
                   +PluginData.getMessageUtil().STRESSED+head.getItemMeta().getDisplayName());
     }
-    
+
     private void sendNotActivatedMessage(Player player) {
         PluginData.getMessageUtil().sendErrorMessage(player,"Custom Heads are not enabled for this world.");
-    }
+    }*/
 
 }

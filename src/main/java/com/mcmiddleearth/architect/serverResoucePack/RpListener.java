@@ -21,6 +21,9 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.mcmiddleearth.pluginutil.message.FancyMessage;
+import com.mcmiddleearth.pluginutil.message.MessageType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -75,6 +78,15 @@ public class RpListener implements Listener{
 //    Logger.getGlobal().info("On PlayerConnect: Set rp to last url: "+rp+" "+ lastUrl);        
                                 RpManager.setRp(rp, player, false);
                             //}
+                        }
+                        if (RpManager.hasPlayerDataLoaded(player)
+                                && player.getClientBrandName() !=null
+                                && player.getClientBrandName().contains("fabric")
+                                && !data.getVariant().equals("Sodium")) {
+                            new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                                    .addSimple("If you are using Sodium mod you might experience texture errors as your server RP is not set to Sodium variant. ")
+                                    .addClickable("Click here to fix this or do command /rp variant sodium.","/rp variant sodium")
+                                    .send(player);
                         }
                         cancel();
                     } else counter --;

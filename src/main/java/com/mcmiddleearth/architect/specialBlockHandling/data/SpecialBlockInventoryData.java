@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
@@ -317,7 +318,7 @@ public class SpecialBlockInventoryData {
                             inventory.add(inventoryItem,null,false);
                             //Logger.getGlobal().info("category object: "+categoryObject);
                         }
-                        searchInventory.add(inventoryItem);
+                        searchInventory.add(inventoryItem,categoryObject);
                     } else {
                         Logger.getLogger(SpecialBlockInventoryData.class.getName())
                             .log(Level.WARNING, "Invalid config data while loading Special MCME Block '"+itemKey+"'. Block skipped.");
@@ -650,6 +651,14 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
             return inv.getRecipeKeys();
         }
         return Sets.newHashSet();
+    }
+
+    public static Map<NamespacedKey,Recipe> getRecipes(String rpName) {
+        SearchInventory inv = searchInventories.get(rpName);
+        if(inv!=null) {
+            return inv.getRecipes();
+        }
+        return Maps.newHashMap();
     }
 
     public static Recipe getRecipe(NamespacedKey key, String rpName) {

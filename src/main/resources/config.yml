@@ -11,7 +11,24 @@ rpSettingsDatabase:
     dbName: xxx
     ip: localhost
     port: 3306
-    dynmap:
-        enabled: true
-    entityLogger:
-        enabled: true
+EntityLimit:
+    number: 500
+    radius: 80
+dynmap:
+    enabled: true
+entityLogger:
+    enabled: true
+gitHubRpReleases:
+    Human:
+        owner: EriolEandur
+        repo: RP-Gondor
+        script: releaseHuman.sh
+        path: /opt/mcme-network/bungee-mcme/resourcePacksAutomation/
+    Dwarf:
+        owner: EriolEandur
+        repo: RP-Moria
+        script: releaseDwarf.sh
+        path: /opt/mcme-network/bungee-mcme/resourcePackAutomation/
+inventoryDownload:
+    script: updateInventories.sh
+    path: /opt/mcme-network/bungee-mcme/resourcePackAutomation/
