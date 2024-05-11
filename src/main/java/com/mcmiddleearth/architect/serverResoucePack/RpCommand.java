@@ -5,6 +5,7 @@
  */
 package com.mcmiddleearth.architect.serverResoucePack;
 
+import com.google.common.base.Joiner;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
@@ -32,6 +33,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
@@ -47,7 +49,8 @@ public class RpCommand extends AbstractArchitectCommand {
         if(args.length>0 && args[0].equalsIgnoreCase("release")
                             && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
             if(args.length>3) {
-                RpReleaseUtil.releaseResourcePack(args[1], args[2], args[3], (exit, exitCode) -> {
+                String title = Joiner.on(" ").join(Arrays.copyOfRange(args, 3, args.length));
+                RpReleaseUtil.releaseResourcePack(args[1], args[2], title, (exit, exitCode) -> {
                     Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
                         if (exit && exitCode == 0) {
                             PluginData.getMessageUtil().sendInfoMessage(cs,
@@ -68,13 +71,14 @@ public class RpCommand extends AbstractArchitectCommand {
         if(args.length>0 && args[0].equalsIgnoreCase("server")
                 && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
             if(args.length>2) {
-                boolean success = RpReleaseUtil.setServerResourcePack(cs, args[1], args[2]);
-                if(success) {
-                    PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack "+args[1]
-                                                                            +" set to version: "+args[2]);
-                } else {
-                    PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack!");
-                }
+                RpReleaseUtil.setServerResourcePack(cs, args[1], args[2], success -> {
+                    if (success) {
+                        PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
+                                + " set to version: " + args[2]);
+                    } else {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack!");
+                    }
+                });
             } else {
                 PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <version>");
             }

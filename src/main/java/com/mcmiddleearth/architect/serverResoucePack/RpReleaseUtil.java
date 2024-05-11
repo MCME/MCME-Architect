@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public class RpReleaseUtil {
@@ -23,8 +24,8 @@ public class RpReleaseUtil {
                         .toLowerCase().startsWith("windows");
                 String gitHubOwner = getGitHubOwner(finalRpName);
                 String gitHubRepo = getGitHubRepo(finalRpName);
-                String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubReleases."+finalRpName+".script");
-                String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubReleases."+finalRpName+".path");
+                String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
+                String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
                 if (isWindows || gitHubOwner==null || gitHubRepo==null || releaseScript==null || scriptPath==null) {
                     callback.accept(false, -1);
                     return;
@@ -44,13 +45,14 @@ public class RpReleaseUtil {
                 int exitCode = process.waitFor();
                 callback.accept(exit, exitCode);
             } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
-                callback.accept(false, -1);
                 e.printStackTrace();
+                callback.accept(false, -1);
             }
         });
     }
 
-    public static boolean setServerResourcePack(CommandSender cs, String rpName, String version) {
+    public static void setServerResourcePack(CommandSender cs, String rpName, String version,
+                                                Consumer<Boolean> callback) {
         if(rpName.equalsIgnoreCase("human")) {
             ConfigurationSection rpConfig = RpManager.getRpConfig();
             ConfigurationSection humanConfig = rpConfig.getConfigurationSection("Human");
@@ -62,8 +64,9 @@ public class RpReleaseUtil {
                 humanConfig.set("sodium.16px.footprints.url", download + version + "/Human-Sodium-Footprints.zip");
                 ArchitectPlugin.getPluginInstance().saveConfig();
                 //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
-                RpManager.refreshSHA(cs, "Human");
-                return true;
+                Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
+                    callback.accept(RpManager.refreshSHA(cs, "Human"));
+                });
             }
         } else if(rpName.equalsIgnoreCase("Dwarf")) {
             ConfigurationSection rpConfig = RpManager.getRpConfig();
@@ -74,11 +77,13 @@ public class RpReleaseUtil {
                 humanConfig.set("vanilla.16px.footprints.url", download + version + "/Dwarven-footprints.zip");
                 ArchitectPlugin.getPluginInstance().saveConfig();
                 //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
-                RpManager.refreshSHA(cs, "Dwarf");
-                return true;
+                Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
+                    callback.accept(RpManager.refreshSHA(cs, "Dwarf"));
+                });
             }
+        } else {
+            callback.accept(false);
         }
-        return false;
     }
 
     private static String getGitHubOwner(String rpName) {
