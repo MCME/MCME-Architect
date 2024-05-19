@@ -81,6 +81,19 @@ public class RpReleaseUtil {
                     callback.accept(RpManager.refreshSHA(cs, "Dwarf"));
                 });
             }
+        } else if(rpName.equalsIgnoreCase("Rohan")) {
+            ConfigurationSection rpConfig = RpManager.getRpConfig();
+            ConfigurationSection humanConfig = rpConfig.getConfigurationSection("Rohan");
+            if(humanConfig !=null) {
+                String download = "https://github.com/"+getGitHubOwner("Rohan")+"/"+getGitHubRepo("Rohan")+"/releases/download/";
+                humanConfig.set("vanilla.16px.light.url", download + version + "/Rohan.zip");
+                humanConfig.set("vanilla.16px.footprints.url", download + version + "/Rohan-footprints.zip");
+                ArchitectPlugin.getPluginInstance().saveConfig();
+                //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
+                Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
+                    callback.accept(RpManager.refreshSHA(cs, "Rohan"));
+                });
+            }
         } else {
             callback.accept(false);
         }
