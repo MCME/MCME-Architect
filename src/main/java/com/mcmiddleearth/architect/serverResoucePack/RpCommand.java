@@ -73,7 +73,8 @@ public class RpCommand extends AbstractArchitectCommand {
                 PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <version>");
             }
             return true;
-        }        if(args.length>0 && args[0].equalsIgnoreCase("calcsha")
+        }
+        if(args.length>0 && args[0].equalsIgnoreCase("calcsha")
                          && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) { 
             if(args.length<2) {
                 PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);

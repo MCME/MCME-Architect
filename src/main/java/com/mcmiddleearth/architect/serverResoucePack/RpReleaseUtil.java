@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 public class RpReleaseUtil {
 
     public static void releaseResourcePack(String rpName, String version, String title, BiConsumer<Boolean,Integer> callback ) {
-        String finalRpName = rpName.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase();
+        String finalRpName = RpManager.matchRpName(rpName);//.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase();
         Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
             try {
                 Process process;
@@ -27,11 +27,11 @@ public class RpReleaseUtil {
                 String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
                 String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
                 if (isWindows || gitHubOwner==null || gitHubRepo==null || releaseScript==null || scriptPath==null) {
-                    callback.accept(false, -1);
+                    callback.accept(true, -1);
                     return;
                 } else {
                     process = Runtime.getRuntime()
-                            .exec(new String[]{"sh", releaseScript, gitHubOwner, gitHubRepo, version, title}, null,
+                            .exec(new String[]{"sh", releaseScript, finalRpName, gitHubOwner, gitHubRepo, version, title}, null,
                                     new File(scriptPath));
                 }
                 StreamGobbler streamGobbler =
@@ -53,7 +53,29 @@ public class RpReleaseUtil {
 
     public static void setServerResourcePack(CommandSender cs, String rpName, String version,
                                              Consumer<Boolean> callback) {
-        if(rpName.equalsIgnoreCase("human")) {
+        String finalRpName = RpManager.matchRpName(rpName);
+        ConfigurationSection rpConfig = RpManager.getRpConfig();
+        rpConfig = rpConfig.getConfigurationSection(finalRpName);
+        if(rpConfig ==null) {
+            callback.accept(false);
+        } else {
+            String download = "https://github.com/" + getGitHubOwner(finalRpName) + "/" + getGitHubRepo(finalRpName) + "/releases/download/";
+            if (rpConfig.contains("sodium")) {
+                rpConfig.set("vanilla.16px.light.url", download + version + "/"+finalRpName+"-Vanilla.zip");
+                rpConfig.set("vanilla.16px.footprints.url", download + version + "/"+finalRpName+"-Vanilla-Footprints.zip");
+                rpConfig.set("sodium.16px.light.url", download + version + "/"+finalRpName+"-Sodium.zip");
+                rpConfig.set("sodium.16px.footprints.url", download + version + "/"+finalRpName+"-Sodium-Footprints.zip");
+            } else {
+                rpConfig.set("vanilla.16px.light.url", download + version + "/"+finalRpName+".zip");
+                rpConfig.set("vanilla.16px.footprints.url", download + version + "/"+finalRpName+"-footprints.zip");
+            }
+            ArchitectPlugin.getPluginInstance().saveConfig();
+            //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
+            Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
+                callback.accept(RpManager.refreshSHA(cs, finalRpName));
+            });
+        }
+        /*if(rpName.equalsIgnoreCase("human")) {
             ConfigurationSection rpConfig = RpManager.getRpConfig();
             ConfigurationSection humanConfig = rpConfig.getConfigurationSection("Human");
             if(humanConfig !=null) {
@@ -96,7 +118,7 @@ public class RpReleaseUtil {
             }
         } else {
             callback.accept(false);
-        }
+        }*/
     }
 
     private static String getGitHubOwner(String rpName) {
