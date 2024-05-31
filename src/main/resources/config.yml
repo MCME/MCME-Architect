@@ -11,7 +11,37 @@ rpSettingsDatabase:
     dbName: xxx
     ip: localhost
     port: 3306
-    dynmap:
-        enabled: true
-    entityLogger:
-        enabled: true
+dynmap:
+    enabled: true
+entityLogger:
+    enabled: true
+EntityLimit:
+    number: 500
+    radius: 80
+headGalleryLocation:
+    world: plotworld
+    x: -18.710812853940528
+    y: -52.0
+    z: 18.49381355206614
+    pitch: 30.449993
+    yaw: 6.750458
+gitHubRpReleases:
+    Human:
+        owner: EriolEandur
+        repo: RP-Gondor
+        script: releaseVanillaSodium.sh
+        path: /opt/mcme-network/bungee-mcme/servers-mcme/devserver/resourcePackAutomation/
+        separateSodium: true
+    Dwarf:
+        owner: EriolEandur
+        repo: RP-Moria
+        script: releaseGeneral.sh
+        path: /opt/mcme-network/bungee-mcme/servers-mcme/devserver/resourcePackAutomation/
+    Rohan:
+        owner: EriolEandur
+        repo: RP-Rohan
+        script: releaseGeneral.sh
+        path: /opt/mcme-network/bungee-mcme/servers-mcme/devserver/resourcePackAutomation/
+inventoryDownload:
+    script: updateInventory.sh
+    path: /opt/mcme-network/bungee-mcme/servers-mcme/devserver/resourcePackAutomation/
