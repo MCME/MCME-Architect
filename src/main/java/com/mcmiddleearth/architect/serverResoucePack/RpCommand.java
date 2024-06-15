@@ -120,71 +120,71 @@ public class RpCommand extends AbstractArchitectCommand {
                           || args[0].equals("client")
                           || args[0].equals("variant"))) {
             RpPlayerData data = RpManager.getPlayerData((Player)cs);
-            switch(args[0]) {
-                case "auto":
-                    if(args.length<2) {
-                        data.setAutoRp(!data.isAutoRp());
+            switch (args[0]) {
+                case "auto" -> {
+                    if (args.length < 2) {
+                        data.setAutoRp(true);
                     } else {
-                        data.setAutoRp(args[1].equals("on") || args[1].equals("true"));
+                        data.setAutoRp(!(args[1].equals("off") || args[1].equals("false")));
                     }
-                    String on = (data.isAutoRp()?"on":"off");
-                    PluginData.getMessageUtil().sendInfoMessage(cs,"Auto rp switching set to " 
-                                                                    +ccStressed+ on);
-                    break;
-                case "px":
-                    if(args.length<2) {
+                    String on = (data.isAutoRp() ? "on" : "off");
+                    PluginData.getMessageUtil().sendInfoMessage(cs, "Auto rp switching set to "
+                            + ccStressed + on);
+                }
+                case "px" -> {
+                    if (args.length < 2) {
                         PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
                         return true;
                     }
-                    if(!NumericUtil.isInt(args[1])) {
+                    if (!NumericUtil.isInt(args[1])) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "You need to specify resolution in px. If your resolution is not available for a RP you'll see default resolution.");
                         return true;
                     }
                     int px = NumericUtil.getInt(args[1]);
-                    if(!RpManager.searchRpKey(RpManager.getResolutionKey(px))) {
+                    if (!RpManager.searchRpKey(RpManager.getResolutionKey(px))) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "That resolution is not available, try 16 or 32.");
                         return true;
                     }
                     data.setResolution(px);
                     PluginData.getMessageUtil().sendInfoMessage(cs, "RP resolution set to "
-                                         +ccStressed+px+"px"+ccInfo+". If this resolution is not available for a RP you'll see default resolution.");
-                    break;
-                case "variant":
-                    if(args.length<2) {
+                            + ccStressed + px + "px" + ccInfo + ". If this resolution is not available for a RP you'll see default resolution.");
+                }
+                case "variant" -> {
+                    if (args.length < 2) {
                         PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
                         return true;
                     }
-                    if(args[1].startsWith("xxx_") || !RpManager.searchRpKey(args[1])) {
+                    if (args[1].startsWith("xxx_") || !RpManager.searchRpKey(args[1])) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "That variant is not available. Try 'light' or 'dark'.");
                         return true;
                     }
-                    if(data.getVariant().equals(args[1])) {
-                        PluginData.getMessageUtil().sendErrorMessage(cs, "You are already using variant "+args[1]);
+                    if (data.getVariant().equals(args[1])) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "You are already using variant " + args[1]);
                         return true;
                     }
                     data.setVariant(args[1]);
-                    RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()),(Player)cs,true);
+                    RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()), (Player) cs, true);
                     PluginData.getMessageUtil().sendInfoMessage(cs, "RP variant set to "
-                            +ccStressed+args[1]+ccInfo+". If this variant is not available for a RP you'll see default variant.");
-                    break;
-                case "client":
-                    if(args.length<2 ) {
+                            + ccStressed + args[1] + ccInfo + ". If this variant is not available for a RP you'll see default variant.");
+                }
+                case "client" -> {
+                    if (args.length < 2) {
                         PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
                         return true;
                     }
-                    if(args[1].startsWith("xxx_") || !RpManager.searchRpKey(args[1])) {
+                    if (args[1].startsWith("xxx_") || !RpManager.searchRpKey(args[1])) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "That client type is not available. Try 'vanilla' or 'sodium'.");
                         return true;
                     }
-                    if(data.getClient().equals(args[1])) {
-                        PluginData.getMessageUtil().sendErrorMessage(cs, "You have already set your client type to "+args[1]);
+                    if (data.getClient().equals(args[1])) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "You have already set your client type to " + args[1]);
                         return true;
                     }
                     data.setClient(args[1]);
-                    RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()),(Player)cs,true);
+                    RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()), (Player) cs, true);
                     PluginData.getMessageUtil().sendInfoMessage(cs, "client type set to "
-                            +ccStressed+args[1]+ccInfo+". If there is no rp for this client type available you'll get the rp for vanilla clients.");
-                    break;
+                            + ccStressed + args[1] + ccInfo + ". If there is no rp for this client type available you'll get the rp for vanilla clients.");
+                }
             }
             RpManager.savePlayerData((Player)cs);
             if((data.isAutoRp() || !args[0].equalsIgnoreCase("auto"))
