@@ -67,7 +67,7 @@ public class RpReleaseUtil {
                 rpConfig.set("sodium.16px.footprints.url", download + version + "/"+finalRpName+"-Sodium-Footprints.zip");
             } else {
                 rpConfig.set("vanilla.16px.light.url", download + version + "/"+finalRpName+".zip");
-                rpConfig.set("vanilla.16px.footprints.url", download + version + "/"+finalRpName+"-footprints.zip");
+                rpConfig.set("vanilla.16px.footprints.url", download + version + "/"+finalRpName+"-Footprints.zip");
             }
             ArchitectPlugin.getPluginInstance().saveConfig();
             //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
