@@ -116,11 +116,12 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         ChatColor ccStressed = PluginData.getMessageUtil().STRESSED;
         ChatColor ccInfo = PluginData.getMessageUtil().INFO;
-        if(args.length>0 && (args[0].equals("auto")
-                          || args[0].equals("client")
-                          || args[0].equals("variant"))) {
+        if(args.length>0 && (args[0].equalsIgnoreCase("auto")
+                          || args[0].equalsIgnoreCase("reset")
+                          || args[0].equalsIgnoreCase("client")
+                          || args[0].equalsIgnoreCase("variant"))) {
             RpPlayerData data = RpManager.getPlayerData((Player)cs);
-            switch (args[0]) {
+            switch (args[0].toLowerCase()) {
                 case "auto" -> {
                     if (args.length < 2) {
                         data.setAutoRp(true);
@@ -130,6 +131,18 @@ public class RpCommand extends AbstractArchitectCommand {
                     String on = (data.isAutoRp() ? "on" : "off");
                     PluginData.getMessageUtil().sendInfoMessage(cs, "Auto rp switching set to "
                             + ccStressed + on);
+                }
+                case "reset" -> {
+                    RpRegion rpRegion = RpManager.getRegion(((Player)cs).getLocation());
+                    if(rpRegion == null) {
+                        PluginData.getMessageUtil().sendInfoMessage(cs, "No server rp defined for your location.");
+                    } else {
+                        data.setAutoRp(true);
+                        RpManager.setRp(rpRegion.getRp(),(Player)cs,true);
+                        PluginData.getMessageUtil().sendInfoMessage(cs, "Automatic RP switching enabled. RP switched to '"
+                                +rpRegion.getRp()+"'.");
+                    }
+                    return true;
                 }
                 case "px" -> {
                     if (args.length < 2) {
