@@ -26,10 +26,7 @@ import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsData;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
 import com.mcmiddleearth.architect.paintingEditor.PaintingListener;
 import com.mcmiddleearth.architect.randomiser.RandomiserCommand;
-import com.mcmiddleearth.architect.serverResoucePack.RPSwitchTask;
-import com.mcmiddleearth.architect.serverResoucePack.RpCommand;
-import com.mcmiddleearth.architect.serverResoucePack.RpListener;
-import com.mcmiddleearth.architect.serverResoucePack.RpManager;
+import com.mcmiddleearth.architect.serverResoucePack.*;
 import com.mcmiddleearth.architect.signEditor.SignCommand;
 import com.mcmiddleearth.architect.signEditor.SignListener;
 import com.mcmiddleearth.architect.specialBlockHandling.command.GetCommand;
@@ -46,6 +43,7 @@ import com.mcmiddleearth.architect.viewDistance.ViewDistanceManager;
 import com.mcmiddleearth.architect.voxelStencilEditor.SlCommand;
 import com.mcmiddleearth.architect.voxelStencilEditor.VvCommand;
 import com.mcmiddleearth.architect.weSchematicsViewer.SchListCommand;
+import org.bukkit.Bukkit;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -107,6 +105,8 @@ public class ArchitectPlugin extends JavaPlugin {
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
 //        pluginManager.registerEvents(new AfkListener(), this);
+
+        Bukkit.getMessenger().registerIncomingPluginChannel(this, "mcme-modpack-marker:hello", new RpPluginMessageListener());
 
         ProtocolManager manager = ProtocolLibrary.getProtocolManager();
         manager.addPacketListener(new ViewDistanceListener(this));

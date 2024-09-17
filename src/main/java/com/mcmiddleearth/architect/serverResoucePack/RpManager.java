@@ -61,6 +61,8 @@ public class RpManager {
     private static final Map<String, RpRegion> regions = new HashMap<>();
     
     private static final Map<UUID,RpPlayerData> playerRpData = new HashMap<>();
+
+    private static final Map<UUID, String> sodiumClients = new HashMap<>();
     
     private static final RpDatabaseConnector dbConnector = new RpDatabaseConnector(ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(rpDatabaseConfig));
     
@@ -452,36 +454,7 @@ public class RpManager {
             }
         }
     }
-    
-    private static class ResourceRegionData {
-        public String name;
-        public String packUrl;
-        public int weight;
-        public String worldName;
-        public int n;
-        public int[] xpoints;
-        public int[] zpoints;
-        
-        public YamlConfiguration getConfig() {
-            YamlConfiguration config = new YamlConfiguration();
-            ConfigurationSection rpSection = config.createSection("rpRegion");
-            rpSection.set("name",name);
-            rpSection.set("weight",weight);
-            rpSection.set("rp",RpManager.getRpForUrl(packUrl));
-            ConfigurationSection regionSection = rpSection.createSection("region");
-            regionSection.set("world", worldName);
-            regionSection.set("minY",0);
-            regionSection.set("maxY",255);
-            regionSection.set("type","Polygonal2DRegion");
-            List<String> points = new ArrayList<>();
-            for(int i = 0; i<n; i++) {
-                points.add(xpoints[i]+","+zpoints[i]);
-            }
-            regionSection.set("points",points);
-            return config;
-        }
-    }
-    
+
     private static void addPacketListener() {
         Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Adding RP packet listener");
         ProtocolManager protocolManager = protocolManager = ProtocolLibrary.getProtocolManager();
@@ -511,4 +484,47 @@ public class RpManager {
     public static RegionEditConversationFactory getRegionEditConversationFactory() {
         return regionEditConversationFactory;
     }
+
+    public static void addSodiumClient(Player player, String sodiumVersion) {
+        sodiumClients.put(player.getUniqueId(), sodiumVersion);
+    }
+
+    public static void removeSodiumClient(Player player) {
+        sodiumClients.remove(player.getUniqueId());
+    }
+
+    public static boolean isSodiumClient(Player player) {
+        return sodiumClients.containsKey(player.getUniqueId());
+    }
+
+    private static class ResourceRegionData {
+        public String name;
+        public String packUrl;
+        public int weight;
+        public String worldName;
+        public int n;
+        public int[] xpoints;
+        public int[] zpoints;
+
+        public YamlConfiguration getConfig() {
+            YamlConfiguration config = new YamlConfiguration();
+            ConfigurationSection rpSection = config.createSection("rpRegion");
+            rpSection.set("name",name);
+            rpSection.set("weight",weight);
+            rpSection.set("rp",RpManager.getRpForUrl(packUrl));
+            ConfigurationSection regionSection = rpSection.createSection("region");
+            regionSection.set("world", worldName);
+            regionSection.set("minY",0);
+            regionSection.set("maxY",255);
+            regionSection.set("type","Polygonal2DRegion");
+            List<String> points = new ArrayList<>();
+            for(int i = 0; i<n; i++) {
+                points.add(xpoints[i]+","+zpoints[i]);
+            }
+            regionSection.set("points",points);
+            return config;
+        }
+    }
+
+
 }

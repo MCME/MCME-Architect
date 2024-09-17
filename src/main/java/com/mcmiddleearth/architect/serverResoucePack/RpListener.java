@@ -22,12 +22,16 @@ import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -62,7 +66,17 @@ public class RpListener implements Listener{
     @EventHandler
     public void onPlayerConnect(PlayerConnectEvent event) {
         Player player = event.getPlayer();
-//    Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());        
+/*Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
+int version = player.getProtocolVersion();
+String snapshot = "";
+if(version > 0x40000000) {
+    snapshot = "Snapshot ";
+    version = version - 0x40000000;
+}
+Logger.getGlobal().info("Protocol Version: "+snapshot + version);
+Logger.getGlobal().info("Sodium client: "+RpManager.isSodiumClient(player));
+Logger.getGlobal().info("Incomming plugin channels:");
+Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().info(channel));*/
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
             new BukkitRunnable() {
                 int counter = 11;
@@ -70,6 +84,9 @@ public class RpListener implements Listener{
                 public void run() {
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
                         RpPlayerData data = RpManager.getPlayerData(player);
+                        if(RpManager.isSodiumClient(player)) {
+                            data.setClient("sodium");
+                        }
                         String lastUrl = data.getCurrentRpUrl();
                         data.setCurrentRpUrl(null);
                         if(!RpManager.setRpRegion(player)) {
@@ -82,10 +99,10 @@ public class RpListener implements Listener{
                         if (RpManager.hasPlayerDataLoaded(player)
                                 && player.getClientBrandName() !=null
                                 && player.getClientBrandName().contains("fabric")
-                                && !data.getVariant().equals("Sodium")) {
+                                && !data.getClient().equals("sodium")) {
                             new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
-                                    .addSimple("If you are using Sodium mod you might experience texture errors as your server RP is not set to Sodium variant. ")
-                                    .addClickable("Click here to fix this or do command /rp variant sodium.","/rp variant sodium")
+                                    .addSimple("If you are using "+ChatColor.GREEN+ChatColor.BOLD+"Sodium "+ChatColor.AQUA+"mod you might experience"+ ChatColor.GREEN+" texture errors"+ChatColor.AQUA+" as your server RP is not set to Sodium variant. ")
+                                    .addClickable("Click here to fix this or do command "+ChatColor.GREEN+ChatColor.BOLD+"/rp client sodium.","/rp client sodium").setRunDirect()
                                     .send(player);
                         }
                         cancel();
@@ -98,5 +115,8 @@ public class RpListener implements Listener{
         }
     }
     
-    
+    @EventHandler
+    public void playerQuit(PlayerQuitEvent event) {
+        RpManager.removeSodiumClient(event.getPlayer());
+    }
 }
