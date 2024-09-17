@@ -66,7 +66,7 @@ public class RpListener implements Listener{
     @EventHandler
     public void onPlayerConnect(PlayerConnectEvent event) {
         Player player = event.getPlayer();
-/*Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
+Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
 int version = player.getProtocolVersion();
 String snapshot = "";
 if(version > 0x40000000) {
@@ -76,7 +76,7 @@ if(version > 0x40000000) {
 Logger.getGlobal().info("Protocol Version: "+snapshot + version);
 Logger.getGlobal().info("Sodium client: "+RpManager.isSodiumClient(player));
 Logger.getGlobal().info("Incomming plugin channels:");
-Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().info(channel));*/
+Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().info(channel));
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
             new BukkitRunnable() {
                 int counter = 11;
@@ -97,13 +97,28 @@ Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().
                             //}
                         }
                         if (RpManager.hasPlayerDataLoaded(player)
-                                && player.getClientBrandName() !=null
-                                && player.getClientBrandName().contains("fabric")
-                                && !data.getClient().equals("sodium")) {
-                            new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
-                                    .addSimple("If you are using "+ChatColor.GREEN+ChatColor.BOLD+"Sodium "+ChatColor.AQUA+"mod you might experience"+ ChatColor.GREEN+" texture errors"+ChatColor.AQUA+" as your server RP is not set to Sodium variant. ")
-                                    .addClickable("Click here to fix this or do command "+ChatColor.GREEN+ChatColor.BOLD+"/rp client sodium.","/rp client sodium").setRunDirect()
-                                    .send(player);
+                                && player.getClientBrandName() !=null) {
+                            if(player.getClientBrandName().contains("fabric")
+                                     && !data.getClient().equals("sodium")) {
+                                new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                                        .addSimple("If you are using " + ChatColor.GREEN + ChatColor.BOLD + "Sodium "
+                                                + ChatColor.AQUA + "you might experience" + ChatColor.GREEN + " texture errors"
+                                                + ChatColor.AQUA + " as your server RP is not set to Sodium variant. ")
+                                        .addClickable("Click here to fix this or do command "
+                                                + ChatColor.GREEN + ChatColor.BOLD + "/rp client sodium.",
+                                                "/rp client sodium").setRunDirect()
+                                        .send(player);
+                            } else if(player.getClientBrandName().contains("forge")
+                                            || player.getClientBrandName().contains("optifine")) {
+                                new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                                        .addSimple("If you are using " + ChatColor.GREEN + ChatColor.BOLD + "Optifine "
+                                                + ChatColor.AQUA + "you need to" + ChatColor.GREEN +ChatColor.BOLD+ " disable mip-mapping"
+                                                + ChatColor.AQUA + ". Also please notice that "
+                                                + ChatColor.GREEN+ChatColor.BOLD+"Optifine Shaders do not work"
+                                                + ChatColor.AQUA + "with our resource packs.")
+                                        .addClickable("Click here to get a " + ChatColor.GREEN + ChatColor.BOLD + "Guide to Shaders on MCME.", "/helper shaders").setRunDirect()
+                                        .send(player);
+                            }
                         }
                         cancel();
                     } else counter --;

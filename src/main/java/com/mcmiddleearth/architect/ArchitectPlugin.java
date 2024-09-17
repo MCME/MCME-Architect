@@ -107,6 +107,9 @@ public class ArchitectPlugin extends JavaPlugin {
 //        pluginManager.registerEvents(new AfkListener(), this);
 
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "mcme-modpack-marker:hello", new RpPluginMessageListener());
+        Bukkit.getMessenger().registerIncomingPluginChannel(this, "minecraft:brand", new TestPluginMessageListener());
+        Bukkit.getMessenger().registerIncomingPluginChannel(this, "l:fmlhs", new TestPluginMessageListener());
+        Bukkit.getMessenger().registerIncomingPluginChannel(this, "wdl:init", new TestPluginMessageListener());
 
         ProtocolManager manager = ProtocolLibrary.getProtocolManager();
         manager.addPacketListener(new ViewDistanceListener(this));

@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
-public class RpPluginMessageListener implements PluginMessageListener {
+public class TestPluginMessageListener implements PluginMessageListener {
 
     @Override
     public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte[] bytes) {
@@ -26,7 +26,6 @@ Logger.getGlobal().info("Received message from player " + player.getName() + " o
             Logger.getGlobal().warning("Received invalid MCME Modpack marker data from player " + player.getName() + " (" + player.getUniqueId() + "): " + Arrays.toString(bytes));
         }
 
-        RpManager.addSodiumClient(player,"unknown");
     }
 
     private int readVarInt(DataInputStream dataStream) throws IOException {
