@@ -27,7 +27,7 @@ import java.io.Serializable;
 public class RpPlayerData implements Serializable {
     
     private final long serialVerionsUID = 1;
-            
+
     private boolean autoRp = true;
     private String variant = "light";
     private String client = "vanilla";
@@ -36,6 +36,8 @@ public class RpPlayerData implements Serializable {
     private String currentRpUrl = null;
     private transient PlayerResourcePackStatusEvent.Status currentRpStatus
             = PlayerResourcePackStatusEvent.Status.DECLINED;
+
+    private transient int protocolVersion;
 
     public boolean isAutoRp() {
         return autoRp;
@@ -91,5 +93,13 @@ public class RpPlayerData implements Serializable {
 
     public void setCurrentRpStatus(PlayerResourcePackStatusEvent.Status currentRpStatus) {
         this.currentRpStatus = currentRpStatus;
+    }
+
+    public void setProtocolVersion(int protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
+
+    public int getProtocolVersion() {
+        return protocolVersion;
     }
 }

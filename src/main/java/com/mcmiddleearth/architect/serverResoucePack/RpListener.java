@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import com.viaversion.viaversion.api.Via;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -66,17 +67,18 @@ public class RpListener implements Listener{
     @EventHandler
     public void onPlayerConnect(PlayerConnectEvent event) {
         Player player = event.getPlayer();
-Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
+/*Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
 int version = player.getProtocolVersion();
 String snapshot = "";
 if(version > 0x40000000) {
     snapshot = "Snapshot ";
     version = version - 0x40000000;
 }
-Logger.getGlobal().info("Protocol Version: "+snapshot + version);
+Logger.getGlobal().info("Bukkit Protocol Version: "+snapshot + version);
+Logger.getGlobal().info("ViaVersion Protocol Version: "+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
 Logger.getGlobal().info("Sodium client: "+RpManager.isSodiumClient(player));
 Logger.getGlobal().info("Incomming plugin channels:");
-Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().info(channel));
+Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().info(channel));*/
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
             new BukkitRunnable() {
                 int counter = 11;
@@ -84,6 +86,7 @@ Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().
                 public void run() {
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
                         RpPlayerData data = RpManager.getPlayerData(player);
+                        data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
                         if(RpManager.isSodiumClient(player)) {
                             data.setClient("sodium");
                         }
@@ -126,7 +129,7 @@ Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().
                         Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Could not get player rp settings from the database");        
                     }
                 }
-            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),0,20);
+            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),30,20);
         }
     }
     

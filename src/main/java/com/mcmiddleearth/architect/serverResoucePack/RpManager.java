@@ -26,7 +26,9 @@ import com.google.gson.Gson;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.RegionEditConversationFactory;
+import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.util.DevUtil;
+import com.mcmiddleearth.util.ResourceUtil;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -46,6 +48,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -55,21 +58,36 @@ public class RpManager {
     
     private static final File playerFile = new File(ArchitectPlugin.getPluginInstance().getDataFolder(),"/playerRpData.dat");
     private static final File regionFolder = new File(ArchitectPlugin.getPluginInstance().getDataFolder(),"regions");
-    
+
+    private static final File versionFile = new File(ArchitectPlugin.getPluginInstance().getDataFolder(), "protocolVersions.yml");
+    private static final Map<String, Integer> protocolVersions = new HashMap<>();
+
     private static final String rpDatabaseConfig = "rpSettingsDatabase";
-    
+
     private static final Map<String, RpRegion> regions = new HashMap<>();
-    
+
     private static final Map<UUID,RpPlayerData> playerRpData = new HashMap<>();
 
     private static final Map<UUID, String> sodiumClients = new HashMap<>();
-    
+
     private static final RpDatabaseConnector dbConnector = new RpDatabaseConnector(ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(rpDatabaseConfig));
     
     private static final RegionEditConversationFactory regionEditConversationFactory
             = new RegionEditConversationFactory(ArchitectPlugin.getPluginInstance());
     
     public static void init() {
+        if(!versionFile.exists()) {
+            ResourceUtil.saveResourceToFile(versionFile.getName(),versionFile);
+        }
+        YamlConfiguration versionConfig = new YamlConfiguration();
+        try {
+            versionConfig.load(versionFile);
+            for(String version: versionConfig.getKeys(false)) {
+                protocolVersions.put(version, versionConfig.getInt(version));
+            }
+        } catch (IOException | InvalidConfigurationException e) {
+            e.printStackTrace();
+        }
         if(!regionFolder.exists()) {
             regionFolder.mkdir();
         }
@@ -145,6 +163,7 @@ public class RpManager {
         RpPlayerData data = playerRpData.get(player.getUniqueId());
         if(data == null) {
             data = new RpPlayerData();
+            data.setProtocolVersion(player.getProtocolVersion());
             playerRpData.put(player.getUniqueId(), data);
         }
         return data;
@@ -261,6 +280,32 @@ public class RpManager {
         if (variantSection != null) {
             if (variantSection.contains("url")) {
                 return variantSection;
+            } else {
+                String versionResult = "0.1";
+                int protocolResult = 0;
+                String versionMin = "unknown";
+                int protocolMin = Integer.MAX_VALUE;
+                for(String version: variantSection.getKeys(false)) {
+//Logger.getGlobal().info("Version: "+version);
+                    Integer protocolVersion = protocolVersions.get(version);
+                    if(protocolVersion==null) {
+                        return null;
+                    }
+//Logger.getGlobal().info("Protocol: "+protocolVersion);
+                    if(protocolResult < protocolVersion && protocolVersion <= data.getProtocolVersion()) {
+                        versionResult = version;
+                        protocolResult = protocolVersion;
+                    }
+                    if(protocolMin > protocolVersion) {
+                        protocolMin = protocolVersion;
+                        versionMin = version;
+                    }
+                }
+                if(protocolResult > 0) {
+                    return variantSection.getConfigurationSection(versionResult);
+                } else {
+                    return variantSection.getConfigurationSection(versionMin);
+                }
             }
         }
         return null;
@@ -306,7 +351,7 @@ public class RpManager {
         return false;
     }
     
-    public static byte[] getSHAForUrl(String url) {
+    /*public static byte[] getSHAForUrl(String url) {
         for(String rpName: getRpConfig().getKeys(false)) {
             ConfigurationSection clientSection = getRpConfig().getConfigurationSection(rpName);
             for (String clientName : clientSection.getKeys(false)) {
@@ -323,7 +368,7 @@ public class RpManager {
             }
         }
         return new byte[20];
-    }
+    }*/
     
     public static String getRpForUrl(String url) {
         for(String rpName: getRpConfig().getKeys(false)) {
@@ -338,8 +383,17 @@ public class RpManager {
                     for (String varKey : pxSection.getKeys(false)) {
 //Logger.getGlobal().info("Variant: "+varKey);
                         ConfigurationSection varSection = pxSection.getConfigurationSection(varKey);
-                        if (varSection.getString("url").equals(url)) {
-                            return rpName;
+                        if (varSection.contains("url")) {
+                            if(varSection.getString("url").equals(url)) {
+                                return rpName;
+                            }
+                        } else {
+                            for(String versionKey: varSection.getKeys(false)) {
+                                ConfigurationSection versionSection = varSection.getConfigurationSection(versionKey);
+                                if (versionSection.getString("url").equals(url)) {
+                                    return rpName;
+                                }
+                            }
                         }
                     }
                 }
@@ -356,39 +410,60 @@ public class RpManager {
         return ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection("ServerResourcePacks");
     }
 
-    public static boolean refreshSHA(CommandSender cs, String rp) {
+    public static boolean refreshSHA(CommandSender cs, String rp, boolean allVersions) {
         ConfigurationSection config = getRpConfig().getConfigurationSection(rp);
         if(config!=null) {
             for(String clientKey: config.getKeys(false)) {
+//Logger.getGlobal().info("ClientKey: "+clientKey);
                 ConfigurationSection clientSection = config.getConfigurationSection(clientKey);
                 for(String resolutionKey: clientSection.getKeys(false)) {
+//Logger.getGlobal().info("ResolutionKey: "+resolutionKey);
                     ConfigurationSection resolutionSection = clientSection.getConfigurationSection(resolutionKey);
                     for (String variantKey : resolutionSection.getKeys(false)) {
+//Logger.getGlobal().info("VariantKey: "+variantKey);
                         try {
                             ConfigurationSection variantSection = resolutionSection.getConfigurationSection(variantKey);
-                            URL url = new URL(variantSection.getString("url"));
-                            InputStream fis = url.openStream();
-                            MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-
-                            byte[] data = new byte[1024];
-                            int read = 0;
-                            long time = System.currentTimeMillis();
-                            while ((read = fis.read(data)) != -1) {
-                                sha1.update(data, 0, read);
-                                if (System.currentTimeMillis() - time > 5000) {
-                                    time = System.currentTimeMillis();
-                                    PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ...");
+                            List<ConfigurationSection> sections = new LinkedList<>();
+                            if (variantSection.contains("url")) {
+//Logger.getGlobal().info("DirectURL: "+variantSection.getString("url"));
+                                sections.add(variantSection);
+                            } else {
+                                if (allVersions) {
+//Logger.getGlobal().info("All versions");
+                                    sections.addAll(variantSection.getKeys(false).stream()
+                                            .map(variantSection::getConfigurationSection).collect(Collectors.toSet()));
+                                } else {
+//Logger.getGlobal().info("Latest versions");
+                                    sections.add(variantSection
+                                            .getConfigurationSection(getLatestVersion(variantSection.getKeys(false))));
                                 }
                             }
-                            byte[] hashBytes = sha1.digest();
-                            StringBuilder sb = new StringBuilder();
-                            for (byte b : hashBytes) {
-                                sb.append(String.format("%02x", b));
+//for(ConfigurationSection section: sections) Logger.getGlobal().info("URL: "+section.getString("url"));
+                            for (ConfigurationSection section : sections) {
+                                URL url = new URL(section.getString("url"));
+                                InputStream fis = url.openStream();
+                                MessageDigest sha1 = MessageDigest.getInstance("SHA1");
+
+                                byte[] data = new byte[1024];
+                                int read = 0;
+                                long time = System.currentTimeMillis();
+                                while ((read = fis.read(data)) != -1) {
+                                    sha1.update(data, 0, read);
+                                    if (System.currentTimeMillis() - time > 5000) {
+                                        time = System.currentTimeMillis();
+                                        PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ...");
+                                    }
+                                }
+                                byte[] hashBytes = sha1.digest();
+                                StringBuilder sb = new StringBuilder();
+                                for (byte b : hashBytes) {
+                                    sb.append(String.format("%02x", b));
+                                }
+                                String hashString = sb.toString();
+                                section.set("sha", hashString);
+                                ArchitectPlugin.getPluginInstance().saveConfig();
                             }
-                            String hashString = sb.toString();
-                            variantSection.set("sha", hashString);
-                            ArchitectPlugin.getPluginInstance().saveConfig();
-                        } catch (IOException | NoSuchAlgorithmException ex) {
+                        } catch(IOException | NoSuchAlgorithmException ex){
                             Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
                             return false;
                         }
@@ -398,6 +473,22 @@ public class RpManager {
             return true;
         }
         return false;
+    }
+
+    private static String getLatestVersion(Collection<String> versions) {
+        int latestProtocol = 0;
+        String latestVersion = "";
+        for(String version : versions) {
+//protocolVersions.forEach((key, protocol) -> Logger.getGlobal().info(key+" "+protocol));
+//Logger.getGlobal().info("getLatestVersion: version "+ version+ " protcolVersions: "+protocolVersions.size());
+            int protocolVersion = protocolVersions.get(version);
+            if(protocolVersion > latestProtocol) {
+                latestProtocol = protocolVersion;
+                latestVersion = version;
+            }
+        }
+//Logger.getGlobal().info("LatestVersion: "+latestVersion);
+        return latestVersion;
     }
     
     public static String getResolutionKey(int px) {

@@ -60,17 +60,17 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         if(args.length>0 && args[0].equalsIgnoreCase("server")
                 && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
-            if(args.length>2) {
-                RpReleaseUtil.setServerResourcePack(cs, args[1], args[2], success -> {
+            if(args.length>3) {
+                RpReleaseUtil.setServerResourcePack(cs, args[1], args[2], args[3], success -> {
                     if (success) {
                         PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
-                                + " set to version: " + args[2]);
+                                + " set to version: " + args[2] + " for MC: "+ args[3]);
                     } else {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack!");
                     }
                 });
             } else {
-                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <version>");
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <rpVersion> <requiredMcVersion>");
             }
             return true;
         }
@@ -84,7 +84,8 @@ public class RpCommand extends AbstractArchitectCommand {
                 @Override
                 public void run() {
                     String rpName = RpManager.matchRpName(args[1]);
-                    if(RpManager.refreshSHA(cs, rpName)) {
+                    boolean allVersions = args.length > 2 && args[2].equals("all");
+                    if(RpManager.refreshSHA(cs, rpName, allVersions)) {
                         PluginData.getMessageUtil().sendInfoMessage(cs, "SHA recalculated for rp: "+rpName);
                     } else {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "Error while recalculating SHA for rp: "+args[1]);

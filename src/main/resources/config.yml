@@ -3,8 +3,9 @@ ServerResourcePacks:
         vanilla:
             16px:
                 light:
-                    url: https://github.com/MCME/RP-Human/releases/download/v3.0.4/Human.zip
-                    sha: 7f838c761529237eaf1d9cdc8cd4c439d9cb0770
+                    1_18_1:
+                        url: https://github.com/MCME/RP-Human/releases/download/v3.0.4/Human.zip
+                        sha: 7f838c761529237eaf1d9cdc8cd4c439d9cb0770
 rpSettingsDatabase:
     user: xxx
     password: xxx

@@ -30,6 +30,7 @@
                 <includes>
                     <include>plugin.yml</include>
                     <include>config.yml</include>
+                    <include>protocolVersions.yml</include>
                     <include>items.json</include>
                 </includes>
             </resource>
@@ -47,6 +48,10 @@
         <repository>
             <id>dmulloy2-repo</id>
             <url>https://repo.dmulloy2.net/repository/public/</url>
+        </repository>
+        <repository>
+            <id>viaversion-repo</id>
+            <url>https://repo.viaversion.com</url>
         </repository>
     </repositories>
     <dependencies>
@@ -102,6 +107,12 @@
                     <artifactId>bstats-bukkit</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.viaversion</groupId>
+            <artifactId>viaversion-api</artifactId>
+            <version>[5.0.0,6.0.0)</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
     <name>MCME-Architect</name>

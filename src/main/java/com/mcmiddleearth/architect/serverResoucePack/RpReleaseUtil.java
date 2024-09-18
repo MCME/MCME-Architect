@@ -51,9 +51,10 @@ public class RpReleaseUtil {
         });
     }
 
-    public static void setServerResourcePack(CommandSender cs, String rpName, String version,
+    public static void setServerResourcePack(CommandSender cs, String rpName, String version, String requiredMcVersion,
                                              Consumer<Boolean> callback) {
         String finalRpName = RpManager.matchRpName(rpName);
+        requiredMcVersion = requiredMcVersion.replace('.','_');
         ConfigurationSection rpConfig = RpManager.getRpConfig();
         rpConfig = rpConfig.getConfigurationSection(finalRpName);
         if(rpConfig ==null) {
@@ -61,66 +62,29 @@ public class RpReleaseUtil {
         } else {
             String download = "https://github.com/" + getGitHubOwner(finalRpName) + "/" + getGitHubRepo(finalRpName) + "/releases/download/";
             if (rpConfig.contains("sodium")) {
-                rpConfig.set("vanilla.16px.light.url", download + version + "/"+finalRpName+"-Vanilla.zip");
-                rpConfig.set("vanilla.16px.footprints.url", download + version + "/"+finalRpName+"-Vanilla-Footprints.zip");
-                rpConfig.set("sodium.16px.light.url", download + version + "/"+finalRpName+"-Sodium.zip");
-                rpConfig.set("sodium.16px.footprints.url", download + version + "/"+finalRpName+"-Sodium-Footprints.zip");
+                updateSection(rpConfig, "vanilla.16px.light",requiredMcVersion, download + version + "/"+finalRpName+"-Vanilla.zip");
+                updateSection(rpConfig, "vanilla.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Vanilla-Footprints.zip");
+                updateSection(rpConfig, "sodium.16px.light",requiredMcVersion, download + version + "/"+finalRpName+"-Sodium.zip");
+                updateSection(rpConfig, "sodium.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Sodium-Footprints.zip");
             } else {
-                rpConfig.set("vanilla.16px.light.url", download + version + "/"+finalRpName+".zip");
-                rpConfig.set("vanilla.16px.footprints.url", download + version + "/"+finalRpName+"-Footprints.zip");
+                updateSection(rpConfig, "vanilla.16px.light",requiredMcVersion, download + version + "/"+finalRpName+".zip");
+                updateSection(rpConfig, "vanilla.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Footprints.zip");
             }
             ArchitectPlugin.getPluginInstance().saveConfig();
-            //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
             Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
-                callback.accept(RpManager.refreshSHA(cs, finalRpName));
+                callback.accept(RpManager.refreshSHA(cs, finalRpName, false));
             });
         }
-        /*if(rpName.equalsIgnoreCase("human")) {
-            ConfigurationSection rpConfig = RpManager.getRpConfig();
-            ConfigurationSection humanConfig = rpConfig.getConfigurationSection("Human");
-            if(humanConfig !=null) {
-                String download = "https://github.com/"+getGitHubOwner("Human")+"/"+getGitHubRepo("Human")+"/releases/download/";
-                humanConfig.set("vanilla.16px.light.url", download + version + "/Human-Vanilla.zip");
-                humanConfig.set("vanilla.16px.footprints.url", download + version + "/Human-Vanilla-Footprints.zip");
-                humanConfig.set("sodium.16px.light.url", download + version + "/Human-Sodium.zip");
-                humanConfig.set("sodium.16px.footprints.url", download + version + "/Human-Sodium-Footprints.zip");
-                ArchitectPlugin.getPluginInstance().saveConfig();
-                //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
-                Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
-                    callback.accept(RpManager.refreshSHA(cs, "Human"));
-                });
-            }
-        } else if(rpName.equalsIgnoreCase("Dwarf")) {
-            ConfigurationSection rpConfig = RpManager.getRpConfig();
-            ConfigurationSection humanConfig = rpConfig.getConfigurationSection("Dwarf");
-            if(humanConfig !=null) {
-                String download = "https://github.com/"+getGitHubOwner("Dwarf")+"/"+getGitHubRepo("Dwarf")+"/releases/download/";
-                humanConfig.set("vanilla.16px.light.url", download + version + "/Dwarven.zip");
-                humanConfig.set("vanilla.16px.footprints.url", download + version + "/Dwarven-footprints.zip");
-                ArchitectPlugin.getPluginInstance().saveConfig();
-                //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
-                Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
-                    callback.accept(RpManager.refreshSHA(cs, "Dwarf"));
-                });
-            }
-        } else if(rpName.equalsIgnoreCase("Rohan")) {
-            ConfigurationSection rpConfig = RpManager.getRpConfig();
-            ConfigurationSection humanConfig = rpConfig.getConfigurationSection("Rohan");
-            if(humanConfig !=null) {
-                String download = "https://github.com/"+getGitHubOwner("Rohan")+"/"+getGitHubRepo("Rohan")+"/releases/download/";
-                humanConfig.set("vanilla.16px.light.url", download + version + "/Rohan.zip");
-                humanConfig.set("vanilla.16px.footprints.url", download + version + "/Rohan-footprints.zip");
-                ArchitectPlugin.getPluginInstance().saveConfig();
-                //ArchitectPlugin.getPluginInstance().loadData(); probably not needed
-                Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
-                    callback.accept(RpManager.refreshSHA(cs, "Rohan"));
-                });
-            }
-        } else {
-            callback.accept(false);
-        }*/
     }
 
+    private static void updateSection(ConfigurationSection rpConfig, String path, String requiredMcVersion, String url) {
+        ConfigurationSection section = rpConfig.getConfigurationSection(path);
+        if(section.contains("url")) {
+            section.set("url", null);
+            section.set("sha", null);
+        }
+        rpConfig.set(path+"."+requiredMcVersion+".url", url);
+    }
     private static String getGitHubOwner(String rpName) {
         return ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+rpName+".owner");
     }
