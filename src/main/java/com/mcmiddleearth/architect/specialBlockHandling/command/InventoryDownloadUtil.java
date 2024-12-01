@@ -6,7 +6,6 @@ import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.logging.Logger;
