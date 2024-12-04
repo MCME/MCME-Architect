@@ -9,6 +9,8 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.conversations.*;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -44,6 +46,7 @@ public class CustomInventoryEditor {
         context.setSessionData("rpName",rpName);
         context.setSessionData("category", category);
         context.setSessionData("state", state);
+        context.setSessionData("inCategory", true);
         conversation.begin();
     }
 
@@ -66,7 +69,22 @@ public class CustomInventoryEditor {
                         newSection.set("display", context.getSessionData("display"));
                         newSection.set("type", Objects.requireNonNull(context.getSessionData("type")).toString()
                                                                                                 .toUpperCase());
+                        ItemStack item = (ItemStack) context.getSessionData("inventoryItem");
+                        assert item != null;
+                        ItemMeta meta = item.getItemMeta();
+                        newSection.set("itemMaterial", item.getType().name());
+                        newSection.set("cmd", meta.getCustomModelData());
+                        if((Boolean) context.getSessionData("inCategory")) {
+                            newSection.set("category",context.getSessionData("category"));
+                        }
+                        Map<String,String> blockData = (Map<String, String>) context.getSessionData("blockData");
 
+                        assert blockData != null;
+                        for(Map.Entry<String,String> entry:  blockData.entrySet()) {
+                            newSection.set(entry.getKey(), entry.getValue());
+                        }
+                        config.save(categoryFile);
+                        SpecialBlockInventoryData.loadInventories();
                     } catch (IOException | InvalidConfigurationException e) {
                         e.printStackTrace();
                     }

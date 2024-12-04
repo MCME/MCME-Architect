@@ -1,5 +1,6 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt;
 
+import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryCollectionState;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.Prompt;
 import org.bukkit.conversations.StringPrompt;
@@ -16,6 +17,10 @@ public class DisplayPrompt extends StringPrompt {
     @Override
     public @Nullable Prompt acceptInput(@NotNull ConversationContext conversationContext, @Nullable String input) {
         conversationContext.setSessionData("display", input);
-        return END_OF_CONVERSATION;
+        if(conversationContext.getSessionData("state") instanceof CustomInventoryCollectionState) {
+            return new CategoryVisiblePrompt();
+        } else {
+            return END_OF_CONVERSATION;
+        }
     }
 }
