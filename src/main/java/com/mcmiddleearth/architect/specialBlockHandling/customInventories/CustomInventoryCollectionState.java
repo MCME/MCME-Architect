@@ -212,4 +212,8 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
     public void setDirectGet(boolean directGet) {
         this.directGet = directGet;
     }
+
+    public SpecialBlock getBaseBlock() {
+        return baseBlock;
+    }
 }

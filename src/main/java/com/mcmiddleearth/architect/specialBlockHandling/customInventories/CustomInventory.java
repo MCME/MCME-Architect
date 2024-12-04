@@ -22,9 +22,13 @@ package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
  */
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Permission;
+import com.mcmiddleearth.architect.serverResoucePack.RpManager;
+import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.CustomInventoryEditor;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -336,6 +340,22 @@ Logger.getGlobal().info("Start: "+startCategory);
                 state.nextCategory();
                 state.update();
                 event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    void onInventoryEdit(final InventoryClickEvent event) {
+        if (openInventories.containsKey(event.getInventory())) { //.getTitle.equals(name)) {
+            if (event.getWhoClicked() instanceof Player player
+                    && player.hasPermission(Permission.INV_EDIT.getPermissionNode())
+                    && event.getRawSlot() >= CATEGORY_SLOTS
+                    && event.getCurrentItem() == null) {//items.size()/9+1)*9
+                CustomInventoryState state = openInventories.get(event.getInventory());
+                String category = state.categoryNames[state.currentCategory];
+                String rpName = RpManager.getCurrentRpName(state.getPlayer());
+                event.getInventory().close();
+                CustomInventoryEditor.addBlock(player, rpName, category, state);
             }
         }
     }

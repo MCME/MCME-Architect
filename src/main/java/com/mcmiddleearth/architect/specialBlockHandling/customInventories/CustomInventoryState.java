@@ -281,4 +281,8 @@ public abstract class CustomInventoryState {
     }
 
     public abstract boolean usesSubcategories();
+
+    public Player getPlayer() {
+        return player;
+    }
 }
