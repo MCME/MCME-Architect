@@ -350,12 +350,18 @@ Logger.getGlobal().info("Start: "+startCategory);
             if (event.getWhoClicked() instanceof Player player
                     && player.hasPermission(Permission.INV_EDIT.getPermissionNode())
                     && event.getRawSlot() >= CATEGORY_SLOTS
-                    && event.getCurrentItem() == null) {//items.size()/9+1)*9
+                    && event.getRawSlot() < event.getInventory().getSize()
+                    && event.isRightClick()
+                    && event.isShiftClick()) {//items.size()/9+1)*9
                 CustomInventoryState state = openInventories.get(event.getInventory());
                 String category = state.categoryNames[state.currentCategory];
                 String rpName = RpManager.getCurrentRpName(state.getPlayer());
                 event.getInventory().close();
-                CustomInventoryEditor.addBlock(player, rpName, category, state);
+                if(event.getCurrentItem() == null) {
+                    CustomInventoryEditor.addBlock(player, rpName, category, state, event.getRawSlot());
+                } else {
+                    CustomInventoryEditor.editBlock(player, rpName, category, state, event.getCurrentItem());
+                }
             }
         }
     }

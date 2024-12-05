@@ -1,4 +1,4 @@
-package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt;
+package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add;
 
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryCollectionState;
 import org.bukkit.conversations.ConversationContext;

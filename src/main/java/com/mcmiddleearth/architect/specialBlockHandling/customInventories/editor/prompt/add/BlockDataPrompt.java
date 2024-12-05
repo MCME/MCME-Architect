@@ -1,11 +1,13 @@
-package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt;
+package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add;
 
 import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.Prompt;
+import org.bukkit.conversations.ValidatingPrompt;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -15,11 +17,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Logger;
 
-public class BlockDataPrompt implements Prompt, Listener {
-
-    private boolean done = false;
-
+public class BlockDataPrompt extends ValidatingPrompt implements Listener {
     private boolean listenerRegistered = false;
 
     private ConversationContext conversationContext;
@@ -32,7 +32,8 @@ public class BlockDataPrompt implements Prompt, Listener {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Left-click a block for blockData"+blockStateKeys[0]+".";
+        return "Make sure you hold in main hand the item you want to add to custom inventory. " +
+                "Then left-click a block to use for blockData"+blockStateKeys[0]+".";
     }
 
     @Override
@@ -42,28 +43,39 @@ public class BlockDataPrompt implements Prompt, Listener {
             Bukkit.getPluginManager().registerEvents(this, Objects.requireNonNull(conversationContext.getPlugin()));
             listenerRegistered = true;
         }
-        return !done;
+Logger.getGlobal().info("blocksForInput: "+true);
+        return true;
     }
 
     @Override
-    public @Nullable Prompt acceptInput(@NotNull ConversationContext conversationContext, @Nullable String input) {
+    protected boolean isInputValid(@NotNull ConversationContext conversationContext, @NotNull String input) {
+        return input.equals("__d0nE__");
+    }
+
+    @Override
+    protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
         if(blockStateKeys.length>1) {
             return new BlockDataPrompt(Arrays.copyOfRange(blockStateKeys,1,blockStateKeys.length));
         } else {
-            return new DisplayPrompt();
+            return new ItemPrompt();
         }
     }
 
+    @SuppressWarnings("unchecked")
     @EventHandler(priority = EventPriority.LOWEST)
     public void onSelectBlockstate(PlayerInteractEvent event) {
+Logger.getGlobal().info("onSelectBlockstate");
         if(event.getAction().equals(Action.LEFT_CLICK_BLOCK)
                 && event.hasItem()) {
             Block block = event.getClickedBlock();
+Logger.getGlobal().info("Block: "+block);
             if(block != null) {
-                ((Map<String, String>) Objects.requireNonNull(conversationContext.getSessionData("blockData")))
-                        .put(blockStateKeys[0], block.getBlockData().getAsString());
-                conversationContext.setSessionData("inventoryItem", event.getItem());
-                done = true;
+Logger.getGlobal().info("BlockData: "+block.getBlockData());
+                Map<String,String> blockDatas = (Map<String, String>) Objects.requireNonNull(conversationContext.getSessionData("blockData"));
+                blockDatas.put(blockStateKeys[0], block.getBlockData().getAsString());
+                HandlerList.unregisterAll(this);
+                event.setCancelled(true);
+                conversationContext.getForWhom().acceptConversationInput("__d0nE__");
             }
         }
     }

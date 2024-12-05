@@ -1,4 +1,4 @@
-package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt;
+package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add;
 
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.FixedSetPrompt;

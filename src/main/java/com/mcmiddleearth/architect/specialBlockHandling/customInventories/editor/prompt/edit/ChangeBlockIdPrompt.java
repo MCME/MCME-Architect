@@ -1,4 +1,4 @@
-package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt;
+package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.edit;
 
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import org.bukkit.conversations.ConversationContext;
@@ -7,11 +7,11 @@ import org.bukkit.conversations.ValidatingPrompt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class BlockIdPrompt extends ValidatingPrompt {
+public class ChangeBlockIdPrompt extends ValidatingPrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Type in an unique ID for the new block!";
+        return "Type in a new id or '!skip'";
     }
 
     @Override
@@ -21,8 +21,10 @@ public class BlockIdPrompt extends ValidatingPrompt {
     }
 
     @Override
-    protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
-        conversationContext.setSessionData("id", input);
-        return new BlockTypePrompt();
+    public @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
+        if(!input.equalsIgnoreCase("!skip")) {
+            conversationContext.setSessionData("id",input);
+        }
+        return new ChangeBlockTypePrompt();
     }
 }

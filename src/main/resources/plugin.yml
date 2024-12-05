@@ -119,6 +119,7 @@ permissions:
             architect.bannerEditor.delete: true
             architect.inventory.reload: true
             architect.inventory.other: true
+            archtiect.inventory.edit: true
             architect.get.other: true
             architect.weather: true
             archtiect.resourcePackAdmin: true
@@ -396,8 +397,11 @@ permissions:
         descriptions: Allows to check item NBTs
         default: op
     architect.inventory.ignoreProtection:
-        descriptions: Allows to edit inventory content without build permission
-        default: op
+      descriptions: Allows to edit inventory content without build permission
+      default: op
+    architect.inventory.edit:
+      descriptions: Allows to edit custom inventory
+      default: op
     architect.viewdistance:
         descriptions: Allows to change client view distance
         default: op
