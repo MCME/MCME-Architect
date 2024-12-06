@@ -1,17 +1,18 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.edit;
 
-import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add.BlockDataPrompt;
-import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add.ItemPrompt;
+import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add.BlockTypePrompt;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.FixedSetPrompt;
 import org.bukkit.conversations.Prompt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
+
 public class ChangeBlockTypePrompt extends FixedSetPrompt {
 
     public ChangeBlockTypePrompt() {
-        super("block", "bisected", "four_directions", "three_axis", "vanilla", "!skip");
+        super(getFixedSet());
     }
 
     @Override
@@ -19,19 +20,28 @@ public class ChangeBlockTypePrompt extends FixedSetPrompt {
         if(!input.equalsIgnoreCase("!skip")) {
            conversationContext.setSessionData("type",input);
         }
-        return switch(input) {
-            case "block" -> new ChangeBlockDataPrompt("");
-            case "bisected" -> new ChangeBlockDataPrompt("Up", "Down");
-            case "four_directions" -> new ChangeBlockDataPrompt("North", "West", "South", "East");
-            case "three_axis" -> new ChangeBlockDataPrompt("X", "Y", "Z");
-            case "six_faces" -> new Chan
-            case "vanilla" -> new ChangeItemPrompt();
-            default -> END_OF_CONVERSATION;
-        };
+        for (String[] blockDatum : BlockTypePrompt.blockData) {
+            if (input.equalsIgnoreCase(blockDatum[0])) {
+                String[] blockOrientations = Arrays.copyOfRange(blockDatum, 1, blockDatum.length);
+                if(blockOrientations.length == 0) {
+                    return new ChangeItemPrompt();
+                } else {
+                    return new ChangeBlockDataPrompt(blockOrientations);
+                }
+            }
+        }
+        return END_OF_CONVERSATION;
     }
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Type in a new block type or '!skip'";
+        return "Current block type is "+conversationContext.getSessionData("type")
+                +". Type in a new block type or '!skip' "+formatFixedSet();
+    }
+
+    private static String[] getFixedSet() {
+        String[] result =  Arrays.copyOf(BlockTypePrompt.getBlockTypes(), BlockTypePrompt.getBlockTypes().length+1);
+        result[result.length-1] = "!skip";
+        return result;
     }
 }

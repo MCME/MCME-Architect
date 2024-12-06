@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.edit;
 
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add.DisplayPrompt;
+import org.bukkit.Material;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.FixedSetPrompt;
 import org.bukkit.conversations.Prompt;
@@ -16,8 +17,17 @@ public class ChangeItemPrompt extends FixedSetPrompt {
 
     @Override
     protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
-        conversationContext.setSessionData("inventoryItem", ((Player)conversationContext.getForWhom()).getInventory().getItemInMainHand());
-        return new DisplayPrompt();
+        if(!input.equalsIgnoreCase("!skip")) {
+            conversationContext.setSessionData("inventoryItem", ((Player) conversationContext.getForWhom()).getInventory().getItemInMainHand());
+        }
+        return new ChangeCmdPrompt();
+    }
+
+    @Override
+    protected boolean isInputValid(@NotNull ConversationContext context, @NotNull String input) {
+        return !((Player)context.getForWhom()).getInventory().getItemInMainHand().getType().equals(Material.AIR)
+                && super.isInputValid(context, input)
+            || input.equalsIgnoreCase("!skip");
     }
 
     @Override

@@ -135,6 +135,7 @@ Logger.getGlobal().info("BaseId: "+baseId);
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static void editBlock(Player player, String rpName, String category, CustomInventoryState state, ItemStack inventoryItem) {
         Conversation conversation = editBlockconversationFactory.buildConversation(player);
         ConversationContext context = conversation.getContext();
@@ -144,6 +145,7 @@ Logger.getGlobal().info("BaseId: "+baseId);
         context.setSessionData("id", rpAndId[1]);
         context.setSessionData("rpName",rpAndId[0]);
         ConfigurationSection inventoryConfig = getInventoryConfig(rpAndId[0], category);
+        assert inventoryConfig != null;
         ConfigurationSection itemSection = inventoryConfig.getConfigurationSection(rpAndId[1]);
         assert itemSection != null;
         context.setSessionData("display", itemSection.get("display"));
@@ -151,7 +153,11 @@ Logger.getGlobal().info("BaseId: "+baseId);
         context.setSessionData("cmd", itemSection.get("cmd"));
         context.setSessionData("display", itemSection.get("display"));
         context.setSessionData("inCategory", itemSection.contains("category"));
-
+        Map<String,String> blockData = (Map<String,String>) context.getSessionData("blockData");
+        assert blockData!=null;
+        itemSection.getKeys(false).stream().filter(key->key.startsWith("blockData")).forEach(key -> {
+            blockData.put(key.substring(9),itemSection.getString(key));
+        });
         conversation.begin();
     }
 

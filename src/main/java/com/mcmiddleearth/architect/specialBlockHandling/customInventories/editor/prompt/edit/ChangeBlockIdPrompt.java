@@ -11,7 +11,7 @@ public class ChangeBlockIdPrompt extends ValidatingPrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Type in a new id or '!skip'";
+        return "Current item id is "+conversationContext.getSessionData("id")+". Enter a new id or '!skip'.";
     }
 
     @Override

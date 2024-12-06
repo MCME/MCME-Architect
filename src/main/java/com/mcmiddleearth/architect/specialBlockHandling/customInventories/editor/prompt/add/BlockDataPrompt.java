@@ -32,8 +32,7 @@ public class BlockDataPrompt extends ValidatingPrompt implements Listener {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Make sure you hold in main hand the item you want to add to custom inventory. " +
-                "Then left-click a block to use for blockData"+blockStateKeys[0]+".";
+        return "Left-click a block to use for blockData"+blockStateKeys[0]+".";
     }
 
     @Override
@@ -78,5 +77,9 @@ Logger.getGlobal().info("BlockData: "+block.getBlockData());
                 conversationContext.getForWhom().acceptConversationInput("__d0nE__");
             }
         }
+    }
+
+    protected String[] getBlockStateKeys() {
+        return blockStateKeys;
     }
 }
