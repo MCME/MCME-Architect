@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 
-public class ChangeBlockTypePrompt extends FixedSetPrompt {
+public class ChangeBlockTypePrompt extends BlockTypePrompt {
 
     public ChangeBlockTypePrompt() {
         super(getFixedSet());
@@ -20,8 +20,9 @@ public class ChangeBlockTypePrompt extends FixedSetPrompt {
         if(!input.equalsIgnoreCase("!skip")) {
            conversationContext.setSessionData("type",input);
         }
+        String type = (String) conversationContext.getSessionData("type"); assert type != null;
         for (String[] blockDatum : BlockTypePrompt.blockData) {
-            if (input.equalsIgnoreCase(blockDatum[0])) {
+            if (type.equalsIgnoreCase(blockDatum[0])) {
                 String[] blockOrientations = Arrays.copyOfRange(blockDatum, 1, blockDatum.length);
                 if(blockOrientations.length == 0) {
                     return new ChangeItemPrompt();

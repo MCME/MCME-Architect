@@ -32,6 +32,10 @@ public class BlockTypePrompt extends FixedSetPrompt {
         super(getBlockTypes());
     }
 
+    protected BlockTypePrompt(@NotNull String... fixedSet) {
+        super(fixedSet);
+    }
+
     @Override
     protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
         conversationContext.setSessionData("type",input);
@@ -46,23 +50,16 @@ public class BlockTypePrompt extends FixedSetPrompt {
             }
         }
         return END_OF_CONVERSATION;
-        /*return switch(input) {
-            case "block" -> new BlockDataPrompt("");
-            case "bisected" -> new BlockDataPrompt("Up", "Down");
-            case "four_directions" -> new BlockDataPrompt("North", "West", "South", "East");
-            case "three_axis" -> new BlockDataPrompt("X", "Y", "Z");
-            case "six_faces" -> new BlockDataPrompt("North", "West", "South", "East", "Up", "Down");
-            case "branch_twigs" -> ;
-            case "branch_horizontal" ->
-
-            case "vanilla" -> new ItemPrompt();
-            default -> END_OF_CONVERSATION;
-        };*/
     }
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
         return "Which type of block do you want to add? "+formatFixedSet()+" ";
+    }
+
+    @Override
+    protected @Nullable String getFailedValidationText(@NotNull ConversationContext context, @NotNull String invalidInput) {
+        return "Not all block types are supported. You need to type in one of the listed block types.";
     }
 
     public static String[] getBlockTypes() {

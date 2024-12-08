@@ -11,7 +11,12 @@ public class BlockIdPrompt extends ValidatingPrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Type in an unique ID for the new block!";
+        return "Type in an unique ID for the new item! You may '!cancel' at any point of the conversation.";
+    }
+
+    @Override
+    protected @Nullable String getFailedValidationText(@NotNull ConversationContext context, @NotNull String invalidInput) {
+        return "You need to type in an item id that doesn't exist yet.";
     }
 
     @Override

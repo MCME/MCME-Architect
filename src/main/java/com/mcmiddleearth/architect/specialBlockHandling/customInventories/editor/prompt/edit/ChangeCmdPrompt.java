@@ -6,16 +6,17 @@ import org.bukkit.conversations.Prompt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ChangeCmdPrompt extends CmdPrompt {
+import java.util.Objects;
 
-    @Override
-    public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Current custom model data is "+conversationContext.getSessionData("cmd")+". Type in a new custom model data or '!skip'";
-    }
+public class ChangeCmdPrompt extends CmdPrompt {
 
     @Override
     protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
         super.acceptValidatedInput(conversationContext, input);
-        return new ChangeColorPrompt();
+        if(((String) Objects.requireNonNull(conversationContext.getSessionData("itemMaterial"))).startsWith("LEATHER")) {
+            return new ChangeColorPrompt();
+        } else {
+            return new ChangeDisplayPrompt();
+        }
     }
 }

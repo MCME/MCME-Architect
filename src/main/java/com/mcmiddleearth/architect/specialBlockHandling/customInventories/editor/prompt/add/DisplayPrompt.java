@@ -11,7 +11,7 @@ public class DisplayPrompt extends StringPrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Enter a block description for the custom inventory:";
+        return "Enter a description for the custom inventory:";
     }
 
     @Override

@@ -1,18 +1,17 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.edit;
 
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryCollectionState;
-import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add.CategoryVisiblePrompt;
+import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add.DisplayPrompt;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.Prompt;
-import org.bukkit.conversations.StringPrompt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ChangeDisplayPrompt extends StringPrompt {
+public class ChangeDisplayPrompt extends DisplayPrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Current description is "+conversationContext.getSessionData("description")
+        return "Current description is "+conversationContext.getSessionData("display")
                 +". Type in new description for the custom inventory or type '!skip'.";
     }
 

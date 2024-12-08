@@ -222,7 +222,14 @@ public class SearchInventory implements Listener {
 
     public ItemStack getItem(String id) {
 //Logger.getGlobal().info("search getItem: "+id);
-        return items.stream().filter(item -> item.getItemMeta().getLore().get(1).equals(id)).findFirst().orElse(null);
+        return items.stream().filter(item -> {
+            if(item.hasItemMeta() && item.getItemMeta().hasLore()) {
+                return item.getItemMeta().getLore().get(1).equals(id);
+//            } else {
+//                Logger.getGlobal().warning("Invalid item in search inventory: "+item);
+            }
+            return false;
+        }).findFirst().orElse(null);
     }
 
     public Set<NamespacedKey> getRecipeKeys() {

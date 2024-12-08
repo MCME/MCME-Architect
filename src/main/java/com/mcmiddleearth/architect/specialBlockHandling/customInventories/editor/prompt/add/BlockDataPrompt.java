@@ -1,6 +1,8 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add;
 
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.Prompt;
@@ -11,6 +13,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +35,12 @@ public class BlockDataPrompt extends ValidatingPrompt implements Listener {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Left-click a block to use for blockData"+blockStateKeys[0]+".";
+        return "Left-click a block to use for blockData"+blockStateKeys[0]+". You may also type in valid block data.";
+    }
+
+    @Override
+    protected @Nullable String getFailedValidationText(@NotNull ConversationContext context, @NotNull String invalidInput) {
+        return "You need to left-click a block or type in valid block data!";
     }
 
     @Override
@@ -42,17 +50,24 @@ public class BlockDataPrompt extends ValidatingPrompt implements Listener {
             Bukkit.getPluginManager().registerEvents(this, Objects.requireNonNull(conversationContext.getPlugin()));
             listenerRegistered = true;
         }
-Logger.getGlobal().info("blocksForInput: "+true);
         return true;
     }
 
     @Override
     protected boolean isInputValid(@NotNull ConversationContext conversationContext, @NotNull String input) {
-        return input.equals("__d0nE__");
+        try {
+            Bukkit.createBlockData(input);
+            return true;
+        } catch(IllegalArgumentException ignore){}
+        return false;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
+        HandlerList.unregisterAll(this);
+        Map<String,String> blockDatas = (Map<String, String>) Objects.requireNonNull(conversationContext.getSessionData("blockData"));
+        blockDatas.put(blockStateKeys[0], input);
         if(blockStateKeys.length>1) {
             return new BlockDataPrompt(Arrays.copyOfRange(blockStateKeys,1,blockStateKeys.length));
         } else {
@@ -60,21 +75,21 @@ Logger.getGlobal().info("blocksForInput: "+true);
         }
     }
 
-    @SuppressWarnings("unchecked")
     @EventHandler(priority = EventPriority.LOWEST)
     public void onSelectBlockstate(PlayerInteractEvent event) {
 Logger.getGlobal().info("onSelectBlockstate");
-        if(event.getAction().equals(Action.LEFT_CLICK_BLOCK)
-                && event.hasItem()) {
+        if(event.getPlayer().equals(conversationContext.getForWhom()) && event.getAction().equals(Action.LEFT_CLICK_BLOCK)
+                && event.getHand()!=null && event.getHand().equals(EquipmentSlot.HAND)
+                && event.getPlayer().getInventory().getItemInMainHand().getType().equals(Material.PRISMARINE_SHARD)) {
             Block block = event.getClickedBlock();
 Logger.getGlobal().info("Block: "+block);
             if(block != null) {
 Logger.getGlobal().info("BlockData: "+block.getBlockData());
-                Map<String,String> blockDatas = (Map<String, String>) Objects.requireNonNull(conversationContext.getSessionData("blockData"));
-                blockDatas.put(blockStateKeys[0], block.getBlockData().getAsString());
                 HandlerList.unregisterAll(this);
                 event.setCancelled(true);
-                conversationContext.getForWhom().acceptConversationInput("__d0nE__");
+                Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()-> {
+                    conversationContext.getForWhom().acceptConversationInput(block.getBlockData().getAsString());
+                }, 3);
             }
         }
     }

@@ -360,7 +360,7 @@ Logger.getGlobal().info("Start: "+startCategory);
                 if(event.getCurrentItem() == null) {
                     CustomInventoryEditor.addBlock(player, rpName, category, state, event.getRawSlot());
                 } else {
-                    CustomInventoryEditor.editBlock(player, rpName, category, state, event.getCurrentItem());
+                    CustomInventoryEditor.editBlock(player, category, state, event.getRawSlot(), event.getCurrentItem());
                 }
             }
         }

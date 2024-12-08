@@ -1,11 +1,14 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add;
 
+import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.edit.ChangeColorPrompt;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.Prompt;
 import org.bukkit.conversations.ValidatingPrompt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 public class CmdPrompt extends ValidatingPrompt {
 
@@ -20,12 +23,17 @@ public class CmdPrompt extends ValidatingPrompt {
         if(!input.equalsIgnoreCase("!skip")) {
             conversationContext.setSessionData("cmd",NumericUtil.getInt(input));
         }
-        return new ColorPrompt(); //todo: only for leather
+        if(((String) Objects.requireNonNull(conversationContext.getSessionData("itemMaterial"))).startsWith("LEATHER")) {
+            return new ColorPrompt();
+        } else {
+            return new DisplayPrompt();
+        }
     }
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Type in a value for custom model data or '!skip'"; //todo prompt current cmd
+        return "Current custom model data is "+conversationContext.getSessionData("cmd")
+                +". Type in a new custom model data or '!skip'";
     }
 
     @Override

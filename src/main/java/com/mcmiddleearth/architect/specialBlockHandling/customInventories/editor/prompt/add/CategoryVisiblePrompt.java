@@ -12,9 +12,18 @@ public class CategoryVisiblePrompt extends FixedSetPrompt {
         super("yes", "no");
     }
 
+    protected CategoryVisiblePrompt(@NotNull String... fixedSet) {
+        super(fixedSet);
+    }
+
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
         return "Should the new inventory item be listed directly in the category of it's collection. "+formatFixedSet();
+    }
+
+    @Override
+    protected @Nullable String getFailedValidationText(@NotNull ConversationContext context, @NotNull String invalidInput) {
+        return "If you type in 'no' the item will be available only by a block collection.";
     }
 
     @Override

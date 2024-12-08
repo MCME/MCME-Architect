@@ -25,6 +25,11 @@ public class ColorPrompt extends ValidatingPrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Type in a color for leather armor or '!skip'";
+        return "Current color is "+conversationContext.getSessionData("color")+". Type in a new color or '!skip'";
+    }
+
+    @Override
+    protected @Nullable String getFailedValidationText(@NotNull ConversationContext context, @NotNull String invalidInput) {
+        return "You need to type in a valid rgb color code.";
     }
 }

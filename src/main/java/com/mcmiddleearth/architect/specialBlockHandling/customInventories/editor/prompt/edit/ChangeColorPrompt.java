@@ -9,11 +9,6 @@ import org.jetbrains.annotations.Nullable;
 public class ChangeColorPrompt extends ColorPrompt {
 
     @Override
-    public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Current color is "+conversationContext.getSessionData("color")+". Type in a new color or '!skip'";
-    }
-
-    @Override
     protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
         super.acceptValidatedInput(conversationContext, input);
         return new ChangeDisplayPrompt();

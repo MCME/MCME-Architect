@@ -1,15 +1,16 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.edit;
 
-import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add.DisplayPrompt;
+import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.add.ItemPrompt;
 import org.bukkit.Material;
 import org.bukkit.conversations.ConversationContext;
-import org.bukkit.conversations.FixedSetPrompt;
 import org.bukkit.conversations.Prompt;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ChangeItemPrompt extends FixedSetPrompt {
+public class ChangeItemPrompt extends ItemPrompt {
 
     public ChangeItemPrompt() {
         super("ok", "!skip");
@@ -18,7 +19,15 @@ public class ChangeItemPrompt extends FixedSetPrompt {
     @Override
     protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
         if(!input.equalsIgnoreCase("!skip")) {
-            conversationContext.setSessionData("inventoryItem", ((Player) conversationContext.getForWhom()).getInventory().getItemInMainHand());
+            ItemStack item = ((Player)conversationContext.getForWhom()).getInventory().getItemInMainHand();
+            conversationContext.setSessionData("itemMaterial", item.getType());
+            if(item.hasItemMeta() && item.getItemMeta().hasCustomModelData()) {
+                conversationContext.setSessionData("cmd", item.getItemMeta().getCustomModelData());
+            }
+            if(item.getType().name().startsWith("LEATHER")) {
+                LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
+                conversationContext.setSessionData("color", meta.getColor().asRGB());
+            }
         }
         return new ChangeCmdPrompt();
     }

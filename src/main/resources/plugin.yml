@@ -119,7 +119,7 @@ permissions:
             architect.bannerEditor.delete: true
             architect.inventory.reload: true
             architect.inventory.other: true
-            archtiect.inventory.edit: true
+            architect.inventory.edit: true
             architect.get.other: true
             architect.weather: true
             archtiect.resourcePackAdmin: true

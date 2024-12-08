@@ -6,29 +6,30 @@ import org.bukkit.conversations.Prompt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class EditPrompt extends FixedSetPrompt {
+public class ChangeSlotPrompt extends FixedSetPrompt {
 
-    public EditPrompt() {
-        super("edit", "delete");
+    public ChangeSlotPrompt() {
+        super("A0", "A1", "A4", "B2", "B4", "C2", "C4", "D2", "D4", "E0", "E1", "E4",
+              "F1", "F4", "G2", "G4", "H2", "H4", "I2", "I4", "J1", "J4", "!skip");
     }
 
     @Override
     protected @Nullable Prompt acceptValidatedInput(@NotNull ConversationContext conversationContext, @NotNull String input) {
-        conversationContext.setSessionData("action",input);
-        if(input.equalsIgnoreCase("edit")) {
-            return new ChangeBlockIdPrompt();
-        } else {
-            return END_OF_CONVERSATION;
+        if(!input.equalsIgnoreCase("!skip")) {
+            conversationContext.setSessionData("oldSlot", conversationContext.getSessionData("slot"));
+            conversationContext.setSessionData("slot", input);
         }
+        return END_OF_CONVERSATION;
     }
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "What do you want to do with inventory item "+conversationContext.getSessionData("id")+"? "+formatFixedSet();
+        return "Current item slot is "+conversationContext.getSessionData("slot")
+                +". Type in a new slot for the inventory item or '!skip'. "+formatFixedSet();
     }
 
     @Override
     protected @Nullable String getFailedValidationText(@NotNull ConversationContext context, @NotNull String invalidInput) {
-        return "You need to type in 'edit' or 'delete'. Or you may '!cancel' at any point of the conversation.";
+        return "You need to type in a slot label or '!skip'.";
     }
 }
