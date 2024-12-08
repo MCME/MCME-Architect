@@ -16,8 +16,8 @@ public class RpPluginMessageListener implements PluginMessageListener {
     public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte[] bytes) {
         //Logger.getGlobal().info("Sodium client detected: "+player.getName());
 
-Logger.getGlobal().info("Received message from player " + player.getName() + " on channel "
-        + channel + " with data " + Arrays.toString(bytes));
+//Logger.getGlobal().info("Received message from player " + player.getName() + " on channel "
+//        + channel + " with data " + Arrays.toString(bytes));
         try (var dataStream = new DataInputStream(new ByteArrayInputStream(bytes))) {
             int stringLength = readVarInt(dataStream);
             String jsonString = new String(dataStream.readNBytes(stringLength));

@@ -29,6 +29,7 @@ import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.Regi
 import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ResourceUtil;
+import com.viaversion.viaversion.api.Via;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -213,6 +214,9 @@ public class RpManager {
         RpPlayerData data;
         if (player != null) {
             data = getPlayerData(player);
+            if(data.getProtocolVersion()==0) {
+                data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+            }
         } else {
             data = new RpPlayerData();
         }
@@ -344,6 +348,7 @@ public class RpManager {
         RpPlayerData data = getPlayerData(player);
         if(url!=null && data!=null && !url.equals("") && (force || !url.equals(data.getCurrentRpUrl()))) {
             data.setCurrentRpUrl(url);
+//Logger.getGlobal().info("Sending to "+player.getName()+"("+getPlayerData(player).getProtocolVersion()+") RP: "+url);
             player.setResourcePack(url, getSHA(rpName, player));
             savePlayerData(player);
             return true;

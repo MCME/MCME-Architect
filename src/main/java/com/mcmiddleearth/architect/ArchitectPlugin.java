@@ -32,6 +32,7 @@ import com.mcmiddleearth.architect.signEditor.SignListener;
 import com.mcmiddleearth.architect.specialBlockHandling.command.GetCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.command.InvCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.command.SwitchStickCommand;
+import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.CustomInventoryEditor;
 import com.mcmiddleearth.architect.specialBlockHandling.data.*;
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockListener;
@@ -146,7 +147,8 @@ public class ArchitectPlugin extends JavaPlugin {
         setCommandExecutor("switchstick", new SwitchStickCommand());
         //setCommandExecutor("speed", new SpeedCommand());
 //        setCommandExecutor("newafkk", new NewAfkCommand());
-        
+
+        CustomInventoryEditor.init(this);
 
         rpSwitchTask = new RPSwitchTask().runTaskTimer(this, 500, 20);
         ItemBlockManager.startEntityGlowTask();

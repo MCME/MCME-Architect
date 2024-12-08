@@ -21,6 +21,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  *
@@ -85,7 +86,10 @@ public class CustomInventoryCategory {
     }
     
     public ItemStack getItem(String id) {
-        return items.stream().filter(item -> SpecialBlockInventoryData.getSpecialBlockId(item).equals(id)).findAny().orElse(null);
+        return items.stream().filter(item -> {
+            String blockId = SpecialBlockInventoryData.getSpecialBlockId(item);
+            return blockId != null && blockId.equals(id);
+        }).findAny().orElse(null);
     }
 
     public boolean isPublic() {

@@ -62,7 +62,7 @@ public class SpecialBlockInventoryData {
     
     private static final String configLocator = "inventories";
     
-    private static final File configFolder = new File(ArchitectPlugin.getPluginInstance()
+    public static final File configFolder = new File(ArchitectPlugin.getPluginInstance()
                                                        .getDataFolder(),configLocator+"/block");
     
     static {

@@ -28,6 +28,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  *
@@ -211,5 +212,9 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
 
     public void setDirectGet(boolean directGet) {
         this.directGet = directGet;
+    }
+
+    public SpecialBlock getBaseBlock() {
+        return baseBlock;
     }
 }
