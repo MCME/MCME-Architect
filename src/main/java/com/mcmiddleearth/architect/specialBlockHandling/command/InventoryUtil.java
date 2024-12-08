@@ -10,23 +10,32 @@ import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 
-public class InventoryDownloadUtil {
+public class InventoryUtil {
 
     public static void downloadInventory(String rpName, BiConsumer<Boolean, Integer> callback) {
+        executeScript("inventoryDownload", rpName, "", callback);
+    }
+
+    public static void uploadInventory(String rpName, String description, BiConsumer<Boolean, Integer> callback) {
+        executeScript("inventoryUpload", rpName, description, callback);
+    }
+
+    private static void executeScript(String action, String rpName, String description, BiConsumer<Boolean, Integer> callback) {
         Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
             try {
                 Process process;
                 boolean isWindows = System.getProperty("os.name")
                         .toLowerCase().startsWith("windows");
-                String downloadScript = ArchitectPlugin.getPluginInstance().getConfig().getString("inventoryDownload.script");
-                String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("inventoryDownload.path");
-                if (isWindows || downloadScript == null || scriptPath == null) {
+                String script = ArchitectPlugin.getPluginInstance().getConfig().getString(action+".script");
+                String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString(action+".path");
+                if (isWindows || script == null || scriptPath == null) {
                     callback.accept(false, -1);
                     return;
                 } else {
                     process = Runtime.getRuntime()
-                            .exec(new String[]{"sh", downloadScript,
-                                            rpName.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase()}, null,
+                            .exec(new String[]{"sh", script,
+                                            rpName.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase(),
+                                            description}, null,
                                     new File(scriptPath));
                 }
                 StreamGobbler streamGobbler =

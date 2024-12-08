@@ -156,6 +156,10 @@ public class CustomInventoryEditor {
                                     collectionSection.set(oldSlot, otherBlockId);
                                 }
                                 collectionSection.set(slot, blockId);
+                                if(!newSection.contains("collection") && (Boolean) inCategory) {
+                                    ConfigurationSection indirectCollection = newSection.createSection("collection");
+                                    indirectCollection.set("indirect", baseBlock);
+                                }
                             }
 
                             Map<String, String> blockData = (Map<String, String>) context.getSessionData("blockData");

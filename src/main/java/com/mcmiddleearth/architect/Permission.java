@@ -65,6 +65,8 @@ public enum Permission {
     INV_SAVE              ("architect.inventory.save"),
     INV_EDIT              ("architect.inventory.edit"),
     INV_RELOAD_COMMAND    ("architect.inventory.reload"),
+    INV_UPLOAD_COMMAND    ("architect.inventory.upload"),
+    INV_DOWNLOAD_COMMAND    ("architect.inventory.download"),
     INVENTORY_OPEN        ("architect.inventory.open"),
     NO_PHYSICS_LIST       ("architect.noPhysicsList.view"),
     NO_PHYSICS_LIST_EDIT  ("architect.noPhysicsList.edit"),
