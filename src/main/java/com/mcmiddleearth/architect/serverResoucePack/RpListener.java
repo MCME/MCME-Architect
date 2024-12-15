@@ -32,6 +32,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -40,7 +41,7 @@ import org.bukkit.scheduler.BukkitRunnable;
  *
  * @author Eriol_Eandur
  */
-public class RpListener implements Listener{
+public class RpListener implements Listener {
     
     @EventHandler
     public void onRpSwitch(PlayerResourcePackStatusEvent event) {
@@ -67,7 +68,7 @@ public class RpListener implements Listener{
     @EventHandler
     public void onPlayerConnect(PlayerConnectEvent event) {
         Player player = event.getPlayer();
-/*Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
+Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
 int version = player.getProtocolVersion();
 String snapshot = "";
 if(version > 0x40000000) {
@@ -78,7 +79,7 @@ Logger.getGlobal().info("Bukkit Protocol Version: "+snapshot + version);
 Logger.getGlobal().info("ViaVersion Protocol Version: "+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
 Logger.getGlobal().info("Sodium client: "+RpManager.isSodiumClient(player));
 Logger.getGlobal().info("Incomming plugin channels:");
-Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().info(channel));*/
+Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().info(channel));
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
             new BukkitRunnable() {
                 int counter = 11;
@@ -95,7 +96,7 @@ Bukkit.getMessenger().getIncomingChannels().forEach(channel->Logger.getGlobal().
                         if(!RpManager.setRpRegion(player)) {
                             //if(data.isAutoRp()) {
                                 String rp = RpManager.getRpForUrl(lastUrl);
-//    Logger.getGlobal().info("On PlayerConnect: Set rp to last url: "+rp+" "+ lastUrl);        
+    Logger.getGlobal().info("On PlayerConnect: Set rp to last url: "+rp+" "+ lastUrl);
                                 RpManager.setRp(rp, player, false);
                             //}
                         }

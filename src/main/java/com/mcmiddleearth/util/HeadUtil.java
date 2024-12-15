@@ -46,7 +46,9 @@ public class HeadUtil {
     public static String headCollectionTag = "MCME Head Collection";
 
     public static ItemStack getCustomHead(String name, UUID uuid, String headTexture) {
-        GameProfile profile = new GameProfile(uuid, null);
+        //todo
+
+        GameProfile profile = new GameProfile(uuid, "MCME Head");
         PropertyMap propertyMap = profile.getProperties();
         if(propertyMap == null)
             throw new IllegalStateException("Profile doesn't contain a property map!");
@@ -67,7 +69,7 @@ public class HeadUtil {
         headMeta.setLore(Collections.singletonList(headCollectionTag));
         itemStack.setItemMeta(headMeta);
         return itemStack;
-    }        
+    }
     
     public static void placeCustomHead(Block block, ItemStack head) {
         try {

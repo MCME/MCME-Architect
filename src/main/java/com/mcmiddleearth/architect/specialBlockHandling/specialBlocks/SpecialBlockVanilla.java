@@ -75,11 +75,12 @@ public class SpecialBlockVanilla extends SpecialBlock {
             material = Material.AIR;
         }
 //Logger.getGlobal().info(material.name());
-        BlockData data = Material.AIR.createBlockData();
         try {
-            data = material.createBlockData();
-        } catch(IllegalArgumentException ex){};
-        return data;
+            return material.createBlockData();
+        } catch(NullPointerException | IllegalArgumentException ex){
+            Logger.getGlobal().warning("SpecialBlockVanilla.matchBlockData "+ex.getMessage());
+            return Material.AIR.createBlockData();
+        }
     }
 
     @Override

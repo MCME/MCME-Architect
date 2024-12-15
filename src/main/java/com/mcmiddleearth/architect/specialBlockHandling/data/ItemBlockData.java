@@ -19,15 +19,15 @@ package com.mcmiddleearth.architect.specialBlockHandling.data;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
 import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockSupport;
-import org.bukkit.block.PistonMoveReaction;
+import org.bukkit.block.*;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.structure.Mirror;
+import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -240,6 +240,46 @@ Logger.getGlobal().info("****************");*/
     @Override
     public boolean isFaceSturdy(@NotNull BlockFace blockFace, @NotNull BlockSupport blockSupport) {
         return false;
+    }
+
+    @Override
+    public @NotNull VoxelShape getCollisionShape(@NotNull Location location) {
+        return null;
+    }
+
+    @Override
+    public @NotNull Color getMapColor() {
+        return null;
+    }
+
+    @Override
+    public @NotNull Material getPlacementMaterial() {
+        return null;
+    }
+
+    @Override
+    public void rotate(@NotNull StructureRotation structureRotation) {
+
+    }
+
+    @Override
+    public void mirror(@NotNull Mirror mirror) {
+
+    }
+
+    @Override
+    public void copyTo(@NotNull BlockData blockData) {
+
+    }
+
+    @Override
+    public @NotNull BlockState createBlockState() {
+        return null;
+    }
+
+    @Override
+    public float getDestroySpeed(@NotNull ItemStack itemStack, boolean b) {
+        return 0;
     }
 
     @Override

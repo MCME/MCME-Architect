@@ -18,8 +18,6 @@ package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
-import com.mcmiddleearth.pluginutil.NBTTagBuilder;
-import com.mcmiddleearth.pluginutil.NMSUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.util.DevUtil;
 import java.lang.reflect.InvocationTargetException;
@@ -72,7 +70,9 @@ public class SpecialBlockMobSpawnerBlock extends SpecialBlock {
     @Override
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
-        final Location playerLoc = player.getLocation();
+        //1.21.4 no update as unused
+
+        /*final Location playerLoc = player.getLocation();
         if(!PluginData.moreEntitiesAllowed(blockPlace)) {
             int count = PluginData.countNearbyEntities(blockPlace);
             PluginData.getMessageUtil().sendErrorMessage(player, "WARNING! Already "+count+" entities (paintings, item frames, item blocks and armorstands) around here. Placing more will cause lag.");
@@ -105,7 +105,7 @@ public class SpecialBlockMobSpawnerBlock extends SpecialBlock {
                 +"}}";
             DevUtil.log("Dispatch command: "+nbtCommand);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), nbtCommand);
-        } else {*/
+        } else {*
         try {
             Object nmsSpawnerTileEntity = NMSUtil.getTileEntity(blockPlace);
             final Object nmsSpawner = nmsSpawnerTileEntity.getClass().getMethod("getSpawner")
@@ -126,7 +126,7 @@ public class SpecialBlockMobSpawnerBlock extends SpecialBlock {
                             //.setTag("Pose",poseDataBuilder.getTag());
             /*spawnDataBuilder.setString("id", "minecraft:item")
                     .setShort("Age", (short) -32768)
-                    .setTag("Item", itemDataBuilder.getTag());*/
+                    .setTag("Item", itemDataBuilder.getTag());*
             NBTTagBuilder blockDataBuilder = new NBTTagBuilder();
             blockDataBuilder.setShort("RequiredPlayerRange", (short) 0)
                             .setShort("MaxNearbyEntities", (short) 87)
@@ -142,9 +142,9 @@ public class SpecialBlockMobSpawnerBlock extends SpecialBlock {
             d.set(nmsSpawner, 0d);*/
             //NMSUtil.sendPacket(player, nmsSpawnerTileEntity.getClass().getMethod("getUpdatePacket")
             //                                                          .invoke(nmsSpawnerTileEntity));
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | InstantiationException | ClassNotFoundException ex) {
+        /*} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | InstantiationException | ClassNotFoundException ex) {
             Logger.getLogger(SpecialBlockMobSpawnerBlock.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        }*/
     }
     
     
