@@ -77,14 +77,14 @@ public class BlockDataPrompt extends ValidatingPrompt implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onSelectBlockstate(PlayerInteractEvent event) {
-Logger.getGlobal().info("onSelectBlockstate");
+//Logger.getGlobal().info("onSelectBlockstate");
         if(event.getPlayer().equals(conversationContext.getForWhom()) && event.getAction().equals(Action.LEFT_CLICK_BLOCK)
                 && event.getHand()!=null && event.getHand().equals(EquipmentSlot.HAND)
                 && event.getPlayer().getInventory().getItemInMainHand().getType().equals(Material.PRISMARINE_SHARD)) {
             Block block = event.getClickedBlock();
-Logger.getGlobal().info("Block: "+block);
+//Logger.getGlobal().info("Block: "+block);
             if(block != null) {
-Logger.getGlobal().info("BlockData: "+block.getBlockData());
+//Logger.getGlobal().info("BlockData: "+block.getBlockData());
                 HandlerList.unregisterAll(this);
                 event.setCancelled(true);
                 Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(),()-> {
