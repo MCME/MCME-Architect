@@ -79,6 +79,7 @@ public class ArchitectPlugin extends JavaPlugin {
         WorldConfig serverConfig = PluginData.getOrCreateWorldConfig("server");
 
         PluginManager pluginManager = getServer().getPluginManager();
+        pluginManager.registerEvents(new AntiKickListener(), this);
         pluginManager.registerEvents(new ArmorStandListener(), this);
         pluginManager.registerEvents(new BannerListener(), this);
         pluginManager.registerEvents(new PaintingListener(), this);
