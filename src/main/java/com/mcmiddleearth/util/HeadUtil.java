@@ -16,11 +16,10 @@
  */
 package com.mcmiddleearth.util;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 import com.google.common.io.BaseEncoding;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
-import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.properties.Property;
-import com.mojang.authlib.properties.PropertyMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -29,13 +28,11 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Skull;
 import org.bukkit.block.data.Rotatable;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Level;
 
 /**
  *
@@ -46,25 +43,12 @@ public class HeadUtil {
     public static String headCollectionTag = "MCME Head Collection";
 
     public static ItemStack getCustomHead(String name, UUID uuid, String headTexture) {
-        //todo
-
-        GameProfile profile = new GameProfile(uuid, "MCME Head");
-        PropertyMap propertyMap = profile.getProperties();
-        if(propertyMap == null)
-            throw new IllegalStateException("Profile doesn't contain a property map!");
-        propertyMap.put("textures", new Property("Value", headTexture));
-        ItemStack itemStack = new ItemStack(Material.PLAYER_HEAD, 1, (short) 3);
-        ItemMeta headMeta = itemStack.getItemMeta();
-        try {
-            Field profileField = headMeta.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            profileField.set(headMeta, profile);
-        } catch (NoSuchFieldException | SecurityException e) {
-            Bukkit.getLogger().log(Level.SEVERE, "No such method exception during reflection.", e);
-        } catch (IllegalArgumentException | IllegalAccessException e) {
-            Bukkit.getLogger().log(Level.SEVERE, "Unable to use reflection.", e);
-        }
-        ((SkullMeta)headMeta).setOwner(uuid.toString());
+        PlayerProfile profile = Bukkit.getServer().createProfile(uuid, "MCME_Head");
+        Set<ProfileProperty> propertySet = profile.getProperties();
+        propertySet.add(new ProfileProperty("textures", headTexture));
+        ItemStack itemStack = new ItemStack(Material.PLAYER_HEAD, 1);
+        SkullMeta headMeta = (SkullMeta) itemStack.getItemMeta();
+        headMeta.setPlayerProfile(profile);
         headMeta.setDisplayName(name);
         headMeta.setLore(Collections.singletonList(headCollectionTag));
         itemStack.setItemMeta(headMeta);
@@ -72,49 +56,30 @@ public class HeadUtil {
     }
     
     public static void placeCustomHead(Block block, ItemStack head) {
-        try {
+        PlayerProfile profile = ((SkullMeta)head.getItemMeta()).getPlayerProfile();
+        if(profile != null) {
             BlockState blockState = block.getState();
             blockState.setType(Material.PLAYER_HEAD);
             blockState.getBlock().setBlockData(blockState.getBlockData());//.update(true, false);
             blockState = block.getState();
             Skull skullData = (Skull) blockState;
-            //skullData.setSkullType(SkullType.PLAYER);
-            Field profileField = head.getItemMeta().getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            GameProfile profile = (GameProfile) profileField.get(head.getItemMeta());
-            profileField = skullData.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            profileField.set(skullData, profile);
+            skullData.setPlayerProfile(profile);
             skullData.update(true, false);
             Rotatable data = ((Rotatable)block.getState().getBlockData());
             data.setRotation(BlockFace.SOUTH_SOUTH_EAST);
             skullData.getBlock().setBlockData(data);
-        } catch (NoSuchFieldException | SecurityException e) {
-            Bukkit.getLogger().log(Level.SEVERE, "No such method exception during reflection.", e);
-        } catch (IllegalArgumentException | IllegalAccessException e) {
-            Bukkit.getLogger().log(Level.SEVERE, "Unable to use reflection.", e);
         }
     }
 
     public static ItemStack pickCustomHead(Skull skullBlockState) {
-        try {
-            Field profileField = skullBlockState.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            GameProfile profile = (GameProfile) profileField.get(skullBlockState);
-
-            ItemStack head = new ItemStack(Material.PLAYER_HEAD, 1, (short) 3);
-            ItemMeta headMeta = head.getItemMeta();
-            
-            profileField = headMeta.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            profileField.set(headMeta, profile);
+        PlayerProfile profile = skullBlockState.getPlayerProfile();
+        if(profile!=null) {
+            ItemStack head = new ItemStack(Material.PLAYER_HEAD, 1);
+            SkullMeta headMeta = (SkullMeta) head.getItemMeta();
+            headMeta.setPlayerProfile(profile);
             headMeta.setDisplayName(CustomHeadManagerData.getHeadName(profile.getId()));
             head.setItemMeta(headMeta);
             return head;
-        } catch (NoSuchFieldException | SecurityException e) {
-            Bukkit.getLogger().log(Level.SEVERE, "No such method exception during reflection.", e);
-        } catch (IllegalArgumentException | IllegalAccessException e) {
-            Bukkit.getLogger().log(Level.SEVERE, "Unable to use reflection.", e);
         }
         return null;
     }

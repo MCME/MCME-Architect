@@ -21,6 +21,7 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.WeSelectCommand;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
+import com.mcmiddleearth.architect.customHeadManager.CustomHeadListener;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.pluginutil.EventUtil;
@@ -75,16 +76,20 @@ public class BlockPickerListener implements Listener {
         } else {
             rpName = SpecialBlockInventoryData.getRpName(handItem);
         }
-        ItemStack item = SpecialBlockInventoryData.getItem(block, rpName);
-        if(item!=null) {
-            event.setCancelled(true);
-            if(!event.getPlayer().isSneaking()) {
-                item = item.clone();
-                item.setAmount(2);
-                event.getPlayer().getInventory().addItem(item);
-            } else if(item.hasItemMeta()){
-                if(!SpecialBlockInventoryData.openInventory(event.getPlayer(), item)) {
-                    InventoryListener.sendNoInventoryError(event.getPlayer(),rpName);
+        if(block.getType().equals(Material.PLAYER_HEAD)) {
+            CustomHeadListener.getHead(event.getPlayer(), block);
+        } else {
+            ItemStack item = SpecialBlockInventoryData.getItem(block, rpName);
+            if (item != null) {
+                event.setCancelled(true);
+                if (!event.getPlayer().isSneaking()) {
+                    item = item.clone();
+                    item.setAmount(2);
+                    event.getPlayer().getInventory().addItem(item);
+                } else if (item.hasItemMeta()) {
+                    if (!SpecialBlockInventoryData.openInventory(event.getPlayer(), item)) {
+                        InventoryListener.sendNoInventoryError(event.getPlayer(), rpName);
+                    }
                 }
             }
         }

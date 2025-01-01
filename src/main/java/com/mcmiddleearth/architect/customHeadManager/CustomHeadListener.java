@@ -22,7 +22,7 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.util.HeadUtil;
 import org.bukkit.Material;
-import org.bukkit.SkullType;
+import org.bukkit.block.Block;
 import org.bukkit.block.Skull;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -39,14 +39,18 @@ public class CustomHeadListener implements Listener {
     @EventHandler
     public void playerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
-        if(!(player.getInventory().getItemInHand().getType().equals(Material.STICK) 
+        if (!(player.getInventory().getItemInHand().getType().equals(Material.STICK)
                 && EventUtil.isMainHandEvent(event))) {
             return;
         }
-        if(!(event.hasBlock() && event.getClickedBlock().getType().equals(Material.PLAYER_HEAD))) {
-                              //1.13 remove && ((Skull)event.getClickedBlock().getState()).getSkullType().equals(SkullType.PLAYER))) {
+        if (!(event.hasBlock() && event.getClickedBlock().getType().equals(Material.PLAYER_HEAD))) {
+            //1.13 remove && ((Skull)event.getClickedBlock().getState()).getSkullType().equals(SkullType.PLAYER))) {
             return;
         }
+        getHead(player, event.getClickedBlock());
+    }
+
+    public static void getHead(Player player, Block block) {
         if(!PluginData.isModuleEnabled(player.getWorld(), Modules.CUSTOM_HEAD_MANAGER)) {
             sendNotActivatedMessage(player);
             return;
@@ -55,13 +59,13 @@ public class CustomHeadListener implements Listener {
             PluginData.getMessageUtil().sendNoPermissionError(player);
             return;
         }
-        ItemStack head = HeadUtil.pickCustomHead((Skull) event.getClickedBlock().getState());
+        ItemStack head = HeadUtil.pickCustomHead((Skull) block.getState());
         player.getInventory().addItem(head);
         PluginData.getMessageUtil().sendInfoMessage(player,"Given head: "
                   +PluginData.getMessageUtil().STRESSED+head.getItemMeta().getDisplayName());
     }
     
-    private void sendNotActivatedMessage(Player player) {
+    private static void sendNotActivatedMessage(Player player) {
         PluginData.getMessageUtil().sendErrorMessage(player,"Custom Heads are not enabled for this world.");
     }
 
