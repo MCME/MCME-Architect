@@ -25,6 +25,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.logging.Logger;
+
 /**
  *
  * @author Eriol_Eandur
@@ -62,10 +64,12 @@ public class SignCommand extends AbstractArchitectCommand {
         for(int i=2;i<args.length;i++) {
             line = line+" "+args[i];
         }
+Logger.getGlobal().info("SignEditor line: "+line);
         line = line.replace("\\_"," ");
         if(line.length()>15) {
             sendLineTooLong(sender);
         }
+Logger.getGlobal().info("SignEditor line: "+line);
         SignEditorData.editSign(player, lineNumber,line);
         SignEditorData.sendSignMessage(player);
         return true;
