@@ -27,10 +27,12 @@ import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInvento
 import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import io.papermc.paper.event.player.PlayerPickItemEvent;
 import org.bukkit.ChatColor;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -38,8 +40,10 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.RayTraceResult;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  *
@@ -48,6 +52,40 @@ import java.util.List;
 public class BlockPickerListener implements Listener {
 
     private static final String placeholder = "#";
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void pickBlock(PlayerPickItemEvent event) {
+        if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_FLINT)) {
+            return;
+        }
+        Player player = event.getPlayer();
+        FluidCollisionMode mode = player.isSneaking() ? FluidCollisionMode.ALWAYS : FluidCollisionMode.NEVER;
+        RayTraceResult result = player.getWorld().rayTrace(player.getEyeLocation(),
+                                player.getLocation().getDirection(),
+                                4, mode,false,0.01,
+                                entity -> entity instanceof Hanging,
+                                block -> !block.isEmpty());
+        if(result != null && result.getHitBlock() != null) {
+            String rpName = RpManager.getCurrentRpName(event.getPlayer());
+            if (!player.getInventory().getItemInMainHand().isEmpty()) {
+                String rpItemName = RpManager.getCurrentRpName(event.getPlayer());
+                if (!rpItemName.isEmpty()) {
+                    rpName = rpItemName;
+                }
+            }
+            if (rpName.isEmpty()) {
+                PluginData.getMessageUtil().sendErrorMessage(event.getPlayer(), "Your resource pack could not be determined. You might not get correct block picks.");
+            }
+            if (getBlockItemPick(player, result.getHitBlock(), rpName)) {
+                event.setCancelled(true);
+            }
+        } else if(result != null && result.getHitEntity() != null) {
+            if (getEntityItemPick(player, result.getHitEntity())) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
     /**
      * If module SPECIAL_BLOCK_FLINT is enabled in world config file
      * gives a player a block in inventory when right-clicking the corresponding
@@ -60,7 +98,7 @@ public class BlockPickerListener implements Listener {
                 || !(event.getAction().equals(Action.RIGHT_CLICK_BLOCK)
                         || event.getAction().equals(Action.RIGHT_CLICK_AIR))
                 || !(event.getPlayer().getInventory().getItemInMainHand().getType().equals(Material.FLINT)
-                     || !SpecialBlockInventoryData.getRpName(event.getPlayer().getInventory().getItemInMainHand()).equals(""))
+                     || !SpecialBlockInventoryData.getRpName(event.getPlayer().getInventory().getItemInMainHand()).isEmpty())
                 || !EventUtil.isMainHandEvent(event)) {
             return;
         }
@@ -70,29 +108,64 @@ public class BlockPickerListener implements Listener {
         String rpName = "";
         if(handItem.getType().equals(Material.FLINT)) {
             rpName = RpManager.getCurrentRpName(event.getPlayer());
-            if(rpName.equals("")) {
+            if(rpName.isEmpty()) {
                 PluginData.getMessageUtil().sendErrorMessage(event.getPlayer(),"Your resource pack could not be determined. If you clicked on a special MCME block you will get a block from mc creative inventory instead.");
             }
         } else {
             rpName = SpecialBlockInventoryData.getRpName(handItem);
         }
+        if(getBlockItemPick(event.getPlayer(), block, rpName)) {
+            event.setCancelled(true);
+        }
+    }
+
+    private boolean getEntityItemPick(Player player, Entity entity) {
+        ItemStack item = null;
+        //Logger.getGlobal().info(entity.getAsString());
+        if(entity instanceof Painting) {
+            item = ItemStack.of(Material.PAINTING);
+        } else if(entity instanceof GlowItemFrame) {
+            //Logger.getGlobal().info("Glow");
+            item = ItemStack.of(Material.GLOW_ITEM_FRAME);
+        } else if(entity instanceof ItemFrame) {
+            //Logger.getGlobal().info("item");
+            item = ItemStack.of(Material.ITEM_FRAME);
+        }
+        if(item != null) {
+            if (player.getInventory().getItemInMainHand().isEmpty()) {
+                player.getInventory().setItemInMainHand(item);
+            } else {
+                player.getInventory().addItem(item);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean getBlockItemPick(Player player, Block block, String rpName) {
         if(block.getType().equals(Material.PLAYER_HEAD)) {
-            CustomHeadListener.getHead(event.getPlayer(), block);
+            CustomHeadListener.getHead(player, block);
+            return true;
         } else {
             ItemStack item = SpecialBlockInventoryData.getItem(block, rpName);
             if (item != null) {
-                event.setCancelled(true);
-                if (!event.getPlayer().isSneaking()) {
+                if (!player.isSneaking()) {
                     item = item.clone();
                     item.setAmount(2);
-                    event.getPlayer().getInventory().addItem(item);
+                    if(player.getInventory().getItemInMainHand().isEmpty()) {
+                        player.getInventory().setItemInMainHand(item);
+                    } else {
+                        player.getInventory().addItem(item);
+                    }
                 } else if (item.hasItemMeta()) {
-                    if (!SpecialBlockInventoryData.openInventory(event.getPlayer(), item)) {
-                        InventoryListener.sendNoInventoryError(event.getPlayer(), rpName);
+                    if (!SpecialBlockInventoryData.openInventory(player, item)) {
+                        InventoryListener.sendNoInventoryError(player, rpName);
                     }
                 }
+                return true;
             }
         }
+        return false;
     }
 
     @EventHandler

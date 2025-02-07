@@ -129,7 +129,7 @@ public class OpItemListener implements Listener {
                 int level = entry.getValue();
                 if(!PluginData.isEnchantmentAllowed(name, level)) {
                     Logger.getGlobal().info("not allowed! "+name+" "+level);
-                    enchantments.remove();
+                    itemMeta.removeEnchant(entry.getKey());
                 }
             }
             if(itemMeta.getAttributeModifiers()!=null) {

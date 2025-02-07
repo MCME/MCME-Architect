@@ -465,7 +465,7 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         if(!vanillaMatches.isEmpty()) {
             return searchInventories.get(rpName).getItem(vanillaMatches.get(0).getId());
         }
-        return getHandItem(new ItemStack(block.getType(),1));
+        return new ItemStack(getHandItem(block.getType()),1);
         //1.13 removed: return getHandItem(new ItemStack(block.getType(),1,(short)0,block.getData()));
     }
 
@@ -503,30 +503,18 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         return result;
     }
     
-    private static ItemStack getHandItem(ItemStack item) {
-        switch(item.getType()) {
-            case ACACIA_WALL_SIGN:
-                return new ItemStack(Material.ACACIA_SIGN,1);
-            case DARK_OAK_WALL_SIGN:
-                return new ItemStack(Material.DARK_OAK_SIGN,1);
-            case OAK_WALL_SIGN:
-                return new ItemStack(Material.OAK_SIGN,1);
-            case SPRUCE_WALL_SIGN:
-                return new ItemStack(Material.SPRUCE_SIGN,1);
-            case JUNGLE_WALL_SIGN:
-                return new ItemStack(Material.JUNGLE_SIGN,1);
-            case BIRCH_WALL_SIGN:
-                return new ItemStack(Material.BIRCH_SIGN,1);
-            case WALL_TORCH:
-                return new ItemStack(Material.TORCH,1);
-            case REDSTONE_WALL_TORCH:
-                return new ItemStack(Material.REDSTONE_TORCH,1);
+    private static Material getHandItem(Material material) {
+        String name = material.name();
+        if(material.name().contains("WALL_BANNER")) {
+            return Material.valueOf(name.replace("WALL_BANNER", "BANNER"));
         }
-        String material = item.getType().name();
-        if(item.getType().name().contains("WALL_BANNER")) {
-            return new ItemStack(Material.valueOf(material.replace("WALL_BANNER", "BANNER")));
+        if(material.name().contains("WALL_SIGN")) {
+            return Material.valueOf(name.replace("WALL_SIGN", "SIGN"));
         }
-        return item;
+        if(material.name().contains("WALL_HANGING_SIGN")) {
+            return Material.valueOf(name.replace("WALL_HANGING_SIGN", "HANGING_SIGN"));
+        }
+        return material;
     }
     /*1.13 removed        case BANNER:
             case STANDING_BANNER:

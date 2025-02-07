@@ -297,7 +297,7 @@ public class RpManager {
                     if(protocolVersion==null) {
                         return null;
                     }
-Logger.getGlobal().info("Protocol: "+protocolVersion);
+                    ArchitectPlugin.getPluginInstance().getDevUtil().log(2,"Protocol: "+protocolVersion);
                     if(protocolResult < protocolVersion && protocolVersion <= data.getProtocolVersion()) {
                         versionResult = version;
                         protocolResult = protocolVersion;
