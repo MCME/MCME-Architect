@@ -17,7 +17,6 @@
 package com.mcmiddleearth.architect.specialBlockHandling.command;
 
 import com.google.common.base.Joiner;
-import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
@@ -30,22 +29,20 @@ import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryCategory;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.pluginutil.NumericUtil;
-import com.mcmiddleearth.util.ZipUtil;
-import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.ZipInputStream;
-import org.bukkit.Bukkit;
+
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.NotNull;
 
 /**
  *
@@ -54,119 +51,71 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class InvCommand extends AbstractArchitectCommand {
 
     @Override
-    public boolean onCommand(CommandSender cs, Command command, String label, String[] args) {
-        final CommandSender sender = cs;
-        if(args.length>0 && args[0].equalsIgnoreCase("reload")) {
+    public boolean onCommand(@NotNull CommandSender cs, @NotNull Command command, @NotNull String label, String[] args) {
+        if(args.length>0 && args[0].equalsIgnoreCase("upload")) {
+            if((cs instanceof Player) && !PluginData.hasPermission(cs,Permission.INV_UPLOAD_COMMAND)) {
+                PluginData.getMessageUtil().sendNoPermissionError(cs);
+                return true;
+            }
+            if(args.length<3) {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Not enough arguments: /rp upload <rpName> <Describe your changes>");
+            } else {
+                String rpName = RpManager.matchRpName(args[1]);
+                if(rpName.equals("")) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "No RP found for: "+args[1]);
+                }
+                String description = Joiner.on(" ").join(Arrays.copyOfRange(args,2, args.length));
+                InventoryUtil.uploadInventory(rpName, description, (exit, exitCode) -> {
+                    if (exit && exitCode == 0) {
+                        PluginData.getMessageUtil().sendInfoMessage(cs,
+                                "Custom inventory for RP " + rpName + " pushed to GitHub!");
+
+                    } else {
+                        PluginData.getMessageUtil().sendErrorMessage(cs,
+                                "Error while pushing custom inventory for RP " + rpName + "! Process terminated=" + exit + " exitCode=" + exitCode);
+                    }
+                });
+            }
+            return true;
+        } else if(args.length>0 && args[0].equalsIgnoreCase("download")) {
+            if((cs instanceof Player) && !PluginData.hasPermission(cs,Permission.INV_DOWNLOAD_COMMAND)) {
+                PluginData.getMessageUtil().sendNoPermissionError(cs);
+                return true;
+            }
+            if(args.length<2) {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Not enough arguments: /rp download <rpName>");
+            } else {
+                String rpName = RpManager.matchRpName(args[1]);
+                if(rpName.equals("")) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "No RP found for: "+args[1]);
+                }
+                InventoryUtil.downloadInventory(rpName, (exit, exitCode) -> {
+                    SpecialBlockInventoryData.loadInventories();
+                    SpecialItemInventoryData.loadInventories();
+                    SpecialHeadInventoryData.loadInventory();
+                    SpecialSavedInventoryData.loadInventories();
+                    if (exit && exitCode == 0) {
+                        PluginData.getMessageUtil().sendInfoMessage(cs,
+                                "Custom inventory for RP " + rpName + " updated!");
+
+                    } else {
+                        PluginData.getMessageUtil().sendErrorMessage(cs,
+                                "Error while updating custom inventory for RP " + rpName + "! Process terminated=" + exit + " exitCode=" + exitCode);
+                    }
+                });
+            }
+            return true;
+        } else if(args.length>0 && args[0].equalsIgnoreCase("reload")) {
             if((cs instanceof Player) && !PluginData.hasPermission(cs,Permission.INV_RELOAD_COMMAND)) {
                 PluginData.getMessageUtil().sendNoPermissionError(cs);
                 return true;
             }
-            final List<String> argList = new ArrayList<>();
-            argList.addAll(Arrays.asList(Arrays.copyOfRange(args, 1, args.length)));
-            if(argList.isEmpty()) {
-                SpecialBlockInventoryData.loadInventories();
-                SpecialItemInventoryData.loadInventories();
-                SpecialHeadInventoryData.loadInventory();
-                SpecialSavedInventoryData.loadInventories();
-                PluginData.getMessageUtil().sendInfoMessage(cs,
-                        "Custom inventories reloaded.");
-            } else {
-                argList.forEach(rpArgument -> {
-                    String rpName = RpManager.matchRpName(rpArgument.substring(3));
-                    InventoryDownloadUtil.downloadInventory(rpName, (exit, exitCode) -> {
-                        SpecialBlockInventoryData.loadInventories();
-                        SpecialItemInventoryData.loadInventories();
-                        SpecialHeadInventoryData.loadInventory();
-                        SpecialSavedInventoryData.loadInventories();
-                        if (exit && exitCode == 0) {
-                            PluginData.getMessageUtil().sendInfoMessage(cs,
-                                    "Custom inventory for RP " + rpName + " updated!");
-
-                        } else {
-                            PluginData.getMessageUtil().sendErrorMessage(cs,
-                                    "Error while updating custom inventory for RP " + rpName + "! Process terminated=" + exit + " exitCode=" + exitCode);
-                        }
-                    });
-                });
-            }
-
-            /* Old Downloader for inventory files included in the RP zip            final CommandSender csFinal = cs;
-//Logger.getGlobal().info("args argList "+args.length + " "+argList.size()+" "+argList.toString());
-            BukkitRunnable downloader = new BukkitRunnable() {
-                BukkitRunnable asyncDownloader;
-                ZipInputStream inputStream;
-                int counter;
-                String rpName;
-                
-                @Override
-                public void run() {
-//Logger.getGlobal().info("task timer ");
-                    if(asyncDownloader == null //no download in progress
-                            || !(Bukkit.getScheduler().isCurrentlyRunning(asyncDownloader.getTaskId())
-                                 || (Bukkit.getScheduler().isQueued(asyncDownloader.getTaskId())))){
-//Logger.getGlobal().info("start download ");
-                        while(argList.size()>0 && !argList.get(0).startsWith("rp:")) {
-//Logger.getGlobal().info("argList "+argList.get(0));
-                            argList.remove(0);
-                        }
-                        if(argList.isEmpty()) { //nothing more to download
-                            SpecialBlockInventoryData.loadInventories();
-                            SpecialItemInventoryData.loadInventories();
-                            SpecialHeadInventoryData.loadInventory();
-                            SpecialSavedInventoryData.loadInventories();
-                            sendInventoryLoadedMessage(csFinal);
-                            cancel();
-                        } else { //still something to download
-                            rpName = RpManager.matchRpName(argList.get(0).substring(3));
-                            if(rpName.equals("")) {
-                                sendNotAValidRpKey(csFinal);
-                            } else { //start next rp download
-                                asyncDownloader = new BukkitRunnable() {
-                                    @Override
-                                    public void run() {
-                                        PluginData.getMessageUtil().sendInfoMessage(sender, "Downloading config files for rp "+rpName+".");
-                                        try {
-                                            int count = SpecialBlockInventoryData.downloadConfig(rpName,inputStream);
-                                            PluginData.getMessageUtil().scheduleInfoMessage(sender, "Downloaded "+count+" block inventory files for rp "+rpName+".");
-                                        } catch (IOException ex) {
-                                            Logger.getLogger(ZipUtil.class.getName()).log(Level.SEVERE, null, ex);
-                                            PluginData.getMessageUtil()
-                                                      .scheduleErrorMessage(sender, "Error while downloading block config files for rp "
-                                                                       +rpName+".");
-                                        }
-                                        try {
-                                            int count = SpecialItemInventoryData.downloadConfig(rpName,inputStream);
-                                            PluginData.getMessageUtil().scheduleInfoMessage(sender, "Downloaded "+count+" item inventory files for rp "+rpName+".");
-                                        } catch (IOException ex) {
-                                            PluginData.getMessageUtil()
-                                                      .scheduleErrorMessage(sender, "Error while downloading item config files for rp "
-                                                                       +rpName+".");
-                                        }
-                                    }
-                                };
-                                asyncDownloader.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
-                                argList.remove(0);
-                            }
-                        }
-                    } else { //download in progress
-                        if(counter < 12) { //keep waiting (12 * 5 sec timeout)
-                            PluginData.getMessageUtil().sendInfoMessage(sender, "Downloading config files for rp "+rpName+".");
-//Logger.getGlobal().info("wait for download ");
-                            counter++;
-                        } else { //cancel download
-                            try {
-                                inputStream.close();
-                            } catch (IOException ex) {
-                                Logger.getLogger(InvCommand.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                            PluginData.getMessageUtil().sendErrorMessage(sender, "Downloading of config files for rp "+rpName+" timed out.");
-                            asyncDownloader.cancel();
-                            counter = 0;
-                        }
-                    }
-                }
-            };
-            downloader.runTaskTimer(ArchitectPlugin.getPluginInstance(), 0, 100);*/
+            SpecialBlockInventoryData.loadInventories();
+            SpecialItemInventoryData.loadInventories();
+            SpecialHeadInventoryData.loadInventory();
+            SpecialSavedInventoryData.loadInventories();
+            PluginData.getMessageUtil().sendInfoMessage(cs,
+                    "Custom inventories reloaded.");
             return true;
         }
         if (!(cs instanceof Player)) {
@@ -310,7 +259,7 @@ public class InvCommand extends AbstractArchitectCommand {
             return true;
         } 
         if(args[0].startsWith("i")) {
-            PluginData.getMessageUtil().sendErrorMessage(sender, "Not implemented yet!");
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Not implemented yet!");
             return true;
             /*if(!SpecialItemInventoryData.hasItemInventory(rpName)) {
                 sendItemInventoryNotFound(p);
@@ -323,15 +272,15 @@ public class InvCommand extends AbstractArchitectCommand {
             }
             return true;*/
         }
-        if(sender instanceof Player && sender.isOp() && args[0].equals("testItemBlock")) {
+        if(cs instanceof Player && cs.isOp() && args[0].equals("testItemBlock")) {
             Logger.getGlobal().info("place item block test area");
             SpecialBlock data = SpecialBlockInventoryData.getSpecialBlock(args[1]);
-            Block start = ((Player)sender).getLocation().getBlock();
+            Block start = ((Player) cs).getLocation().getBlock();
             start = start.getRelative(BlockFace.SOUTH);
             for(int i = 0; i<=NumericUtil.getInt(args[2]);i+=NumericUtil.getInt(args[3])) {
                 for(int j=0; j<NumericUtil.getInt(args[2]);j+=NumericUtil.getInt(args[3])) {
                     
-                    data.placeBlock(start.getRelative(i,0,j), BlockFace.UP, start, start.getLocation(), (Player)sender);
+                    data.placeBlock(start.getRelative(i,0,j), BlockFace.UP, start, start.getLocation(), (Player) cs);
                 }
             }
         }

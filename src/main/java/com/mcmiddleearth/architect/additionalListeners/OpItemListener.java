@@ -19,9 +19,12 @@ package com.mcmiddleearth.architect.additionalListeners;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
-import com.mcmiddleearth.pluginutil.NBTTagUtil;
-import com.mcmiddleearth.pluginutil.NMSUtil;
+import com.mcmiddleearth.pluginutil.nms.AccessInventory;
+import com.mcmiddleearth.pluginutil.nms.AccessNBT;
 import org.bukkit.Bukkit;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -32,9 +35,11 @@ import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -113,121 +118,66 @@ public class OpItemListener implements Listener {
     }
     private void checkItem(ItemStack item) {
 //Logger.getGlobal().info("check item 1");
-        if(item==null) return;
+        if(item==null || item.getItemMeta() == null) return;
 //Logger.getGlobal().info("check item 1a");
-        if(PluginData.isModuleEnabled(Bukkit.getWorlds().get(0), Modules.BLOCK_OP_ITEMS)) {
-            try {
-//Logger.getGlobal().info("check item 2");
-                //Class clazz = item.getClass();
-                //Field field = clazz.getDeclaredField("handle");
-                //field.setAccessible(true);
-                //Object nmsItem = field.get(item);
-                //Logger.getLogger(ArchitectPlugin.class.getName())
-                //      .log(Level.INFO, "Check item: "+item.getType());
-                Object nmsItem = NMSUtil.getCraftBukkitDeclaredField("inventory.CraftItemStack","handle",item);
-                Object tag = NMSUtil.invokeNMS("world.item.ItemStack", "t", new Class[]{}, nmsItem);
-/*if(tag!=null) {Set keys = (Set) NMSUtil.invokeNMS("nbt.NBTTagCompound","d",new Class[]{},tag);
-for(Object key: keys) {
-    Logger.getGlobal().info((String)key);
-}}*/
-/*Logger.getGlobal().info("Class: "+tag.getClass().getName());
-Set<String> keys = (Set<String>) NMSUtil.invokeNMS("nbt.NBTTagCompound","d",new Class[]{},tag);
-for(String key: keys) {
-    Logger.getGlobal().info("key: "+key);
-}*/
-                if(NBTTagUtil.hasKey(tag, "Enchantments")) {
+        ItemMeta itemMeta = item.getItemMeta();
+        if(PluginData.isModuleEnabled(Bukkit.getWorlds().getFirst(), Modules.BLOCK_OP_ITEMS)) {
+            Iterator<Map.Entry<Enchantment,Integer>> enchantments = itemMeta.getEnchants().entrySet().iterator();
+            while(enchantments.hasNext()) {
+                Map.Entry<Enchantment,Integer> entry = enchantments.next();
+                String name = entry.getKey().getKey().getKey();
+                int level = entry.getValue();
+                if(!PluginData.isEnchantmentAllowed(name, level)) {
+                    Logger.getGlobal().info("not allowed! "+name+" "+level);
+                    itemMeta.removeEnchant(entry.getKey());
+                }
+            }
+            if(itemMeta.getAttributeModifiers()!=null) {
+                Iterator<Map.Entry<Attribute, AttributeModifier>> modifiers = itemMeta.getAttributeModifiers().entries().iterator();
+                while(modifiers.hasNext()) {
+                    modifiers.next();
+                    modifiers.remove();
+                }
+            }
+            item.setItemMeta(itemMeta);
+            /*try {
+                //Object nmsItem = NMSUtil.getCraftBukkitDeclaredField("inventory.CraftItemStack","handle",item);
+                Object tag = AccessInventory.getItemNBT(item);//NMSUtil.invokeNMS("world.item.ItemStack", "t", new Class[]{}, nmsItem);
+                if(AccessNBT.hasKey(tag, "Enchantments")) {
 //Logger.getGlobal().info("Has enchantment");
-                    Object enchantments = NBTTagUtil.getTagList(tag, "Enchantments");
+                    Object enchantments = AccessNBT.getNBTBaseList(tag, "Enchantments"); //getTagList
                     for(int i = 0;
-                            i < (int) NMSUtil.invokeNMS("nbt.NBTTagList", "size", new Class[]{},
+                            i < AccessNBT.size(//(int) NMSUtil.invokeNMS("nbt.NBTTagList", "size", new Class[]{},
                                     enchantments); i++) {
-                        Object enchant = NMSUtil.invokeNMS("nbt.NBTTagList", "a"/*getCompound*/,
-                                new Class[]{int.class}, enchantments, i);
-                        String name = NBTTagUtil.getString(enchant,"id");
-                        int level = NBTTagUtil.getInt(enchant,"lvl");
+                        Object enchant = AccessNBT.getCompoundFromList(enchantments, i);//NMSUtil.invokeNMS("nbt.NBTTagList", "a"/*getCompound*,
+                                //new Class[]{int.class}, enchantments, i);
+                        String name = AccessNBT.getString(enchant,"id");
+                        int level = AccessNBT.getInt(enchant,"lvl");
                         if(!PluginData.isEnchantmentAllowed(name, level)) {
                             Logger.getGlobal().info("not allowed! "+name+" "+level);
-                            block(nmsItem);
+                            block(item);
                             return;
                         }
                     }
                 }
-                if(NBTTagUtil.hasKey(tag, "AttributeModifiers")) {
-                    block(nmsItem);
+                if(AccessNBT.hasKey(tag, "AttributeModifiers")) {
+                    block(item);
                     return;
                 }
-            } catch (SecurityException | IllegalArgumentException ex) {
+            } catch (SecurityException | IllegalArgumentException | ClassNotFoundException ex) {
                 Logger.getLogger(OpItemListener.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            }*/
         }
     }
     
-    private void block(Object nmsItem) {
+    /*private void block(ItemStack item) {//Object nmsItem) {
         try {
-            NMSUtil.invokeNMS("world.item.ItemStack", "c"/*setTag*/,
+            item.getItemMeta().getA
+            NMSUtil.invokeNMS("world.item.ItemStack", "c"/*setTag*,
                     new Class[]{NMSUtil.getNMSClass("nbt.NBTTagCompound")}, nmsItem,(Object) null);
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(OpItemListener.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
-    /*
-    @EventHandler
-    public void onInventoryEvent(InventoryDragEvent event) {
-Logger.getGlobal().info("InventoryDragEvent!");
-        checkItems(event.getInventory().iterator());
-        checkItems(event.getView().getPlayer().getInventory().iterator());
-    }
-    
-    @EventHandler
-    public void onInventoryEvent(InventoryPickupItemEvent event) {
-Logger.getGlobal().info("InventoryPickupItemEvent!");
-        checkItems(event.getInventory().iterator());
-    }
-    
-    @EventHandler
-    public void onInventoryEvent(InventoryMoveItemEvent event) {
-Logger.getGlobal().info("InventoryMoveItemEvent!");
-        checkItems(event.getInitiator().iterator());
-        checkItems(event.getDestination().iterator());
-    }
-    @EventHandler
-    public void onInventoryEvent(InventoryInteractEvent event) {
-Logger.getGlobal().info("InventoryInteractEvent!");
-        checkItems(event.getInventory().iterator());
-        checkItems(event.getView().getPlayer().getInventory().iterator());
-    }
-    
-    @EventHandler
-    public void onInventoryEvent(InventoryOpenEvent event) {
-Logger.getGlobal().info("InventoryOpenEvent!");
-        checkItems(event.getInventory().iterator());
-        checkItems(event.getView().getPlayer().getInventory().iterator());
-    }
-    
-    @EventHandler
-    public void onInventoryEvent(InventoryEvent event) {
-Logger.getGlobal().info("InventoryEvent!");
-        checkItems(event.getInventory().iterator());
-    }
-    
-    @EventHandler
-    public void onInventoryEvent(InventoryCreativeEvent event) {
-Logger.getGlobal().info("InventoryCreativeEvent!");
-        //checkItems(event.getInventory().iterator());
-        //checkItems(event.getView().getPlayer().getInventory().iterator());
-        //checkItems(event.getWhoClicked().getInventory().iterator());
-        checkItem(event.getCurrentItem());
-        checkItem(event.getCursor());
-        int slot = event.getSlot();
-        Inventory inventory = event.getInventory();
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                checkItem(inventory.getItem(slot));
-            }
-        }.runTaskLater(ArchitectPlugin.getPluginInstance(),2);
-    }
-    
-    */
+    }*/
 
 }

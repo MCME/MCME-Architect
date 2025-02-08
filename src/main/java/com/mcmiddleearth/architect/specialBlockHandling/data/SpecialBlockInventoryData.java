@@ -300,6 +300,12 @@ public class SpecialBlockInventoryData {
                         case VANILLA:
                             blockData = SpecialBlockVanilla.loadFromConfig(section, fullName(rpName, itemKey));
                             break;
+                        case NONE:
+                            blockData = SpecialBlockNone.loadFromConfig(section, fullName(rpName, itemKey));
+                            break;
+                        case ITEM_FRAME:
+                            blockData = SpecialBlockItemFrame.loadFromConfig(section, fullName(rpName, itemKey));
+                            break;
                     }
                     ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
                     if(blockData !=null && inventoryItem!=null && !inventoryItem.getType().equals(Material.AIR)) {
@@ -459,7 +465,7 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         if(!vanillaMatches.isEmpty()) {
             return searchInventories.get(rpName).getItem(vanillaMatches.get(0).getId());
         }
-        return getHandItem(new ItemStack(block.getType(),1));
+        return new ItemStack(getHandItem(block.getType()),1);
         //1.13 removed: return getHandItem(new ItemStack(block.getType(),1,(short)0,block.getData()));
     }
 
@@ -497,30 +503,18 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         return result;
     }
     
-    private static ItemStack getHandItem(ItemStack item) {
-        switch(item.getType()) {
-            case ACACIA_WALL_SIGN:
-                return new ItemStack(Material.ACACIA_SIGN,1);
-            case DARK_OAK_WALL_SIGN:
-                return new ItemStack(Material.DARK_OAK_SIGN,1);
-            case OAK_WALL_SIGN:
-                return new ItemStack(Material.OAK_SIGN,1);
-            case SPRUCE_WALL_SIGN:
-                return new ItemStack(Material.SPRUCE_SIGN,1);
-            case JUNGLE_WALL_SIGN:
-                return new ItemStack(Material.JUNGLE_SIGN,1);
-            case BIRCH_WALL_SIGN:
-                return new ItemStack(Material.BIRCH_SIGN,1);
-            case WALL_TORCH:
-                return new ItemStack(Material.TORCH,1);
-            case REDSTONE_WALL_TORCH:
-                return new ItemStack(Material.REDSTONE_TORCH,1);
+    private static Material getHandItem(Material material) {
+        String name = material.name();
+        if(material.name().contains("WALL_BANNER")) {
+            return Material.valueOf(name.replace("WALL_BANNER", "BANNER"));
         }
-        String material = item.getType().name();
-        if(item.getType().name().contains("WALL_BANNER")) {
-            return new ItemStack(Material.valueOf(material.replace("WALL_BANNER", "BANNER")));
+        if(material.name().contains("WALL_SIGN")) {
+            return Material.valueOf(name.replace("WALL_SIGN", "SIGN"));
         }
-        return item;
+        if(material.name().contains("WALL_HANGING_SIGN")) {
+            return Material.valueOf(name.replace("WALL_HANGING_SIGN", "HANGING_SIGN"));
+        }
+        return material;
     }
     /*1.13 removed        case BANNER:
             case STANDING_BANNER:
@@ -550,41 +544,49 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
     public static synchronized int downloadConfig(String rpName, InputStream in) throws IOException {
         return ZipUtil.extract(RpManager.getRpUrl(rpName,null), in, configLocator, new File(configFolder,rpName));
     }
-    
-    private static ItemStack loadItemFromConfig(ConfigurationSection config, String name, String rp) {
+
+    public static Material loadItemMaterial(ConfigurationSection config) {
         String materialName = config.getString("itemMaterial","");
         if(materialName.startsWith("LEGACY")) {
             materialName = ConversionUtil_1_13.convertItemName(materialName.substring(7));
             config.set("itemMaterial", materialName);
         }
-        Material itemMat = Material.matchMaterial(materialName);
-        short dam = (short) config.getInt("damage",0);
+        return Material.matchMaterial(materialName);
+    }
+
+    public static ItemMeta loadItemMeta(ItemMeta im, ConfigurationSection config) {
+        if(im instanceof Damageable) {
+            short dam = (short) config.getInt("damage",0);
+            ((Damageable)im).setDamage(dam);
+        } else {
+            config.set("damage",null);
+        }
+        if(config.isInt("cmd")) {
+            im.setCustomModelData(config.getInt("cmd"));
+        }
+        if(config.isInt("color")) {
+            if(im instanceof LeatherArmorMeta armorMeta) {
+                armorMeta.setColor(Color.fromRGB(config.getInt("color")));
+            } else if(im instanceof PotionMeta potionMeta) {
+                potionMeta.setColor(Color.fromRGB(config.getInt("color")));
+            } else if(im instanceof FireworkEffectMeta fireworkMeta) {
+                fireworkMeta.setEffect(FireworkEffect.builder()
+                        .withColor(Color.fromRGB(config.getInt("color"))).build());
+            }
+        }
+        return im;
+    }
+
+    private static ItemStack loadItemFromConfig(ConfigurationSection config, String name, String rp) {
+        Material itemMat = loadItemMaterial(config);
         String displayName = (String) config.get("display");
         if(displayName==null) {
             displayName = name;
         }
         if(itemMat!=null) {
             ItemStack item = new ItemStack(itemMat,1);
-            ItemMeta im = item.getItemMeta();
+            ItemMeta im = loadItemMeta(item.getItemMeta(),config);
             im.setDisplayName(displayName);
-            if(im instanceof Damageable) {
-                ((Damageable)im).setDamage(dam);
-            } else {
-                config.set("damage",null);
-            }
-            if(config.isInt("cmd")) {
-                im.setCustomModelData(config.getInt("cmd"));
-            }
-            if(config.isInt("color")) {
-                if(im instanceof LeatherArmorMeta armorMeta) {
-                    armorMeta.setColor(Color.fromRGB(config.getInt("color")));
-                } else if(im instanceof PotionMeta potionMeta) {
-                    potionMeta.setColor(Color.fromRGB(config.getInt("color")));
-                } else if(im instanceof FireworkEffectMeta fireworkMeta) {
-                    fireworkMeta.setEffect(FireworkEffect.builder()
-                            .withColor(Color.fromRGB(config.getInt("color"))).build());
-                }
-            }
             im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp,name)}));
             im.setUnbreakable(true);
             im.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);

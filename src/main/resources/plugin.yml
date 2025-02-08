@@ -118,6 +118,8 @@ permissions:
             architect.armorStandEditor.delete: true
             architect.bannerEditor.delete: true
             architect.inventory.reload: true
+            architect.inventory.upload: true
+            architect.inventory.download: true
             architect.inventory.other: true
             architect.inventory.edit: true
             architect.get.other: true
@@ -211,8 +213,14 @@ permissions:
         description: Allows to delete custom build inventories created by other players
         default: op
     architect.inventory.reload:
-        description: Allows to reload Architect's special build inventories from config files
-        default: op
+      description: Allows to reload Architect's special build inventories from config files
+      default: op
+    architect.inventory.upload:
+      description: Allows to upload Architect's special build inventories config files to GitHub
+      default: op
+    architect.inventory.download:
+      description: Allows to download Architect's special build inventories config files from GitHub
+      default: op
     architect.chunkupdate:
         description: Allows to use comand /chunkupdate
         default: op

@@ -1,5 +1,6 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +22,7 @@ public class RpPluginMessageListener implements PluginMessageListener {
         try (var dataStream = new DataInputStream(new ByteArrayInputStream(bytes))) {
             int stringLength = readVarInt(dataStream);
             String jsonString = new String(dataStream.readNBytes(stringLength));
-            Logger.getGlobal().info("data = " + jsonString);
+            ArchitectPlugin.getPluginInstance().getDevUtil().log(2,"data = " + jsonString);
         } catch (IOException e) {
             Logger.getGlobal().warning("Received invalid MCME Modpack marker data from player " + player.getName() + " (" + player.getUniqueId() + "): " + Arrays.toString(bytes));
         }

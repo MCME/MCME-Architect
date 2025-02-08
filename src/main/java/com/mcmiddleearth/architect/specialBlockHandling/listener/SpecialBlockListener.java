@@ -55,7 +55,7 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.material.MaterialData;
+//import org.bukkit.material.MaterialData;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.logging.Logger;
@@ -372,7 +372,7 @@ public class SpecialBlockListener extends WatchedListener{
      * handles placing of six sided logs.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.HIGH)
+    /*@EventHandler(priority = EventPriority.HIGH)
     private void logPlace(BlockPlaceEvent event) {
         Player p = event.getPlayer();
 
@@ -406,14 +406,14 @@ public class SpecialBlockListener extends WatchedListener{
                 bs.update();
             }
         }
-    }
+    }*/
     
     /**
      * If module SIX_SIDED_LOG is enabled in world config file
      * handles placing of huge mushroom blocks.
      * @param event 
      */
-    @EventHandler(priority = EventPriority.HIGH)
+    /*@EventHandler(priority = EventPriority.HIGH)
     private void giantMushroomPlace(BlockPlaceEvent event) {
         Player p = event.getPlayer();
 
@@ -727,7 +727,7 @@ public class SpecialBlockListener extends WatchedListener{
         }
     }
     
-    @EventHandler(priority = EventPriority.HIGH)
+    /*@EventHandler(priority = EventPriority.HIGH)
     private void doubleSlabPlace(BlockPlaceEvent event) {
         Player p = event.getPlayer();
         if (p.getItemInHand().getType().equals(Material.STONE_SLAB)
@@ -772,7 +772,7 @@ public class SpecialBlockListener extends WatchedListener{
                 bs.update(true,false);
             }
         }
-    }
+    }*/
     
     @EventHandler(priority = EventPriority.HIGH)
     private void bedPlace(PlayerInteractEvent event) {

@@ -44,6 +44,8 @@ import com.mcmiddleearth.architect.viewDistance.ViewDistanceManager;
 import com.mcmiddleearth.architect.voxelStencilEditor.SlCommand;
 import com.mcmiddleearth.architect.voxelStencilEditor.VvCommand;
 import com.mcmiddleearth.architect.weSchematicsViewer.SchListCommand;
+import com.mcmiddleearth.pluginutil.developer.Debugable;
+import com.mcmiddleearth.pluginutil.developer.DevUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.PluginManager;
@@ -57,17 +59,20 @@ import java.util.List;
  *
  * @author Eriol_Eandur
  */
-public class ArchitectPlugin extends JavaPlugin {
+public class ArchitectPlugin extends JavaPlugin implements Debugable {
     
     private static ArchitectPlugin pluginInstance;
     
     private final static List<String> commandList = new ArrayList<>();
 
     private BukkitTask rpSwitchTask;
+
+    private DevUtil devUtil;
     
     @Override
     public void onEnable() {
-        
+        devUtil = new DevUtil();
+
         getConfig().options().copyDefaults(true);
         saveDefaultConfig();
         pluginInstance = this;
@@ -79,6 +84,7 @@ public class ArchitectPlugin extends JavaPlugin {
         WorldConfig serverConfig = PluginData.getOrCreateWorldConfig("server");
 
         PluginManager pluginManager = getServer().getPluginManager();
+        pluginManager.registerEvents(new AntiKickListener(), this);
         pluginManager.registerEvents(new ArmorStandListener(), this);
         pluginManager.registerEvents(new BannerListener(), this);
         pluginManager.registerEvents(new PaintingListener(), this);
@@ -195,5 +201,10 @@ public class ArchitectPlugin extends JavaPlugin {
     @Override
     public ChunkGenerator getDefaultWorldGenerator(String worldName, String id) {
         return WorldGenerationManager.getGenerator(worldName, id);
+    }
+
+    @Override
+    public DevUtil getDevUtil() {
+        return devUtil;
     }
 }

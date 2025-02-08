@@ -217,6 +217,8 @@ public class RpManager {
             if(data.getProtocolVersion()==0) {
                 data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
             }
+            Logger.getGlobal().info("Player: "+player.getName()+" Detected protocol: "+data.getProtocolVersion()
+                    +" ("+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getName()+")");
         } else {
             data = new RpPlayerData();
         }
@@ -295,7 +297,7 @@ public class RpManager {
                     if(protocolVersion==null) {
                         return null;
                     }
-//Logger.getGlobal().info("Protocol: "+protocolVersion);
+                    ArchitectPlugin.getPluginInstance().getDevUtil().log(2,"Protocol: "+protocolVersion);
                     if(protocolResult < protocolVersion && protocolVersion <= data.getProtocolVersion()) {
                         versionResult = version;
                         protocolResult = protocolVersion;

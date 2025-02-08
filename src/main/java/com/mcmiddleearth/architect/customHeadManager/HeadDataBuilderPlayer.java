@@ -24,7 +24,6 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.PluginData;
-import com.mojang.util.UUIDTypeAdapter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -66,10 +65,11 @@ public class HeadDataBuilderPlayer {
                 if(received) {
                     try {
                         if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                            String json = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
-                            JsonObject jsonObject = (JsonObject) new JsonParser().parse(json);
+                            JsonObject jsonObject = (JsonObject) JsonParser.parseReader(new BufferedReader(new InputStreamReader(connection.getInputStream())));
                             String uuidString = jsonObject.get("id").getAsString();
-                            UUID ownerId = UUIDTypeAdapter.fromString(uuidString);
+                            UUID ownerId = UUID.fromString(uuidString
+                                                        .replaceFirst("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
+                                                        "$1-$2-$3-$4-$5"));
                             fetchCustomHeadData(submitter, ownerId, name);
                         } else {
                             PluginData.getMessageUtil().sendErrorMessage(submitter, "Player name not found.");
@@ -110,8 +110,7 @@ public class HeadDataBuilderPlayer {
                 if(received) {
                     try {
                         if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                            String json = new BufferedReader(new InputStreamReader(connection.getInputStream())).readLine();
-                            JsonObject jsonObject = (JsonObject) new JsonParser().parse(json);
+                            JsonObject jsonObject = (JsonObject) JsonParser.parseReader(new BufferedReader(new InputStreamReader(connection.getInputStream())));
                             JsonArray jProperties = jsonObject.getAsJsonArray("properties");
                             String textures="";
                             for(JsonElement jProperty : jProperties) {
@@ -152,7 +151,7 @@ public class HeadDataBuilderPlayer {
             @Override
             public void run() {
                 try {
-                    URL url = new URL(String.format(mojangSkinUrl, UUIDTypeAdapter.fromUUID(ownerId)));
+                    URL url = new URL(String.format(mojangSkinUrl, ownerId.toString().replace("-", "")));
                     connection = (HttpURLConnection) url.openConnection();
                     connection.setReadTimeout(5000);
                     connection.connect();

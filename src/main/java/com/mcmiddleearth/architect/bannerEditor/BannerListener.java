@@ -11,8 +11,11 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import java.util.List;
+import java.util.logging.Logger;
+
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
+import org.bukkit.Registry;
 import org.bukkit.block.Banner;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.banner.Pattern;
@@ -110,7 +113,7 @@ public class BannerListener implements Listener {
                         }
                         break;
                     case ADD:
-                        banner.addPattern(new Pattern(DyeColor.WHITE,PatternType.CIRCLE_MIDDLE));
+                        banner.addPattern(new Pattern(DyeColor.WHITE,PatternType.CIRCLE));
                         banner.update(true, false);
                         break;
                     case REMOVE:
@@ -137,9 +140,10 @@ public class BannerListener implements Listener {
                         sendGotShield(player, amoun);
                         break;
                     case GET:
-                        ItemStack item = new ItemStack(Material.WHITE_BANNER);
+                        ItemStack item = new ItemStack(Material.valueOf(banner.getBaseColor().name().toUpperCase()
+                                                                        +"_BANNER"));
                         BannerMeta meta = (BannerMeta) item.getItemMeta();
-                        meta.setBaseColor(banner.getBaseColor());
+                        //meta.setBaseColor(banner.getBaseColor());
                         for(Pattern pattern: banner.getPatterns()) {
                             meta.addPattern(pattern);
                         }
@@ -155,9 +159,15 @@ public class BannerListener implements Listener {
     }
 
     private PatternType cycle(PatternType current, Action direction) {
-        PatternType[] types = PatternType.values();
-        int ordinal = current.ordinal();
-        return (PatternType) cycle(types, ordinal, direction);
+        PatternType[] types = Registry.BANNER_PATTERN.stream().toArray(PatternType[]::new);// toArray(new PatternType[0]);PatternType.values();
+        for(int i = 0; i< types.length; i++) {
+            if (types[i].equals(current)) {
+                return (PatternType) cycle(types, i, direction);
+            }
+        }
+        return current;
+        //int ordinal = Registry.BLOCK.iterator()current.ordinal();
+        //return (PatternType) cycle(types, ordinal, direction);
     }
     
     private DyeColor cycle(DyeColor current, Action direction) {
