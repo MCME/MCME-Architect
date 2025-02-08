@@ -161,22 +161,12 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
                     int[] indices = editData[i].getIndicesFor(data);
                     if (indices.length > 0) {
 //Logger.getGlobal().info("found");
-                        int editIndex;
-                        switch (editFace) {
-                            case NORTH:
-                            default:
-                                editIndex = 0;
-                                break;
-                            case EAST:
-                                editIndex = 1;
-                                break;
-                            case SOUTH:
-                                editIndex = 2;
-                                break;
-                            case WEST:
-                                editIndex = 3;
-                                break;
-                        }
+                        int editIndex = switch (editFace) {
+                            case EAST -> 1;
+                            case SOUTH -> 2;
+                            case WEST -> 3;
+                            default -> 0;
+                        };
                         if (indices[editIndex] == 0) {
                             indices[editIndex] = 1;
                         } else {
@@ -260,16 +250,12 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
     }
 
     private BlockFace rotateFace(BlockFace face) {
-        switch(face) {
-            case NORTH:
-                return BlockFace.EAST;
-            case EAST:
-                return BlockFace.SOUTH;
-            case SOUTH:
-                return BlockFace.WEST;
-            default:
-                return BlockFace.NORTH;
-        }
+        return switch (face) {
+            case NORTH -> BlockFace.EAST;
+            case EAST -> BlockFace.SOUTH;
+            case SOUTH -> BlockFace.WEST;
+            default -> BlockFace.NORTH;
+        };
     }
 
     @Override
