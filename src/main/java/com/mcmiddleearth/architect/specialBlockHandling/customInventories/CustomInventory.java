@@ -158,7 +158,6 @@ Logger.getGlobal().info("Start: "+startCategory);
     
     @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
     void onInventoryClick(final InventoryClickEvent event) {
-//Logger.getGlobal().info(event.getClick().name());
         if (openInventories.containsKey(event.getInventory())) { //.getTitle.equals(name)) {
             if(event.getSlotType().equals(InventoryType.SlotType.OUTSIDE)
                     || event.getRawSlot() >= event.getInventory().getSize()
@@ -210,14 +209,11 @@ Logger.getGlobal().info("Start: "+startCategory);
                         event.getWhoClicked().closeInventory(),1);
                 }
             }
-//Logger.getGlobal().info("onInventoryClick: "+event.isLeftClick() +" "+event.isShiftClick());
             if(event.getCurrentItem() != null
                 && (event.isRightClick()
                     || (event.isLeftClick() && event.isShiftClick()))
                     || (state.usesSubcategories() && hasCollection(event.getCurrentItem()))) {
-//Logger.getGlobal().info("Create collection view.");
                 if(hasCollection(event.getCurrentItem())) {
-//Logger.getGlobal().info("Found collection.");
                     state = new CustomInventoryCollectionState(state,event.getCurrentItem());
                     openInventories.put(state.inventory, state);
                     state.update();

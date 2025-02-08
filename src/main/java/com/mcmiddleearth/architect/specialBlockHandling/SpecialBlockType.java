@@ -65,6 +65,8 @@ public enum SpecialBlockType {
     MULTI_FACE,
     DOOR_VANILLA,
     DOOR_THREE_BLOCKS,
-    DOOR_FOUR_BLOCKS //("threeAxis");
+    DOOR_FOUR_BLOCKS,
+    ITEM_FRAME,
+    NONE//("threeAxis");
     
 }

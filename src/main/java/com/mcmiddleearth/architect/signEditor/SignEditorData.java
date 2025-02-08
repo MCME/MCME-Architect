@@ -48,18 +48,18 @@ public class SignEditorData {
         }
         Sign sign = (Sign) signBlock.getState();
         FancyMessage message = new FancyMessage(MessageType.INFO,PluginData.getMessageUtil());
-        message.addSimple("Click at a line to edit it.\n");
+        message.addSimple("Click at a line to edit it.\\n");
         String[] lines = sign.getLines();
         for(int i = 0; i<4;i++) {
             String line = "<empty Line>";
             String lineEdit="";
             if(i<lines.length) {
                 line = lines[i];
-                lineEdit = line.replace('§','#');
+                lineEdit = line.replace('§','&');
             }
-            message.addFancy("["+(i+1)+"] "+line+"\n",
+            message.addFancy("["+(i+1)+"] "+line+"\\n",
                              "/sign "+(i+1)+" "+lineEdit, 
-                             "Click to edit. Don't change the leading '/sign <#line> '.");
+                             "Click to edit. Don't change the leading '/sign <line index> '.");
         }
         message.send(editor);
     }
