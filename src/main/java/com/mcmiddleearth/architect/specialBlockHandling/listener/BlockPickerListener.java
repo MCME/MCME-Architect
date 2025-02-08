@@ -40,10 +40,10 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  *
@@ -62,7 +62,7 @@ public class BlockPickerListener implements Listener {
         FluidCollisionMode mode = player.isSneaking() ? FluidCollisionMode.ALWAYS : FluidCollisionMode.NEVER;
         RayTraceResult result = player.getWorld().rayTrace(player.getEyeLocation(),
                                 player.getLocation().getDirection(),
-                                4, mode,false,0.01,
+                                6, mode,false,0.01,
                                 entity -> entity instanceof Hanging,
                                 block -> !block.isEmpty());
         if(result != null && result.getHitBlock() != null) {
@@ -132,11 +132,7 @@ public class BlockPickerListener implements Listener {
             item = ItemStack.of(Material.ITEM_FRAME);
         }
         if(item != null) {
-            if (player.getInventory().getItemInMainHand().isEmpty()) {
-                player.getInventory().setItemInMainHand(item);
-            } else {
-                player.getInventory().addItem(item);
-            }
+            placeItem(player, item);
             return true;
         }
         return false;
@@ -151,12 +147,7 @@ public class BlockPickerListener implements Listener {
             if (item != null) {
                 if (!player.isSneaking()) {
                     item = item.clone();
-                    item.setAmount(2);
-                    if(player.getInventory().getItemInMainHand().isEmpty()) {
-                        player.getInventory().setItemInMainHand(item);
-                    } else {
-                        player.getInventory().addItem(item);
-                    }
+                    placeItem(player,item);
                 } else if (item.hasItemMeta()) {
                     if (!SpecialBlockInventoryData.openInventory(player, item)) {
                         InventoryListener.sendNoInventoryError(player, rpName);
@@ -166,6 +157,34 @@ public class BlockPickerListener implements Listener {
             }
         }
         return false;
+    }
+
+    private void placeItem(Player player, ItemStack item) {
+        ItemStack twoItems = item.clone();
+        twoItems.setAmount(2);
+        PlayerInventory inventory = player.getInventory();
+        if(inventory.first(item) > -1 && inventory.first(item) < 10) {
+            //hotbar slot with just one item -> increate to two items and make active
+            inventory.setHeldItemSlot(inventory.first(item));
+            inventory.setItem(inventory.first(item),twoItems);
+        } else if(inventory.first(twoItems) > -1 && inventory.first(twoItems) < 10) {
+            //hotbar slot with two items -> active slot
+            inventory.setHeldItemSlot(inventory.first(twoItems));
+        } else if(inventory.getItemInMainHand().isEmpty()) {
+            //mainhand empty -> put there
+            inventory.setItemInMainHand(twoItems);
+        } else {
+            //try to put in empty hotbar slot
+            int firstEmpty = inventory.firstEmpty();
+            if(firstEmpty > -1 && firstEmpty < 10) {
+                inventory.setItem(firstEmpty, twoItems);
+                inventory.setHeldItemSlot(firstEmpty);
+                return;
+            }
+
+            //replace item in main hand
+            inventory.setItemInMainHand(twoItems);
+        }
     }
 
     @EventHandler
