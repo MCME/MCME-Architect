@@ -155,7 +155,7 @@ public class SpecialBlock {
                         ChunkUpdateUtil.sendUpdates(blockPlace, player);
                         //new ClientUpdateUtil().sendBlockPlaceUpdates(blockPlace,player);
                     }
-                }.runTaskLater(ArchitectPlugin.getPluginInstance(), 5);
+                }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
     }
