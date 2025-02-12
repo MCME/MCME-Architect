@@ -204,7 +204,7 @@ public class SpecialBlock {
             return BlockFace.NORTH;
         }
     }
-    
+
     protected static BlockFace getBlockFaceFine(float yaw) {
         while(yaw>180) {
             yaw -=360;
@@ -230,7 +230,51 @@ public class SpecialBlock {
             return BlockFace.NORTH_EAST;
         }
     }
-    
+
+    protected static BlockFace getBlockFaceSuperFine(float yaw) {
+        while(yaw>180) {
+            yaw -=360;
+        }
+        while(yaw<-180) {
+            yaw +=360;
+        }
+        if ((yaw >= 168.75)) {
+            return BlockFace.NORTH;
+        } else if (yaw >= 146.25) {
+            return BlockFace.NORTH_NORTH_WEST;
+        } else if (yaw >= 123.75) {
+            return BlockFace.NORTH_WEST;
+        } else if (yaw >= 101.25) {
+            return BlockFace.WEST_NORTH_WEST;
+        } else if (yaw >= 78.75) {
+            return BlockFace.WEST;
+        } else if (yaw >= 56.25) {
+            return BlockFace.WEST_SOUTH_WEST;
+        } else if (yaw >= 33.75) {
+            return BlockFace.SOUTH_WEST;
+        } else if (yaw >= 11.25) {
+            return BlockFace.SOUTH_SOUTH_WEST;
+        } else if (yaw >= -11.25) {
+            return BlockFace.SOUTH;
+        } else if (yaw >= -33.75) {
+            return BlockFace.SOUTH_SOUTH_EAST;
+        } else if (yaw >= -56.25) {
+            return BlockFace.SOUTH_EAST;
+        } else if (yaw >= -78.75) {
+            return BlockFace.EAST_SOUTH_EAST;
+        } else if (yaw >= -101.25) {
+            return BlockFace.EAST;
+        } else if (yaw >= -123.75) {
+            return BlockFace.EAST_NORTH_EAST;
+        } else if (yaw >= -146.25) {
+            return BlockFace.NORTH_EAST;
+        } else if (yaw >= -168.75) {
+            return BlockFace.NORTH_NORTH_EAST;
+        } else {
+            return BlockFace.NORTH;
+        }
+    }
+
     public boolean matches(Block block) {
         return block.getBlockData().matches(blockData);
     }

@@ -59,6 +59,7 @@ public class SpecialBlockItemFrame extends SpecialBlock {
                         itemFrame.setItem(item.clone());
                         itemFrame.setRotation(rotation);
                         itemFrame.setVisible(false);
+                        itemFrame.setFixed(true);
                         DevUtil.log("Special block place item frame x2");
                     }
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 2);

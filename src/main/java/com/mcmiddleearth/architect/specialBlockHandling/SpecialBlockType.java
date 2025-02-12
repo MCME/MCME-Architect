@@ -67,6 +67,7 @@ public enum SpecialBlockType {
     DOOR_THREE_BLOCKS,
     DOOR_FOUR_BLOCKS,
     ITEM_FRAME,
+    SIGN,
     NONE//("threeAxis");
     
 }
