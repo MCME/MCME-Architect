@@ -1,6 +1,8 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -12,8 +14,17 @@ import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.Waterlogged;
 import org.bukkit.block.data.type.HangingSign;
 import org.bukkit.block.data.type.Sign;
+import org.bukkit.block.sign.Side;
+import org.bukkit.block.sign.SignSide;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.util.List;
 
 public class SpecialBlockSign extends SpecialBlock {
 
@@ -86,4 +97,67 @@ public class SpecialBlockSign extends SpecialBlock {
             return null;
         }
     }
+
+    private void placeblock() {
+
+    }
+    public void registerSign(Block blockPlace) {
+
+    }
+
+    public static class SignListener implements Listener {
+
+        private Block blockPlace, clicked;
+        private BlockFace blockFace;
+        private Location interactionPoint;
+        private Player player;
+        private BukkitTask removalTask;
+        private SignListener instance;
+        private SpecialBlock specialBlock;
+
+        public SignListener(SpecialBlock specialBlock, final Block blockPlace,
+                            final BlockFace blockFace, final Block clicked,
+                            final Location interactionPoint, final Player player) {
+            this.blockPlace = blockPlace;
+            this.blockFace = blockFace;
+            this.clicked = clicked;
+            this.interactionPoint = interactionPoint;
+            this.player = player;
+            this.specialBlock = specialBlock;
+            instance = this;
+            Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), new Runnable() {
+                @Override
+                public void run() {
+                    HandlerList.unregisterAll(instance);
+                }
+            }, 6000); // 20*60*5 = 6000 ticks = 5 minutes
+        }
+
+        @EventHandler
+        public void onSignChange(SignChangeEvent event) {
+            if(event.getBlock().equals(blockPlace) && player.equals(event.getPlayer())) {
+                specialBlock.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
+                Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), new Runnable() {
+                    @Override
+                    public void run() {
+                        List<Component> lines = event.lines();
+                        org.bukkit.block.Sign sign = (org.bukkit.block.Sign) blockPlace.getState();
+                        setLines(sign.getSide(Side.FRONT), lines);
+                        setLines(sign.getSide(Side.BACK), lines);
+                        sign.update(true, false);
+                    }
+                }, 3);
+                HandlerList.unregisterAll(this);
+            }
+        }
+
+        private void setLines(SignSide side, List<Component> lines) {
+            for(int i = 0; i < 4; i++) {
+                side.line(i, lines.get(i));
+            }
+        }
+
+    }
 }
+
+

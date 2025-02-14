@@ -26,6 +26,7 @@ import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
+import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockSign;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.util.DevUtil;
@@ -121,7 +122,8 @@ public class SpecialBlockListener extends WatchedListener{
         final Player player = event.getPlayer();
         final ItemStack handItem = player.getInventory().getItemInMainHand();
         SpecialBlock data = SpecialBlockInventoryData.getSpecialBlockDataFromItem(handItem);
-        if(data == null || data.getType().equals(SpecialBlockType.VANILLA)
+        if(data == null || data.getType().equals(SpecialBlockType.SIGN)
+                        || data.getType().equals(SpecialBlockType.VANILLA)
                         || data.getType().equals(SpecialBlockType.DOOR_VANILLA)
                         || (!data.getType().equals(SpecialBlockType.BLOCK_ON_WATER)
                                 && !event.getAction().equals(Action.RIGHT_CLICK_BLOCK))
@@ -137,6 +139,9 @@ public class SpecialBlockListener extends WatchedListener{
             if(data==null) {
                 PluginData.getMessageUtil().sendErrorMessage(player, "Special block data not found, item is probably outdated.");
                 return;
+            } else if(data instanceof SpecialBlockSign specialSign) {
+                Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), event.getInteractionPoint(), player);
+                specialSign.registerSign(blockPlace);
             }
             return;
         }

@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
+import org.bukkit.block.sign.SignSide;
 import org.bukkit.entity.Player;
 
 /**
@@ -31,10 +33,10 @@ import org.bukkit.entity.Player;
  */
 public class SignEditorData {
     
-    private final static Map<Player,Block> signEditors = new HashMap<>();
+    private final static Map<Player,SignData> signEditors = new HashMap<>();
     
-    public static void putEditor(Player editor, Block signBlock) {
-        signEditors.put(editor, signBlock);
+    public static void putEditor(Player editor, Block signBlock, Side side) {
+        signEditors.put(editor, new SignData(signBlock, side));
     }
     
     public static boolean isEditor(Player editor) {
@@ -42,14 +44,15 @@ public class SignEditorData {
     }
     
     public static void sendSignMessage(Player editor) {
-        Block signBlock = signEditors.get(editor);
-        if(signBlock==null || !(signBlock.getState() instanceof Sign)) {
+        SignData signData = signEditors.get(editor);
+        Block signBlock = signData.getBlock();
+        if(signBlock==null || !(signBlock.getState() instanceof Sign sign)) {
             return;
         }
-        Sign sign = (Sign) signBlock.getState();
         FancyMessage message = new FancyMessage(MessageType.INFO,PluginData.getMessageUtil());
+        message.addSimple("You are editing sign side: "+signData.getSide()+"\\n");
         message.addSimple("Click at a line to edit it.\\n");
-        String[] lines = sign.getLines();
+        String[] lines = sign.getSide(signData.getSide()).getLines();
         for(int i = 0; i<4;i++) {
             String line = "<empty Line>";
             String lineEdit="";
@@ -65,15 +68,15 @@ public class SignEditorData {
     }
     
     public static boolean editSign(Player player, int line, String newText) {
-        Block signBlock = signEditors.get(player);
+        SignData signData = signEditors.get(player);
+        Block signBlock = signData.getBlock();
         if(line<1||line>4) {
             return false;
         }
-        if(signBlock==null || !(signBlock.getState() instanceof Sign)) {
+        if(signBlock==null || !(signBlock.getState() instanceof Sign sign)) {
             signEditors.remove(player);
             return false;
         }
-        Sign sign = (Sign) signBlock.getState();
         char[] chars = newText.toCharArray();
         CharPage charPage = CharPage.LATIN;
         newText = "";
@@ -105,7 +108,7 @@ public class SignEditorData {
                 newText = newText+((char)(chars[i]+charPage.shift));
             }
         }
-        sign.setLine(line-1, newText);//.replace('#','§'));
+        sign.getSide(signData.getSide()).setLine(line-1, newText);//.replace('#','§'));
         sign.update(true, false);
         return true;
     }
