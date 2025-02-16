@@ -31,7 +31,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.SignChangeEvent;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
@@ -94,7 +93,11 @@ public class SpecialBlockSign extends SpecialBlock {
             case BlockFace.SOUTH:
             case BlockFace.EAST:
                 Directional sign = (Directional) dataWall;
-                sign.setFacing(blockFace);
+                if(hanging) {
+                    sign.setFacing(rotateBlockFace90(blockFace));
+                } else {
+                    sign.setFacing(blockFace);
+                }
                 placeData = (Waterlogged) sign;
                 break;
         }
@@ -180,7 +183,7 @@ public class SpecialBlockSign extends SpecialBlock {
                         String[] lines = packet.getStringArrays().read(0);
                         org.bukkit.block.Sign sign = (org.bukkit.block.Sign) blockPlace.getState();
                         for (int i = 0; i < lines.length; i++) {
-                            sign.getSide(side).setLine(i, SignEditorData.processLineText(lines[i]));
+                            sign.getSide(side).line(i, SignEditorData.parseLine(lines[i]));
                         }
                         sign.update(true, false);
                         if(side == Side.FRONT) {
@@ -225,7 +228,7 @@ public class SpecialBlockSign extends SpecialBlock {
 
         @EventHandler
         public void onSignChange(SignChangeEvent event) {
-Logger.getGlobal().info("On Sign change!!");
+//Logger.getGlobal().info("On Sign change!!");
             if(event.getBlock().equals(blockPlace) && player.equals(event.getPlayer())) {
                 //specialBlock.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
                 Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), new Runnable() {

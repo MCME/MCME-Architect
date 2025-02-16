@@ -16,11 +16,13 @@
  */
 package com.mcmiddleearth.architect.signEditor;
 
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.additionalCommands.*;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.NumericUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -65,12 +67,17 @@ public class SignCommand extends AbstractArchitectCommand {
         }
 //Logger.getGlobal().info("SignEditor line: "+line);
         line = line.replace("\\_"," ");
-        if(line.length()>15) {
+        if(SignEditorData.formattedLength(line, '&',"")>16) {
             sendLineTooLong(sender);
         }
 //Logger.getGlobal().info("SignEditor line: "+line);
         SignEditorData.editSign(player, lineNumber,line);
-        SignEditorData.sendSignMessage(player);
+        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), new Runnable() {
+            @Override
+            public void run() {
+                SignEditorData.sendSignMessage(player);
+            }
+        },1);
         return true;
     }
 

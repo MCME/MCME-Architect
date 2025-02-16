@@ -509,62 +509,38 @@ public class SpecialBlockListener extends WatchedListener{
                 }
                 Block b = event.getClickedBlock().getRelative(event.getBlockFace());
                 BlockState bs = b.getState();
-                switch(p.getItemInHand().getType()) {
-                    case BROWN_MUSHROOM:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.BROWN_MUSHROOM, true, (byte)0);
-                        break;
-                    case RED_MUSHROOM:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.RED_MUSHROOM, true, (byte)0);
-                        break;
-                    case WHEAT:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.WHEAT, true, (byte)7);
-                        break;
-                    case MELON_SEEDS:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.MELON_STEM, true, (byte)7);
-                        break;
-                    case PUMPKIN_SEEDS:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.PUMPKIN_STEM, true, (byte)7);
-                       break;
-                    case CARROT:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(),  
-                                            Material.CARROT, true, (byte)7);
-                       break;
-                    case POTATO:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.POTATO, true, (byte)7);
-                        break;
-                    case CACTUS:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.CACTUS, false,(byte)0);
-                        break;
-                    case NETHER_WART:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.NETHER_WART, true,(byte)3);
-                        break;
-                    case LILY_PAD:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.LILY_PAD, false,(byte)0);
-                        break;
+                bs = switch (p.getItemInHand().getType()) {
+                    case BROWN_MUSHROOM -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.BROWN_MUSHROOM, true, (byte) 0);
+                    case RED_MUSHROOM -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.RED_MUSHROOM, true, (byte) 0);
+                    case WHEAT -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.WHEAT, true, (byte) 7);
+                    case MELON_SEEDS -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.MELON_STEM, true, (byte) 7);
+                    case PUMPKIN_SEEDS -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.PUMPKIN_STEM, true, (byte) 7);
+                    case CARROT -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.CARROT, true, (byte) 7);
+                    case POTATO -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.POTATO, true, (byte) 7);
+                    case CACTUS -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.CACTUS, false, (byte) 0);
+                    case NETHER_WART -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.NETHER_WART, true, (byte) 3);
+                    case LILY_PAD -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.LILY_PAD, false, (byte) 0);
                     /*case ROSE_RED:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
+                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(),
                                             Material.ROSE_RED, false,p.getItemInHand().getData().getData());
                         break;
                         */
-                    case ROSE_BUSH:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.ROSE_BUSH, false,(byte) 0);
-                        break;
-                    case DEAD_BUSH:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.DEAD_BUSH, false,(byte) 0);
-                        break;
-
-                }
+                    case ROSE_BUSH -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.ROSE_BUSH, false, (byte) 0);
+                    case DEAD_BUSH -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.DEAD_BUSH, false, (byte) 0);
+                    default -> bs;
+                };
                 bs.update(true,false);
             }
         }

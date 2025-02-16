@@ -22,6 +22,7 @@ import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -63,6 +64,19 @@ public class SignEditorData {
             String lineEdit="";
             if(i<lines.length) {
                 line = lines[i];
+                while(SignEditorData.formattedLength(line,'§',"§x")>16) {
+                    line = line.substring(0,line.length()-1);
+                }
+                if(line.startsWith("§0")) {
+                    line = line.substring(2);
+                }
+                int hexCodeIndex = line.indexOf("§x");
+                while(hexCodeIndex > -1 && hexCodeIndex < line.length() - 14) {
+                    String hexString = line.substring(hexCodeIndex,hexCodeIndex+14);
+                    hexString = hexString.replace("§","").replace("x","#");
+                    line = line.substring(0,hexCodeIndex) + hexString + line.substring(hexCodeIndex+14);
+                    hexCodeIndex = line.indexOf("§x");
+                }
                 lineEdit = line.replace('§','&');
             }
             message.addFancy("["+(i+1)+"] "+line+"\\n",
@@ -83,7 +97,8 @@ public class SignEditorData {
             return false;
         }
         newText = processLineText(newText);
-        sign.getSide(signData.getSide()).setLine(line-1, newText);//.replace('#','§'));
+        Component component = parseLine(newText);
+        sign.getSide(signData.getSide()).line(line-1, component);//.replace('#','§'));
         sign.update(true, false);
         return true;
     }
@@ -145,12 +160,14 @@ public class SignEditorData {
                         i++;
                         break;
                     default:
+//Logger.getGlobal().info("Append format code: "+text.toString());
                         result = result.append(format.format(Component.text(text.toString())));
                         text = new StringBuilder();
                         format.setFormat(chars[i+1]);
                         i++;
                 }
-            } else if(chars[i] == '#' && i < chars.length-7 && Format.isHexString(line.substring(i,i+7))) {
+            } else if(chars[i] == '#' && i < chars.length-6 && Format.isHexString(line.substring(i,i+7))) {
+//Logger.getGlobal().info("Append css: "+text.toString());
                 result = result.append(format.format(Component.text(text.toString())));
                 text = new StringBuilder();
                 format.setHexColor(line.substring(i, i+7));
@@ -159,13 +176,31 @@ public class SignEditorData {
                 text.append((char)(chars[i]+charPage.shift));
             }
         }
+        result = result.append(format.format(Component.text(text.toString())));
         return result;
+    }
+
+    public static int formattedLength(String line, char formatter, String ignore) {
+        int length = 0;
+        char[] chars = line.replace(ignore,"").toCharArray();
+        for(int i = 0; i < chars.length; i++) {
+            if (chars[i] == formatter && i < chars.length-1 && Format.isFormatting(chars[i+1])) {
+                i++;
+            } else if(chars[i] == '#' && i < chars.length-6 && Format.isHexString(line.substring(i,i+7))) {
+                i+=6;
+            } else {
+                length++;
+            }
+        }
+//Logger.getGlobal().info("Formatted length of: "+line +" is : "+length);
+        return length;
     }
 
     public static class Format {
 
         private static Set<Character> formattingChars = new HashSet<>(
-                Arrays.asList('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','k','l','m','n','o','r'));
+                Arrays.asList('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','k','l','m','n','o','r',
+                              'L','T','A'));
 
         private TextColor color = NamedTextColor.BLACK;
         private boolean bold = false;
@@ -248,15 +283,20 @@ public class SignEditorData {
         }
 
         public static boolean isHexString(String hexString) {
+//Logger.getGlobal().info("IsHexString: "+hexString);
             if(hexString.length() != 7) {
+//Logger.getGlobal().info("Wrong length");
                 return false;
             }
             try {
                 Integer.parseInt(hexString.substring(1), 16);
+//Logger.getGlobal().info("Parse success");
                 return true;
             } catch(NumberFormatException ex) {
+//Logger.getGlobal().info("Parse failure");
                 return false;
             }
         }
     }
+
 }

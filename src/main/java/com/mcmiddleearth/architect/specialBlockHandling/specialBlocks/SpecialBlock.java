@@ -275,6 +275,28 @@ public class SpecialBlock {
         }
     }
 
+    public static BlockFace rotateBlockFace90(BlockFace blockFace) {
+        return switch (blockFace) {
+            case NORTH -> BlockFace.EAST;
+            case EAST -> BlockFace.SOUTH;
+            case SOUTH -> BlockFace.WEST;
+            case WEST -> BlockFace.NORTH;
+            case NORTH_EAST -> BlockFace.SOUTH_EAST;
+            case NORTH_WEST -> BlockFace.NORTH_EAST;
+            case SOUTH_EAST -> BlockFace.SOUTH_WEST;
+            case SOUTH_WEST -> BlockFace.NORTH_WEST;
+            case WEST_NORTH_WEST -> BlockFace.NORTH_NORTH_EAST;
+            case NORTH_NORTH_WEST -> BlockFace.EAST_NORTH_EAST;
+            case NORTH_NORTH_EAST -> BlockFace.EAST_SOUTH_EAST;
+            case EAST_NORTH_EAST -> BlockFace.SOUTH_SOUTH_EAST;
+            case EAST_SOUTH_EAST -> BlockFace.SOUTH_SOUTH_WEST;
+            case SOUTH_SOUTH_EAST -> BlockFace.WEST_SOUTH_WEST;
+            case SOUTH_SOUTH_WEST -> BlockFace.WEST_NORTH_WEST;
+            case WEST_SOUTH_WEST -> BlockFace.NORTH_NORTH_WEST;
+            default -> blockFace;
+        };
+    }
+
     public boolean matches(Block block) {
         return block.getBlockData().matches(blockData);
     }
