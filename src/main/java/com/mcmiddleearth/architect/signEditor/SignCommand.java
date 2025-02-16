@@ -35,11 +35,10 @@ public class SignCommand extends AbstractArchitectCommand {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             PluginData.getMessageUtil().sendPlayerOnlyCommandError(sender);
             return true;
         }
-        Player player = (Player)sender;
         if(!PluginData.hasPermission(player, Permission.SIGN_EDITOR)) {
             PluginData.getMessageUtil().sendNoPermissionError(sender);
             return true;
@@ -64,12 +63,12 @@ public class SignCommand extends AbstractArchitectCommand {
         for(int i=2;i<args.length;i++) {
             line = line+" "+args[i];
         }
-Logger.getGlobal().info("SignEditor line: "+line);
+//Logger.getGlobal().info("SignEditor line: "+line);
         line = line.replace("\\_"," ");
         if(line.length()>15) {
             sendLineTooLong(sender);
         }
-Logger.getGlobal().info("SignEditor line: "+line);
+//Logger.getGlobal().info("SignEditor line: "+line);
         SignEditorData.editSign(player, lineNumber,line);
         SignEditorData.sendSignMessage(player);
         return true;
