@@ -67,7 +67,7 @@ public class SignCommand extends AbstractArchitectCommand {
         }
 //Logger.getGlobal().info("SignEditor line: "+line);
         line = line.replace("\\_"," ");
-        if(SignEditorData.formattedLength(line, '&',"")>16) {
+        if(SignEditorData.formattedLength(line, '&',"")>SignEditorData.getRowLength(player)) {
             sendLineTooLong(sender);
         }
 //Logger.getGlobal().info("SignEditor line: "+line);
@@ -90,7 +90,7 @@ public class SignCommand extends AbstractArchitectCommand {
     }
 
     private void sendLineTooLong(CommandSender sender) {
-        PluginData.getMessageUtil().sendErrorMessage(sender,"You typed in too many characters. Line will be truncated.");
+        PluginData.getMessageUtil().sendErrorMessage(sender,"You typed in many characters. Line might get truncated depending on letter width.");
     }
 
     private void sendWrongLineNumberMessage(Player player) {

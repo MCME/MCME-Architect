@@ -29,6 +29,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
 import org.bukkit.entity.Player;
@@ -64,9 +65,9 @@ public class SignEditorData {
             String lineEdit="";
             if(i<lines.length) {
                 line = lines[i];
-                while(SignEditorData.formattedLength(line,'§',"§x")>16) {
+                /*while(SignEditorData.formattedLength(line,'§',"§x")>getRowLength(editor)) {
                     line = line.substring(0,line.length()-1);
-                }
+                }*/
                 if(line.startsWith("§0")) {
                     line = line.substring(2);
                 }
@@ -85,6 +86,17 @@ public class SignEditorData {
         }
         message.send(editor);
     }
+
+    public static int getRowLength(Player player) {
+        SignData signData = signEditors.get(player);
+        Block signBlock = signData.getBlock();
+        BlockState state = signBlock.getState();
+        if(state instanceof org.bukkit.block.HangingSign) {
+            return 10;
+        } else {
+            return 15;
+        }
+    }
     
     public static boolean editSign(Player player, int line, String newText) {
         SignData signData = signEditors.get(player);
@@ -96,7 +108,7 @@ public class SignEditorData {
             signEditors.remove(player);
             return false;
         }
-        newText = processLineText(newText);
+        //newText = processLineText(newText);
         Component component = parseLine(newText);
         sign.getSide(signData.getSide()).line(line-1, component);//.replace('#','§'));
         sign.update(true, false);
