@@ -52,6 +52,7 @@ import java.util.List;
 public class BlockPickerListener implements Listener {
 
     private static final String placeholder = "#";
+    private static final int HOTBAR_SIZE = 9;
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void pickBlock(PlayerPickItemEvent event) {
@@ -59,6 +60,7 @@ public class BlockPickerListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
+
         FluidCollisionMode mode = player.isSneaking() ? FluidCollisionMode.ALWAYS : FluidCollisionMode.NEVER;
         RayTraceResult result = player.getWorld().rayTrace(player.getEyeLocation(),
                                 player.getLocation().getDirection(),
@@ -124,12 +126,15 @@ public class BlockPickerListener implements Listener {
         //Logger.getGlobal().info(entity.getAsString());
         if(entity instanceof Painting) {
             item = ItemStack.of(Material.PAINTING);
-        } else if(entity instanceof GlowItemFrame) {
+        } else if(entity instanceof ItemFrame itemFrame) {
             //Logger.getGlobal().info("Glow");
-            item = ItemStack.of(Material.GLOW_ITEM_FRAME);
-        } else if(entity instanceof ItemFrame) {
-            //Logger.getGlobal().info("item");
-            item = ItemStack.of(Material.ITEM_FRAME);
+            if(!itemFrame.getItem().getType().equals(Material.AIR)) {
+                item = itemFrame.getItem();
+            } else if(itemFrame instanceof GlowItemFrame) {
+                item = ItemStack.of(Material.GLOW_ITEM_FRAME);
+            } else {
+                item = ItemStack.of(Material.ITEM_FRAME);
+            }
         }
         if(item != null) {
             placeItem(player, item);
@@ -163,11 +168,11 @@ public class BlockPickerListener implements Listener {
         ItemStack twoItems = item.clone();
         twoItems.setAmount(2);
         PlayerInventory inventory = player.getInventory();
-        if(inventory.first(item) > -1 && inventory.first(item) < 10) {
+        if(inventory.first(item) > -1 && inventory.first(item) < HOTBAR_SIZE) {
             //hotbar slot with just one item -> increate to two items and make active
             inventory.setHeldItemSlot(inventory.first(item));
             inventory.setItem(inventory.first(item),twoItems);
-        } else if(inventory.first(twoItems) > -1 && inventory.first(twoItems) < 10) {
+        } else if(inventory.first(twoItems) > -1 && inventory.first(twoItems) < HOTBAR_SIZE) {
             //hotbar slot with two items -> active slot
             inventory.setHeldItemSlot(inventory.first(twoItems));
         } else if(inventory.getItemInMainHand().isEmpty()) {
@@ -176,7 +181,7 @@ public class BlockPickerListener implements Listener {
         } else {
             //try to put in empty hotbar slot
             int firstEmpty = inventory.firstEmpty();
-            if(firstEmpty > -1 && firstEmpty < 10) {
+            if(firstEmpty > -1 && firstEmpty < HOTBAR_SIZE) {
                 inventory.setItem(firstEmpty, twoItems);
                 inventory.setHeldItemSlot(firstEmpty);
                 return;
