@@ -252,6 +252,16 @@ public class SpecialBlockSign extends SpecialBlock {
         }
 
     }
+
+    @Override
+    public boolean matches(BlockData data) {
+        return data.matches(this.data) || data.matches(this.dataWall);
+    }
+
+    @Override
+    public boolean matches(Block block) {
+        return matches(block.getBlockData());
+    }
 }
 
 
