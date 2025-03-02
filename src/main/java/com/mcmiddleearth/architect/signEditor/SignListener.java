@@ -47,7 +47,7 @@ public class SignListener implements Listener {
             SignEditorData.putEditor(event.getPlayer(),block, sign.getInteractableSideFor(player));
             SignEditorData.sendSignMessage(event.getPlayer());
         }
-        event.setCancelled(true);
+        //event.setCancelled(true);
     }
 
     private void sendNotEnabledErrorMessage(Player player) {

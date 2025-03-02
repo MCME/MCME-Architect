@@ -41,6 +41,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.List;
@@ -179,13 +180,13 @@ public class BlockPickerListener implements Listener {
         twoItems.setAmount(2);
         PlayerInventory inventory = player.getInventory();
         //todo: check if special block item already in hotbar!!! instead of simple inventory.first
-        if(inventory.first(item) > -1 && inventory.first(item) < HOTBAR_SIZE) {
+        if(exactFirst(inventory, item) > -1 && exactFirst(inventory, item) < HOTBAR_SIZE) {
             //hotbar slot with just one item -> increase to two items and make active
-            if(changeHandSlot) inventory.setHeldItemSlot(inventory.first(item));
-            inventory.setItem(inventory.first(item),twoItems);
-        } else if(inventory.first(twoItems) > -1 && inventory.first(twoItems) < HOTBAR_SIZE) {
+            if(changeHandSlot) inventory.setHeldItemSlot(exactFirst(inventory, item));
+            inventory.setItem(exactFirst(inventory, item),twoItems);
+        } else if(exactFirst(inventory, twoItems) > -1 && exactFirst(inventory, twoItems) < HOTBAR_SIZE) {
             //hotbar slot with two items -> active slot
-            if(changeHandSlot) inventory.setHeldItemSlot(inventory.first(twoItems));
+            if(changeHandSlot) inventory.setHeldItemSlot(exactFirst(inventory, twoItems));
         } else if(inventory.getItemInMainHand().isEmpty()) {
             //mainhand empty -> put there
             inventory.setItemInMainHand(twoItems);
@@ -201,6 +202,27 @@ public class BlockPickerListener implements Listener {
             //replace item in main hand
             //inventory.setItemInMainHand(twoItems);
         }
+    }
+
+    private int exactFirst(PlayerInventory inventory, ItemStack item) {
+        for(int i = 0; i < HOTBAR_SIZE; i++) {
+            ItemStack barItem = inventory.getItem(i);
+            if(barItem!= null && item.getType().equals(barItem.getType())) {
+                if(item.getAmount() != barItem.getAmount()) {
+                    return -1;
+                }
+                ItemMeta itemMeta = item.getItemMeta();
+                ItemMeta barItemMeta = barItem.getItemMeta();
+                if(barItemMeta == null && itemMeta!= null) {
+                    return i;
+                } else if(barItemMeta != null && itemMeta != null) {
+                    if(itemMeta.getAsString().equals(barItemMeta.getAsString())) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return -1;
     }
 
     @EventHandler

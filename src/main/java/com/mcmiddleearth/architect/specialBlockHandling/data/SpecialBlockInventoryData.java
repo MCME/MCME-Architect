@@ -243,6 +243,9 @@ public class SpecialBlockInventoryData {
                         case EIGHT_FACES:
                             blockData = SpecialBlockEightFaces.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
+                        case SIX_FACES_XZ:
+                            blockData = SpecialBlockSixFacesXZ.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
                         case FOUR_DIRECTIONS:
                             blockData = SpecialBlockFourDirections.loadFromConfig(section, fullName(rpName,itemKey));
                             break;

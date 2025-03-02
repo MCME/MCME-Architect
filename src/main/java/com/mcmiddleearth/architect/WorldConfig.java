@@ -54,6 +54,9 @@ public class WorldConfig {
     private static final String DOUBLE_SLAB_REPLACEMENTS = "doubleSlabReplacements";
     private static final String DISABLED_BLOCK_STATES = "disabledBlockStates";
     private static final String VIEW_DISTANCE = "viewDistance";
+    private static final String ARMOR_STAND_CONFIG = "armorStand";
+    private static final String ARMOR_STAND_MIN_SCALE = "minScale";
+    private static final String ARMOR_STAND_MAX_SCALE = "maxScale";
 
     private static final int defaultItemBlockBaseLimit = 5;
     
@@ -72,7 +75,9 @@ public class WorldConfig {
     private final Map<String,Integer> allowedEnchants = new HashMap<>();
 
     private int viewDistance = 255;
-    
+    private double armorStandMinScale = 0.0625;
+    private double armorStandMaxScale = 16;
+
     private final Map<String,Map<BlockData,BlockData>> doubleSlabReplacements = new HashMap<>();
     
     static {
@@ -113,6 +118,7 @@ public class WorldConfig {
         loadNoInteraction();
         loadNoConnection();
         loadViewDistance();
+        loadArmorStandConfig();
         loadAllowedEnchants();
         loadDoubleSlabReplacements();
         loadDisabledBlockStates();
@@ -130,6 +136,9 @@ public class WorldConfig {
         }
         config.set(NO_PHYSICS_LIST, new ArrayList<>());
         config.set(VIEW_DISTANCE,255);
+        ConfigurationSection armorConfig = config.createSection(ARMOR_STAND_CONFIG);
+        armorConfig.set(ARMOR_STAND_MAX_SCALE, armorStandMaxScale);
+        armorConfig.set(ARMOR_STAND_MIN_SCALE, armorStandMinScale);
         createInventoryAccess(config);
         createNoInteraction(config);
         createNoConnection(config);
@@ -548,6 +557,31 @@ public class WorldConfig {
         }
     }
 
+    public double getArmorStandMinScale() {
+        return armorStandMinScale;
+    }
+
+    public double getArmorStandMaxScale() {
+        return armorStandMaxScale;
+    }
+
+    public void loadArmorStandConfig() {
+        if(worldConfig.contains(ARMOR_STAND_CONFIG)) {
+            ConfigurationSection armorStandConfig = worldConfig.getConfigurationSection(ARMOR_STAND_CONFIG);
+            armorStandMaxScale = armorStandConfig.getDouble(ARMOR_STAND_MAX_SCALE);
+            armorStandMinScale = armorStandConfig.getDouble(ARMOR_STAND_MIN_SCALE);
+        } else {
+            if (!defaultConfig.contains(ARMOR_STAND_CONFIG)) {
+                ConfigurationSection armorStandConfig = defaultConfig.createSection(ARMOR_STAND_CONFIG);
+                armorStandConfig.set(ARMOR_STAND_MIN_SCALE, armorStandMinScale);
+                armorStandConfig.set(ARMOR_STAND_MAX_SCALE, armorStandMaxScale);
+                saveDefaultConfig();
+            }
+            ConfigurationSection armorStandConfig = defaultConfig.getConfigurationSection(ARMOR_STAND_CONFIG);
+            armorStandMaxScale = armorStandConfig.getDouble(ARMOR_STAND_MAX_SCALE);
+            armorStandMinScale = armorStandConfig.getDouble(ARMOR_STAND_MIN_SCALE);
+        }
+    }
 
     public static File getWorldConfigDir() {
         return worldConfigDir;
