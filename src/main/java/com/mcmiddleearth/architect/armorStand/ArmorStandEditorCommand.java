@@ -301,6 +301,9 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                         case SIZE:
                             PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> switch size");
                             break;
+                        case SCALE:
+                            PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> change scale");
+                            break;
                         case VISIBLE:
                             PluginData.getMessageUtil().sendNoPrefixInfoMessage(cs, "   -> switch visibility");
                             break;

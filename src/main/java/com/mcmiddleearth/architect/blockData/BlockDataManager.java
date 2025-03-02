@@ -97,7 +97,7 @@ public class BlockDataManager {
         attributes.add(new SetAttribute("Leaves", Bamboo.class, Bamboo.Leaves.class));
         attributes.add(new SetAttribute("Attachment", Bell.class, Bell.Attachment.class));
         attributes.add(new BooleanAttribute("SignalFire", Campfire.class));
-        attributes.add(new BooleanAttribute("Hanging", Lantern.class));
+        attributes.add(new BooleanAttribute("Hanging", Hangable.class));
         attributes.add(new BooleanAttribute("Bottom", Scaffolding.class));
         attributes.add(new IntAttribute("Distance", Scaffolding.class));
         //attributes.add(new SetAttribute("Face")) Grindstone???

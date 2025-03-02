@@ -243,6 +243,9 @@ public class SpecialBlockInventoryData {
                         case EIGHT_FACES:
                             blockData = SpecialBlockEightFaces.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
+                        case SIX_FACES_XZ:
+                            blockData = SpecialBlockSixFacesXZ.loadFromConfig(section, fullName(rpName,itemKey));
+                            break;
                         case FOUR_DIRECTIONS:
                             blockData = SpecialBlockFourDirections.loadFromConfig(section, fullName(rpName,itemKey));
                             break;
@@ -305,6 +308,9 @@ public class SpecialBlockInventoryData {
                             break;
                         case ITEM_FRAME:
                             blockData = SpecialBlockItemFrame.loadFromConfig(section, fullName(rpName, itemKey));
+                            break;
+                        case SIGN:
+                            blockData = SpecialBlockSign.loadFromConfig(section, fullName(rpName, itemKey));
                             break;
                     }
                     ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
@@ -424,16 +430,20 @@ public class SpecialBlockInventoryData {
 
     public static String getSpecialBlockId(ItemStack handItem) {
 //Logger.getGlobal().info("getID start");
-        ItemMeta meta = handItem.getItemMeta();
-        if(meta==null 
-            || (!(meta.hasLore() 
-                && meta.getLore().size()>1 
-                && meta.getLore().get(0).equals(SPECIAL_BLOCK_TAG)))) {
-//Logger.getGlobal().info("getID return null");
+        if(handItem != null) {
+            ItemMeta meta = handItem.getItemMeta();
+            if (meta == null
+                    || (!(meta.hasLore()
+                    && meta.getLore().size() > 1
+                    && meta.getLore().get(0).equals(SPECIAL_BLOCK_TAG)))) {
+                //Logger.getGlobal().info("getID return null");
+                return null;
+            }
+            //Logger.getGlobal().info("getID return "+meta.getLore().get(1));
+            return meta.getLore().get(1);
+        } else {
             return null;
         }
-//Logger.getGlobal().info("getID return "+meta.getLore().get(1));
-        return meta.getLore().get(1);
     }
 
     public static ItemStack getItem(Block block, String rpName) {
@@ -465,7 +475,12 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
         if(!vanillaMatches.isEmpty()) {
             return searchInventories.get(rpName).getItem(vanillaMatches.get(0).getId());
         }
-        return new ItemStack(getHandItem(block.getType()),1);
+        Material type = block.getType();
+        if(type.isItem()) {
+            return new ItemStack(getHandItem(block.getType()), 1);
+        } else {
+            return null;
+        }
         //1.13 removed: return getHandItem(new ItemStack(block.getType(),1,(short)0,block.getData()));
     }
 

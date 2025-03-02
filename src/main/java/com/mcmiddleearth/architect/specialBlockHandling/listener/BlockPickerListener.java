@@ -41,9 +41,11 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.RayTraceResult;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  *
@@ -52,6 +54,7 @@ import java.util.List;
 public class BlockPickerListener implements Listener {
 
     private static final String placeholder = "#";
+    private static final int HOTBAR_SIZE = 9;
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void pickBlock(PlayerPickItemEvent event) {
@@ -65,7 +68,9 @@ public class BlockPickerListener implements Listener {
                                 6, mode,false,0.01,
                                 entity -> entity instanceof Hanging,
                                 block -> !block.isEmpty());
-        if(result != null && result.getHitBlock() != null) {
+        if(result == null || isIgnoredBlock(result.getHitBlock())) {
+            return;
+        } else if (result.getHitBlock() != null) {
             String rpName = RpManager.getCurrentRpName(event.getPlayer());
             if (!player.getInventory().getItemInMainHand().isEmpty()) {
                 String rpItemName = RpManager.getCurrentRpName(event.getPlayer());
@@ -76,14 +81,22 @@ public class BlockPickerListener implements Listener {
             if (rpName.isEmpty()) {
                 PluginData.getMessageUtil().sendErrorMessage(event.getPlayer(), "Your resource pack could not be determined. You might not get correct block picks.");
             }
-            if (getBlockItemPick(player, result.getHitBlock(), rpName)) {
+            if (getBlockItemPick(player, result.getHitBlock(), rpName, true)) {
                 event.setCancelled(true);
             }
-        } else if(result != null && result.getHitEntity() != null) {
-            if (getEntityItemPick(player, result.getHitEntity())) {
+        } else if(result.getHitEntity() != null) {
+            if (getEntityItemPick(player, result.getHitEntity(), true)) {
                 event.setCancelled(true);
             }
         }
+    }
+
+    private boolean isIgnoredBlock(Block block) {
+        return block != null
+                && (block.getType().equals(Material.CHEST)
+                || block.getType().equals(Material.TRAPPED_CHEST)
+                || block.getType().equals(Material.ENDER_CHEST)
+                || block.getType().equals(Material.CHEST));
     }
 
     /**
@@ -114,31 +127,34 @@ public class BlockPickerListener implements Listener {
         } else {
             rpName = SpecialBlockInventoryData.getRpName(handItem);
         }
-        if(getBlockItemPick(event.getPlayer(), block, rpName)) {
+        if(getBlockItemPick(event.getPlayer(), block, rpName, false)) {
             event.setCancelled(true);
         }
     }
 
-    private boolean getEntityItemPick(Player player, Entity entity) {
+    private boolean getEntityItemPick(Player player, Entity entity, boolean changeHandSlot) {
         ItemStack item = null;
         //Logger.getGlobal().info(entity.getAsString());
         if(entity instanceof Painting) {
             item = ItemStack.of(Material.PAINTING);
-        } else if(entity instanceof GlowItemFrame) {
+        } else if(entity instanceof ItemFrame itemFrame) {
             //Logger.getGlobal().info("Glow");
-            item = ItemStack.of(Material.GLOW_ITEM_FRAME);
-        } else if(entity instanceof ItemFrame) {
-            //Logger.getGlobal().info("item");
-            item = ItemStack.of(Material.ITEM_FRAME);
+            if(!itemFrame.getItem().getType().equals(Material.AIR)) {
+                item = itemFrame.getItem();
+            } else if(itemFrame instanceof GlowItemFrame) {
+                item = ItemStack.of(Material.GLOW_ITEM_FRAME);
+            } else {
+                item = ItemStack.of(Material.ITEM_FRAME);
+            }
         }
         if(item != null) {
-            placeItem(player, item);
+            placeItem(player, item, changeHandSlot);
             return true;
         }
         return false;
     }
 
-    private boolean getBlockItemPick(Player player, Block block, String rpName) {
+    private boolean getBlockItemPick(Player player, Block block, String rpName, boolean changeHandSlot) {
         if(block.getType().equals(Material.PLAYER_HEAD)) {
             CustomHeadListener.getHead(player, block);
             return true;
@@ -147,7 +163,7 @@ public class BlockPickerListener implements Listener {
             if (item != null) {
                 if (!player.isSneaking()) {
                     item = item.clone();
-                    placeItem(player,item);
+                    placeItem(player,item, changeHandSlot);
                 } else if (item.hasItemMeta()) {
                     if (!SpecialBlockInventoryData.openInventory(player, item)) {
                         InventoryListener.sendNoInventoryError(player, rpName);
@@ -159,32 +175,54 @@ public class BlockPickerListener implements Listener {
         return false;
     }
 
-    private void placeItem(Player player, ItemStack item) {
+    private void placeItem(Player player, ItemStack item, boolean changeHandSlot) {
         ItemStack twoItems = item.clone();
         twoItems.setAmount(2);
         PlayerInventory inventory = player.getInventory();
-        if(inventory.first(item) > -1 && inventory.first(item) < 10) {
-            //hotbar slot with just one item -> increate to two items and make active
-            inventory.setHeldItemSlot(inventory.first(item));
-            inventory.setItem(inventory.first(item),twoItems);
-        } else if(inventory.first(twoItems) > -1 && inventory.first(twoItems) < 10) {
+        //todo: check if special block item already in hotbar!!! instead of simple inventory.first
+        if(exactFirst(inventory, item) > -1 && exactFirst(inventory, item) < HOTBAR_SIZE) {
+            //hotbar slot with just one item -> increase to two items and make active
+            if(changeHandSlot) inventory.setHeldItemSlot(exactFirst(inventory, item));
+            inventory.setItem(exactFirst(inventory, item),twoItems);
+        } else if(exactFirst(inventory, twoItems) > -1 && exactFirst(inventory, twoItems) < HOTBAR_SIZE) {
             //hotbar slot with two items -> active slot
-            inventory.setHeldItemSlot(inventory.first(twoItems));
+            if(changeHandSlot) inventory.setHeldItemSlot(exactFirst(inventory, twoItems));
         } else if(inventory.getItemInMainHand().isEmpty()) {
             //mainhand empty -> put there
             inventory.setItemInMainHand(twoItems);
         } else {
             //try to put in empty hotbar slot
             int firstEmpty = inventory.firstEmpty();
-            if(firstEmpty > -1 && firstEmpty < 10) {
+            if(firstEmpty > -1 && firstEmpty < HOTBAR_SIZE) {
                 inventory.setItem(firstEmpty, twoItems);
-                inventory.setHeldItemSlot(firstEmpty);
+                if(changeHandSlot) inventory.setHeldItemSlot(firstEmpty);
                 return;
             }
 
             //replace item in main hand
-            inventory.setItemInMainHand(twoItems);
+            //inventory.setItemInMainHand(twoItems);
         }
+    }
+
+    private int exactFirst(PlayerInventory inventory, ItemStack item) {
+        for(int i = 0; i < HOTBAR_SIZE; i++) {
+            ItemStack barItem = inventory.getItem(i);
+            if(barItem!= null && item.getType().equals(barItem.getType())) {
+                if(item.getAmount() != barItem.getAmount()) {
+                    return -1;
+                }
+                ItemMeta itemMeta = item.getItemMeta();
+                ItemMeta barItemMeta = barItem.getItemMeta();
+                if(barItemMeta == null && itemMeta!= null) {
+                    return i;
+                } else if(barItemMeta != null && itemMeta != null) {
+                    if(itemMeta.getAsString().equals(barItemMeta.getAsString())) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return -1;
     }
 
     @EventHandler

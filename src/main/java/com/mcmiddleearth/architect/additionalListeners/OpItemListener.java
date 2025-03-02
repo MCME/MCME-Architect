@@ -133,10 +133,8 @@ public class OpItemListener implements Listener {
                 }
             }
             if(itemMeta.getAttributeModifiers()!=null) {
-                Iterator<Map.Entry<Attribute, AttributeModifier>> modifiers = itemMeta.getAttributeModifiers().entries().iterator();
-                while(modifiers.hasNext()) {
-                    modifiers.next();
-                    modifiers.remove();
+                for (Map.Entry<Attribute, AttributeModifier> attributeAttributeModifierEntry : itemMeta.getAttributeModifiers().entries()) {
+                    itemMeta.removeAttributeModifier(attributeAttributeModifierEntry.getKey());
                 }
             }
             item.setItemMeta(itemMeta);

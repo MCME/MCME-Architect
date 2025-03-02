@@ -33,7 +33,7 @@ public class SignListener implements Listener {
         }
         Player player = event.getPlayer();
         Block block = event.getClickedBlock();
-        if(!(block.getState() instanceof Sign 
+        if(!(block.getState() instanceof Sign sign
                 && player.getInventory().getItemInHand().getType().equals(Material.STICK)
                 && EventUtil.isMainHandEvent(event))) {
             return;
@@ -44,10 +44,10 @@ public class SignListener implements Listener {
         }   
         if(PluginData.checkBuildPermissions(player,block.getLocation(),
                                         Permission.SIGN_EDITOR)) {
-            SignEditorData.putEditor(event.getPlayer(),block);
+            SignEditorData.putEditor(event.getPlayer(),block, sign.getInteractableSideFor(player));
             SignEditorData.sendSignMessage(event.getPlayer());
         }
-        event.setCancelled(true);
+        //event.setCancelled(true);
     }
 
     private void sendNotEnabledErrorMessage(Player player) {

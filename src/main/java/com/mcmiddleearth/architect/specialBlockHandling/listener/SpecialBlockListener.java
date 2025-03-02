@@ -22,7 +22,6 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
-import com.mcmiddleearth.architect.specialBlockHandling.MushroomBlocks;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
@@ -31,6 +30,7 @@ import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.TheGafferUtil;
+import io.papermc.paper.event.player.PlayerItemFrameChangeEvent;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -42,6 +42,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.*;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -55,10 +56,7 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-//import org.bukkit.material.MaterialData;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.logging.Logger;
 
 /**
  *
@@ -139,6 +137,9 @@ public class SpecialBlockListener extends WatchedListener{
             if(data==null) {
                 PluginData.getMessageUtil().sendErrorMessage(player, "Special block data not found, item is probably outdated.");
                 return;
+            /*} else if(data instanceof SpecialBlockSign specialSign) {
+                Block blockPlace = data.getBlock(event.getClickedBlock(), event.getBlockFace(), event.getInteractionPoint(), player);
+                specialSign.registerSign(blockPlace);*/
             }
             return;
         }
@@ -358,101 +359,31 @@ public class SpecialBlockListener extends WatchedListener{
                                     event.getBlock().getY(), event.getBlock().getZ()+0.5);
         SpecialBlockItemBlock.removeArmorStands(loc);
     }
-    
-    
 
+    /**
+     * Removes invisible item frames when content item is removed.
+     * @param event
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void removeItemFrame(PlayerItemFrameChangeEvent event) {
+        if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
+            return;
+        }
+        if(event.getAction().equals(PlayerItemFrameChangeEvent.ItemFrameChangeAction.REMOVE)) {
+            ItemFrame itemFrame = event.getItemFrame();
+            if(!itemFrame.isVisible()) {
+                event.setCancelled(true);
+                itemFrame.remove();
+            }
+        }
+    }
     
 /***********************************************************************************************
 /* Methods for old special blocks like six sided logs. Will no longer be needed once there are *
 /* custom inventories for all                                                                  *
 /***********************************************************************************************/
     
-    /**
-     * If module SIX_SIDED_LOG is enabled in world config file
-     * handles placing of six sided logs.
-     * @param event 
-     */
-    /*@EventHandler(priority = EventPriority.HIGH)
-    private void logPlace(BlockPlaceEvent event) {
-        Player p = event.getPlayer();
 
-        if (p.getItemInHand().getType().equals(Material.OAK_LOG)
-                || p.getItemInHand().getType().equals(Material.JUNGLE_LOG)) {
-            if (!PluginData.isModuleEnabled(event.getBlock().getWorld(), Modules.SIX_SIDED_LOGS)) {
-                return;
-            }
-            if (p.getItemInHand().getItemMeta().hasDisplayName()
-                    && p.getItemInHand().getItemMeta().getDisplayName().startsWith("Six Sided")) {
-                DevUtil.log(2,"logPlace fired cancelled: " + event.isCancelled());
-                if(event.isCancelled()) {
-                    return;
-                }
-                if(!(PluginData.hasPermission(p, Permission.PLACE_SIX_SIDED_LOG))) {
-                    PluginData.getMessageUtil().sendNoPermissionError(p); 
-                    event.setCancelled(true);
-                    return;
-                } else if(!TheGafferUtil.hasGafferPermission(p,event.getBlock().getLocation())) {
-                    event.setCancelled(true);
-//                    PluginData.getMessageUtil().sendErrorMessage(p, 
-//                            PluginData.getGafferProtectionMessage(p, event.getBlock().getLocation()));
-                    return;
-                }
-                Block b = event.getBlockPlaced();
-                MaterialData md = p.getItemInHand().getData();
-                md.setData((byte) (md.getData()+12));
-                BlockState bs = b.getState();
-
-                bs.setData(md);
-                bs.update();
-            }
-        }
-    }*/
-    
-    /**
-     * If module SIX_SIDED_LOG is enabled in world config file
-     * handles placing of huge mushroom blocks.
-     * @param event 
-     */
-    /*@EventHandler(priority = EventPriority.HIGH)
-    private void giantMushroomPlace(BlockPlaceEvent event) {
-        Player p = event.getPlayer();
-
-        if (p.getItemInHand().getType().equals(Material.BROWN_MUSHROOM_BLOCK)
-                || p.getItemInHand().getType().equals(Material.RED_MUSHROOM_BLOCK)) {
-            if (!PluginData.isModuleEnabled(event.getBlock().getWorld(), Modules.SIX_SIDED_LOGS)) {
-                return;
-            }
-            if (p.getItemInHand().getItemMeta().hasEnchants()) {
-                DevUtil.log(2,"giantMushroomPlace fired cancelled: " + event.isCancelled());
-                if(event.isCancelled()) {
-                    return;
-                }
-                if(!(PluginData.hasPermission(p, Permission.PLACE_SIX_SIDED_LOG))) {
-                    PluginData.getMessageUtil().sendNoPermissionError(p);
-                    event.setCancelled(true);
-                    return;
-                } else if(!TheGafferUtil.hasGafferPermission(p,event.getBlock().getLocation())) {
-                    event.setCancelled(true);
-//                    PluginData.getMessageUtil().sendErrorMessage(p, 
-//                            PluginData.getGafferProtectionMessage(p, event.getBlock().getLocation()));
-                    return;
-                }
-                Block b = event.getBlockPlaced();
-                MaterialData md = p.getItemInHand().getData();
-                md.setData(MushroomBlocks.getDataValue(p.getItemInHand().getItemMeta().getDisplayName()));
-                final BlockState bs = b.getState();
-                bs.setData(md);
-                event.setCancelled(true);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        bs.update(true, false);
-                    }
-                }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
-            }
-        }
-    }
-    
     /**
      * If module PISTON_EXTENSIONS is enabled in world config file
      * handles placing of piston extensions.
@@ -578,62 +509,38 @@ public class SpecialBlockListener extends WatchedListener{
                 }
                 Block b = event.getClickedBlock().getRelative(event.getBlockFace());
                 BlockState bs = b.getState();
-                switch(p.getItemInHand().getType()) {
-                    case BROWN_MUSHROOM:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.BROWN_MUSHROOM, true, (byte)0);
-                        break;
-                    case RED_MUSHROOM:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.RED_MUSHROOM, true, (byte)0);
-                        break;
-                    case WHEAT:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.WHEAT, true, (byte)7);
-                        break;
-                    case MELON_SEEDS:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.MELON_STEM, true, (byte)7);
-                        break;
-                    case PUMPKIN_SEEDS:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.PUMPKIN_STEM, true, (byte)7);
-                       break;
-                    case CARROT:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(),  
-                                            Material.CARROT, true, (byte)7);
-                       break;
-                    case POTATO:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.POTATO, true, (byte)7);
-                        break;
-                    case CACTUS:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.CACTUS, false,(byte)0);
-                        break;
-                    case NETHER_WART:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.NETHER_WART, true,(byte)3);
-                        break;
-                    case LILY_PAD:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.LILY_PAD, false,(byte)0);
-                        break;
+                bs = switch (p.getItemInHand().getType()) {
+                    case BROWN_MUSHROOM -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.BROWN_MUSHROOM, true, (byte) 0);
+                    case RED_MUSHROOM -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.RED_MUSHROOM, true, (byte) 0);
+                    case WHEAT -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.WHEAT, true, (byte) 7);
+                    case MELON_SEEDS -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.MELON_STEM, true, (byte) 7);
+                    case PUMPKIN_SEEDS -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.PUMPKIN_STEM, true, (byte) 7);
+                    case CARROT -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.CARROT, true, (byte) 7);
+                    case POTATO -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.POTATO, true, (byte) 7);
+                    case CACTUS -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.CACTUS, false, (byte) 0);
+                    case NETHER_WART -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.NETHER_WART, true, (byte) 3);
+                    case LILY_PAD -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.LILY_PAD, false, (byte) 0);
                     /*case ROSE_RED:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
+                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(),
                                             Material.ROSE_RED, false,p.getItemInHand().getData().getData());
                         break;
                         */
-                    case ROSE_BUSH:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.ROSE_BUSH, false,(byte) 0);
-                        break;
-                    case DEAD_BUSH:
-                        bs = handleInteract(event.getClickedBlock(), event.getBlockFace(), 
-                                            Material.DEAD_BUSH, false,(byte) 0);
-                        break;
-
-                }
+                    case ROSE_BUSH -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.ROSE_BUSH, false, (byte) 0);
+                    case DEAD_BUSH -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
+                            Material.DEAD_BUSH, false, (byte) 0);
+                    default -> bs;
+                };
                 bs.update(true,false);
             }
         }
@@ -726,53 +633,6 @@ public class SpecialBlockListener extends WatchedListener{
                 return (byte) 0;
         }
     }
-    
-    /*@EventHandler(priority = EventPriority.HIGH)
-    private void doubleSlabPlace(BlockPlaceEvent event) {
-        Player p = event.getPlayer();
-        if (p.getItemInHand().getType().equals(Material.STONE_SLAB)
-                || p.getItemInHand().getType().equals(Material.OAK_SLAB)
-                || p.getItemInHand().getType().equals(Material.SANDSTONE_SLAB)) {
-            if (!PluginData.isModuleEnabled(event.getBlock().getWorld(), Modules.DOUBLE_SLABS)) {
-                return;
-            }
-            if (p.getItemInHand().getItemMeta().hasDisplayName()
-                    && p.getItemInHand().getItemMeta().getDisplayName().startsWith("Double")) {
-                DevUtil.log(2,"doubleSlabPlace fired cancelled: " + event.isCancelled());
-                if(event.isCancelled()) {
-                    return;
-                }
-                if(!(PluginData.hasPermission(p, Permission.PLACE_DOUBLE_SLAB))) {
-                    PluginData.getMessageUtil().sendNoPermissionError(p);
-                    event.setCancelled(true);
-                    return;
-                } else if(!TheGafferUtil.hasGafferPermission(p,event.getBlock().getLocation())) {
-                    event.setCancelled(true);
-//                    PluginData.getMessageUtil().sendErrorMessage(p, 
-//                            PluginData.getGafferProtectionMessage(p, event.getBlock().getLocation()));
-                    return;
-                }
-                Block b = event.getBlockPlaced();
-                BlockState bs = b.getState();
-                if(p.getItemInHand().getType().equals(Material.STONE_SLAB)) {
-                    bs.setType(Material.STONE_SLAB);
-                }
-                else {
-                    bs.setType(Material.SANDSTONE_SLAB);
-                }
-                if(p.getItemInHand().getType().equals(Material.OAK_SLAB)) {
-                    bs.setRawData((byte) 2);
-                }
-                else if(p.getItemInHand().getItemMeta().getDisplayName().startsWith("Double Full")) {
-                    bs.setRawData((byte) 8);
-                }
-                else {
-                    bs.setRawData(p.getItemInHand().getData().getData());
-                }
-                bs.update(true,false);
-            }
-        }
-    }*/
     
     @EventHandler(priority = EventPriority.HIGH)
     private void bedPlace(PlayerInteractEvent event) {

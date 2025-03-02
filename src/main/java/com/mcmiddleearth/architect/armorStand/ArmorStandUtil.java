@@ -16,20 +16,17 @@
  */
 package com.mcmiddleearth.architect.armorStand;
 
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.deserializeEulerAngle;
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.deserializeLocation;
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.getMap;
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.serializeEulerAngle;
-import static com.mcmiddleearth.pluginutil.ConfigurationUtil.serializeLocation;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.mcmiddleearth.pluginutil.ConfigurationUtil.*;
 
 /**
  *
@@ -133,5 +130,5 @@ public class ArmorStandUtil {
     public static boolean isLocked(ArmorStand armorStand) {
         return armorStand.getScoreboardTags().contains(LOCKED);
     }
-    
+
 }

@@ -16,11 +16,13 @@
  */
 package com.mcmiddleearth.architect.signEditor;
 
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.additionalCommands.*;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.NumericUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -35,11 +37,10 @@ public class SignCommand extends AbstractArchitectCommand {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             PluginData.getMessageUtil().sendPlayerOnlyCommandError(sender);
             return true;
         }
-        Player player = (Player)sender;
         if(!PluginData.hasPermission(player, Permission.SIGN_EDITOR)) {
             PluginData.getMessageUtil().sendNoPermissionError(sender);
             return true;
@@ -64,14 +65,19 @@ public class SignCommand extends AbstractArchitectCommand {
         for(int i=2;i<args.length;i++) {
             line = line+" "+args[i];
         }
-Logger.getGlobal().info("SignEditor line: "+line);
+//Logger.getGlobal().info("SignEditor line: "+line);
         line = line.replace("\\_"," ");
-        if(line.length()>15) {
+        if(SignEditorData.formattedLength(line, '&',"")>SignEditorData.getRowLength(player)) {
             sendLineTooLong(sender);
         }
-Logger.getGlobal().info("SignEditor line: "+line);
+//Logger.getGlobal().info("SignEditor line: "+line);
         SignEditorData.editSign(player, lineNumber,line);
-        SignEditorData.sendSignMessage(player);
+        Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), new Runnable() {
+            @Override
+            public void run() {
+                SignEditorData.sendSignMessage(player);
+            }
+        },1);
         return true;
     }
 
@@ -84,7 +90,7 @@ Logger.getGlobal().info("SignEditor line: "+line);
     }
 
     private void sendLineTooLong(CommandSender sender) {
-        PluginData.getMessageUtil().sendErrorMessage(sender,"You typed in too many characters. Line will be truncated.");
+        PluginData.getMessageUtil().sendErrorMessage(sender,"You typed in many characters. Line might get truncated depending on letter width.");
     }
 
     private void sendWrongLineNumberMessage(Player player) {

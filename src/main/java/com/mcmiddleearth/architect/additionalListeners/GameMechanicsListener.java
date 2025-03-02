@@ -16,11 +16,15 @@
  */
 package com.mcmiddleearth.architect.additionalListeners;
 
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.block.Container;
+import org.bukkit.block.Jukebox;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -40,6 +44,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.scheduler.BukkitScheduler;
 
 import java.util.logging.Logger;
 
@@ -145,7 +150,8 @@ public class GameMechanicsListener extends WatchedListener{
         if (PluginData.isModuleEnabled(event.getEntity().getWorld(), Modules.PLAYER_DAMAGE_BLOCKING)
                 && event.getEntity() instanceof Player
                 && (event.getCause().equals(DamageCause.FALL)
-                     || event.getCause().equals(DamageCause.HOT_FLOOR))) {
+                    || event.getCause().equals(DamageCause.HOT_FLOOR)
+                    || event.getCause().equals(DamageCause.CAMPFIRE))) {
             event.setCancelled(true);
         }
     }
@@ -168,9 +174,14 @@ public class GameMechanicsListener extends WatchedListener{
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void containerBreak(BlockBreakEvent event) {
-        if (PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.REMOVE_CONTAINER_ITEMS)
-                && event.getBlock().getState() instanceof Container) {
-            ((Container)event.getBlock().getState()).getInventory().clear();
+        if (PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.REMOVE_CONTAINER_ITEMS)) {
+            if(event.getBlock().getState() instanceof Container container) {
+                container.getInventory().clear();
+            } else  if(event.getBlock().getState() instanceof Jukebox jukebox) {
+                jukebox.setType(Material.AIR);
+                jukebox.update(true, false);
+                event.setCancelled(true);
+            }
         }
     }
 

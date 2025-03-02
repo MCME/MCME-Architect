@@ -48,6 +48,7 @@ public enum SpecialBlockType {
     FIVE_FACES     ,//("sixFaces"),
     SIX_FACES     ,//("sixFaces"),
     EIGHT_FACES,
+    SIX_FACES_XZ,
     INVALID       ,//("invalid"),
     BURNING_FURNACE,
     THREE_AXIS,
@@ -67,6 +68,7 @@ public enum SpecialBlockType {
     DOOR_THREE_BLOCKS,
     DOOR_FOUR_BLOCKS,
     ITEM_FRAME,
+    SIGN,
     NONE//("threeAxis");
     
 }

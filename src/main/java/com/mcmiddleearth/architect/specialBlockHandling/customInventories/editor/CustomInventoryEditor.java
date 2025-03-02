@@ -70,30 +70,33 @@ public class CustomInventoryEditor {
         ConversationContext context = conversation.getContext();
         context.setSessionData("category", category);
         context.setSessionData("state", state);
-        String[] rpAndId = SpecialBlockInventoryData.getSpecialBlockId(inventoryItem).split("/");
-        context.setSessionData("id", rpAndId[1]);
-        context.setSessionData("rpName",rpAndId[0]);
-        ConfigurationSection inventoryConfig = getInventoryConfig(rpAndId[0], category);
-        assert inventoryConfig != null;
-        ConfigurationSection itemSection = inventoryConfig.getConfigurationSection(rpAndId[1]);
-        assert itemSection != null;
-        context.setSessionData("display", itemSection.get("display"));
-        context.setSessionData("type", itemSection.get("type"));
-        context.setSessionData("itemMaterial", itemSection.get("itemMaterial"));
-        if(itemSection.contains("cmd")) {
-            context.setSessionData("cmd", itemSection.get("cmd"));
+        String blockId = SpecialBlockInventoryData.getSpecialBlockId(inventoryItem);
+        if(blockId != null) {
+            String[] rpAndId = blockId.split("/");
+            context.setSessionData("id", rpAndId[1]);
+            context.setSessionData("rpName", rpAndId[0]);
+            ConfigurationSection inventoryConfig = getInventoryConfig(rpAndId[0], category);
+            assert inventoryConfig != null;
+            ConfigurationSection itemSection = inventoryConfig.getConfigurationSection(rpAndId[1]);
+            assert itemSection != null;
+            context.setSessionData("display", itemSection.get("display"));
+            context.setSessionData("type", itemSection.get("type"));
+            context.setSessionData("itemMaterial", itemSection.get("itemMaterial"));
+            if (itemSection.contains("cmd")) {
+                context.setSessionData("cmd", itemSection.get("cmd"));
+            }
+            if (itemSection.contains("color")) {
+                context.setSessionData("color", itemSection.get("color"));
+            }
+            context.setSessionData("inCategory", itemSection.contains("category"));
+            context.setSessionData("slot", getLocator(slot));
+            Map<String, String> blockData = (Map<String, String>) context.getSessionData("blockData");
+            assert blockData != null;
+            itemSection.getKeys(false).stream().filter(key -> key.startsWith("blockData")).forEach(key -> {
+                blockData.put(key.substring(9), itemSection.getString(key));
+            });
+            conversation.begin();
         }
-        if(itemSection.contains("color")) {
-            context.setSessionData("color", itemSection.get("color"));
-        }
-        context.setSessionData("inCategory", itemSection.contains("category"));
-        context.setSessionData("slot", getLocator(slot));
-        Map<String,String> blockData = (Map<String,String>) context.getSessionData("blockData");
-        assert blockData!=null;
-        itemSection.getKeys(false).stream().filter(key->key.startsWith("blockData")).forEach(key -> {
-            blockData.put(key.substring(9),itemSection.getString(key));
-        });
-        conversation.begin();
     }
 
     @SuppressWarnings("unchecked")

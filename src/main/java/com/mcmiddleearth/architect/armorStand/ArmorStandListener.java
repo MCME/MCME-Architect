@@ -5,6 +5,7 @@
  */
 package com.mcmiddleearth.architect.armorStand;
 
+import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -13,6 +14,8 @@ import com.mcmiddleearth.pluginutil.EventUtil;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
@@ -29,6 +32,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.EulerAngle;
+
+import java.util.logging.Logger;
 
 /**
  *
@@ -313,6 +318,15 @@ public class ArmorStandListener implements Listener {
                 armorStand.setSmall(!armorStand.isSmall());
                 PluginData.getMessageUtil().sendInfoMessage(player,"Switched armor stand size.");
                 break;
+            case SCALE:
+                AttributeInstance scaleAttribute = armorStand.getAttribute(Attribute.SCALE);
+                if(scaleAttribute != null) {
+                    double newScale = calculateScale(scaleAttribute.getBaseValue(), rightClick, stepInDegree,
+                            PluginData.getOrCreateWorldConfig(armorStand.getWorld().getName()).getArmorStandMinScale(),
+                            PluginData.getOrCreateWorldConfig(armorStand.getWorld().getName()).getArmorStandMaxScale());
+                    scaleAttribute.setBaseValue(newScale);
+                }
+                break;
             case VISIBLE:
                 armorStand.setVisible(!armorStand.isVisible());
                 PluginData.getMessageUtil().sendInfoMessage(player,"Switched visibility.");
@@ -439,6 +453,18 @@ public class ArmorStandListener implements Listener {
         }
         location.setZ(location.getZ()+step);
         return location;
+    }
+
+    private double calculateScale(double oldScale, boolean rightClick, int stepInDegree, double min, double max) {
+        double value;
+        if(rightClick) {
+            value = oldScale * (1d + stepInDegree / 100d);
+        } else {
+            value = oldScale * (1d - stepInDegree / 100d);
+        }
+        if(value < Math.max(0.0625, min)) value = Math.max(0.0625, min);
+        if(value > Math.min(16, max)) value = Math.min(16, max);
+        return value;
     }
 
     private void sendCopyMessage(Player player) {
