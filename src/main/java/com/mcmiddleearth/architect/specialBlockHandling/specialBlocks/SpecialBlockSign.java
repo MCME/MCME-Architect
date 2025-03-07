@@ -75,14 +75,12 @@ public class SpecialBlockSign extends SpecialBlock {
         Waterlogged placeData = null;
         switch(blockFace) {
             case BlockFace.UP:
+            case BlockFace.DOWN:
                 if(!hanging) {
                     Sign sign = (Sign) data;
                     sign.setRotation(getBlockFaceSuperFine(player.getYaw()).getOppositeFace());
                     placeData = sign;
-                }
-                break;
-            case BlockFace.DOWN:
-                if(hanging) {
+                } else {
                     HangingSign sign = (HangingSign) data;
                     sign.setRotation(getBlockFaceSuperFine(player.getYaw()).getOppositeFace());
                     placeData = sign;

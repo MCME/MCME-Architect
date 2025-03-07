@@ -41,9 +41,12 @@ import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerRecipeDiscoverEvent;
 import org.bukkit.event.player.PlayerTakeLecternBookEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
+
+import java.util.logging.Logger;
 
 /**
  *
@@ -175,4 +178,9 @@ public class AdditionalProtectionListener extends WatchedListener{
             }
         }
     }
+
+    /* @EventHandler
+    public void onRecipe(PlayerRecipeDiscoverEvent event) {
+        Logger.getGlobal().info("Discover reipe: "+event.getRecipe()+" "+event.getPlayer().name());
+    }*/
 }

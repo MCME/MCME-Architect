@@ -17,7 +17,6 @@
 package com.mcmiddleearth.architect.signEditor;
 
 import com.mcmiddleearth.architect.PluginData;
-import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
 
@@ -32,6 +31,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
+import org.bukkit.block.sign.SignSide;
 import org.bukkit.entity.Player;
 
 /**
@@ -52,14 +52,14 @@ public class SignEditorData {
     
     public static void sendSignMessage(Player editor) {
         SignData signData = signEditors.get(editor);
-        Block signBlock = signData.getBlock();
+        Block signBlock = signData.block();
         if(signBlock==null || !(signBlock.getState() instanceof Sign sign)) {
             return;
         }
         FancyMessage message = new FancyMessage(MessageType.INFO,PluginData.getMessageUtil());
-        message.addSimple("You are editing sign side: "+signData.getSide()+"\\n");
+        message.addSimple("You are editing sign side: "+signData.side()+"\\n");
         message.addSimple("Click at a line to edit it.\\n");
-        String[] lines = sign.getSide(signData.getSide()).getLines();
+        String[] lines = sign.getSide(signData.side()).getLines();
         for(int i = 0; i<4;i++) {
             String line = "<empty Line>";
             String lineEdit="";
@@ -84,12 +84,18 @@ public class SignEditorData {
                              "/sign "+(i+1)+" "+lineEdit, 
                              "Click to edit. Don't change the leading '/sign <line index> '.");
         }
+        boolean glowing = !sign.getSide(signData.side()).isGlowingText();
+        String enable = (glowing?"enable":"disable");
+        message.send(editor);
+        message = new FancyMessage(MessageType.INFO_NO_PREFIX,PluginData.getMessageUtil());
+        message.addFancy("Click here to "+enable+" text glow.","/sign glow "+glowing, "Click to toggle glow state.");
+        message.setRunDirect();
         message.send(editor);
     }
 
     public static int getRowLength(Player player) {
         SignData signData = signEditors.get(player);
-        Block signBlock = signData.getBlock();
+        Block signBlock = signData.block();
         BlockState state = signBlock.getState();
         if(state instanceof org.bukkit.block.HangingSign) {
             return 10;
@@ -100,7 +106,7 @@ public class SignEditorData {
     
     public static boolean editSign(Player player, int line, String newText) {
         SignData signData = signEditors.get(player);
-        Block signBlock = signData.getBlock();
+        Block signBlock = signData.block();
         if (line < 1 || line > 4) {
             return false;
         }
@@ -110,7 +116,7 @@ public class SignEditorData {
         }
         //newText = processLineText(newText);
         Component component = parseLine(newText);
-        sign.getSide(signData.getSide()).line(line-1, component);//.replace('#','§'));
+        sign.getSide(signData.side()).line(line-1, component);//.replace('#','§'));
         sign.update(true, false);
         return true;
     }
@@ -206,6 +212,19 @@ public class SignEditorData {
         }
 //Logger.getGlobal().info("Formatted length of: "+line +" is : "+length);
         return length;
+    }
+
+    public static boolean editSignGlow(Player player, boolean glowing) {
+        SignData signData = signEditors.get(player);
+        Block signBlock = signData.block();
+        if (signBlock == null || !(signBlock.getState() instanceof Sign sign)) {
+            signEditors.remove(player);
+            return false;
+        }
+        SignSide side = sign.getSide(signData.side());
+        side.setGlowingText(glowing);
+        sign.update(true, false);
+        return true;
     }
 
     public static class Format {

@@ -53,6 +53,10 @@ public class SignCommand extends AbstractArchitectCommand {
             PluginData.getMessageUtil().sendNotEnoughArgumentsError(sender);
             return true;
         }
+        if(args[0].equalsIgnoreCase("glow")) {
+            SignEditorData.editSignGlow(player, Boolean.parseBoolean(args[1]));
+            return true;
+        }
         if(!NumericUtil.isInt(args[0])) {
             sendInvalidArgument(sender);
             return true;
@@ -79,6 +83,19 @@ public class SignCommand extends AbstractArchitectCommand {
             }
         },1);
         return true;
+    }
+
+    private void sendNoSignSelected(Player player) {
+
+    }
+
+    private void sendInvalidGlowArgument(Player player) {
+    }
+
+    private void sendGlowDisable(Player player) {
+    }
+
+    private void sendGlowEnable(Player player) {
     }
 
     private void sendNotEnabledErrorMessage(CommandSender sender) {

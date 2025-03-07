@@ -599,15 +599,20 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
             displayName = name;
         }
         if(itemMat!=null) {
-            ItemStack item = new ItemStack(itemMat,1);
-            ItemMeta im = loadItemMeta(item.getItemMeta(),config);
-            im.setDisplayName(displayName);
-            im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp,name)}));
-            im.setUnbreakable(true);
-            im.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
-            im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-            item.setItemMeta(im);
-            return item;
+            try {
+                ItemStack item = new ItemStack(itemMat, 1);
+                ItemMeta im = loadItemMeta(item.getItemMeta(), config);
+                im.setDisplayName(displayName);
+                im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp, name)}));
+                im.setUnbreakable(true);
+                im.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+                im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                item.setItemMeta(im);
+                return item;
+            } catch(IllegalArgumentException ex) {
+                Logger.getLogger(SpecialBlockInventoryData.class.getName())
+                        .warning("Not an item material: "+itemMat.name());
+            }
         }
         return new ItemStack(Material.STONE);
     }
