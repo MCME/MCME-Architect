@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.util.StreamGobbler;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -66,6 +67,8 @@ public class RpReleaseUtil {
                 updateSection(rpConfig, "vanilla.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Vanilla-Footprints.zip");
                 updateSection(rpConfig, "sodium.16px.light",requiredMcVersion, download + version + "/"+finalRpName+"-Sodium.zip");
                 updateSection(rpConfig, "sodium.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Sodium-Footprints.zip");
+                updateSection(rpConfig, "lite.16px.light",requiredMcVersion, download + version + "/"+finalRpName+"-Lite.zip");
+                updateSection(rpConfig, "lite.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Lite-Footprints.zip");
             } else {
                 updateSection(rpConfig, "vanilla.16px.light",requiredMcVersion, download + version + "/"+finalRpName+".zip");
                 updateSection(rpConfig, "vanilla.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Footprints.zip");
@@ -78,6 +81,8 @@ public class RpReleaseUtil {
     }
 
     private static void updateSection(ConfigurationSection rpConfig, String path, String requiredMcVersion, String url) {
+Logger.getGlobal().info("Key search: "+path);
+rpConfig.getKeys(true).forEach(key -> Logger.getGlobal().info(key));
         ConfigurationSection section = rpConfig.getConfigurationSection(path);
         if(section.contains("url")) {
             section.set("url", null);
@@ -85,6 +90,7 @@ public class RpReleaseUtil {
         }
         rpConfig.set(path+"."+requiredMcVersion+".url", url);
     }
+
     private static String getGitHubOwner(String rpName) {
         return ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+rpName+".owner");
     }
