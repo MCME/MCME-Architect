@@ -184,12 +184,12 @@ public class SpecialBlockSign extends SpecialBlock {
                             sign.getSide(side).line(i, SignEditorData.parseLine(lines[i]));
                         }
                         sign.update(true, false);
-                        if(side == Side.FRONT) {
+                        /*if(side == Side.FRONT) {
                             sendSignEditorOpen(blockPlace, player, Side.BACK);
                             side = Side.BACK;
-                        } else {
-                            protocolManager.removePacketListener(instance);
-                        }
+                        } else {*/
+                        protocolManager.removePacketListener(instance);
+                        //}
                     }
                 });
             }
@@ -198,13 +198,13 @@ public class SpecialBlockSign extends SpecialBlock {
 
     public static class SignListener implements Listener {
 
-        private Block blockPlace, clicked;
-        private BlockFace blockFace;
-        private Location interactionPoint;
-        private Player player;
+        private final Block blockPlace, clicked;
+        private final BlockFace blockFace;
+        private final Location interactionPoint;
+        private final Player player;
         private BukkitTask removalTask;
-        private SignListener instance;
-        private SpecialBlock specialBlock;
+        private final SignListener instance;
+        private final SpecialBlock specialBlock;
 
         public SignListener(SpecialBlock specialBlock, final Block blockPlace,
                             final BlockFace blockFace, final Block clicked,

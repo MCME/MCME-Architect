@@ -295,7 +295,7 @@ Logger.getGlobal().info("Found connection: " + connection.getLocation());
                             blockPlace.setBlockData(tempState.getBlockData(), false);
                             ChunkUpdateUtil.sendUpdates(blockPlace, player);
                         }
-                    }.runTaskLater(ArchitectPlugin.getPluginInstance(), 5);
+                    }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
                 }
             }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
 
