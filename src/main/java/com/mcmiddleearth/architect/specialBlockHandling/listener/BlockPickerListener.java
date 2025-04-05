@@ -48,7 +48,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Logger;
 
 /**
  *
@@ -65,6 +64,9 @@ public class BlockPickerListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
+        if(player.getInventory().getItemInMainHand().getType().equals(Material.DRIED_KELP)) {
+            return;
+        }
         FluidCollisionMode mode = player.isSneaking() ? FluidCollisionMode.ALWAYS : FluidCollisionMode.NEVER;
         RayTraceResult result = player.getWorld().rayTrace(player.getEyeLocation(),
                                 player.getLocation().getDirection(),
