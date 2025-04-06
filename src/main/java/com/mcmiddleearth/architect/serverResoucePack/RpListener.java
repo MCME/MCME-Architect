@@ -19,10 +19,6 @@ package com.mcmiddleearth.architect.serverResoucePack;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.pluginutil.developer.DevUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
@@ -33,10 +29,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -71,6 +69,7 @@ public class RpListener implements Listener {
         Player player = event.getPlayer();
         DevUtil devUtil = ArchitectPlugin.getPluginInstance().getDevUtil();
         devUtil.log(2,"PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
+//Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
         int version = player.getProtocolVersion();
         String snapshot = "";
         if(version > 0x40000000) {

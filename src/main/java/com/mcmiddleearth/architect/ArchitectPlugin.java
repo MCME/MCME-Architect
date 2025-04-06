@@ -7,7 +7,6 @@ package com.mcmiddleearth.architect;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.mcmiddleearth.architect.WorldGeneration.SuperflatChunkGenerator;
 import com.mcmiddleearth.architect.WorldGeneration.WorldGenerationManager;
 import com.mcmiddleearth.architect.additionalCommands.*;
 import com.mcmiddleearth.architect.additionalListeners.*;

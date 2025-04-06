@@ -64,7 +64,7 @@ public class BlockPickerListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
-        if(player.getInventory().getItemInMainHand().getType().equals(Material.DRIED_KELP)) {
+        if(player.getInventory().getItemInMainHand().getType().equals(Material.FLINT)) {
             return;
         }
         FluidCollisionMode mode = player.isSneaking() ? FluidCollisionMode.ALWAYS : FluidCollisionMode.NEVER;
