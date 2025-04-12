@@ -137,13 +137,15 @@ public class SpecialBlock {
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
         final BlockState state = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
-        new BukkitRunnable() {
+        /*new BukkitRunnable() {
             @Override
-            public void run() {
-                //state.update(true, false);
+            public void run() {*/
+                state.update(true, false);
                 blockPlace.setBlockData(state.getBlockData(), false);
                 DevUtil.log("Special block place: ID "+state.getType()+" - DV "+state.getRawData());
-                final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
+
+                ChunkUpdateUtil.sendUpdates(blockPlace, player);
+                /*final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -157,7 +159,7 @@ public class SpecialBlock {
                     }
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
             }
-        }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+        }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);*/
     }
 
     public void handleBlockBreak(BlockState state) {}

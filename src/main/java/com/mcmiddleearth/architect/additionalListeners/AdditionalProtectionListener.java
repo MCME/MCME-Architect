@@ -22,6 +22,8 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.util.TheGafferUtil;
+import io.papermc.paper.event.player.PlayerOpenSignEvent;
+import io.papermc.paper.event.player.PlayerSignCommandPreprocessEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -39,10 +41,7 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerRecipeDiscoverEvent;
-import org.bukkit.event.player.PlayerTakeLecternBookEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
 
@@ -176,6 +175,13 @@ public class AdditionalProtectionListener extends WatchedListener{
                     }.runTaskLater(ArchitectPlugin.getPluginInstance(),1);
                 }
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void signProtection(PlayerOpenSignEvent event) {
+        if(!TheGafferUtil.checkGafferPermission(event.getPlayer(), event.getSign().getLocation())) {
+            event.setCancelled(true);
         }
     }
 

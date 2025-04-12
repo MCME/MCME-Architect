@@ -41,7 +41,7 @@ public class SpecialBlockSign extends SpecialBlock {
     private final boolean hanging;
     private final BlockData data, dataWall;
 
-    private SpecialBlockSign(String id, BlockData data, BlockData dataWall, boolean hanging,
+    protected SpecialBlockSign(String id, BlockData data, BlockData dataWall, boolean hanging,
                              SpecialBlockType type) {
         super(id, Material.AIR.createBlockData(), type);
         this.data = data;
@@ -130,7 +130,7 @@ public class SpecialBlockSign extends SpecialBlock {
         },3);
     }
 
-    public static void sendSignEditorOpen(Block blockPlace, Player player, Side side) {
+    public void sendSignEditorOpen(Block blockPlace, Player player, Side side) {
         ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
         BlockPosition blockPosition = new BlockPosition(blockPlace.getX(), blockPlace.getY(), blockPlace.getZ());
         PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.OPEN_SIGN_EDITOR);
@@ -196,7 +196,7 @@ public class SpecialBlockSign extends SpecialBlock {
         }
     }
 
-    public static class SignListener implements Listener {
+    /*public static class SignListener implements Listener {
 
         private final Block blockPlace, clicked;
         private final BlockFace blockFace;
@@ -249,7 +249,7 @@ public class SpecialBlockSign extends SpecialBlock {
             }
         }
 
-    }
+    }*/
 
     @Override
     public boolean matches(BlockData data) {
