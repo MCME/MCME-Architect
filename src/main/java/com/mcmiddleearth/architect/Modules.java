@@ -69,6 +69,7 @@ public enum Modules {
     BANNER_EDITOR          ("modules.command.bannerEditor"),
     PAINTING_EDITOR        ("modules.command.paintingEditor"),
     CYCLE_BLOCKS           ("modules.command.cycleBlocks"),
+    DISPLAY_ENTITY_EDITOR     ("modules.command.displayEntityEditor"),
     ARMOR_STAND_EDITOR     ("modules.command.armorStandEditor"),
     ARMOR_STAND_ROLLBACK   ("modules.command.armorStandRollback"),
     RANDOMISER             ("modules.command.randomiser"),

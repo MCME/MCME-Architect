@@ -318,6 +318,9 @@ public class SpecialBlockInventoryData {
                         case SIGN_WALL:
                             blockData = SpecialBlockSignWall.loadFromConfig(section, fullName(rpName, itemKey));
                             break;
+                        case DISPLAY:
+                            blockData = SpecialBlockDisplayEntity.loadFromConfig(section, fullName(rpName, itemKey));
+                            break;
                     }
                     ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
                     if(blockData !=null && inventoryItem!=null && !inventoryItem.getType().equals(Material.AIR)) {

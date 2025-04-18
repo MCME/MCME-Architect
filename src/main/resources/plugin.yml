@@ -33,8 +33,11 @@ commands:
       description: Edit banners command
       usage: see /banner help
    armor:
-      description: Edit armor stands command
-      usage: see /armor help
+     description: Edit armor stands command
+     usage: see /armor help
+   display:
+     description: Edit display entitites command
+     usage: see /display help
    rp:
       description: Switch resource packs by command
       usage: /rp Human|Lothlorien|Rohan|Moria|Mordor
@@ -373,18 +376,29 @@ permissions:
     architect.lecternEditor:
         description: Allows to take books from lecterns
         default: op
-    architect.armorStandEditor: 
-        descriptions: Allows to use Armor Stand Editor (except storing and deleting files)
-        default: op
-    architect.armorStandEditor.trusted: 
-        descriptions: Allows to store Armor Stand Editor files and delete own files
-        default: op
-        children:
-            architect.armorStandEditor: true
-    architect.armorStandEditor.delete: 
-        descriptions: Allows to delete Armor Stand Editor files created by other players
-        default: op
-    architect.randomiser.allowMaterials: 
+    architect.armorStandEditor:
+      descriptions: Allows to use Armor Stand Editor (except storing and deleting files)
+      default: op
+    architect.armorStandEditor.trusted:
+      descriptions: Allows to store Armor Stand Editor files and delete own files
+      default: op
+      children:
+        architect.armorStandEditor: true
+    architect.armorStandEditor.delete:
+      descriptions: Allows to delete Armor Stand Editor files created by other players
+      default: op
+    architect.displayEntityEditor:
+      descriptions: Allows to use Display Entity Editor (except storing and deleting files)
+      default: op
+    architect.displayEntityEditor.trusted:
+      descriptions: Allows to store Display Entity Editor files and delete own files
+      default: op
+      children:
+        architect.displayEntityEditor: true
+    architect.displayEntityEditor.delete:
+      descriptions: Allows to delete Display Entity Editor files created by other players
+      default: op
+    architect.randomiser.allowMaterials:
         descriptions: Allows to change allowed materials for command /random
         default: op
         children:

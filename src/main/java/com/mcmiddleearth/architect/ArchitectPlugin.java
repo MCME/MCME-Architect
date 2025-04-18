@@ -20,6 +20,8 @@ import com.mcmiddleearth.architect.copyPaste.*;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadListener;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import com.mcmiddleearth.architect.customHeadManager.HeadCommand;
+import com.mcmiddleearth.architect.displayEntity.DisplayEntityEditorCommand;
+import com.mcmiddleearth.architect.displayEntity.DisplayEntityListener;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsCommand;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsData;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
@@ -85,6 +87,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         PluginManager pluginManager = getServer().getPluginManager();
         pluginManager.registerEvents(new AntiKickListener(), this);
         pluginManager.registerEvents(new ArmorStandListener(), this);
+        pluginManager.registerEvents(new DisplayEntityListener(), this);
         pluginManager.registerEvents(new BannerListener(), this);
         pluginManager.registerEvents(new PaintingListener(), this);
         pluginManager.registerEvents(new GameMechanicsListener(), this);
@@ -123,6 +126,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         // all CommandExecutors should be subclasses of AbstractArchitectCommand
         // AbstractArchitectCommand methods are used by command /architect help
         setCommandExecutor("armor", new ArmorStandEditorCommand());
+        setCommandExecutor("display", new DisplayEntityEditorCommand());
         setCommandExecutor("banner", new BannerEditorCommand());
         setCommandExecutor("random", new RandomiserCommand());
         setCommandExecutor("noPhy", new NoPhysicsCommand());

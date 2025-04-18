@@ -71,6 +71,7 @@ public enum SpecialBlockType {
     SIGN,
     SIGN_POST,
     SIGN_WALL,
+    DISPLAY,
     NONE//("threeAxis");
     
 }
