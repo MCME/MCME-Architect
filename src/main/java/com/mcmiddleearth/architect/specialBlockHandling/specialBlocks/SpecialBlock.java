@@ -21,6 +21,7 @@ import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
+import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.util.DevUtil;
@@ -31,6 +32,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Waterlogged;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -162,7 +164,24 @@ public class SpecialBlock {
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);*/
     }
 
-    public void handleBlockBreak(BlockState state) {}
+    public void handleBlockBreak(BlockState state) {
+//Logger.getGlobal().info("BlockBreak: "+state);
+        Block block = state.getBlock();
+        if(isUnderwater(block.getRelative(BlockFace.NORTH))
+                || isUnderwater(block.getRelative(BlockFace.EAST))
+                || isUnderwater(block.getRelative(BlockFace.SOUTH))
+                || isUnderwater(block.getRelative(BlockFace.WEST))) {
+            state.setType(Material.WATER);
+        } else {
+            state.setType(Material.AIR);
+        }
+        state.update(true, false);
+    }
+
+    private boolean isUnderwater(Block block) {
+        return block.getType().equals(Material.WATER)
+                || (block.getBlockData() instanceof Waterlogged waterlogged && waterlogged.isWaterlogged());
+    }
     
     protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
                                        Player player, Location interactionPoint) {
