@@ -165,17 +165,13 @@ public class SpecialBlock {
     }
 
     public void handleBlockBreak(BlockState state) {
-//Logger.getGlobal().info("BlockBreak: "+state);
-        Block block = state.getBlock();
-        if(isUnderwater(block.getRelative(BlockFace.NORTH))
-                || isUnderwater(block.getRelative(BlockFace.EAST))
-                || isUnderwater(block.getRelative(BlockFace.SOUTH))
-                || isUnderwater(block.getRelative(BlockFace.WEST))) {
-            state.setType(Material.WATER);
-        } else {
+        Logger.getGlobal().info("BlockBreak: "+state.getBlockData());
+        Logger.getGlobal().info("BlockBreak: "+(state instanceof Waterlogged waterlogged));
+        Logger.getGlobal().info("BlockBreak: "+(((Waterlogged)state.getBlockData()).isWaterlogged()));
+        if(state.getBlockData() instanceof Waterlogged waterlogged && waterlogged.isWaterlogged()) {
             state.setType(Material.AIR);
+            state.update(true, false);
         }
-        state.update(true, false);
     }
 
     private boolean isUnderwater(Block block) {
