@@ -86,7 +86,8 @@ public enum Modules {
     ARMOR_STAND_PROTECTION    ("modules.protection.armorStand"),
     LILY_PAD_PROTECTION       ("modules.protection.lilyPad"),
     REDSTONE_PROTECTION       ("modules.protection.redstone"),
-    CHEST_INVENTORY_PROTECTION       ("modules.protection.chestInventory"),
+    CHEST_INVENTORY_PROTECTION ("modules.protection.chestInventory"),
+    TNT_PROTECTION            ("modules.protection.tnt"),
     HANGING_ENTITY_PROTECTION ("modules.protection.hangingEntity");
 
 
