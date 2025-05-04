@@ -28,7 +28,6 @@ import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;

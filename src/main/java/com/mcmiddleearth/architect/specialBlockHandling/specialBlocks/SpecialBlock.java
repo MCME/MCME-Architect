@@ -165,9 +165,9 @@ public class SpecialBlock {
     }
 
     public void handleBlockBreak(BlockState state) {
-        Logger.getGlobal().info("BlockBreak: "+state.getBlockData());
-        Logger.getGlobal().info("BlockBreak: "+(state instanceof Waterlogged waterlogged));
-        Logger.getGlobal().info("BlockBreak: "+(((Waterlogged)state.getBlockData()).isWaterlogged()));
+        //Logger.getGlobal().info("BlockBreak: "+state.getBlockData());
+        //Logger.getGlobal().info("BlockBreak: "+(state instanceof Waterlogged waterlogged));
+        //Logger.getGlobal().info("BlockBreak: "+(((Waterlogged)state.getBlockData()).isWaterlogged()));
         if(state.getBlockData() instanceof Waterlogged waterlogged && waterlogged.isWaterlogged()) {
             state.setType(Material.AIR);
             state.update(true, false);
