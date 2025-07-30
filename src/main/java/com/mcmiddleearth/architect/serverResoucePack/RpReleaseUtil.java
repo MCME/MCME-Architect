@@ -28,6 +28,7 @@ public class RpReleaseUtil {
                 String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
                 String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
                 if (isWindows || gitHubOwner==null || gitHubRepo==null || releaseScript==null || scriptPath==null) {
+                    Logger.getGlobal().warning("finalRP: "+finalRpName+" windows: "+isWindows+" owner: "+gitHubOwner+" gitHubRepo: "+gitHubRepo+" releaseScript: "+releaseScript+" path: "+scriptPath);
                     callback.accept(true, -1);
                     return;
                 } else {

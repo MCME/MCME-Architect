@@ -18,7 +18,6 @@ package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.PluginData;
-import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import com.mcmiddleearth.pluginutil.developer.DevUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
@@ -29,6 +28,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -41,7 +41,11 @@ import java.util.logging.Logger;
  * @author Eriol_Eandur
  */
 public class RpListener implements Listener {
-    
+
+    public RpListener() {
+        Logger.getGlobal().info("RPListener");
+    }
+
     @EventHandler
     public void onRpSwitch(PlayerResourcePackStatusEvent event) {
         Player player = event.getPlayer();
@@ -61,14 +65,15 @@ public class RpListener implements Listener {
     
     @EventHandler
     public void onPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+        //Logger.getGlobal().info("AsyncPlayerPreLoginEvent: "+event.getName()+" "+ event.getPlayerProfile().getName());
         RpManager.loadPlayerData(event.getUniqueId());
     }
 
     @EventHandler
-    public void onPlayerConnect(PlayerConnectEvent event) {
+    public void onPlayerConnect(PlayerLoginEvent event) {
         Player player = event.getPlayer();
         DevUtil devUtil = ArchitectPlugin.getPluginInstance().getDevUtil();
-        devUtil.log(2,"PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
+        //devUtil.log(2,"PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
 //Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
         int version = player.getProtocolVersion();
         String snapshot = "";
@@ -81,7 +86,7 @@ public class RpListener implements Listener {
         devUtil.log(2,"Sodium client: "+RpManager.isSodiumClient(player));
         devUtil.log(2,"Incomming plugin channels:");
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
-        if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
+        if(true) {//event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
             new BukkitRunnable() {
                 int counter = 11;
                 @Override

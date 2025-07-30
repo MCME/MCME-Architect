@@ -83,13 +83,21 @@ public class RpCommand extends AbstractArchitectCommand {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    String rpName = RpManager.matchRpName(args[1]);
-                    boolean allVersions = args.length > 2 && args[2].equals("all");
-                    if(RpManager.refreshSHA(cs, rpName, allVersions)) {
-                        PluginData.getMessageUtil().sendInfoMessage(cs, "SHA recalculated for rp: "+rpName);
-                    } else {
-                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while recalculating SHA for rp: "+args[1]);
-                    }
+                    /*if(args[1].equalsIgnoreCase("overlay")) {
+                        if(RpManager.refreshOverlaySHA(cs)) {
+                            PluginData.getMessageUtil().sendInfoMessage(cs, "SHA recalculated for overlay rp");
+                        } else {
+                            PluginData.getMessageUtil().sendErrorMessage(cs, "Error while recalculating SHA for overlay rp");
+                        }
+                    } else {*/
+                        String rpName = RpManager.matchRpName(args[1]);
+                        boolean allVersions = args.length > 2 && args[2].equals("all");
+                        if (RpManager.refreshSHA(cs, rpName, allVersions)) {
+                            PluginData.getMessageUtil().sendInfoMessage(cs, "SHA recalculated for rp: " + rpName);
+                        } else {
+                            PluginData.getMessageUtil().sendErrorMessage(cs, "Error while recalculating SHA for rp: " + args[1]);
+                        }
+                    //}
                 }}.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
             return true;
         }

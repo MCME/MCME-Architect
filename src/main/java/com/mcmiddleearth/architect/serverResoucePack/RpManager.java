@@ -353,6 +353,13 @@ public class RpManager {
 //Logger.getGlobal().info("Sending to "+player.getName()+"("+getPlayerData(player).getProtocolVersion()+") RP: "+url);
             player.setResourcePack(url, getSHA(rpName, player));
             savePlayerData(player);
+            ConfigurationSection overlaySection =  getRpConfig().getConfigurationSection("overlay");
+            if(overlaySection!=null) {
+                byte[] sha1 = getSHA("overlay", player);
+                player.addResourcePack(UUID.nameUUIDFromBytes(sha1),
+                        getRpUrl("overlay", player),
+                        sha1, null, false);
+            }
             return true;
         }
         return false;
@@ -417,6 +424,14 @@ public class RpManager {
         return ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection("ServerResourcePacks");
     }
 
+    public static boolean refreshOverlaySHA(CommandSender sender) {
+        ConfigurationSection section = getRpConfig().getConfigurationSection("overlay");
+        if(section!=null) {
+            return calculateSHA(section, sender);
+        }
+        return false;
+    }
+
     public static boolean refreshSHA(CommandSender cs, String rp, boolean allVersions) {
         ConfigurationSection config = getRpConfig().getConfigurationSection(rp);
         if(config!=null) {
@@ -428,7 +443,6 @@ public class RpManager {
                     ConfigurationSection resolutionSection = clientSection.getConfigurationSection(resolutionKey);
                     for (String variantKey : resolutionSection.getKeys(false)) {
 //Logger.getGlobal().info("VariantKey: "+variantKey);
-                        try {
                             ConfigurationSection variantSection = resolutionSection.getConfigurationSection(variantKey);
                             List<ConfigurationSection> sections = new LinkedList<>();
                             if (variantSection.contains("url")) {
@@ -447,33 +461,10 @@ public class RpManager {
                             }
 //for(ConfigurationSection section: sections) Logger.getGlobal().info("URL: "+section.getString("url"));
                             for (ConfigurationSection section : sections) {
-                                URL url = new URL(section.getString("url"));
-                                InputStream fis = url.openStream();
-                                MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-
-                                byte[] data = new byte[1024];
-                                int read = 0;
-                                long time = System.currentTimeMillis();
-                                while ((read = fis.read(data)) != -1) {
-                                    sha1.update(data, 0, read);
-                                    if (System.currentTimeMillis() - time > 5000) {
-                                        time = System.currentTimeMillis();
-                                        PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ...");
-                                    }
+                                if(!calculateSHA(section, cs)) {
+                                    return false;
                                 }
-                                byte[] hashBytes = sha1.digest();
-                                StringBuilder sb = new StringBuilder();
-                                for (byte b : hashBytes) {
-                                    sb.append(String.format("%02x", b));
-                                }
-                                String hashString = sb.toString();
-                                section.set("sha", hashString);
-                                ArchitectPlugin.getPluginInstance().saveConfig();
                             }
-                        } catch(IOException | NoSuchAlgorithmException ex){
-                            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
-                            return false;
-                        }
                     }
                 }
             }
@@ -482,12 +473,43 @@ public class RpManager {
         return false;
     }
 
+    private static boolean calculateSHA(ConfigurationSection section, CommandSender cs) {
+        try {
+            URL url = new URL(section.getString("url"));
+            InputStream fis = url.openStream();
+            MessageDigest sha1 = MessageDigest.getInstance("SHA1");
+
+            byte[] data = new byte[1024];
+            int read = 0;
+            long time = System.currentTimeMillis();
+            while ((read = fis.read(data)) != -1) {
+                sha1.update(data, 0, read);
+                if (System.currentTimeMillis() - time > 5000) {
+                    time = System.currentTimeMillis();
+                    PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ...");
+                }
+            }
+            byte[] hashBytes = sha1.digest();
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            String hashString = sb.toString();
+            section.set("sha", hashString);
+            ArchitectPlugin.getPluginInstance().saveConfig();
+        } catch(IOException | NoSuchAlgorithmException ex){
+            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+        return true;
+    }
+
     private static String getLatestVersion(Collection<String> versions) {
         int latestProtocol = 0;
         String latestVersion = "";
         for(String version : versions) {
 //protocolVersions.forEach((key, protocol) -> Logger.getGlobal().info(key+" "+protocol));
-//Logger.getGlobal().info("getLatestVersion: version "+ version+ " protcolVersions: "+protocolVersions.size());
+Logger.getGlobal().info("getLatestVersion: version "+ version+ " protcolVersions: "+protocolVersions.size());
             int protocolVersion = protocolVersions.get(version);
             if(protocolVersion > latestProtocol) {
                 latestProtocol = protocolVersion;

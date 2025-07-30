@@ -102,7 +102,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new LightBlockListener(), this);
         pluginManager.registerEvents(new LecternProtectionListener(), this);
         pluginManager.registerEvents(new SignListener(), this);
-        pluginManager.registerEvents(new DoorListener(), this);
+        //pluginManager.registerEvents(new DoorListener(), this);
         pluginManager.registerEvents(new InventoryListener(), this);
         pluginManager.registerEvents(new RpListener(), this);
         pluginManager.registerEvents(new ChunkUpdateListener(), this);

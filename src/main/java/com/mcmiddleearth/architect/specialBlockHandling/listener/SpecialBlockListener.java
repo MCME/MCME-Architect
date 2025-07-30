@@ -261,7 +261,7 @@ public class SpecialBlockListener extends WatchedListener{
      */
     @EventHandler(priority = EventPriority.HIGH)
     public void blockChangeDurability(PlayerItemDamageEvent event) {
-        if(PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
+        if(false && PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_PLACE)) {
                 event.setCancelled(true);
         }
     }
