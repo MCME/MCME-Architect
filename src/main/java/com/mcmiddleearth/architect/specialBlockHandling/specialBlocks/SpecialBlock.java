@@ -55,7 +55,74 @@ public class SpecialBlock {
     private int priority;
     
     private final Map<String,String> collection = new HashMap<>();
-    
+
+    public static SpecialBlock createSpecialBlock(SpecialBlockType type, ConfigurationSection section, String fullName) {
+        return switch (type) {
+            case BLOCK -> SpecialBlock.loadFromConfig(section, fullName);
+            case BLOCK_ON_WATER -> SpecialBlockOnWater.loadFromConfig(section, fullName);
+            case BLOCK_ON_WATER_CONNECT -> SpecialBlockOnWaterConnect.loadFromConfig(section, fullName);
+            case BRANCH -> SpecialBlockBranch2.loadFromConfig(section, fullName);
+            case BRANCH_HORIZONTAL -> SpecialBlockBranchHorizontal.loadFromConfig(section, fullName);
+            case BRANCH_DIAGONAL -> SpecialBlockBranchDiagonal.loadFromConfig(section, fullName);
+            case BRANCH_STEEP -> SpecialBlockBranchSteep.loadFromConfig(section, fullName);
+            case BRANCH_TWIGS -> SpecialBlockBranchTwigs.loadFromConfig(section, fullName);
+            case BRANCH_TWIGS_EIGHT_DIRECTIONS ->
+                    SpecialBlockBranchTwigsEightDirections.loadFromConfig(section, fullName);
+                        /*case BRANCH_TWIGS_UPPER:
+                            blockData = SpecialBlockBranchTwigsUpper.loadFromConfig(section, fullName);
+                            break;
+                        case BRANCH_TWIGS_LOWER:
+                            blockData = SpecialBlockBranchTwigsLower.loadFromConfig(section, fullName);
+                            break;
+                        case BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS:
+                            blockData = SpecialBlockBranchTwigsUpperEightDirections.loadFromConfig(section, fullName);
+                            break;
+                        case BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS:
+                            blockData = SpecialBlockBranchTwigsLowerEightDirections.loadFromConfig(section, fullName);
+                            break;*/
+            case BRANCH_CONNECT -> SpecialBlockBranchConnect.loadFromConfig(section, fullName);
+            case BRANCH_TRUNK_CONNECT -> SpecialBlockBranchTrunkConnect.loadFromConfig(section, fullName);
+            case BRANCH_TRUNK_CONNECT_COMPLEX ->
+                    SpecialBlockBranchTrunkConnectComplex.loadFromConfig(section, fullName);
+            case BLOCK_CONNECT ->
+//Logger.getGlobal().info("Block connect:"+itemKey);
+                    SpecialBlockConnect.loadFromConfig(section, fullName);
+            case DIAGONAL_CONNECT -> SpecialBlockDiagonalConnect.loadFromConfig(section, fullName);
+            case BISECTED -> SpecialBlockBisected.loadFromConfig(section, fullName);
+            case THREE_AXIS -> SpecialBlockThreeAxis.loadFromConfig(section, fullName);
+            case TWO_AXIS -> SpecialBlockTwoAxis.loadFromConfig(section, fullName);
+            case FIVE_FACES -> SpecialBlockFiveFaces.loadFromConfig(section, fullName);
+            case SIX_FACES -> SpecialBlockSixFaces.loadFromConfig(section, fullName);
+            case EIGHT_FACES -> SpecialBlockEightFaces.loadFromConfig(section, fullName);
+            case SIX_FACES_XZ -> SpecialBlockSixFacesXZ.loadFromConfig(section, fullName);
+            case FOUR_DIRECTIONS -> SpecialBlockFourDirections.loadFromConfig(section, fullName);
+            case FOUR_DIRECTIONS_COMPLEX -> SpecialBlockFourDirectionsComplex.loadFromConfig(section, fullName);
+            case OPEN_HALF_DOOR -> SpecialBlockOpenHalfDoor.loadFromConfig(section, fullName);
+            case MATCH_ORIENTATION -> SpecialBlockMatchOrientation.loadFromConfig(section, fullName);
+            case WALL_COMBI -> SpecialBlockWallCombi.loadFromConfig(section, fullName);
+            case DOOR -> SpecialBlockDoor.loadFromConfig(section, fullName);
+            case THIN_WALL -> SpecialBlockThinWall.loadFromConfig(section, fullName);
+            case DOOR_VANILLA -> SpecialBlockVanillaDoor.loadFromConfig(section, fullName);
+            case DOOR_FOUR_BLOCKS -> SpecialBlockDoorFourBlocks.loadFromConfig(section, fullName);
+            case DOOR_THREE_BLOCKS -> SpecialBlockDoorThreeBlocks.loadFromConfig(section, fullName);
+            case ITEM_BLOCK -> SpecialBlockItemBlock.loadFromConfig(section, fullName);
+            case ITEM_BLOCK_TWO_DIRECTIONS -> SpecialBlockItemTwoDirections.loadFromConfig(section, fullName);
+            case ITEM_BLOCK_FOUR_DIRECTIONS -> SpecialBlockItemFourDirections.loadFromConfig(section, fullName);
+            case MOB_SPAWNER_BLOCK -> SpecialBlockMobSpawnerBlock.loadFromConfig(section, fullName);
+            case BURNING_FURNACE -> SpecialBlockBurningFurnace.loadFromConfig(section, fullName);
+            case DOUBLE_Y_BLOCK -> SpecialBlockDoubleY.loadFromConfig(section, fullName);
+            case UPSHIFT -> SpecialBlockUpshift.loadFromConfig(section, fullName);
+            case MULTI_FACE -> SpecialBlockMultiFace.loadFromConfig(section, fullName);
+            case VANILLA -> SpecialBlockVanilla.loadFromConfig(section, fullName);
+            case NONE -> SpecialBlockNone.loadFromConfig(section, fullName);
+            case ITEM_FRAME -> SpecialBlockItemFrame.loadFromConfig(section, fullName);
+            case SIGN -> SpecialBlockSign.loadFromConfig(section, fullName);
+            case SIGN_POST -> SpecialBlockSignPost.loadFromConfig(section, fullName);
+            case SIGN_WALL -> SpecialBlockSignWall.loadFromConfig(section, fullName);
+            default -> null;
+        };
+    }
+
     private SpecialBlock(String id, BlockData data) {
         this(id, data, SpecialBlockType.BLOCK);
     }
@@ -144,7 +211,7 @@ public class SpecialBlock {
             public void run() {*/
                 state.update(true, false);
                 blockPlace.setBlockData(state.getBlockData(), false);
-                DevUtil.log("Special block place: ID "+state.getType()+" - DV "+state.getRawData());
+                //DevUtil.log("Special block place: ID "+state.getType()+" - DV "+state.getRawData());
 
                 ChunkUpdateUtil.sendUpdates(blockPlace, player);
                 /*final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);

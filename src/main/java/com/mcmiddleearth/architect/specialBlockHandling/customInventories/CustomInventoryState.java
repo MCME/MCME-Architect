@@ -50,9 +50,9 @@ public abstract class CustomInventoryState {
 
     protected int leftCategory;
     
-    protected final Inventory inventory;
+    protected Inventory inventory;
     
-    protected final Player player;
+    protected Player player;
 
     public CustomInventoryState(Map<String, CustomInventoryCategory> categories, CustomInventoryCategory withoutCategory, Inventory inventory, Player player) {
         this(categories, withoutCategory,inventory,player,0);
@@ -284,5 +284,13 @@ public abstract class CustomInventoryState {
 
     public Player getPlayer() {
         return player;
+    }
+
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
+    }
+
+    public void setPlayer(Player player) {
+        this.player = player;
     }
 }
