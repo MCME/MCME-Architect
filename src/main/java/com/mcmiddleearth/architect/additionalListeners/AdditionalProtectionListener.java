@@ -41,6 +41,7 @@ import org.bukkit.event.block.TNTPrimeEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -53,15 +54,27 @@ import java.util.logging.Logger;
  * @author Eriol_Eandur
  */
 public class AdditionalProtectionListener extends WatchedListener{
-    
+
     @EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
-    public void HangingBreak(HangingBreakByEntityEvent event) {
-        if((!PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.HANGING_ENTITY_PROTECTION))) {
-            return;
-        }  
-        if(!(event.getRemover() instanceof Player)) {
-            event.setCancelled(true);
-            return;
+    public void HangingBreak(HangingBreakEvent event) {
+        if((PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.HANGING_ENTITY_PROTECTION))) {
+            switch(event.getCause()) {
+                case OBSTRUCTION:
+                case PHYSICS:
+                case EXPLOSION:
+                case DEFAULT:
+                    event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
+    public void HangingBreaByEntity(HangingBreakByEntityEvent event) {
+        if((PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.HANGING_ENTITY_PROTECTION))) {
+            if (!(event.getRemover() instanceof Player)) {
+                event.setCancelled(true);
+                return;
+            }
         }
         Player player = (Player) event.getRemover();
         if(!PluginData.checkBuildPermissions(player,event.getEntity().getLocation(),
