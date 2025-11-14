@@ -45,15 +45,19 @@ public class RpListener implements Listener {
     @EventHandler
     public void onRpSwitch(PlayerResourcePackStatusEvent event) {
         Player player = event.getPlayer();
+        RpPlayerData data = RpManager.getPlayerData(player);
         switch(event.getStatus()) {
             case SUCCESSFULLY_LOADED:
                 PluginData.getMessageUtil().sendInfoMessage(player, "Resource pack loaded successfully.");
+                data.setServerRpStatus(ServerRpStatus.OK);
                 break;
             case FAILED_DOWNLOAD:
                 PluginData.getMessageUtil().sendInfoMessage(player, "Resource pack download failed. Please check your connection.");
+                data.setServerRpStatus(ServerRpStatus.FAIlED);
                 break;
             case DECLINED:
                 PluginData.getMessageUtil().sendInfoMessage(player, "Resource pack loading failed. Did you enable server resource packs (edit server in multiplayer list)?");
+                data.setServerRpStatus(ServerRpStatus.FAIlED);
                 break;
         }
         RpManager.getPlayerData(player).setCurrentRpStatus(event.getStatus());

@@ -36,6 +36,7 @@ public class RpPlayerData implements Serializable {
     private String currentRpUrl = null;
     private transient PlayerResourcePackStatusEvent.Status currentRpStatus
             = PlayerResourcePackStatusEvent.Status.DECLINED;
+    private transient ServerRpStatus serverRpStatus = ServerRpStatus.UNKNOWN;
 
     private transient int protocolVersion;
 
@@ -101,5 +102,9 @@ public class RpPlayerData implements Serializable {
 
     public int getProtocolVersion() {
         return protocolVersion;
+    }
+
+    public void setServerRpStatus(ServerRpStatus serverRpStatus) {
+        this.serverRpStatus = serverRpStatus;
     }
 }

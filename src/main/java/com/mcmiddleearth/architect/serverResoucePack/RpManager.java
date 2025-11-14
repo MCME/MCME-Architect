@@ -340,7 +340,11 @@ public class RpManager {
                     setRp(newRegion.getRp(), player, false);
                     return true;
                 }
+            } else if(data.getCurrentRegion() != null){
+                data.setServerRpStatus(ServerRpStatus.OK);
             }
+        } else {
+            data.setServerRpStatus(ServerRpStatus.OK);
         }
         return false;
     }
@@ -350,6 +354,7 @@ public class RpManager {
         RpPlayerData data = getPlayerData(player);
         if(url!=null && data!=null && !url.equals("") && (force || !url.equals(data.getCurrentRpUrl()))) {
             data.setCurrentRpUrl(url);
+            data.setServerRpStatus(ServerRpStatus.LOADING);
 //Logger.getGlobal().info("Sending to "+player.getName()+"("+getPlayerData(player).getProtocolVersion()+") RP: "+url);
             player.setResourcePack(url, getSHA(rpName, player));
             savePlayerData(player);
