@@ -91,6 +91,8 @@ public class RpListener implements Listener {
                         data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
                         if(RpManager.isSodiumClient(player)) {
                             data.setClient("sodium");
+                        } else if(!"fabric".equalsIgnoreCase(player.getClientBrandName())) {
+                            data.setClient("vanilla");
                         }
                         String lastUrl = data.getCurrentRpUrl();
                         data.setCurrentRpUrl(null);
