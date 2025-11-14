@@ -39,6 +39,7 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
     private final SpecialBlock baseBlock;
 
     private int returnCategory;
+    private int returnUpperLeftItem;
 
     private final int maskSlot = CustomInventory.CATEGORY_SLOTS + 13;
     private final int backSlot = CustomInventory.CATEGORY_SLOTS + 31;
@@ -92,6 +93,9 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
 
     CustomInventoryCollectionState(CustomInventoryState state, ItemStack baseItem) {
         this(state.categories, state.withoutCategory, state.inventory, state.player, baseItem, false);
+        if(state instanceof CustomInventoryCategoryState categoryState) {
+            returnUpperLeftItem = categoryState.getUpperLeftItem();
+        }
     }
     
     @Override
@@ -216,5 +220,9 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
 
     public SpecialBlock getBaseBlock() {
         return baseBlock;
+    }
+
+    public int getReturnUpperLeftItem() {
+        return returnUpperLeftItem;
     }
 }

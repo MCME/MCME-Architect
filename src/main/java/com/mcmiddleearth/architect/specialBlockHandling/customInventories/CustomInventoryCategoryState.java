@@ -41,6 +41,9 @@ public class CustomInventoryCategoryState extends CustomInventoryState {
         this(state.categories,state.withoutCategory,state.inventory,state.player);
         currentCategory = state.currentCategory;
         leftCategory = state.leftCategory;
+        if(state instanceof CustomInventoryCollectionState collectionState) {
+            upperLeftItem = collectionState.getReturnUpperLeftItem();
+        }
     }
     
     @Override
@@ -138,5 +141,9 @@ public class CustomInventoryCategoryState extends CustomInventoryState {
 
     @Override
     public boolean usesSubcategories() {return categories.get(categoryNames[currentCategory]).usesSubcategories();}
+
+    protected int getUpperLeftItem() {
+        return upperLeftItem;
+    }
 
 }
