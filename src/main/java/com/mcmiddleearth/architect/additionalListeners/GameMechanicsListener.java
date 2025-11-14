@@ -23,7 +23,9 @@ import com.mcmiddleearth.architect.watcher.WatchedListener;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
+import org.bukkit.block.DecoratedPot;
 import org.bukkit.block.Jukebox;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -177,9 +179,11 @@ public class GameMechanicsListener extends WatchedListener{
         if (PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.REMOVE_CONTAINER_ITEMS)) {
             if(event.getBlock().getState() instanceof Container container) {
                 container.getInventory().clear();
-            } else  if(event.getBlock().getState() instanceof Jukebox jukebox) {
-                jukebox.setType(Material.AIR);
-                jukebox.update(true, false);
+            } else  if(event.getBlock().getState() instanceof Jukebox
+                        || event.getBlock().getState() instanceof DecoratedPot) {
+                BlockState state = event.getBlock().getState();
+                state.setType(Material.AIR);
+                state.update(true, false);
                 event.setCancelled(true);
             }
         }

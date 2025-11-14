@@ -28,7 +28,6 @@ import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -45,7 +44,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 
 import java.util.*;
-import java.util.logging.Logger;
 
 public class CustomInventory implements Listener {
  
@@ -61,6 +59,8 @@ public class CustomInventory implements Listener {
                                                                         null, false);
     
     private final Map<Inventory,CustomInventoryState> openInventories = new HashMap<>();
+
+    private final Map<UUID, CustomInventoryState> closedInventoryStates = new HashMap<>();
     
     private final String menueItemId = "MCME Inventory Category";
 
@@ -114,15 +114,22 @@ public class CustomInventory implements Listener {
             Set<String> categoryNames = categories.keySet();
             Iterator<String> iterator = categoryNames.iterator();
             String startCategory = iterator.next();
-Logger.getGlobal().info("Start: "+startCategory);
+//Logger.getGlobal().info("Start: "+startCategory);
             if(startCategory.equals("Blocks") || startCategory.equals("Heads")) {
                 startCategory = iterator.next();
             }
             if(startCategory == null) {
                 startCategory = "";
             }
-            state = new CustomInventoryCategoryState(categories, withoutCategory, inventory, player);
-            state.setCategory(startCategory);
+            CustomInventoryState lastState = closedInventoryStates.get(player.getUniqueId());
+            if(lastState != null) {
+                state = lastState;
+                state.setInventory(inventory);
+                state.setPlayer(player);
+            } else {
+                state = new CustomInventoryCategoryState(categories, withoutCategory, inventory, player);
+                state.setCategory(startCategory);
+            }
         } else {
             state = new CustomInventoryCollectionState(categories, withoutCategory, inventory, player, collectionBase, directGet);
         }
@@ -364,7 +371,12 @@ Logger.getGlobal().info("Start: "+startCategory);
     
     @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
     void onClose(final InventoryCloseEvent event) {
-        openInventories.remove(event.getInventory());
+        Inventory inventory = event.getInventory();
+        CustomInventoryState state = openInventories.get(inventory);
+        if(state != null) {
+            closedInventoryStates.put(event.getPlayer().getUniqueId(), state);
+        }
+        openInventories.remove(inventory);
     }
     
     private ItemStack setItemNameAndLore(ItemStack item, String name, String[] lore) {
@@ -418,5 +430,14 @@ Logger.getGlobal().info("Start: "+startCategory);
 //Logger.getGlobal().info(""+SpecialBlockInventoryData.getSpecialBlockDataFromItem(currentItem).getId());
 //Logger.getGlobal().info(""+SpecialBlockInventoryData.getSpecialBlockDataFromItem(currentItem).getCollection().size());
         return SpecialBlockInventoryData.getSpecialBlockDataFromItem(currentItem).hasCollection();
+    }
+
+    public String matchCategory(String filter) {
+        for(String search: categories.keySet()) {
+            if (search.toLowerCase().startsWith(filter.toLowerCase())) {
+                return search;
+            }
+        }
+        return null;
     }
 }

@@ -2,6 +2,7 @@ package com.mcmiddleearth.architect.specialBlockHandling.customInventories.edito
 
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor.prompt.edit.ChangeColorPrompt;
 import com.mcmiddleearth.pluginutil.NumericUtil;
+import org.bukkit.Material;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.Prompt;
 import org.bukkit.conversations.ValidatingPrompt;
@@ -23,7 +24,14 @@ public class CmdPrompt extends ValidatingPrompt {
         if(!input.equalsIgnoreCase("!skip")) {
             conversationContext.setSessionData("cmd",NumericUtil.getInt(input));
         }
-        if(((String) Objects.requireNonNull(conversationContext.getSessionData("itemMaterial"))).startsWith("LEATHER")) {
+        Object itemMaterial = conversationContext.getSessionData("itemMaterial");
+        String name = "";
+        if(itemMaterial instanceof Material material) {
+            name = material.name();
+        } else {
+            name = (itemMaterial!=null?(String) name:"");
+        }
+        if(name.startsWith("LEATHER")) {
             return new ColorPrompt();
         } else {
             return new DisplayPrompt();

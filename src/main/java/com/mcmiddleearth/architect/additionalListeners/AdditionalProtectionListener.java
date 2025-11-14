@@ -22,6 +22,8 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.util.TheGafferUtil;
+import io.papermc.paper.event.player.PlayerOpenSignEvent;
+import io.papermc.paper.event.player.PlayerSignCommandPreprocessEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -35,30 +37,44 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.TNTPrimeEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerTakeLecternBookEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
+
+import java.util.logging.Logger;
 
 /**
  *
  * @author Eriol_Eandur
  */
 public class AdditionalProtectionListener extends WatchedListener{
-    
+
     @EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
-    public void HangingBreak(HangingBreakByEntityEvent event) {
-        if((!PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.HANGING_ENTITY_PROTECTION))) {
-            return;
-        }  
-        if(!(event.getRemover() instanceof Player)) {
-            event.setCancelled(true);
-            return;
+    public void HangingBreak(HangingBreakEvent event) {
+        if((PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.HANGING_ENTITY_PROTECTION))) {
+            switch(event.getCause()) {
+                case OBSTRUCTION:
+                case PHYSICS:
+                case EXPLOSION:
+                case DEFAULT:
+                    event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
+    public void HangingBreaByEntity(HangingBreakByEntityEvent event) {
+        if((PluginData.isModuleEnabled(event.getEntity().getWorld(),Modules.HANGING_ENTITY_PROTECTION))) {
+            if (!(event.getRemover() instanceof Player)) {
+                event.setCancelled(true);
+                return;
+            }
         }
         Player player = (Player) event.getRemover();
         if(!PluginData.checkBuildPermissions(player,event.getEntity().getLocation(),
@@ -175,4 +191,23 @@ public class AdditionalProtectionListener extends WatchedListener{
             }
         }
     }
+
+    @EventHandler
+    public void tntIgnitionBlock(TNTPrimeEvent event) {
+        if((PluginData.isModuleEnabled(event.getBlock().getWorld(), Modules.TNT_PROTECTION))) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void signProtection(PlayerOpenSignEvent event) {
+        if(!TheGafferUtil.checkGafferPermission(event.getPlayer(), event.getSign().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    /* @EventHandler
+    public void onRecipe(PlayerRecipeDiscoverEvent event) {
+        Logger.getGlobal().info("Discover reipe: "+event.getRecipe()+" "+event.getPlayer().name());
+    }*/
 }

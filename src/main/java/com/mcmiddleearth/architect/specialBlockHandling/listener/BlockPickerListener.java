@@ -44,8 +44,10 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.RayTraceResult;
 
+import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Logger;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  *
@@ -62,6 +64,9 @@ public class BlockPickerListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
+        if(player.getInventory().getItemInMainHand().getType().equals(Material.FLINT)) {
+            return;
+        }
         FluidCollisionMode mode = player.isSneaking() ? FluidCollisionMode.ALWAYS : FluidCollisionMode.NEVER;
         RayTraceResult result = player.getWorld().rayTrace(player.getEyeLocation(),
                                 player.getLocation().getDirection(),
@@ -200,7 +205,7 @@ public class BlockPickerListener implements Listener {
             }
 
             //replace item in main hand
-            //inventory.setItemInMainHand(twoItems);
+            if(changeHandSlot) inventory.setItemInMainHand(twoItems);
         }
     }
 
@@ -225,6 +230,8 @@ public class BlockPickerListener implements Listener {
         return -1;
     }
 
+    private Map<UUID, String> selectedBlockData = new HashMap<>();
+
     @EventHandler
     private void blockInfo(PlayerInteractEvent event) {
         if(!PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_FLINT)) {
@@ -234,20 +241,42 @@ public class BlockPickerListener implements Listener {
                 && event.getHand().equals(EquipmentSlot.HAND)
                 && event.getPlayer().getInventory().getItemInMainHand().getType().equals(Material.FLINT)) {
             event.setCancelled(true);
-            Block block =  (event.getClickedBlock()!=null?
+            Block block = (event.getClickedBlock()!=null?
                     event.getClickedBlock():event.getPlayer().getTargetBlock(null, 1000));
             Player player = event.getPlayer();
             if(player.isSneaking()) {
-                String preSet = WeSelectCommand.getWeSelect(player.getUniqueId(),true);
-                if(preSet.contains(placeholder)){
-                    preSet = preSet.replace(placeholder,block.getBlockData().getAsString());
-                    FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
-                            .addClickable(block.getBlockData().getAsString(),preSet);
-                    message.send(player);
-                }else{
-                    FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
-                            .addClickable(block.getBlockData().getAsString(), preSet+" "+block.getBlockData().getAsString());
-                    message.send(player);
+                if(event.getAction().equals(Action.LEFT_CLICK_BLOCK)) {
+                    String previousSelection = selectedBlockData.get(player.getUniqueId());
+                    if(previousSelection != null) {
+                        selectedBlockData.put(player.getUniqueId(), previousSelection+","
+                                +block.getBlockData().getAsString().replace("minecraft:",""));
+                    } else {
+                        selectedBlockData.put(player.getUniqueId(),
+                                block.getBlockData().getAsString().replace("minecraft:",""));
+                    }
+                } else if(event.getAction().equals(Action.LEFT_CLICK_AIR)) {
+                    String preSet = WeSelectCommand.getWeSelect(player.getUniqueId(),true);
+                    String selection = selectedBlockData.get(event.getPlayer().getUniqueId());
+                    if(selection == null) {
+                        selection = block.getBlockData().getAsString();
+                    }
+                    if(preSet.contains(placeholder)){
+                        preSet = preSet.replace(placeholder,selection);
+                        FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                                .addFancy(selection,preSet,"Click to suggest selected WE command!");
+                        message.send(player);
+                    } else if(!preSet.isEmpty()){
+                        FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                                .addFancy(selection, preSet+" "+selection,
+                                        "Click to suggest selected WE command!");
+                        message.send(player);
+                    } else {
+                        FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
+                                .addFancy(selection, selection,"Click to copy to clipboard!")
+                                .setCopyToClipboard();
+                        message.send(player);
+                    }
+                    selectedBlockData.put(player.getUniqueId(),null);
                 }
             } else {
                 String preSet = WeSelectCommand.getWeSelect(player.getUniqueId(),false);

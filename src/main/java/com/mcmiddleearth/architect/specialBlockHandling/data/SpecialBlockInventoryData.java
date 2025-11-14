@@ -101,7 +101,7 @@ public class SpecialBlockInventoryData {
         searchInventories.put(rpName, searchInventory);
         File blockFile = new File(folder,"categories.yml");
         if(blockFile.exists()) {
-            loadFromFile(rpName, blockFile);
+            loadCategories(rpName, blockFile);
         }
         for(File file: files) {
             if(!file.getName().equals(blockFile.getName())) {
@@ -115,13 +115,12 @@ public class SpecialBlockInventoryData {
             searchInventory.destroy();
         }
     }
-    
-    private static void loadFromFile(String rpName, File file) {
-        Logger.getGlobal().info("Loading items into to inventory for resource pack "+rpName+" from "+file.getName());
+
+    private static void loadCategories(String rpName, File file) {
+        DevUtil.log(1, "Loading categories to inventory for resource pack "+rpName+" from "+file.getName());
         CustomInventory inventory = inventories.get(rpName);
         inventory.setCategoryItems("Heads",null, true,
-                                    new ItemStack(Material.PLAYER_HEAD), new ItemStack(Material.PLAYER_HEAD),false);
-        SearchInventory searchInventory = searchInventories.get(rpName);
+                new ItemStack(Material.PLAYER_HEAD), new ItemStack(Material.PLAYER_HEAD),false);
         YamlConfiguration config = new YamlConfiguration();
         try {
             config.load(file);
@@ -148,193 +147,39 @@ public class SpecialBlockInventoryData {
                 inventory.setCategoryItems(categoryKey, null, true, categoryItem, currentCategoryItem, useSubcategories);
             }
         }
+    }
+    
+    private static void loadFromFile(String rpName, File file) {
+        DevUtil.log(1,"Loading items into to inventory for resource pack "+rpName+" from "+file.getName());
+        CustomInventory inventory = inventories.get(rpName);
+        SearchInventory searchInventory = searchInventories.get(rpName);
+        YamlConfiguration config = new YamlConfiguration();
+        try {
+            config.load(file);
+        } catch (IOException | InvalidConfigurationException ex) {
+            Logger.getLogger(SpecialBlockInventoryData.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        int separator = file.getName().lastIndexOf(".");
+        String categoryName = inventory.matchCategory(file.getName().substring(0,separator));
+        DevUtil.log(2, "Loading category: "+categoryName);
         ConfigurationSection itemConfig = config.getConfigurationSection("Items");
+
         if(itemConfig!=null) {
+            DevUtil.log(2, "Loading category items.");
+            for(String itemKey : config.getStringList("Main")) {
+                if(getSpecialBlock(fullName(rpName, itemKey))!=null) {
+                    DevUtil.log(2, "Error. Double custom block ID "+fullName(rpName,itemKey)+"'. Block skipped.");
+                } else {
+                    addSpecialBlock(inventory, searchInventory, categoryName, itemConfig, rpName, itemKey);
+                }
+            };
+            DevUtil.log(2, "Loading uncategorized items.");
             for(String itemKey: itemConfig.getKeys(false)) {
                 if(getSpecialBlock(fullName(rpName, itemKey))!=null) {
-                    Logger.getLogger(SpecialBlockInventoryData.class.getName())
-                        .log(Level.WARNING, "Double custom block ID "+fullName(rpName,itemKey)+"'. Block skipped.");
-                    DevUtil.log("Error. Double custom block ID "+fullName(rpName,itemKey)+"'. Block skipped.");
+                    DevUtil.log(2, "Warning. Double custom block ID "+fullName(rpName,itemKey)
+                            +"'. Maybe that Block was already loaded from Main lists?");
                 } else {
-                    SpecialBlockType type;
-                    ConfigurationSection section = itemConfig.getConfigurationSection(itemKey);
-                    try {
-                        String typeName = section.getString("type");
-                        if(typeName==null) {
-                            typeName="VANILLA";
-                            DevUtil.log("Waring, missing block type for: "+fullName(rpName,itemKey));
-                        }
-                        type = SpecialBlockType.valueOf(typeName);
-                    } catch( IllegalArgumentException e) { 
-                        type = SpecialBlockType.INVALID;
-                    }
-                    SpecialBlock blockData = null;
-                    switch(type) {
-                        case BLOCK:
-                            blockData = SpecialBlock.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BLOCK_ON_WATER:
-                            blockData = SpecialBlockOnWater.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BLOCK_ON_WATER_CONNECT:
-                            blockData = SpecialBlockOnWaterConnect.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH:
-                            blockData = SpecialBlockBranch2.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_HORIZONTAL:
-                            blockData = SpecialBlockBranchHorizontal.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_DIAGONAL:
-                            blockData = SpecialBlockBranchDiagonal.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_STEEP:
-                            blockData = SpecialBlockBranchSteep.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_TWIGS:
-                            blockData = SpecialBlockBranchTwigs.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_TWIGS_EIGHT_DIRECTIONS:
-                            blockData = SpecialBlockBranchTwigsEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        /*case BRANCH_TWIGS_UPPER:
-                            blockData = SpecialBlockBranchTwigsUpper.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_TWIGS_LOWER:
-                            blockData = SpecialBlockBranchTwigsLower.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS:
-                            blockData = SpecialBlockBranchTwigsUpperEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS:
-                            blockData = SpecialBlockBranchTwigsLowerEightDirections.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;*/
-                        case BRANCH_CONNECT:
-                            blockData = SpecialBlockBranchConnect.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_TRUNK_CONNECT:
-                            blockData = SpecialBlockBranchTrunkConnect.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BRANCH_TRUNK_CONNECT_COMPLEX:
-                            blockData = SpecialBlockBranchTrunkConnectComplex.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BLOCK_CONNECT:
-//Logger.getGlobal().info("Block connect:"+itemKey);
-                            blockData = SpecialBlockConnect.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case DIAGONAL_CONNECT:
-                            blockData = SpecialBlockDiagonalConnect.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BISECTED:
-                            blockData = SpecialBlockBisected.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case THREE_AXIS:
-                            blockData = SpecialBlockThreeAxis.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case TWO_AXIS:
-                            blockData = SpecialBlockTwoAxis.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case FIVE_FACES:
-                            blockData = SpecialBlockFiveFaces.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case SIX_FACES:
-                            blockData = SpecialBlockSixFaces.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case EIGHT_FACES:
-                            blockData = SpecialBlockEightFaces.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case SIX_FACES_XZ:
-                            blockData = SpecialBlockSixFacesXZ.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case FOUR_DIRECTIONS:
-                            blockData = SpecialBlockFourDirections.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case FOUR_DIRECTIONS_COMPLEX:
-                            blockData = SpecialBlockFourDirectionsComplex.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case OPEN_HALF_DOOR:
-                            blockData = SpecialBlockOpenHalfDoor.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case MATCH_ORIENTATION:
-                            blockData = SpecialBlockMatchOrientation.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case WALL_COMBI:
-                            blockData = SpecialBlockWallCombi.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case DOOR:
-                            blockData = SpecialBlockDoor.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case THIN_WALL:
-                            blockData = SpecialBlockThinWall.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case DOOR_VANILLA:
-                            blockData = SpecialBlockVanillaDoor.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case DOOR_FOUR_BLOCKS:
-                            blockData = SpecialBlockDoorFourBlocks.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case DOOR_THREE_BLOCKS:
-                            blockData = SpecialBlockDoorThreeBlocks.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case ITEM_BLOCK:
-                            blockData = SpecialBlockItemBlock.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case ITEM_BLOCK_TWO_DIRECTIONS:
-                            blockData = SpecialBlockItemTwoDirections.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case ITEM_BLOCK_FOUR_DIRECTIONS:
-                            blockData = SpecialBlockItemFourDirections.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case MOB_SPAWNER_BLOCK:
-                            blockData = SpecialBlockMobSpawnerBlock.loadFromConfig(section, fullName(rpName,itemKey));
-                            break;
-                        case BURNING_FURNACE:
-                            blockData = SpecialBlockBurningFurnace.loadFromConfig(section, fullName(rpName, itemKey));
-                            break;
-                        case DOUBLE_Y_BLOCK:
-                            blockData = SpecialBlockDoubleY.loadFromConfig(section, fullName(rpName, itemKey));
-                            break;
-                        case UPSHIFT:
-                            blockData = SpecialBlockUpshift.loadFromConfig(section, fullName(rpName, itemKey));
-                            break;
-                        case MULTI_FACE:
-                            blockData = SpecialBlockMultiFace.loadFromConfig(section, fullName(rpName, itemKey));
-                            break;
-                        case VANILLA:
-                            blockData = SpecialBlockVanilla.loadFromConfig(section, fullName(rpName, itemKey));
-                            break;
-                        case NONE:
-                            blockData = SpecialBlockNone.loadFromConfig(section, fullName(rpName, itemKey));
-                            break;
-                        case ITEM_FRAME:
-                            blockData = SpecialBlockItemFrame.loadFromConfig(section, fullName(rpName, itemKey));
-                            break;
-                        case SIGN:
-                            blockData = SpecialBlockSign.loadFromConfig(section, fullName(rpName, itemKey));
-                            break;
-                    }
-                    ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
-                    if(blockData !=null && inventoryItem!=null && !inventoryItem.getType().equals(Material.AIR)) {
-                        blockData.loadPriority(section);
-                        blockData.loadNextBlock(section,rpName);
-                        blockData.loadBlockCollection(section,rpName);
-                        blockList.add(blockData);
-
-                        Object categoryObject = section.get("category");
-                        if(categoryObject instanceof String) {
-                            inventory.add(inventoryItem, (String) categoryObject, false);
-                        } else if((categoryObject instanceof List) && ! ((List<?>)categoryObject).isEmpty()) {
-                            ((List<String>)categoryObject).forEach(category -> inventory.add(inventoryItem, category,false));
-                        } else {
-                            inventory.add(inventoryItem,null,false);
-                            //Logger.getGlobal().info("category object: "+categoryObject);
-                        }
-                        searchInventory.add(inventoryItem);
-                    } else {
-                        Logger.getLogger(SpecialBlockInventoryData.class.getName())
-                            .log(Level.WARNING, "Invalid config data while loading Special MCME Block '"+itemKey+"'. Block skipped.");
-                        Logger.getGlobal().info("block Data: "+blockData+" - item: "+inventoryItem);
-                    }
+                    addSpecialBlock(inventory, searchInventory, null, itemConfig, rpName, itemKey);
                 }
             }
         }
@@ -345,7 +190,55 @@ public class SpecialBlockInventoryData {
             Logger.getLogger(SpecialBlockInventoryData.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
+    private static void addSpecialBlock(CustomInventory inventory, SearchInventory searchInventory, String category,
+                                        ConfigurationSection itemConfig, String rpName, String itemKey) {
+        SpecialBlockType type;
+        ConfigurationSection section = itemConfig.getConfigurationSection(itemKey);
+        if(section != null) {
+            try {
+                String typeName = section.getString("type");
+                if (typeName == null) {
+                    typeName = "VANILLA";
+                    DevUtil.log(2, "Waring, missing block type for: " + fullName(rpName, itemKey));
+                }
+                type = SpecialBlockType.valueOf(typeName);
+            } catch (IllegalArgumentException e) {
+                type = SpecialBlockType.INVALID;
+            }
+
+            SpecialBlock blockData = SpecialBlock.createSpecialBlock(type, section, fullName(rpName, itemKey));
+
+            ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
+            if (blockData != null && !inventoryItem.getType().equals(Material.AIR)) {
+                blockData.loadPriority(section);
+                blockData.loadNextBlock(section, rpName);
+                blockData.loadBlockCollection(section, rpName);
+                blockList.add(blockData);
+
+                if (category != null) {
+                    inventory.add(inventoryItem, category, false);
+                } else {
+                    Object categoryObject = section.get("category");
+                    if (categoryObject instanceof String) {
+                        inventory.add(inventoryItem, (String) categoryObject, false);
+                    } else if ((categoryObject instanceof List) && !((List<?>) categoryObject).isEmpty()) {
+                        ((List<String>) categoryObject).forEach(thisCategory -> inventory.add(inventoryItem, thisCategory, false));
+                    } else {
+                        inventory.add(inventoryItem, null, false);
+                        //Logger.getGlobal().info("category object: "+categoryObject);
+                    }
+                }
+                searchInventory.add(inventoryItem);
+            } else {
+                DevUtil.log(2, "Invalid config data while loading Special MCME Block '" + itemKey + "'. Block skipped."
+                        + " block Data: " + blockData + " - item: " + inventoryItem);
+            }
+        } else {
+            DevUtil.log(2, "Expected config section does not exist for id: "+itemKey);
+        }
+    }
+
     public static boolean openInventory(Player p, String resourcePack) {
         return openInventory(p,resourcePack,null);
     }
@@ -599,15 +492,20 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
             displayName = name;
         }
         if(itemMat!=null) {
-            ItemStack item = new ItemStack(itemMat,1);
-            ItemMeta im = loadItemMeta(item.getItemMeta(),config);
-            im.setDisplayName(displayName);
-            im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp,name)}));
-            im.setUnbreakable(true);
-            im.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
-            im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-            item.setItemMeta(im);
-            return item;
+            try {
+                ItemStack item = new ItemStack(itemMat, 1);
+                ItemMeta im = loadItemMeta(item.getItemMeta(), config);
+                im.setDisplayName(displayName);
+                im.setLore(Arrays.asList(new String[]{SPECIAL_BLOCK_TAG, fullName(rp, name)}));
+                im.setUnbreakable(true);
+                im.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+                im.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                item.setItemMeta(im);
+                return item;
+            } catch(IllegalArgumentException ex) {
+                Logger.getLogger(SpecialBlockInventoryData.class.getName())
+                        .warning("Not an item material: "+itemMat.name());
+            }
         }
         return new ItemStack(Material.STONE);
     }

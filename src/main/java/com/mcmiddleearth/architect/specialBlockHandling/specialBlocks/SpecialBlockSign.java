@@ -41,7 +41,7 @@ public class SpecialBlockSign extends SpecialBlock {
     private final boolean hanging;
     private final BlockData data, dataWall;
 
-    private SpecialBlockSign(String id, BlockData data, BlockData dataWall, boolean hanging,
+    protected SpecialBlockSign(String id, BlockData data, BlockData dataWall, boolean hanging,
                              SpecialBlockType type) {
         super(id, Material.AIR.createBlockData(), type);
         this.data = data;
@@ -75,14 +75,12 @@ public class SpecialBlockSign extends SpecialBlock {
         Waterlogged placeData = null;
         switch(blockFace) {
             case BlockFace.UP:
+            case BlockFace.DOWN:
                 if(!hanging) {
                     Sign sign = (Sign) data;
                     sign.setRotation(getBlockFaceSuperFine(player.getYaw()).getOppositeFace());
                     placeData = sign;
-                }
-                break;
-            case BlockFace.DOWN:
-                if(hanging) {
+                } else {
                     HangingSign sign = (HangingSign) data;
                     sign.setRotation(getBlockFaceSuperFine(player.getYaw()).getOppositeFace());
                     placeData = sign;
@@ -132,7 +130,7 @@ public class SpecialBlockSign extends SpecialBlock {
         },3);
     }
 
-    public static void sendSignEditorOpen(Block blockPlace, Player player, Side side) {
+    public void sendSignEditorOpen(Block blockPlace, Player player, Side side) {
         ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
         BlockPosition blockPosition = new BlockPosition(blockPlace.getX(), blockPlace.getY(), blockPlace.getZ());
         PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.OPEN_SIGN_EDITOR);
@@ -186,27 +184,27 @@ public class SpecialBlockSign extends SpecialBlock {
                             sign.getSide(side).line(i, SignEditorData.parseLine(lines[i]));
                         }
                         sign.update(true, false);
-                        if(side == Side.FRONT) {
+                        /*if(side == Side.FRONT) {
                             sendSignEditorOpen(blockPlace, player, Side.BACK);
                             side = Side.BACK;
-                        } else {
-                            protocolManager.removePacketListener(instance);
-                        }
+                        } else {*/
+                        protocolManager.removePacketListener(instance);
+                        //}
                     }
                 });
             }
         }
     }
 
-    public static class SignListener implements Listener {
+    /*public static class SignListener implements Listener {
 
-        private Block blockPlace, clicked;
-        private BlockFace blockFace;
-        private Location interactionPoint;
-        private Player player;
+        private final Block blockPlace, clicked;
+        private final BlockFace blockFace;
+        private final Location interactionPoint;
+        private final Player player;
         private BukkitTask removalTask;
-        private SignListener instance;
-        private SpecialBlock specialBlock;
+        private final SignListener instance;
+        private final SpecialBlock specialBlock;
 
         public SignListener(SpecialBlock specialBlock, final Block blockPlace,
                             final BlockFace blockFace, final Block clicked,
@@ -251,7 +249,7 @@ public class SpecialBlockSign extends SpecialBlock {
             }
         }
 
-    }
+    }*/
 
     @Override
     public boolean matches(BlockData data) {

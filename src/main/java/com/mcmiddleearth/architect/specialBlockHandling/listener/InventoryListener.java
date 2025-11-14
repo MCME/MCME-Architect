@@ -49,7 +49,7 @@ public class InventoryListener implements Listener{
      * in Architect config file.
      * @param event 
      */
-    @EventHandler(priority=EventPriority.LOW)  
+    @EventHandler(priority=EventPriority.LOW, ignoreCancelled = true)
     public void openSpecialInventory(PlayerSwapHandItemsEvent event) {
         if(PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_GET)) {
             event.setCancelled(true);
@@ -161,7 +161,7 @@ public class InventoryListener implements Listener{
         }
     }*/
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void selectItem(PlayerDropItemEvent event) {
         if(PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.SPECIAL_BLOCKS_GET)) {
             if(!event.getPlayer().isSneaking()) {

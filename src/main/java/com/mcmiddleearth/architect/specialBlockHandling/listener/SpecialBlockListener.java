@@ -31,6 +31,7 @@ import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.TheGafferUtil;
 import io.papermc.paper.event.player.PlayerItemFrameChangeEvent;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -57,6 +58,10 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  *
@@ -97,6 +102,23 @@ public class SpecialBlockListener extends WatchedListener{
         }
     }
 
+    private Set<PlayerInteractEventData> interactEventDataSet = new HashSet<>();
+
+    private record PlayerInteractEventData(int tick, Location loc) {
+
+        public boolean matches(Object other) {
+//Logger.getGlobal().info("matches");
+            if(other instanceof PlayerInteractEventData(int tick1, Location loc1)) {
+//Logger.getGlobal().info("Ticks: " + this.tick + " " + tick1 + " Location: " + this.loc.getBlockX() + " " + loc1.getBlockX()+" "+this.loc.getBlockY() + " " + loc1.getBlockY()+" "+this.loc.getBlockZ() + " " + loc1.getBlockZ()+" ");
+                return this.tick == tick1
+                    && this.loc.getBlockX() <= loc1.getBlockX() + 1 && this.loc.getBlockX() >= loc1.getBlockX() - 1
+                    && this.loc.getBlockY() <= loc1.getBlockY() + 1 && this.loc.getBlockY() >= loc1.getBlockY() - 1
+                    && this.loc.getBlockZ() <= loc1.getBlockZ() + 1 && this.loc.getBlockZ() >= loc1.getBlockZ() - 1;
+            }
+            return false;
+        }
+    }
+
     /**
      * If module SPECIAL_BLOCK_PLACE is enabled in world config file
      * handles placement of blocks from the MCME custom inventories.
@@ -118,6 +140,14 @@ public class SpecialBlockListener extends WatchedListener{
                 || !(SpecialBlockInventoryData.isSpecialBlockItem(event.getPlayer().getInventory().getItemInMainHand()))) {
             return;
         }
+        PlayerInteractEventData eventData = new PlayerInteractEventData(Bukkit.getServer().getCurrentTick(),
+                event.getClickedBlock().getLocation());
+        if(interactEventDataSet.stream().anyMatch(data -> data.matches(eventData))) {
+            return;
+        }
+        interactEventDataSet.removeIf(data -> data.tick < Bukkit.getServer().getCurrentTick());
+        interactEventDataSet.add(eventData);
+//Logger.getGlobal().info("PlayerInteractEvent: "+event.getHand()+" "+event.getAction()+ " "+event.getClickedBlock()+" "+event.getBlockFace()+" "+event.getInteractionPoint());
         final Player player = event.getPlayer();
         final ItemStack handItem = player.getInventory().getItemInMainHand();
         SpecialBlock data = SpecialBlockInventoryData.getSpecialBlockDataFromItem(handItem);
