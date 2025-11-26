@@ -69,27 +69,57 @@ public class CustomInventory implements Listener {
         Plugin plugin = ArchitectPlugin.getPluginInstance();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
+    
+    private String buildInventoryTitle(String baseName, String category, String subcategory) {
+        String prefix = "";
+        if (baseName != null && baseName.contains(" - ")) {
+            String[] parts = baseName.split(" - ");
+            if (parts.length > 1) {
+                prefix = parts[1] + " - ";
+            }
+        }
+        return org.bukkit.ChatColor.DARK_GRAY + prefix + category + " - " + subcategory;
+    }
+    
+    private String buildInventoryTitle(String baseName, CustomInventoryState state) {
+        if (state instanceof CustomInventoryCategoryState catState) {
+            String[] categoryNames = categories.keySet().toArray(new String[0]);
+            if (catState.currentCategory >= 0 && catState.currentCategory < categoryNames.length) {
+                String category = categoryNames[catState.currentCategory];
+                String subcategory = catState.getCurrentSubcategory();
+                return buildInventoryTitle(baseName, category, subcategory);
+            }
+        }
+        return baseName;
+    }
    
-    public CustomInventory add(ItemStack item, String category, boolean withSubcategories) {//, String name, String... info) {
+    public CustomInventory add(ItemStack item, String category, String subcategory, boolean withSubcategories) {//, String name, String... info) {
         if(category == null || category.equalsIgnoreCase("")) {
             withoutCategory.addItem(item);
         } else {
             createCategoryIfNotExists(category, null, true,
                     new ItemStack(Material.GOLD_NUGGET),
                     new ItemStack(Material.GOLD_NUGGET), withSubcategories);
-            categories.get(category).addItem(item);
+            categories.get(category).addItem(item, subcategory);
         }
         return this;
     }
    
     public void setCategoryItems(String category, UUID owner, boolean isPublic,
-                                 ItemStack item, ItemStack currentItem, boolean withSubcategories) {
+                                 ItemStack item, ItemStack currentItem, boolean withSubcategories, List<String> subcategoryNames,
+                                 Map<String, CustomInventoryCategory.SubcategoryItemConfig> subcategoryItemConfigs) {
         createCategoryIfNotExists(category, owner, isPublic, item, currentItem, withSubcategories);
         CustomInventoryCategory cat = categories.get(category);
         if(item!=null) 
             cat.setCategoryItem(setMenueItemMeta(item,category));
         if(currentItem!=null)
             cat.setCurrentCategoryItem(setMenueItemMeta(currentItem,category));
+        if(subcategoryNames != null && !subcategoryNames.isEmpty()) {
+            cat.setSubcategoryNames(subcategoryNames);
+        }
+        if(subcategoryItemConfigs != null && !subcategoryItemConfigs.isEmpty()) {
+            cat.setSubcategoryItemConfigs(subcategoryItemConfigs);
+        }
     }
     
     private void createCategoryIfNotExists(String category, UUID owner, boolean isPublic, ItemStack item,
@@ -108,30 +138,54 @@ public class CustomInventory implements Listener {
 
     public void open(Player player, ItemStack collectionBase, boolean directGet) {
         int size = CATEGORY_SLOTS + ITEM_SLOTS;//Math.min((items.get(startCategory).size()/9+1)*9,54);
-        Inventory inventory = Bukkit.createInventory(player, size, name);
+        
+        // Build the title with proper formatting before creating inventory
+        String inventoryTitle = name;
+        CustomInventoryState lastState = closedInventoryStates.get(player.getUniqueId());
+        if(collectionBase == null && lastState != null) {
+            // Restore from saved state - build title with saved category and subcategory
+            inventoryTitle = buildInventoryTitle(name, lastState);
+        } else if(collectionBase == null) {
+            // New state - build title with first category and "All" subcategory
+            Set<String> categoryNames = categories.keySet();
+            if(!categoryNames.isEmpty()) {
+                Iterator<String> iterator = categoryNames.iterator();
+                String startCategory = iterator.next();
+                if((startCategory.equals("Blocks") || startCategory.equals("Heads")) && iterator.hasNext()) {
+                    startCategory = iterator.next();
+                }
+                inventoryTitle = buildInventoryTitle(name, startCategory, "All");
+            }
+        }
+        
+        Inventory inventory = Bukkit.createInventory(player, size, inventoryTitle);
         CustomInventoryState state;
         if(collectionBase == null) {
             Set<String> categoryNames = categories.keySet();
+            // Check if categories exist before trying to iterate
+            if(categoryNames.isEmpty()) {
+                return; // Cannot open empty inventory
+            }
             Iterator<String> iterator = categoryNames.iterator();
             String startCategory = iterator.next();
 //Logger.getGlobal().info("Start: "+startCategory);
-            if(startCategory.equals("Blocks") || startCategory.equals("Heads")) {
+            if((startCategory.equals("Blocks") || startCategory.equals("Heads")) && iterator.hasNext()) {
                 startCategory = iterator.next();
             }
             if(startCategory == null) {
                 startCategory = "";
             }
-            CustomInventoryState lastState = closedInventoryStates.get(player.getUniqueId());
             if(lastState != null) {
                 state = lastState;
                 state.setInventory(inventory);
                 state.setPlayer(player);
+                state.setInventoryName(name);
             } else {
-                state = new CustomInventoryCategoryState(categories, withoutCategory, inventory, player);
+                state = new CustomInventoryCategoryState(categories, withoutCategory, inventory, player, name);
                 state.setCategory(startCategory);
             }
         } else {
-            state = new CustomInventoryCollectionState(categories, withoutCategory, inventory, player, collectionBase, directGet);
+            state = new CustomInventoryCollectionState(categories, withoutCategory, inventory, player, name, collectionBase, directGet);
         }
         openInventories.put(inventory, state);
         state.update();
@@ -197,8 +251,23 @@ public class CustomInventory implements Listener {
                 state.update();
                 return;
             }
+            // Handle clicks on category button slots (subcategory navigation)
+            if(state instanceof CustomInventoryCategoryState categoryState) {
+                if(categoryState.isCategoryButtonSlot(event.getRawSlot())) {
+                    // Only handle if this category uses subcategories
+                    if(categoryState.usesSubcategories()) {
+                        int buttonIndex = categoryState.getSubcategoryButtonIndex(event.getRawSlot());
+                        if(buttonIndex != -1) {
+                            categoryState.setSubcategory(buttonIndex);
+                            categoryState.update();
+                        }
+                    }
+                    return;
+                }
+            }
             if(state instanceof CustomInventoryCollectionState) {
-                if(event.getRawSlot() == ((CustomInventoryCollectionState)state).getBackSlot()) {
+                // Right-click on center slot to go back to category
+                if(event.getRawSlot() == ((CustomInventoryCollectionState)state).getCenterSlot() && event.isRightClick()) {
                     state = new CustomInventoryCategoryState(state);
                     openInventories.put(state.inventory, state);
                     state.update();
@@ -218,8 +287,7 @@ public class CustomInventory implements Listener {
             }
             if(event.getCurrentItem() != null
                 && (event.isRightClick()
-                    || (event.isLeftClick() && event.isShiftClick()))
-                    || (state.usesSubcategories() && hasCollection(event.getCurrentItem()))) {
+                    || (event.isLeftClick() && event.isShiftClick()))) {
                 if(hasCollection(event.getCurrentItem())) {
                     state = new CustomInventoryCollectionState(state,event.getCurrentItem());
                     openInventories.put(state.inventory, state);

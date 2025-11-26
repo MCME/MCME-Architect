@@ -40,9 +40,10 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
 
     private int returnCategory;
     private int returnUpperLeftItem;
+    private String returnSubcategory;
 
-    private final int maskSlot = CustomInventory.CATEGORY_SLOTS + 13;
-    private final int backSlot = CustomInventory.CATEGORY_SLOTS + 31;
+    private final int maskSlot = CustomInventory.CATEGORY_SLOTS + 15;
+    private final int centerSlot = CustomInventory.CATEGORY_SLOTS + 22;
 
     private final ItemStack maskItem = new ItemStack(Material.PAPER,1);
 
@@ -51,6 +52,38 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
     public CustomInventoryCollectionState(Map<String, CustomInventoryCategory> categories, CustomInventoryCategory withoutCategory,
                                           Inventory inventory, Player player, ItemStack baseItem, boolean directGet) {
         super(categories, withoutCategory, inventory, player);
+        this.directGet = directGet;
+        stressCurrentCategoryItem = false;
+        SpecialBlock tempBase = SpecialBlockInventoryData.getSpecialBlockDataFromItem(baseItem);
+        Set<SpecialBlock> visited = new HashSet<>();
+        while(tempBase.hasIndirectCollection() && !visited.contains(tempBase)) {
+            visited.add(tempBase);
+            SpecialBlock nextBase = tempBase.getCollectionBase();
+            if(nextBase!=null) {
+                tempBase = nextBase;
+            } else {
+                break;
+            }
+        }
+        baseBlock = tempBase;
+        ItemMeta meta = maskItem.getItemMeta();//Bukkit.getServer().getItemFactory().getItemMeta(Material.GOLDEN_HELMET);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+        meta.setUnbreakable(true);
+        //((Damageable)meta).setDamage(35);
+        meta.setCustomModelData(35);
+        maskItem.setItemMeta(meta);
+        String foundCat = null;
+        for(Map.Entry<String,CustomInventoryCategory> cat: categories.entrySet()) {
+            if(cat.getValue().getItem(baseBlock.getId())!=null) {
+                foundCat = cat.getKey();
+                break;
+            }
+        }
+    }
+    
+    public CustomInventoryCollectionState(Map<String, CustomInventoryCategory> categories, CustomInventoryCategory withoutCategory,
+                                          Inventory inventory, Player player, String inventoryName, ItemStack baseItem, boolean directGet) {
+        super(categories, withoutCategory, inventory, player, inventoryName);
         this.directGet = directGet;
         stressCurrentCategoryItem = false;
         SpecialBlock tempBase = SpecialBlockInventoryData.getSpecialBlockDataFromItem(baseItem);
@@ -92,16 +125,21 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
     }
 
     CustomInventoryCollectionState(CustomInventoryState state, ItemStack baseItem) {
-        this(state.categories, state.withoutCategory, state.inventory, state.player, baseItem, false);
+        this(state.categories, state.withoutCategory, state.inventory, state.player, state.inventoryName, baseItem, false);
+        // Preserve the category and left category position from the parent state
+        currentCategory = state.currentCategory;
+        leftCategory = state.leftCategory;
+        returnCategory = state.currentCategory;
         if(state instanceof CustomInventoryCategoryState categoryState) {
             returnUpperLeftItem = categoryState.getUpperLeftItem();
+            returnSubcategory = categoryState.getCurrentSubcategory();
         }
     }
     
     @Override
     public void update()  {
+        // Keep the category buttons/top row from parent state
         super.update();
-        inventory.setItem(CustomInventory.CATEGORY_SLOTS+22, getItem(baseBlock.getId()));
         baseBlock.getCollection().forEach((key,entry)-> {
             List<Character> allowedRows = Arrays.asList('A','B','C','D','E','F','G','H','I','J','a','b','c','d','e','f','g','h','i','j');
             char row = key.charAt(0);
@@ -113,10 +151,8 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
             } 
         });
         inventory.setItem(maskSlot, maskItem);
-        if(returnCategory>=0) {
-            CustomInventoryCategory cat = categories.get(categoryNames[returnCategory]);
-            inventory.setItem(backSlot, cat.getCategoryItem());
-        }
+        // Center slot now available for blocks, no back button
+        inventory.setItem(centerSlot, getItem(baseBlock.getId()));
     }
 
     private ItemStack customItem(int value) {
@@ -206,8 +242,8 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
         return maskSlot;
     }
 
-    public int getBackSlot() {
-        return backSlot;
+    public int getCenterSlot() {
+        return centerSlot;
     }
 
     public boolean isDirectGet() {
@@ -224,5 +260,9 @@ public class CustomInventoryCollectionState extends CustomInventoryState {
 
     public int getReturnUpperLeftItem() {
         return returnUpperLeftItem;
+    }
+    
+    public String getReturnSubcategory() {
+        return returnSubcategory;
     }
 }

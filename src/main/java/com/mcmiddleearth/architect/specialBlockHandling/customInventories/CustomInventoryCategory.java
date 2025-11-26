@@ -42,6 +42,12 @@ public class CustomInventoryCategory {
 
     private final boolean usesSubcategories;
     
+    private final Map<String, List<ItemStack>> itemsBySubcategory = new HashMap<>();
+    
+    private List<String> subcategoryNames = new ArrayList<>();
+    
+    private Map<String, SubcategoryItemConfig> subcategoryItemConfigs = new HashMap<>();
+    
     public CustomInventoryCategory(UUID owner, boolean isPublic, ItemStack categoryItem,
                                    ItemStack currentCategoryItem, boolean usesSubcategories) {
         //this.name = name;
@@ -55,6 +61,13 @@ public class CustomInventoryCategory {
     
     public void addItem(ItemStack item) {
         items.add(item);
+    }
+    
+    public void addItem(ItemStack item, String subcategory) {
+        items.add(item);
+        if(usesSubcategories && subcategory != null && !subcategory.isEmpty()) {
+            itemsBySubcategory.computeIfAbsent(subcategory, k -> new ArrayList<>()).add(item);
+        }
     }
     
     public void addPermission(String permission) {
@@ -119,6 +132,47 @@ public class CustomInventoryCategory {
     public List<ItemStack> getItems() {
         return items;
     }
+    
+    public List<ItemStack> getItemsBySubcategory(String subcategory) {
+        if("All".equals(subcategory) || subcategory == null) {
+            return items;
+        }
+        return itemsBySubcategory.getOrDefault(subcategory, new ArrayList<>());
+    }
 
     public boolean usesSubcategories() {return usesSubcategories;}
+    
+    public List<String> getSubcategoryNames() {
+        return subcategoryNames;
+    }
+    
+    public void setSubcategoryNames(List<String> names) {
+        this.subcategoryNames = names;
+    }
+    
+    public Map<String, SubcategoryItemConfig> getSubcategoryItemConfigs() {
+        return subcategoryItemConfigs;
+    }
+    
+    public void setSubcategoryItemConfigs(Map<String, SubcategoryItemConfig> configs) {
+        this.subcategoryItemConfigs = configs;
+    }
+    
+    public static class SubcategoryItemConfig {
+        private final int cmd;
+        private final int cmdCurrent;
+        
+        public SubcategoryItemConfig(int cmd, int cmdCurrent) {
+            this.cmd = cmd;
+            this.cmdCurrent = cmdCurrent;
+        }
+        
+        public int getCmd() {
+            return cmd;
+        }
+        
+        public int getCmdCurrent() {
+            return cmdCurrent;
+        }
+    }
 }

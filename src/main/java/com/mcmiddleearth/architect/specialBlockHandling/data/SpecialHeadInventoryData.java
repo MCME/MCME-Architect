@@ -22,6 +22,7 @@ import com.mcmiddleearth.architect.specialBlockHandling.customInventories.Custom
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryState;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.SearchInventory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -57,7 +58,7 @@ public class SpecialHeadInventoryData {
         }
         createInventories();
         inventory.setCategoryItems("Blocks",null, true,
-                new ItemStack(Material.STONE), new ItemStack(Material.STONE),false);
+                new ItemStack(Material.STONE), new ItemStack(Material.STONE),false, new ArrayList<>(), new HashMap<>());
         for(String name: CustomHeadManagerData.getCollection().getSubCollections().keySet()) {
             CustomHeadCollection collection = CustomHeadManagerData.getCollection()
                                                                    .getSubCollection(name);
@@ -65,7 +66,7 @@ public class SpecialHeadInventoryData {
             collection.getAllHeadsIncludingSubCollections(heads);
 //Logger.getGlobal().info("Loading head collection: "+name+ " count: "+heads.size());
             for(ItemStack head: heads.values()) {
-                inventory.add(head, name, false);
+                inventory.add(head, name, null, false);
                 searchInventory.add(head);
             }
             if(!heads.isEmpty()) {
@@ -73,7 +74,7 @@ public class SpecialHeadInventoryData {
                 inventory.setCategoryItems(name, null, true, 
                                            categoryItem.clone(),
                         CustomInventoryState.newPagingItem(CustomInventoryState.pagingMaterial,
-                                                 CustomInventoryState.pageDown, name),false);
+                                                 CustomInventoryState.pageDown, name),false, new ArrayList<>(), new HashMap<>());
             }
         }
     }

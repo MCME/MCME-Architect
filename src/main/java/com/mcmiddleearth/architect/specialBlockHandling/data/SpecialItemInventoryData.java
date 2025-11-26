@@ -35,6 +35,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -114,7 +115,7 @@ public class SpecialItemInventoryData {
                 if(section.contains("damageCurrent")) {
                     currentCategoryItem.setDurability((short)section.getInt("damageCurrent"));
                 }
-                inventory.setCategoryItems(categoryKey, null, true, categoryItem, currentCategoryItem, false);
+                inventory.setCategoryItems(categoryKey, null, true, categoryItem, currentCategoryItem, false, new ArrayList<>(), new HashMap<>());
             }
         }
         ConfigurationSection itemConfig = config.getConfigurationSection("Items");
@@ -130,7 +131,7 @@ public class SpecialItemInventoryData {
                 ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
                 if(inventoryItem!=null) {
                     String category = section.getString("category","item");
-                    inventory.add(inventoryItem, category,false);
+                    inventory.add(inventoryItem, category, null, false);
                     searchInventory.add(inventoryItem);
                 } else {
                     Logger.getLogger(SpecialBlockInventoryData.class.getName())

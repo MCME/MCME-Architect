@@ -53,13 +53,19 @@ public abstract class CustomInventoryState {
     protected Inventory inventory;
     
     protected Player player;
+    
+    protected String inventoryName;
 
     public CustomInventoryState(Map<String, CustomInventoryCategory> categories, CustomInventoryCategory withoutCategory, Inventory inventory, Player player) {
-        this(categories, withoutCategory,inventory,player,0);
+        this(categories, withoutCategory,inventory,player,0,null);
+    }
+    
+    public CustomInventoryState(Map<String, CustomInventoryCategory> categories, CustomInventoryCategory withoutCategory, Inventory inventory, Player player, String inventoryName) {
+        this(categories, withoutCategory,inventory,player,0,inventoryName);
     }
 
     public CustomInventoryState(Map<String, CustomInventoryCategory> categories, CustomInventoryCategory withoutCategory,
-                                Inventory inventory, Player player,int currentCategory) {
+                                Inventory inventory, Player player,int currentCategory, String inventoryName) {
         this.categories = categories;
         this.categoryNames = categories.keySet().toArray(new String[0]);
         this.currentCategory = currentCategory;
@@ -67,6 +73,7 @@ public abstract class CustomInventoryState {
         this.inventory = inventory;
         this.player = player;
         this.withoutCategory = withoutCategory;
+        this.inventoryName = inventoryName;
         //showCat();
     }
     
@@ -292,5 +299,9 @@ public abstract class CustomInventoryState {
 
     public void setPlayer(Player player) {
         this.player = player;
+    }
+    
+    public void setInventoryName(String inventoryName) {
+        this.inventoryName = inventoryName;
     }
 }

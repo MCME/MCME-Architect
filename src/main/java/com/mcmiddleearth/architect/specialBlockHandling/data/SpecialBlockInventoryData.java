@@ -21,6 +21,7 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
+import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryCategory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.SearchInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.*;
 import com.mcmiddleearth.pluginutil.FileUtil;
@@ -120,7 +121,7 @@ public class SpecialBlockInventoryData {
         DevUtil.log(1, "Loading categories to inventory for resource pack "+rpName+" from "+file.getName());
         CustomInventory inventory = inventories.get(rpName);
         inventory.setCategoryItems("Heads",null, true,
-                new ItemStack(Material.PLAYER_HEAD), new ItemStack(Material.PLAYER_HEAD),false);
+                new ItemStack(Material.PLAYER_HEAD), new ItemStack(Material.PLAYER_HEAD),false, new ArrayList<>(), new HashMap<>());
         YamlConfiguration config = new YamlConfiguration();
         try {
             config.load(file);
@@ -144,7 +145,27 @@ public class SpecialBlockInventoryData {
                     }
                 }
                 boolean useSubcategories = section.getBoolean("useSubcategories",false);
-                inventory.setCategoryItems(categoryKey, null, true, categoryItem, currentCategoryItem, useSubcategories);
+                List<String> subcategoryNames = section.getStringList("subcategories");
+                
+                // Load subcategory item configurations
+                Map<String, CustomInventoryCategory.SubcategoryItemConfig> subcategoryItemConfigs = new HashMap<>();
+                if(section.contains("subcategoryItems")) {
+                    ConfigurationSection itemsSection = section.getConfigurationSection("subcategoryItems");
+                    if(itemsSection != null) {
+                        for(String subcatKey : itemsSection.getKeys(false)) {
+                            ConfigurationSection subcatSection = itemsSection.getConfigurationSection(subcatKey);
+                            if(subcatSection != null) {
+                                int cmd = subcatSection.getInt("cmd", 100);
+                                int cmdCurrent = subcatSection.getInt("cmdCurrent", 105);
+                                subcategoryItemConfigs.put(subcatKey, 
+                                    new CustomInventoryCategory.SubcategoryItemConfig(cmd, cmdCurrent));
+                            }
+                        }
+                    }
+                }
+                
+                inventory.setCategoryItems(categoryKey, null, true, categoryItem, currentCategoryItem, 
+                    useSubcategories, subcategoryNames, subcategoryItemConfigs);
             }
         }
     }
@@ -216,16 +237,19 @@ public class SpecialBlockInventoryData {
                 blockData.loadBlockCollection(section, rpName);
                 blockList.add(blockData);
 
+                // Extract subcategory from YAML
+                String subcategory = section.getString("subcategory", null);
+                
                 if (category != null) {
-                    inventory.add(inventoryItem, category, false);
+                    inventory.add(inventoryItem, category, subcategory, false);
                 } else {
                     Object categoryObject = section.get("category");
                     if (categoryObject instanceof String) {
-                        inventory.add(inventoryItem, (String) categoryObject, false);
+                        inventory.add(inventoryItem, (String) categoryObject, subcategory, false);
                     } else if ((categoryObject instanceof List) && !((List<?>) categoryObject).isEmpty()) {
-                        ((List<String>) categoryObject).forEach(thisCategory -> inventory.add(inventoryItem, thisCategory, false));
+                        ((List<String>) categoryObject).forEach(thisCategory -> inventory.add(inventoryItem, thisCategory, subcategory, false));
                     } else {
-                        inventory.add(inventoryItem, null, false);
+                        inventory.add(inventoryItem, null, subcategory, false);
                         //Logger.getGlobal().info("category object: "+categoryObject);
                     }
                 }
