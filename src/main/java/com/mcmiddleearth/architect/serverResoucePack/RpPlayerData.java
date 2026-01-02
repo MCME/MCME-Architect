@@ -34,8 +34,10 @@ public class RpPlayerData implements Serializable {
     private int resolution = 16;
     private transient RpRegion currentRegion = null;
     private String currentRpUrl = null;
-    private transient PlayerResourcePackStatusEvent.Status currentRpStatus
-            = PlayerResourcePackStatusEvent.Status.DECLINED;
+    private RpPlayerStatus currentRpStatus
+            = RpPlayerStatus.NOT_SENT;
+    private transient RpPlayerStatus lastRpStatus
+            = RpPlayerStatus.NOT_SENT;
 
     private transient int protocolVersion;
 
@@ -87,11 +89,19 @@ public class RpPlayerData implements Serializable {
         this.currentRpUrl = currentRpUrl;
     }
 
-    public PlayerResourcePackStatusEvent.Status getCurrentRpStatus() {
+    public RpPlayerStatus getCurrentRpStatus() {
         return currentRpStatus;
     }
 
-    public void setCurrentRpStatus(PlayerResourcePackStatusEvent.Status currentRpStatus) {
+    public RpPlayerStatus getLastRpStatus() {
+        return lastRpStatus;
+    }
+
+    public void setLastRpStatus(RpPlayerStatus lastRpStatus) {
+        this.lastRpStatus = lastRpStatus;
+    }
+
+    public void setCurrentRpStatus(RpPlayerStatus currentRpStatus) {
         this.currentRpStatus = currentRpStatus;
     }
 

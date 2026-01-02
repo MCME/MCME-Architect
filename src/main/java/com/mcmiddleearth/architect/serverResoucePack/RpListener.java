@@ -56,7 +56,8 @@ public class RpListener implements Listener {
                 PluginData.getMessageUtil().sendInfoMessage(player, "Resource pack loading failed. Did you enable server resource packs (edit server in multiplayer list)?");
                 break;
         }
-        RpManager.getPlayerData(player).setCurrentRpStatus(event.getStatus());
+        RpManager.getPlayerData(player).setCurrentRpStatus(RpPlayerStatus.forPlayerResourcePackStatusEvent(event.getStatus()));
+        RpManager.savePlayerData(player);
     }
     
     @EventHandler
@@ -83,11 +84,14 @@ public class RpListener implements Listener {
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
             new BukkitRunnable() {
-                int counter = 11;
+                int counter = 30;
                 @Override
                 public void run() {
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
                         RpPlayerData data = RpManager.getPlayerData(player);
+                        data.setCurrentRpStatus(RpPlayerStatus.NOT_SENT);
+Logger.getGlobal().info("Reset curren rp status to NOT_SENT");
+                        RpManager.savePlayerData(player);
                         data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
                         if(RpManager.isSodiumClient(player)) {
                             data.setClient("sodium");
@@ -133,7 +137,7 @@ public class RpListener implements Listener {
                         Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Could not get player rp settings from the database");        
                     }
                 }
-            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),30,20);
+            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),0,10);
         }
     }
     

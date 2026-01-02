@@ -20,6 +20,7 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -109,11 +110,11 @@ public class RpDatabaseConnector {
 
             checkTables();
 
-            insertPlayerRpSettings = dbConnection.prepareStatement("INSERT INTO architect_rp (uuid, auto, variant, resolution, client, currentURL) "
-                                                                  +"VALUES (?,?,?,?,?,?)");
-            updatePlayerRpSettings = dbConnection.prepareStatement("UPDATE architect_rp SET auto=?, variant=?, resolution=?, client=?, currentURL=? "
+            insertPlayerRpSettings = dbConnection.prepareStatement("INSERT INTO architect_rp (uuid, auto, variant, resolution, client, currentURL, status) "
+                                                                  +"VALUES (?,?,?,?,?,?,?)");
+            updatePlayerRpSettings = dbConnection.prepareStatement("UPDATE architect_rp SET auto=?, variant=?, resolution=?, client=?, currentURL=?, status=? "
                                                                   +"WHERE uuid = ?");
-            selectPlayerRpSettings = dbConnection.prepareStatement("SELECT auto, variant, resolution, client, currentURL FROM architect_rp "
+            selectPlayerRpSettings = dbConnection.prepareStatement("SELECT auto, variant, resolution, client, currentURL, status FROM architect_rp "
                                                                  + "WHERE uuid = ?");
             insertPlayerRpSettings.setQueryTimeout(10);
             updatePlayerRpSettings.setQueryTimeout(10);
@@ -149,6 +150,11 @@ public class RpDatabaseConnector {
             String statement = "CREATE TABLE IF NOT EXISTS architect_rp (uuid VARCHAR(50), "
                              + "auto BIT, variant VARCHAR(30), resolution INT, currentURL VARCHAR(100), KEY(uuid))";
             dbConnection.createStatement().execute(statement);
+            statement = "ALTER TABLE architect_rp ADD COLUMN status VARCHAR(30)";
+            try {
+                dbConnection.createStatement().execute(statement);
+            } catch (SQLException ignore) {}
+
         } catch (SQLException ex) {
             Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -180,6 +186,17 @@ public class RpDatabaseConnector {
                     data.setResolution(result.getInt("resolution"));
                     data.setClient(result.getString("client"));
                     if(data.getClient()==null) data.setClient("vanilla");
+                    if(result.getString("status")!=null) {
+                        data.setCurrentRpStatus(RpPlayerStatus.valueOf(result.getString("status")));
+                    }
+Logger.getGlobal().info("Player: "+uuid+" RP data loaded from database: "
+        +data.isAutoRp()+", "
+        +data.getVariant()+", "
+        +data.getResolution()+", "
+        +data.getClient()+", "
+        +data.getCurrentRpUrl()+", "
+        +data.getCurrentRpStatus().name()
+);
                     result.close();
                     dataMap.put(uuid,data);
                 } catch (SQLException ex) {
@@ -207,6 +224,14 @@ public class RpDatabaseConnector {
 
     private synchronized void saveRpSettingsSync(Player player, RpPlayerData data) {
         try {
+Logger.getGlobal().info("Player: "+player.getName()+" RP data save to database: "
+        +data.isAutoRp()+", "
+        +data.getVariant()+", "
+        +data.getResolution()+", "
+        +data.getClient()+", "
+        +data.getCurrentRpUrl()+", "
+        +data.getCurrentRpStatus().name()
+);
             selectPlayerRpSettings.setString(1, player.getUniqueId().toString());
             ResultSet result = selectPlayerRpSettings.executeQuery();
             if(result.next()) {
@@ -223,14 +248,14 @@ public class RpDatabaseConnector {
         }
     }
 
-
     private synchronized void updateRpSettings(Player player, RpPlayerData data) throws SQLException {
         updatePlayerRpSettings.setBoolean(1, data.isAutoRp());
         updatePlayerRpSettings.setString(2, data.getVariant());
         updatePlayerRpSettings.setInt(3, data.getResolution());
         updatePlayerRpSettings.setString(4, data.getClient());
         updatePlayerRpSettings.setString(5, data.getCurrentRpUrl());
-        updatePlayerRpSettings.setString(6, player.getUniqueId().toString());
+        updatePlayerRpSettings.setString(6, data.getCurrentRpStatus().name());
+        updatePlayerRpSettings.setString(7, player.getUniqueId().toString());
         updatePlayerRpSettings.executeUpdate();
     }
 
@@ -241,6 +266,7 @@ public class RpDatabaseConnector {
         insertPlayerRpSettings.setInt(4, data.getResolution());
         insertPlayerRpSettings.setString(5, data.getClient());
         insertPlayerRpSettings.setString(6, data.getCurrentRpUrl());
+        insertPlayerRpSettings.setString(7, data.getCurrentRpStatus().name());
         insertPlayerRpSettings.executeUpdate();
     }
 

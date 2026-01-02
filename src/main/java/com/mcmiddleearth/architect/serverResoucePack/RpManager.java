@@ -36,6 +36,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
@@ -167,6 +168,14 @@ public class RpManager {
             data.setProtocolVersion(player.getProtocolVersion());
             playerRpData.put(player.getUniqueId(), data);
         }
+/*Logger.getGlobal().info("Player: "+player.getName()+" RP data found: "
+        +data.isAutoRp()+", "
+        +data.getVariant()+", "
+        +data.getResolution()+", "
+        +data.getClient()+", "
+        +data.getCurrentRpUrl()+", "
+        +data.getCurrentRpStatus().name()
+);*/
         return data;
     }
     
@@ -352,6 +361,8 @@ public class RpManager {
             data.setCurrentRpUrl(url);
 //Logger.getGlobal().info("Sending to "+player.getName()+"("+getPlayerData(player).getProtocolVersion()+") RP: "+url);
             player.setResourcePack(url, getSHA(rpName, player));
+            data.setLastRpStatus(data.getCurrentRpStatus());
+            data.setCurrentRpStatus(RpPlayerStatus.SENT);
             savePlayerData(player);
             return true;
         }
