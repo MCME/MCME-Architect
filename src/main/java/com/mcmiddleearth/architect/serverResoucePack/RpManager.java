@@ -26,7 +26,6 @@ import com.google.gson.Gson;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.RegionEditConversationFactory;
-import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ResourceUtil;
 import com.viaversion.viaversion.api.Via;
@@ -36,7 +35,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
@@ -226,8 +224,8 @@ public class RpManager {
             if(data.getProtocolVersion()==0) {
                 data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
             }
-            Logger.getGlobal().info("Player: "+player.getName()+" Detected protocol: "+data.getProtocolVersion()
-                    +" ("+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getName()+")");
+            //Logger.getGlobal().info("Player: "+player.getName()+" Detected protocol: "+data.getProtocolVersion()
+            //        +" ("+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getName()+")");
         } else {
             data = new RpPlayerData();
         }

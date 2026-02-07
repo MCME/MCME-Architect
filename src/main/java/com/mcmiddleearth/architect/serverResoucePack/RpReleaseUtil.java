@@ -1,7 +1,6 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.util.StreamGobbler;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -81,8 +80,8 @@ public class RpReleaseUtil {
     }
 
     private static void updateSection(ConfigurationSection rpConfig, String path, String requiredMcVersion, String url) {
-Logger.getGlobal().info("Key search: "+path);
-rpConfig.getKeys(true).forEach(key -> Logger.getGlobal().info(key));
+//Logger.getGlobal().info("Key search: "+path);
+//rpConfig.getKeys(true).forEach(key -> Logger.getGlobal().info(key));
         ConfigurationSection section = rpConfig.getConfigurationSection(path);
         if(section.contains("url")) {
             section.set("url", null);

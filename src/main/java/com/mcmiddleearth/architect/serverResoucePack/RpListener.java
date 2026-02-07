@@ -90,7 +90,7 @@ public class RpListener implements Listener {
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
                         RpPlayerData data = RpManager.getPlayerData(player);
                         data.setCurrentRpStatus(RpPlayerStatus.NOT_SENT);
-Logger.getGlobal().info("Reset curren rp status to NOT_SENT");
+//Logger.getGlobal().info("Reset curren rp status to NOT_SENT");
                         RpManager.savePlayerData(player);
                         data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
                         if(RpManager.isSodiumClient(player)) {

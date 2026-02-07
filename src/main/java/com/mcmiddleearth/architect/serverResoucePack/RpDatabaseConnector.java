@@ -189,14 +189,14 @@ public class RpDatabaseConnector {
                     if(result.getString("status")!=null) {
                         data.setCurrentRpStatus(RpPlayerStatus.valueOf(result.getString("status")));
                     }
-Logger.getGlobal().info("Player: "+uuid+" RP data loaded from database: "
+/*Logger.getGlobal().info("Player: "+uuid+" RP data loaded from database: "
         +data.isAutoRp()+", "
         +data.getVariant()+", "
         +data.getResolution()+", "
         +data.getClient()+", "
         +data.getCurrentRpUrl()+", "
         +data.getCurrentRpStatus().name()
-);
+);*/
                     result.close();
                     dataMap.put(uuid,data);
                 } catch (SQLException ex) {
@@ -224,14 +224,14 @@ Logger.getGlobal().info("Player: "+uuid+" RP data loaded from database: "
 
     private synchronized void saveRpSettingsSync(Player player, RpPlayerData data) {
         try {
-Logger.getGlobal().info("Player: "+player.getName()+" RP data save to database: "
+/*Logger.getGlobal().info("Player: "+player.getName()+" RP data save to database: "
         +data.isAutoRp()+", "
         +data.getVariant()+", "
         +data.getResolution()+", "
         +data.getClient()+", "
         +data.getCurrentRpUrl()+", "
         +data.getCurrentRpStatus().name()
-);
+);*/
             selectPlayerRpSettings.setString(1, player.getUniqueId().toString());
             ResultSet result = selectPlayerRpSettings.executeQuery();
             if(result.next()) {

@@ -16,8 +16,6 @@
  */
 package com.mcmiddleearth.architect.serverResoucePack;
 
-import org.bukkit.event.player.PlayerResourcePackStatusEvent;
-
 import java.io.Serializable;
 
 /**
