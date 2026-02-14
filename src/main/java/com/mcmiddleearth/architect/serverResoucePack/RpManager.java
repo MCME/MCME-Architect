@@ -213,6 +213,10 @@ public class RpManager {
         result = new BigInteger(sha.trim(),16).toByteArray();
         if(result.length>20) {
             result = Arrays.copyOfRange(result,1,21);
+        } else if(result.length<20) {
+            byte[] padded = new byte[20];
+            System.arraycopy(result, 0, padded, 20 - result.length, result.length);
+            result = padded;
         }
         return result;
     }
