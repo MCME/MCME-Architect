@@ -33,15 +33,15 @@ public class FbtCommand extends AbstractArchitectCommand {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             PluginData.getMessageUtil().sendPlayerOnlyCommandError(sender);
             return true;
         }
-        Player player = (Player)sender;
         if(!PluginData.hasPermission(player, Permission.FULL_BRIGHTNESS)) {
             PluginData.getMessageUtil().sendNoPermissionError(sender);
             return true;
         }
+
         if (player.hasPotionEffect(PotionEffectType.NIGHT_VISION)) {
             player.removePotionEffect(PotionEffectType.NIGHT_VISION);
             sendOffMessage(player);
@@ -51,7 +51,7 @@ public class FbtCommand extends AbstractArchitectCommand {
                 sendNotEnabledErrorMessage(sender);
                 return true;
             }
-            final PotionEffect effect = new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 1, false, false);
+            final PotionEffect effect = new PotionEffect(PotionEffectType.NIGHT_VISION, PotionEffect.INFINITE_DURATION, 1, false, false);
             player.addPotionEffect(effect);
             sendOnMessage(player);
             return true;
