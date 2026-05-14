@@ -148,7 +148,7 @@ public class RpDatabaseConnector {
         try {
             Logger.getLogger(ArchitectPlugin.class.getName()).info("checking tables...");
             String statement = "CREATE TABLE IF NOT EXISTS architect_rp (uuid VARCHAR(50), "
-                             + "auto BIT, variant VARCHAR(30), resolution INT, currentURL VARCHAR(100), KEY(uuid))";
+                             + "auto BIT, variant VARCHAR(30), resolution INT, client VARCHAR(30), currentURL VARCHAR(100), KEY(uuid))";
             dbConnection.createStatement().execute(statement);
             statement = "ALTER TABLE architect_rp ADD COLUMN status VARCHAR(30)";
             try {
@@ -268,6 +268,25 @@ public class RpDatabaseConnector {
         insertPlayerRpSettings.setString(6, data.getCurrentRpUrl());
         insertPlayerRpSettings.setString(7, data.getCurrentRpStatus().name());
         insertPlayerRpSettings.executeUpdate();
+    }
+
+    public synchronized boolean dropTable() {
+        try {
+            checkConnection();
+            if (!connected || dbConnection == null) {
+                Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, "No database connection");
+                return false;
+            }
+            String statement = "DROP TABLE IF EXISTS architect_rp";
+            dbConnection.createStatement().execute(statement);
+            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.INFO, "architect_rp successfully deleted");
+            checkTables();
+            return true;
+        } catch (SQLException ex) {
+            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, "Error while deleting architect_rp table.", ex);
+            connected = false;
+            return false;
+        }
     }
 
 }

@@ -74,6 +74,36 @@ public class RpCommand extends AbstractArchitectCommand {
             }
             return true;
         }
+        if(args.length>0 && args[0].equalsIgnoreCase("dropdb")
+                && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            if(args.length<2 || !args[1].equalsIgnoreCase("confirm")) {
+                PluginData.getMessageUtil().sendErrorMessage(cs,
+                        "Deletes RP database table. Confirm with: /rp dropdb confirm");
+                return true;
+            }
+            PluginData.getMessageUtil().sendInfoMessage(cs, "Deleting RP table...");
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    boolean success = false;
+                    try {
+                        success = RpManager.getDbConnector().dropTable();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                    final boolean result = success;
+                    Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
+                        if (result) {
+                            PluginData.getMessageUtil().sendInfoMessage(cs, "RP database table successfully deleted.");
+                        } else {
+                            PluginData.getMessageUtil().sendErrorMessage(cs,
+                                    "Error while deleting RP database table. See server logs.");
+                        }
+                    });
+                }
+            }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
+            return true;
+        }
         if(args.length>0 && args[0].equalsIgnoreCase("calcsha")
                          && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) { 
             if(args.length<2) {
