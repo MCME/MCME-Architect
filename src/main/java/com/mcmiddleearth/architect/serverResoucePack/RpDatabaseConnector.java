@@ -282,6 +282,7 @@ public class RpDatabaseConnector {
             Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.INFO, "architect_rp successfully deleted");
             checkTables();
             return true;
+
         } catch (SQLException ex) {
             Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, "Error while deleting architect_rp table.", ex);
             connected = false;
