@@ -63,6 +63,7 @@ public class InvCommand extends AbstractArchitectCommand {
                 String rpName = RpManager.matchRpName(args[1]);
                 if(rpName.equals("")) {
                     PluginData.getMessageUtil().sendErrorMessage(cs, "No RP found for: "+args[1]);
+                    return true;
                 }
                 String description = Joiner.on(" ").join(Arrays.copyOfRange(args,2, args.length));
                 InventoryUtil.uploadInventory(rpName, description, (exit, exitCode) -> {
@@ -88,6 +89,7 @@ public class InvCommand extends AbstractArchitectCommand {
                 String rpName = RpManager.matchRpName(args[1]);
                 if(rpName.equals("")) {
                     PluginData.getMessageUtil().sendErrorMessage(cs, "No RP found for: "+args[1]);
+                    return true;
                 }
                 InventoryUtil.downloadInventory(rpName, (exit, exitCode) -> {
                     SpecialBlockInventoryData.loadInventories();
@@ -204,9 +206,10 @@ public class InvCommand extends AbstractArchitectCommand {
             }
             CustomInventoryCategory category = SpecialSavedInventoryData
                                                  .getCategory(args[adaptIndex(1,rpIndex)], rpName);
-            if(!category.getOwner().equals(p.getUniqueId()) 
+            if(!category.getOwner().equals(p.getUniqueId())
                         && !PluginData.hasPermission(p, Permission.INV_OTHER)) {
                 PluginData.getMessageUtil().sendNoPermissionError(cs);
+                return true;
             }
             SpecialSavedInventoryData.deleteInventory(args[adaptIndex(1,rpIndex)], rpName);
             sendInventoryDeletedMessage(p);

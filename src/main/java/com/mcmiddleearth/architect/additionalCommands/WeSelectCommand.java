@@ -58,6 +58,10 @@ public class WeSelectCommand extends AbstractArchitectCommand {
                 weSelectShift.put(uuid, "");
             }
 
+            if(args.length == 0) {
+                sendHelpMessage(player, 1);
+                return true;
+            }
             if(args[0].equalsIgnoreCase("help")){
                 int page = 1;
                 if(args.length>1 && NumericUtil.isInt(args[1])) page = NumericUtil.getInt(args[1]);
@@ -69,6 +73,10 @@ public class WeSelectCommand extends AbstractArchitectCommand {
             } else if(args[0].equalsIgnoreCase("show")){
                 sendShow(sender,weSelectShift.get(uuid),weSelect.get(uuid));
             } else if(args[0].equalsIgnoreCase("shift")) {
+                if(args.length < 2){
+                    PluginData.getMessageUtil().sendNotEnoughArgumentsError(sender);
+                    return true;
+                }
                 if(args.length > 2){
                     String args_added = "";
                     for(int i = 1; i < args.length;i++) args_added = args_added + " " + args[i];

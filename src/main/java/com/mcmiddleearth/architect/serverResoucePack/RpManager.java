@@ -210,15 +210,27 @@ public class RpManager {
         return result;
     }
     
+    /**
+     * Returns the client's real protocol version. Uses ViaVersion when it is installed
+     * (accurate for version-translated clients) and falls back to the Bukkit/Paper protocol
+     * version otherwise. Guarded so the plugin does not hard-depend on ViaVersion (which is
+     * only a softdepend); the {@code Via} reference is resolved lazily and never reached when
+     * ViaVersion is absent.
+     */
+    public static int getClientProtocolVersion(Player player) {
+        if(ArchitectPlugin.getPluginInstance().getServer().getPluginManager().getPlugin("ViaVersion") != null) {
+            return Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion();
+        }
+        return player.getProtocolVersion();
+    }
+
     private static ConfigurationSection getConfigSection(String rp, Player player) {
         RpPlayerData data;
         if (player != null) {
             data = getPlayerData(player);
             if(data.getProtocolVersion()==0) {
-                data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+                data.setProtocolVersion(getClientProtocolVersion(player));
             }
-            Logger.getGlobal().info("Player: "+player.getName()+" Detected protocol: "+data.getProtocolVersion()
-                    +" ("+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getName()+")");
         } else {
             data = new RpPlayerData();
         }

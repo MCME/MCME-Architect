@@ -117,8 +117,12 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "l:fmlhs", new TestPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "wdl:init", new TestPluginMessageListener());
 
-        ProtocolManager manager = ProtocolLibrary.getProtocolManager();
-        manager.addPacketListener(new ViewDistanceListener(this));
+        if(pluginManager.getPlugin("ProtocolLib") != null) {
+            ProtocolManager manager = ProtocolLibrary.getProtocolManager();
+            manager.addPacketListener(new ViewDistanceListener(this));
+        } else {
+            getLogger().warning("ProtocolLib not found - client-side view distance packets are disabled.");
+        }
 
         // all CommandExecutors should be subclasses of AbstractArchitectCommand
         // AbstractArchitectCommand methods are used by command /architect help
