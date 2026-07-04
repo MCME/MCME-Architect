@@ -22,7 +22,6 @@ import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import com.mcmiddleearth.pluginutil.developer.DevUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
-import com.viaversion.viaversion.api.Via;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -77,7 +76,7 @@ public class RpListener implements Listener {
             version = version - 0x40000000;
         }
         devUtil.log(2,"Bukkit Protocol Version: "+snapshot + version);
-        devUtil.log(2,"ViaVersion Protocol Version: "+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+        devUtil.log(2,"Client Protocol Version: "+RpManager.getClientProtocolVersion(player));
         devUtil.log(2,"Sodium client: "+RpManager.isSodiumClient(player));
         devUtil.log(2,"Incomming plugin channels:");
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
@@ -88,7 +87,7 @@ public class RpListener implements Listener {
                 public void run() {
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
                         RpPlayerData data = RpManager.getPlayerData(player);
-                        data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+                        data.setProtocolVersion(RpManager.getClientProtocolVersion(player));
                         if(RpManager.isSodiumClient(player)) {
                             data.setClient("sodium");
                         } else if(!"fabric".equalsIgnoreCase(player.getClientBrandName())) {
