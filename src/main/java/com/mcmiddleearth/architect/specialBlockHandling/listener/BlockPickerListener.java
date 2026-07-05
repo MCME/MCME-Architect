@@ -272,8 +272,7 @@ public class BlockPickerListener implements Listener {
                         message.send(player);
                     } else {
                         FancyMessage message = new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
-                                .addFancy(selection, selection,"Click to copy to clipboard!")
-                                .setCopyToClipboard();
+                                .addFancy(selection, selection,"Click to copy to clipboard!");
                         message.send(player);
                     }
                     selectedBlockData.put(player.getUniqueId(),null);
