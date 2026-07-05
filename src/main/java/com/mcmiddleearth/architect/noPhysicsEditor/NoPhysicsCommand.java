@@ -20,6 +20,7 @@ import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
+import com.mcmiddleearth.architect.util.WorldEditGuard;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
@@ -80,6 +81,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                 }
                 if(args[1].equalsIgnoreCase("redstone")
                         || args[1].equalsIgnoreCase("water")) {
+                    if (!WorldEditGuard.require(cs)) return true;
                     Region region= null;
                     //try {
                         //1.13 removed region = WorldEdit.getInstance().getSession(p.getName()).getRegion();
