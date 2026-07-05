@@ -494,7 +494,9 @@ public class RpManager {
         for(String version : versions) {
 //protocolVersions.forEach((key, protocol) -> Logger.getGlobal().info(key+" "+protocol));
 //Logger.getGlobal().info("getLatestVersion: version "+ version+ " protcolVersions: "+protocolVersions.size());
-            int protocolVersion = protocolVersions.get(version);
+            Integer boxed = protocolVersions.get(version);
+            if(boxed == null) continue;
+            int protocolVersion = boxed;
             if(protocolVersion > latestProtocol) {
                 latestProtocol = protocolVersion;
                 latestVersion = version;
