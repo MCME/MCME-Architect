@@ -1,20 +1,14 @@
 package com.mcmiddleearth.architect.viewDistance;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLib;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.NumericUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -50,13 +44,7 @@ public class ViewDistanceManager {
     }
 
     private static void sendViewDistancePacket(Player player, int viewDistance) {
-        PacketContainer packet = new PacketContainer(PacketType.Play.Server.VIEW_DISTANCE);
-        packet.getIntegers().write(0, viewDistance);
-        try {
-            ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
+        player.setSendViewDistance(viewDistance);
     }
 
     public static void saveViewDistances() {
