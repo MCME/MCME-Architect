@@ -5,8 +5,6 @@
  */
 package com.mcmiddleearth.architect;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
 import com.mcmiddleearth.architect.WorldGeneration.WorldGenerationManager;
 import com.mcmiddleearth.architect.additionalCommands.*;
 import com.mcmiddleearth.architect.additionalListeners.*;
@@ -110,19 +108,13 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
+        pluginManager.registerEvents(new ViewDistanceListener(), this);
 //        pluginManager.registerEvents(new AfkListener(), this);
 
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "mcme-modpack-marker:hello", new RpPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "minecraft:brand", new TestPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "l:fmlhs", new TestPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "wdl:init", new TestPluginMessageListener());
-
-        if(pluginManager.getPlugin("ProtocolLib") != null) {
-            ProtocolManager manager = ProtocolLibrary.getProtocolManager();
-            manager.addPacketListener(new ViewDistanceListener(this));
-        } else {
-            getLogger().warning("ProtocolLib not found - client-side view distance packets are disabled.");
-        }
 
         // all CommandExecutors should be subclasses of AbstractArchitectCommand
         // AbstractArchitectCommand methods are used by command /architect help
