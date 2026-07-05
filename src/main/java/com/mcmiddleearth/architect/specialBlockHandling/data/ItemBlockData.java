@@ -223,6 +223,11 @@ Logger.getGlobal().info("****************");*/
     }
 
     @Override
+    public boolean isReplaceable() {
+        return false;
+    }
+
+    @Override
     public boolean requiresCorrectToolForDrops() {
         return false;
     }
