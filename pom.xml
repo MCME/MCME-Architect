@@ -21,6 +21,11 @@
                     <release>25</release>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
         </plugins>
         <resources>
             <resource>
@@ -102,6 +107,18 @@
             <artifactId>viaversion-api</artifactId>
             <version>[5.0.0,6.0.0)</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockbukkit.mockbukkit</groupId>
+            <artifactId>mockbukkit-v26.1.2</artifactId>
+            <version>4.114.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.4</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <name>MCME-Architect</name>
