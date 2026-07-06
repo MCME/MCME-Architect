@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.SearchInventory;
@@ -38,8 +39,6 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -97,13 +96,13 @@ public class SpecialItemInventoryData {
     }
     
     private static void loadFromFile(CustomInventory inventory, String rpName, File file) {
-        Logger.getGlobal().info("Loading items into to inventory for resource pack "+rpName+" from "+file.getName());
+        Log.info("Loading items into inventory for resource pack "+rpName+" from "+file.getName());
         SearchInventory searchInventory = searchInventories.get(rpName);
         YamlConfiguration config = new YamlConfiguration();
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Logger.getLogger(SpecialBlockInventoryData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to load item inventory file " + file + " for RP " + rpName, ex);
         }
         ConfigurationSection categoryConfig = config.getConfigurationSection("Categories");
         if(categoryConfig!=null) {
@@ -123,8 +122,7 @@ public class SpecialItemInventoryData {
         }
         for(String itemKey: itemConfig.getKeys(false)) {
             if(inventory.contains(fullName(rpName, itemKey))) {
-                Logger.getLogger(SpecialBlockInventoryData.class.getName())
-                    .log(Level.WARNING, "Double custom item ID "+fullName(rpName,itemKey)+"'. Item skipped.");
+                Log.warn("Double custom item ID "+fullName(rpName,itemKey)+"'. Item skipped.");
             } else {
                 ConfigurationSection section = itemConfig.getConfigurationSection(itemKey);
                 ItemStack inventoryItem = loadItemFromConfig(section, itemKey, rpName);
@@ -133,8 +131,7 @@ public class SpecialItemInventoryData {
                     inventory.add(inventoryItem, category,false);
                     searchInventory.add(inventoryItem);
                 } else {
-                    Logger.getLogger(SpecialBlockInventoryData.class.getName())
-                        .log(Level.WARNING, "Invalid config data while loading Special MCME Item '"+itemKey+"'. Item skipped.");
+                    Log.warn("Invalid config data while loading Special MCME Item '"+itemKey+"' (RP "+rpName+"). Item skipped.");
                 }
             }
         }

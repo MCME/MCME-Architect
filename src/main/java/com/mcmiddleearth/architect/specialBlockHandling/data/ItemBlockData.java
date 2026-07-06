@@ -31,7 +31,6 @@ import org.bukkit.util.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
-import java.util.logging.Logger;
 
 /**
  *
@@ -70,9 +69,7 @@ public class ItemBlockData implements BlockData {
         String[] firstSplit = data.split("::");
         String blockData = firstSplit[1];
         String[] itemBlockData = firstSplit[0].split("[:=\\[,\\]]");
-Logger.getGlobal().info("itemBlockData: "+itemBlockData[1]);
         SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlock(itemBlockData[1]);
-Logger.getGlobal().info("specialBlock: "+specialBlock);
         if(specialBlock instanceof SpecialBlockItemBlock) {
             int currentDamage;
             if (itemBlockData[3].equals("?")) {

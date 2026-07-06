@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.command;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.util.StreamGobbler;
 import org.bukkit.Bukkit;
 
@@ -8,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
-import java.util.logging.Logger;
 
 public class InventoryUtil {
 
@@ -40,7 +40,7 @@ public class InventoryUtil {
                 }
                 StreamGobbler streamGobbler =
                         new StreamGobbler(process.getInputStream(), process.getErrorStream(),
-                                line -> Logger.getGlobal().info(line));
+                                line -> Log.info("[" + action + " " + rpName + "] " + line));
                 ExecutorService executorService = Executors.newSingleThreadExecutor();
                 Future<?> future = executorService.submit(streamGobbler);
                 boolean exit = process.waitFor(5, TimeUnit.MINUTES);
@@ -50,7 +50,7 @@ public class InventoryUtil {
                 callback.accept(exit, exitCode);
             } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
                 callback.accept(false, -1);
-                e.printStackTrace();
+                Log.error("Failed to run " + action + " script for RP " + rpName, e);
             }
         });
     }
