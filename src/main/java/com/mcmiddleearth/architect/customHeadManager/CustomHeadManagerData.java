@@ -17,8 +17,10 @@
 package com.mcmiddleearth.architect.customHeadManager;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.HeadUtil;
+import com.mcmiddleearth.util.PathSafety;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -109,8 +111,8 @@ public class CustomHeadManagerData {
     }
     
     public static ItemStack getSumittedHead(String name) {
-        File file = new File(submittedHeadDir.toString()+"/"+name+"."+fileExtension);
-        if(!file.exists()) {
+        File file = safeHeadFile(submittedHeadDir, name, "get submitted head");
+        if(file==null || !file.exists()) {
             return null;
         }
         CustomHeadData data = CustomHeadData.fromFile(file);
@@ -122,8 +124,8 @@ public class CustomHeadManagerData {
     }
     
     public static ItemStack getHead(String name) {
-        File file = new File(acceptedHeadDir.toString()+"/"+name+"."+fileExtension);
-        if(!file.exists()) {
+        File file = safeHeadFile(acceptedHeadDir, name, "get head");
+        if(file==null || !file.exists()) {
             return null;
         }
         CustomHeadData data = CustomHeadData.fromFile(file);
@@ -147,8 +149,8 @@ public class CustomHeadManagerData {
     public static boolean acceptHead(String name, String newName) {
         CustomHeadData data = getSubmittedHeadData(name);
         if(data!=null) {
-            File file = new File(acceptedHeadDir.toString()+"/"+newName+"."+fileExtension);
-            if(file.exists()) {
+            File file = safeHeadFile(acceptedHeadDir, newName, "accept head");
+            if(file==null || file.exists()) {
                 return false;
             }
             if(data.saveToFile(file)){
@@ -156,7 +158,10 @@ public class CustomHeadManagerData {
                     gallery.remove();
                 }
                 collection.addHead(newName, data);
-                file = new File(submittedHeadDir.toString()+"/"+name+"."+fileExtension);
+                file = safeHeadFile(submittedHeadDir, name, "accept head");
+                if(file==null) {
+                    return false;
+                }
                 removeFileAndDirectory(file);
                 if(gallery!=null) {
                     gallery.place();
@@ -168,7 +173,10 @@ public class CustomHeadManagerData {
     }
     
     public static boolean rejectHead(String name) {
-        File file = new File(submittedHeadDir.toString()+"/"+name+"."+fileExtension);
+        File file = safeHeadFile(submittedHeadDir, name, "reject head");
+        if(file==null) {
+            return false;
+        }
         if(file.exists()) {
             removeFileAndDirectory(file);
             return true;
@@ -195,19 +203,26 @@ public class CustomHeadManagerData {
     }
     
     private static boolean addHead(String name, CustomHeadData headData, File dir) {
-        File file = new File(dir,
-                             name+"."+CustomHeadManagerData.getFileExtension());
+        File file = safeHeadFile(dir, name, "add head");
+        if(file==null) {
+            return false;
+        }
         int index = 0;
         while(file.exists()) {
             index++;
-            file = new File(dir,
-                            name+index+"."+CustomHeadManagerData.getFileExtension());
+            file = safeHeadFile(dir, name+index, "add head");
+            if(file==null) {
+                return false;
+            }
         }
         return headData.saveToFile(file);
     }
     
     public static boolean deleteHead(String name) {
-        File file = new File(acceptedHeadDir.toString()+"/"+name+"."+fileExtension);
+        File file = safeHeadFile(acceptedHeadDir, name, "delete head");
+        if(file==null) {
+            return false;
+        }
         if(file.exists()) {
             if(gallery!=null) {
                 gallery.remove();
@@ -223,8 +238,11 @@ public class CustomHeadManagerData {
     }
     
     public static boolean renameHead(String oldName, String newName) {
-        File oldFile = new File(acceptedHeadDir.toString()+"/"+oldName+"."+fileExtension);
-        File newFile = new File(acceptedHeadDir.toString()+"/"+newName+"."+fileExtension);
+        File oldFile = safeHeadFile(acceptedHeadDir, oldName, "rename head");
+        File newFile = safeHeadFile(acceptedHeadDir, newName, "rename head");
+        if(oldFile==null || newFile==null) {
+            return false;
+        }
         if(oldFile.exists() && !newFile.exists()) {
             CustomHeadData data = getHeadData(oldName);
             if(data.saveToFile(newFile)) {
@@ -243,29 +261,49 @@ public class CustomHeadManagerData {
         return false;
     }
     
+    /**
+     * Resolve a head file inside {@code baseDir}, guarding against directory traversal.
+     * @return the safe file, or {@code null} if {@code name} escapes {@code baseDir} (rejection is logged).
+     */
+    private static File safeHeadFile(File baseDir, String name, String operation) {
+        try {
+            return PathSafety.resolveInside(baseDir, name, fileExtension);
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe custom-head name '" + name + "' for " + operation + ": " + ex.getMessage());
+            return null;
+        }
+    }
+
     private static void removeFileAndDirectory(File file) {
+        if(!PathSafety.isInside(acceptedHeadDir, file) && !PathSafety.isInside(submittedHeadDir, file)) {
+            Log.warn("Refusing to delete '" + file + "': it is outside the custom-head directories.");
+            return;
+        }
         if(!file.isDirectory()) {
             file.delete();
             file = file.getParentFile();
         }
-        while(file.listFiles().length==0 && !file.equals(acceptedHeadDir)
-                                         && !file.equals(submittedHeadDir)) {
+        File[] children;
+        while(file != null
+                && !file.equals(acceptedHeadDir) && !file.equals(submittedHeadDir)
+                && (PathSafety.isInside(acceptedHeadDir, file) || PathSafety.isInside(submittedHeadDir, file))
+                && (children = file.listFiles()) != null && children.length == 0) {
             file.delete();
             file = file.getParentFile();
         }
     }
     
     public static CustomHeadData getSubmittedHeadData(String name) {
-        File file = new File(submittedHeadDir, name+"."+fileExtension);
-        if(!file.exists()) {
+        File file = safeHeadFile(submittedHeadDir, name, "get submitted head data");
+        if(file==null || !file.exists()) {
             return null;
         }
         return CustomHeadData.fromFile(file);
     }
     
     public static CustomHeadData getHeadData(String name) {
-        File file = new File(acceptedHeadDir, name+"."+fileExtension);
-        if(!file.exists()) {
+        File file = safeHeadFile(acceptedHeadDir, name, "get head data");
+        if(file==null || !file.exists()) {
             return null;
         }
         return CustomHeadData.fromFile(file);
