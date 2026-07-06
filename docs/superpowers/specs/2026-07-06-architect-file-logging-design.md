@@ -7,7 +7,7 @@
 
 ## 1. Goal
 
-Give Architect its own log file under `plugins/MCME-Architect/logs/` and route **all** of Architect's output there — debug, warnings, and errors/stacktraces — **out of the shared server log**, to make debugging Architect easier without wading through the whole server console. Architect already has a debug *mode* (`/architect dev` + `DevUtil`); this keeps that as the live in-game control and adds the file as the complete diagnostic record.
+Give Architect its own log file under `plugins/MCME-Architect/logs/` and route **all** of Architect's output there — debug, warnings, and errors/stacktraces — **out of the shared server log**, to make debugging Architect easier without wading through the whole server console. Architect already has a debug *mode* (`/architect dev` + `DevUtil`); this keeps that as the live in-game control and adds the file as the complete diagnostic record. Migrating the calls is also a **clarity pass** — every error and message is brought up to the quality bar in §5, so the log is genuinely useful to debug from rather than relocated noise.
 
 **In scope:** a `Log` facade + a file-logging handler on Architect's plugin logger; per-restart, daily-dated, size-rotating log files with retention; config toggles; migrating the ~400 scattered logging calls onto the facade; MockBukkit tests.
 
@@ -76,6 +76,15 @@ Grep-driven, mechanical, batched by package; after each batch `mvn compile` and 
 
 Remove the now-unused `java.util.logging.Logger`/`Level` imports as files are cleaned. Commented-out log lines can be left or deleted at the migrator's discretion (don't expand scope chasing them).
 
+**Message-quality bar (applies to every migrated call — this is not a blind find-replace).** As each call site moves onto `Log`, bring the message itself up to standard:
+- **Errors carry real context.** Never a bare stacktrace or `Log.error("error", e)`. State *what operation failed* and include the relevant identifiers available at that point — player name/UUID, world, file path, RP name, region, block location, command args — then pass the throwable. Example: `Logger.getLogger(...).log(SEVERE, null, ex)` → `Log.error("Failed to load RP region '" + name + "' from " + file, ex)`.
+- **Readable and self-contained.** Full phrases a non-author can understand — what happened, and where useful why and what it means. No cryptic tags or abbreviations (e.g. the audit's `"Key search"` debug line, raw `Arrays.toString(bytes)` dumps).
+- **Correct severity.** `info` for normal operational events, `warn` for handled-but-unexpected conditions, `error` for failures. Not everything at `info`.
+- **Drop pure noise.** Left-in dev prints / byte-dumps / spammy per-event lines are deleted, or converted to `Log.debug(...)` with a clear label if genuinely useful under `/architect dev`. They must not pollute the file at normal verbosity.
+- **Greppable.** Prefer stable identifiers and consistent wording so entries can be filtered later.
+
+Because this needs judgment per message, the plan reviews message clarity **per package** (a read-through of the batch's diff), not just a green compile.
+
 ## 6. Config (`config.yml`)
 
 ```yaml
@@ -105,3 +114,4 @@ Defaults make it work out-of-box (file on, out of server log). Missing keys fall
 3. `/architect dev <level>` controls debug detail in both the in-game view and the file.
 4. Config toggles work (disable → back to server log; retention prunes; rotation caps size).
 5. `mvn compile` green; MockBukkit tests pass; file handle released on disable.
+6. **Message quality (§5):** migrated errors carry the failed operation + relevant identifiers + the throwable; no bare stacktraces or cryptic one-word logs survive; severities (`info`/`warn`/`error`) are used correctly — reviewed per package, not just compiled.
