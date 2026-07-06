@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.voxelStencilEditor;
 
 import com.mcmiddleearth.architect.Log;
+import com.mcmiddleearth.util.PathSafety;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -38,11 +39,17 @@ public class StencilList {
         this.name = name;
     }
     
-    public static StencilList loadFromFile(String name) { 
+    public static StencilList loadFromFile(String name) {
+        File file;
+        try {
+            file = PathSafety.resolveInside(VoxelConstants.STENCIL_LISTS_DIR,
+                                 name + "."+VoxelConstants.STENCIL_LIST_EXT);
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil-list name '" + name + "' for load: " + ex.getMessage());
+            return null;
+        }
         FileReader fr = null;
         try {
-            File file = new File(VoxelConstants.STENCIL_LISTS_DIR,
-                                 name + "."+VoxelConstants.STENCIL_LIST_EXT);
             if(!file.exists()) {
                 return null;
             }
@@ -71,8 +78,14 @@ public class StencilList {
     }
 
     public boolean addStencil(String stencilName) {
-        File file = new File(VoxelConstants.STENCILS_DIR+"/"
-                             +stencilName + "."+VoxelConstants.STENCIL_EXT);
+        File file;
+        try {
+            file = PathSafety.resolveInside(VoxelConstants.STENCILS_DIR,
+                                 stencilName + "."+VoxelConstants.STENCIL_EXT);
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil name '" + stencilName + "' for addStencil: " + ex.getMessage());
+            return false;
+        }
         if(!file.exists()) {
             return false;
         }
