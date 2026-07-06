@@ -25,6 +25,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
+                <configuration>
+                    <!-- Fresh JVM per test class: Architect caches data-folder paths in static
+                         fields at class-load, so test classes must not share a fork (a prior
+                         class's plugin load would leave a stale path for the next). -->
+                    <reuseForks>false</reuseForks>
+                </configuration>
             </plugin>
         </plugins>
         <resources>
