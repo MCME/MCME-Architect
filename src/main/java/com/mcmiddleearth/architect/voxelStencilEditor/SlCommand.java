@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.voxelStencilEditor;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -25,6 +26,7 @@ import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.confirmation.ConfirmationFactory;
 import com.mcmiddleearth.pluginutil.confirmation.Confirmationable;
+import com.mcmiddleearth.util.PathSafety;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -147,7 +149,13 @@ public class SlCommand extends AbstractArchitectCommand implements Confirmationa
     }
     
     private int addStencils(StencilList list, String stencilName) {
-        File search = new File(VoxelConstants.STENCILS_DIR+"/"+stencilName);
+        File search;
+        try {
+            search = PathSafety.resolveInside(VoxelConstants.STENCILS_DIR, stencilName);
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil name '" + stencilName + "' for addStencils: " + ex.getMessage());
+            return 0;
+        }
         File dir;
         if(search.isDirectory()) {
             dir = search;
