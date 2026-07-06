@@ -37,6 +37,20 @@ class LogFileTest {
         assertTrue(c.contains("kaboom"), "stacktrace present");
     }
 
+    @Test void devUtilDebugWritesToFileWhenLevelPasses() throws Exception {
+        com.mcmiddleearth.util.DevUtil.setLevel(5);
+        com.mcmiddleearth.util.DevUtil.log(1, "dbg-777");
+        LogFileManager.flush();
+        assertTrue(readLatestLog().contains("dbg-777"));
+    }
+
+    @Test void devUtilDebugSuppressedBelowLevel() throws Exception {
+        com.mcmiddleearth.util.DevUtil.setLevel(1);
+        com.mcmiddleearth.util.DevUtil.log(9, "dbg-should-not-appear");
+        LogFileManager.flush();
+        assertFalse(readLatestLog().contains("dbg-should-not-appear"));
+    }
+
     private File[] logs() {
         return new File(plugin.getDataFolder(), "logs")
                 .listFiles((d, n) -> n.startsWith("architect_") && n.endsWith(".log"));
