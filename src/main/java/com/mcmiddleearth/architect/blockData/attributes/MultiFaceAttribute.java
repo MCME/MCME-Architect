@@ -5,11 +5,10 @@
  */
 package com.mcmiddleearth.architect.blockData.attributes;
 
+import com.mcmiddleearth.architect.Log;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.MultipleFacing;
@@ -74,13 +73,13 @@ public class MultiFaceAttribute extends Attribute {
             Method getFace = clazz.getDeclaredMethod("hasFace",BlockFace.class);
             boolean hasFace = (boolean) getFace.invoke(blockData,face);
             return hasFace;
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                 | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(MultiFaceAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to reflectively invoke hasFace() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
         }
         return false;
     }
-    
+
     protected Set<BlockFace> getAllowedFaces() {
         if(blockData==null || !clazz.isInstance(blockData)) {
             return null;
@@ -89,13 +88,13 @@ public class MultiFaceAttribute extends Attribute {
             Method getAllowed = clazz.getDeclaredMethod("getAllowedFaces");
             Set<BlockFace> allowed = (Set<BlockFace>) getAllowed.invoke(blockData);
             return allowed;
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                 | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(MultiFaceAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to reflectively invoke getAllowedFaces() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
         }
         return null;
     }
-    
+
     protected BlockFace getCurrentFace() {
         int index = -1;
         Set<BlockFace> allowed = getAllowedFaces();

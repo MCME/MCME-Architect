@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.viewDistance;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import org.bukkit.entity.Player;
@@ -53,11 +54,11 @@ public class ViewDistanceManager {
                 try {
                     fileWriter.write(uuid.toString()+" "+viewdistance+"\n");
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    Log.error("Failed to write view distance entry for player " + uuid + " to " + viewDistancesFile.getAbsolutePath(), e);
                 }
             });
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.error("Failed to save view distances file " + viewDistancesFile.getAbsolutePath(), e);
         }
     }
 
@@ -68,7 +69,7 @@ public class ViewDistanceManager {
                 viewDistances.put(UUID.fromString(line[0]), NumericUtil.getInt(line[1]));
             }
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            Log.warn("View distances file not found (expected on first run): " + viewDistancesFile.getAbsolutePath());
         }
     }
 

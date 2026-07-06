@@ -17,10 +17,9 @@
 package com.mcmiddleearth.architect.entityLogging;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger.Coordinates;
 import com.mcmiddleearth.util.DevUtil;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.World;
@@ -55,7 +54,7 @@ public class ELogDynmapUtil {
         }
         Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
         if(dynmap==null) {
-            Logger.getGlobal().info("Dynmap not found");
+            Log.info("Dynmap plugin not found; entity-log markers on the map are disabled.");
         }
         else {
             try{
@@ -71,7 +70,7 @@ public class ELogDynmapUtil {
                 init = true;
                 clearMarkers();
             } catch(Exception e) {
-                Logger.getLogger(ELogDynmapUtil.class.getName()).log(Level.WARNING, "Dynmap plugin not compatible",e);
+                Log.warn("Dynmap plugin is not compatible with the entity-log marker API", e);
             }
         }
     }

@@ -5,11 +5,10 @@
  */
 package com.mcmiddleearth.architect.blockData.attributes;
 
+import com.mcmiddleearth.architect.Log;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.block.data.type.BrewingStand;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -73,9 +72,9 @@ public class BrewingStandAttribute extends Attribute {
             Method getAllowed = clazz.getDeclaredMethod("getBottles");
             Set<Integer> allowed = (Set<Integer>) getAllowed.invoke(blockData);
             return allowed;
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                 | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(BrewingStandAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to reflectively invoke getBottles() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
         }
         return null;
     }

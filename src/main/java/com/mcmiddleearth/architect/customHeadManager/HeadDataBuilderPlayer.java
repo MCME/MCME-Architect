@@ -23,6 +23,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -30,8 +31,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -77,7 +76,7 @@ public class HeadDataBuilderPlayer {
                         cancel();
                         return;
                     } catch (IOException | JsonSyntaxException ex) {
-                        Logger.getLogger(CustomHeadManagerData.class.getName()).log(Level.SEVERE, null, ex);
+                        Log.error("Failed to parse Mojang UUID lookup response for player name " + ownerName, ex);
                     } finally {
                         cancel();
                     }
@@ -94,7 +93,7 @@ public class HeadDataBuilderPlayer {
                     connection.setReadTimeout(5000);
                     connection.connect();
                 } catch (IOException ex) {
-                    Logger.getLogger(CustomHeadManagerData.class.getName()).log(Level.SEVERE, null, ex);
+                    Log.error("Failed to connect to Mojang UUID lookup for player name " + ownerName, ex);
                 } finally {
                     received = true;
                 }
@@ -139,7 +138,7 @@ public class HeadDataBuilderPlayer {
                             return;
                             }
                     } catch (IOException | JsonSyntaxException ex) {
-                        Logger.getLogger(CustomHeadManagerData.class.getName()).log(Level.SEVERE, null, ex);
+                        Log.error("Failed to parse Mojang skin lookup response for player " + ownerId, ex);
                     } finally {
                         cancel();
                     }
@@ -156,7 +155,7 @@ public class HeadDataBuilderPlayer {
                     connection.setReadTimeout(5000);
                     connection.connect();
                 } catch (IOException ex) {
-                    Logger.getLogger(CustomHeadManagerData.class.getName()).log(Level.SEVERE, null, ex);
+                    Log.error("Failed to connect to Mojang skin lookup for player " + ownerId, ex);
                 } finally {
                     received = true;
                 }
