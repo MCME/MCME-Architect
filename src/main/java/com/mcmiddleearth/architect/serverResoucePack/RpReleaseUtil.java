@@ -1,7 +1,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.connect.log.Log;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.util.StreamGobbler;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.logging.Logger;
 
 public class RpReleaseUtil {
 
@@ -37,7 +36,7 @@ public class RpReleaseUtil {
                 }
                 StreamGobbler streamGobbler =
                         new StreamGobbler(process.getInputStream(), process.getErrorStream(),
-                                line -> Logger.getGlobal().info(line));
+                                line -> Log.info("[RP release " + finalRpName + "] " + line));
                 ExecutorService executorService = Executors.newSingleThreadExecutor();
                 Future<?> future = executorService.submit(streamGobbler);
                 boolean exit = process.waitFor(5, TimeUnit.MINUTES);
@@ -46,7 +45,7 @@ public class RpReleaseUtil {
                 int exitCode = process.waitFor();
                 callback.accept(exit, exitCode);
             } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
-                e.printStackTrace();
+                Log.error("Failed to run RP release script for '" + finalRpName + "' version " + version, e);
                 callback.accept(false, -1);
             }
         });
@@ -81,8 +80,6 @@ public class RpReleaseUtil {
     }
 
     private static void updateSection(ConfigurationSection rpConfig, String path, String requiredMcVersion, String url) {
-Logger.getGlobal().info("Key search: "+path);
-rpConfig.getKeys(true).forEach(key -> Logger.getGlobal().info(key));
         ConfigurationSection section = rpConfig.getConfigurationSection(path);
         if(section.contains("url")) {
             section.set("url", null);

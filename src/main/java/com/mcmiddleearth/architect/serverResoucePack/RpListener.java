@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import com.mcmiddleearth.pluginutil.developer.DevUtil;
@@ -31,9 +32,6 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -68,7 +66,6 @@ public class RpListener implements Listener {
         Player player = event.getPlayer();
         DevUtil devUtil = ArchitectPlugin.getPluginInstance().getDevUtil();
         devUtil.log(2,"PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
-//Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
         int version = player.getProtocolVersion();
         String snapshot = "";
         if(version > 0x40000000) {
@@ -129,7 +126,7 @@ public class RpListener implements Listener {
                         cancel();
                     } else counter --;
                     if(counter==0) {
-                        Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Could not get player rp settings from the database");        
+                        Log.warn("Timed out waiting for RP settings to load from the database for player " + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
                     }
                 }
             }.runTaskTimer(ArchitectPlugin.getPluginInstance(),30,20);
