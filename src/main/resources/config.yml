@@ -46,3 +46,10 @@ gitHubRpReleases:
 inventoryDownload:
     script: updateInventory.sh
     path: /opt/mcme-network/bungee-mcme/servers-mcme/devserver/resourcePackAutomation/
+logging:
+    file:
+        enabled: true
+        alsoServerLog: false
+        maxSizeMB: 10
+        maxFiles: 5
+        retentionDays: 14

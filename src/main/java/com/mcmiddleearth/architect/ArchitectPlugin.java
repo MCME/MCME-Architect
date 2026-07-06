@@ -73,6 +73,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         getConfig().options().copyDefaults(true);
         saveDefaultConfig();
         pluginInstance = this;
+        LogFileManager.install(this);
         //ProtocolLibUtil.init(this);
         //DoorListener.addOpenHalfDoorListener();
         PluginData.getMessageUtil().setPluginName("Architect");
@@ -163,6 +164,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
+        LogFileManager.uninstall(this);
     }
     
     public void setCommandExecutor(String command, AbstractArchitectCommand executor) {
