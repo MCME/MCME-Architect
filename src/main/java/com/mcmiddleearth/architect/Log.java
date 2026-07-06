@@ -9,6 +9,7 @@ public final class Log {
     private static Logger log() { return ArchitectPlugin.getPluginInstance().getLogger(); }
     public static void info(String msg)                { log().info(msg); }
     public static void warn(String msg)                { log().warning(msg); }
+    public static void warn(String msg, Throwable t)   { log().log(Level.WARNING, msg, t); }
     public static void error(String msg)               { log().severe(msg); }
     public static void error(String msg, Throwable t)  { log().log(Level.SEVERE, msg, t); }
     public static void debug(String msg)               { log().fine(msg); }
