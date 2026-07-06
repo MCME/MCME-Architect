@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.entity.Player;
@@ -27,8 +28,6 @@ import java.sql.*;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -65,8 +64,6 @@ public class RpDatabaseConnector {
             @Override
             public void run() {
                 checkConnection();
-                //Logger.getGlobal().info("ArchitectTasks: " + Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
-                //Logger.getGlobal().info("ArchitectWorker: " + Bukkit.getScheduler().getActiveWorkers().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
             }
         }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(),0,1200);
     }
@@ -86,17 +83,16 @@ public class RpDatabaseConnector {
     private synchronized void checkConnection() {
         try {
             if(connected && dbConnection.isValid(5)) {
-                //ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO,
-                //        "Successfully checked connection to rp database.");
+                // connection healthy, nothing to do
             } else {
                 if(dbConnection!=null) {
                     dbConnection.close();
                 }
                 connect();
-                ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO, "Reconnecting to rp database.");
+                Log.info("Reconnecting to RP database " + dbName + " at " + dbIp + ":" + port);
             }
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to check/reconnect RP database connection to " + dbName + " at " + dbIp + ":" + port, ex);
             connected = false;
         }
     }
@@ -121,7 +117,7 @@ public class RpDatabaseConnector {
 
             connected = true;
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to connect to RP database " + dbName + " at " + dbIp + ":" + port + " as user " + dbUser, ex);
             connected = false;
         }
     }
@@ -138,19 +134,19 @@ public class RpDatabaseConnector {
                 selectPlayerRpSettings.close();
                 dbConnection.close();
             } catch (SQLException ex) {
-                Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to close RP database connection to " + dbName + " at " + dbIp + ":" + port, ex);
             }
         }
     }
 
     private synchronized void checkTablesSync(){
         try {
-            Logger.getLogger(ArchitectPlugin.class.getName()).info("checking tables...");
+            Log.debug("Checking RP database tables exist on " + dbName);
             String statement = "CREATE TABLE IF NOT EXISTS architect_rp (uuid VARCHAR(50), "
                              + "auto BIT, variant VARCHAR(30), resolution INT, currentURL VARCHAR(100), KEY(uuid))";
             dbConnection.createStatement().execute(statement);
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to create/verify architect_rp table on RP database " + dbName, ex);
         }
     }
 
@@ -183,12 +179,12 @@ public class RpDatabaseConnector {
                     result.close();
                     dataMap.put(uuid,data);
                 } catch (SQLException ex) {
-                    Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+                    Log.error("Failed to read RP settings row for player " + uuid + " from database " + dbName, ex);
                     dataMap.put(uuid,null);
                 }
             }
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to query RP settings for player " + uuid + " from database " + dbName, ex);
             dataMap.put(uuid,null);
             connected = false;
         }
@@ -218,7 +214,7 @@ public class RpDatabaseConnector {
             }
 
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save RP settings for player " + player.getName() + " (" + player.getUniqueId() + ") to database " + dbName, ex);
             connected = false;
         }
     }

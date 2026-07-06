@@ -18,9 +18,9 @@ package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.google.gson.Gson;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.RegionEditConversationFactory;
-import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ResourceUtil;
 import com.viaversion.viaversion.api.Via;
@@ -41,8 +41,6 @@ import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -81,7 +79,7 @@ public class RpManager {
                 protocolVersions.put(version, versionConfig.getInt(version));
             }
         } catch (IOException | InvalidConfigurationException e) {
-            e.printStackTrace();
+            Log.error("Failed to load protocol versions file " + versionFile.getName(), e);
         }
         if(!regionFolder.exists()) {
             regionFolder.mkdir();
@@ -111,7 +109,7 @@ public class RpManager {
                     }
                 }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 200, 20);
             } catch (IOException | InvalidConfigurationException ex) {
-                Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to load RP region file " + file.getName(), ex);
             }
         }
         importResourceRegions();
@@ -298,7 +296,6 @@ public class RpManager {
                 String versionMin = "unknown";
                 int protocolMin = Integer.MAX_VALUE;
                 for(String version: variantSection.getKeys(false)) {
-//Logger.getGlobal().info("Version: "+version);
                     Integer protocolVersion = protocolVersions.get(version);
                     if(protocolVersion==null) {
                         return null;
@@ -356,7 +353,6 @@ public class RpManager {
         RpPlayerData data = getPlayerData(player);
         if(url!=null && data!=null && !url.equals("") && (force || !url.equals(data.getCurrentRpUrl()))) {
             data.setCurrentRpUrl(url);
-//Logger.getGlobal().info("Sending to "+player.getName()+"("+getPlayerData(player).getProtocolVersion()+") RP: "+url);
             player.setResourcePack(url, getSHA(rpName, player));
             savePlayerData(player);
             return true;
@@ -385,16 +381,12 @@ public class RpManager {
     
     public static String getRpForUrl(String url) {
         for(String rpName: getRpConfig().getKeys(false)) {
-//Logger.getGlobal().info("RP: "+rpName);
             ConfigurationSection clientSection = getRpConfig().getConfigurationSection(rpName);
             for (String clientName : clientSection.getKeys(false)) {
-//Logger.getGlobal().info("Client: "+clientName);
                 ConfigurationSection resolutionSection = clientSection.getConfigurationSection(clientName);
                 for (String key : resolutionSection.getKeys(false)) {
-//Logger.getGlobal().info("Resolution: "+key);
                     ConfigurationSection pxSection = resolutionSection.getConfigurationSection(key);
                     for (String varKey : pxSection.getKeys(false)) {
-//Logger.getGlobal().info("Variant: "+varKey);
                         ConfigurationSection varSection = pxSection.getConfigurationSection(varKey);
                         if (varSection.contains("url")) {
                             if(varSection.getString("url").equals(url)) {
@@ -427,31 +419,24 @@ public class RpManager {
         ConfigurationSection config = getRpConfig().getConfigurationSection(rp);
         if(config!=null) {
             for(String clientKey: config.getKeys(false)) {
-//Logger.getGlobal().info("ClientKey: "+clientKey);
                 ConfigurationSection clientSection = config.getConfigurationSection(clientKey);
                 for(String resolutionKey: clientSection.getKeys(false)) {
-//Logger.getGlobal().info("ResolutionKey: "+resolutionKey);
                     ConfigurationSection resolutionSection = clientSection.getConfigurationSection(resolutionKey);
                     for (String variantKey : resolutionSection.getKeys(false)) {
-//Logger.getGlobal().info("VariantKey: "+variantKey);
                         try {
                             ConfigurationSection variantSection = resolutionSection.getConfigurationSection(variantKey);
                             List<ConfigurationSection> sections = new LinkedList<>();
                             if (variantSection.contains("url")) {
-//Logger.getGlobal().info("DirectURL: "+variantSection.getString("url"));
                                 sections.add(variantSection);
                             } else {
                                 if (allVersions) {
-//Logger.getGlobal().info("All versions");
                                     sections.addAll(variantSection.getKeys(false).stream()
                                             .map(variantSection::getConfigurationSection).collect(Collectors.toSet()));
                                 } else {
-//Logger.getGlobal().info("Latest versions");
                                     sections.add(variantSection
                                             .getConfigurationSection(getLatestVersion(variantSection.getKeys(false))));
                                 }
                             }
-//for(ConfigurationSection section: sections) Logger.getGlobal().info("URL: "+section.getString("url"));
                             for (ConfigurationSection section : sections) {
                                 URL url = new URL(section.getString("url"));
                                 InputStream fis = url.openStream();
@@ -477,7 +462,8 @@ public class RpManager {
                                 ArchitectPlugin.getPluginInstance().saveConfig();
                             }
                         } catch(IOException | NoSuchAlgorithmException ex){
-                            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                            Log.error("Failed to calculate SHA for RP '" + rp + "' client=" + clientKey
+                                    + " resolution=" + resolutionKey + " variant=" + variantKey, ex);
                             return false;
                         }
                     }
@@ -492,8 +478,6 @@ public class RpManager {
         int latestProtocol = 0;
         String latestVersion = "";
         for(String version : versions) {
-//protocolVersions.forEach((key, protocol) -> Logger.getGlobal().info(key+" "+protocol));
-//Logger.getGlobal().info("getLatestVersion: version "+ version+ " protcolVersions: "+protocolVersions.size());
             Integer boxed = protocolVersions.get(version);
             if(boxed == null) continue;
             int protocolVersion = boxed;
@@ -502,7 +486,6 @@ public class RpManager {
                 latestVersion = version;
             }
         }
-//Logger.getGlobal().info("LatestVersion: "+latestVersion);
         return latestVersion;
     }
     
@@ -524,10 +507,10 @@ public class RpManager {
             config.set("rpRegion", region.saveToMap());
             config.save(new File(regionFolder,region.getName()+".reg"));
         } catch (IOException ex) {
-            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save RP region '" + region.getName() + "' to " + regionFolder, ex);
         }
     }
-    
+
     private static void importResourceRegions() {
         for(File file: regionFolder.listFiles((File dir, String name) -> name.endsWith(".json"))) {
             Gson gson = new Gson();
@@ -556,7 +539,7 @@ public class RpManager {
                     }
                 }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 200, 20);
             } catch (IOException ex) {
-                Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to import RP region from resource file " + file.getName(), ex);
             }
         }
     }
