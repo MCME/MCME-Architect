@@ -17,14 +17,13 @@
 package com.mcmiddleearth.architect.entityLogging;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.World;
@@ -96,9 +95,9 @@ public class EntityLogger{
                                     ELogDynmapUtil.createMarker(coord, entityTypes, values, maxValue, world));
                             //}
                         //}.runTask(ArchitectPlugin.getPluginInstance());
-                        Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.INFO, "Dumping Entity Logs");
+                        Log.debug("Dumped entity logs for " + logData.size() + " chunk(s) to " + logFile.getName());
                     } catch (IOException ex) {
-                        Logger.getLogger(EntityLogger.class.getName()).log(Level.SEVERE, null, ex);
+                        Log.error("Failed to write entity log file " + logFile.getAbsolutePath(), ex);
                     }
                 }
             }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(), 500, 2000);

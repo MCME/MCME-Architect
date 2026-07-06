@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.copyPaste;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.plotStoring.IStoragePlot;
 import com.sk89q.worldedit.regions.CuboidRegion;
@@ -28,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -242,7 +241,7 @@ public class CopyPasteManager {
                         Clipboard cb = new Clipboard(file);
                         clipboards.put(player.getUniqueId(), cb);
                     } catch (IOException ex) {
-                        Logger.getLogger(CopyPasteManager.class.getName()).log(Level.SEVERE, null, ex);
+                        Log.error("Failed to load clipboard file " + file.getAbsolutePath() + " for player " + player.getName(), ex);
                     }
                 }
             }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());

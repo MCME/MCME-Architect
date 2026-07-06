@@ -156,7 +156,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         ItemBlockManager.startEntityGlowTask();
         
         
-        getLogger().info("MCME-Architect Enabled!");
+        Log.info("MCME-Architect Enabled!");
     }
     
     @Override

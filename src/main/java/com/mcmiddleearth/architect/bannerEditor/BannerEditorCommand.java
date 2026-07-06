@@ -5,6 +5,7 @@
  */
 package com.mcmiddleearth.architect.bannerEditor;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -20,8 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -89,7 +88,7 @@ public class BannerEditorCommand extends AbstractArchitectCommand {
                             }
                         } catch (IOException ex) {
                             PluginData.getMessageUtil().sendIOError(cs);
-                            Logger.getLogger(BannerEditorCommand.class.getName()).log(Level.SEVERE, null, ex);
+                            Log.error("Failed to save banner '" + args[1] + "' for player " + cs.getName(), ex);
                         }
                     }
                     return true;

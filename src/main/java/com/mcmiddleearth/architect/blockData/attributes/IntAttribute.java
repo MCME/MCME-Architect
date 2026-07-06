@@ -5,10 +5,9 @@
  */
 package com.mcmiddleearth.architect.blockData.attributes;
 
+import com.mcmiddleearth.architect.Log;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -60,9 +59,9 @@ public class IntAttribute extends Attribute {
         try {
             Method getter = clazz.getDeclaredMethod("get"+name);
             return (int) getter.invoke(blockData);
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                 | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(IntAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to reflectively invoke get" + name + "() on " + clazz.getSimpleName(), ex);
         }
         return 0;
     }
@@ -91,13 +90,13 @@ public class IntAttribute extends Attribute {
             try {
                 Method setter = clazz.getDeclaredMethod("set"+name,int.class);
                 setter.invoke(blockData,newValue);
-            } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                     | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(IntAttribute.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to reflectively invoke set" + name + "() on " + clazz.getSimpleName(), ex);
             }
         }
     }
-    
+
     private int getMaxValue() {
         if(maxMethod.equals("")) {
             return maxValue;
@@ -106,14 +105,14 @@ public class IntAttribute extends Attribute {
             try {
                 Method max = clazz.getDeclaredMethod(maxMethod);
                 return (int) max.invoke(blockData);
-            } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                     | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(IntAttribute.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to reflectively invoke " + maxMethod + "() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
             }
         }
         return 0;
     }
-    
+
     private int getMinValue() {
         if(minMethod.equals("")) {
             return minValue;
@@ -121,9 +120,9 @@ public class IntAttribute extends Attribute {
         try {
             Method min = clazz.getDeclaredMethod(minMethod);
             return (int) min.invoke(blockData);
-        } catch (NoSuchMethodException e) {} catch (IllegalAccessException | IllegalArgumentException 
+        } catch (NoSuchMethodException e) {} catch (IllegalAccessException | IllegalArgumentException
                 | InvocationTargetException ex) {
-            Logger.getLogger(IntAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to reflectively invoke " + minMethod + "() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
         }
         return 0;
     }

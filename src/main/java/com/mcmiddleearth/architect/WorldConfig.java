@@ -29,8 +29,6 @@ import org.bukkit.inventory.Inventory;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -83,7 +81,7 @@ public class WorldConfig {
     static {
         if (!worldConfigDir.exists()) {
             if(!worldConfigDir.mkdirs()) {
-                Logger.getLogger(WorldConfig.class.getName()).log(Level.SEVERE, "Can't create world config folder.");
+                Log.error("Failed to create WorldConfig directory " + worldConfigDir.getAbsolutePath());
             }
         }
     }
@@ -93,12 +91,11 @@ public class WorldConfig {
         this.worldName = worldName;
         if (!worldConfigDir.exists()) {
             if(!worldConfigDir.mkdirs()) {
-                Logger.getLogger(WorldConfig.class.getName()).log(Level.SEVERE, "Can't create world config folder.");
+                Log.error("Failed to create WorldConfig directory " + worldConfigDir.getAbsolutePath());
             }
         }
         if (!defaultConfigFile.exists()) {
-            Logger.getGlobal().info("*****************************************************************");
-            Logger.getGlobal().info("missing default world config file --- creating defaultWorldConfig");
+            Log.info("Missing default world config file, creating " + defaultWorldConfigName + "." + cfgExtension);
             this.defaultConfig = createDefaultConfig();
             saveDefaultConfig();
         }
@@ -109,7 +106,7 @@ public class WorldConfig {
             try {
                 worldConfig.save(configFile);
             } catch (IOException ex) {
-                Logger.getLogger(WorldConfig.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to save new world config file " + configFile.getAbsolutePath(), ex);
             }
         } else {
             worldConfig = YamlConfiguration.loadConfiguration(configFile);
@@ -152,7 +149,7 @@ public class WorldConfig {
         try {
             defaultConfig.save(defaultConfigFile);
         } catch (IOException ex) {
-            Logger.getLogger(WorldConfig.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save default world config file " + defaultConfigFile.getAbsolutePath(), ex);
         }
     }
 
@@ -160,7 +157,7 @@ public class WorldConfig {
         try {
             worldConfig.save(getConfigFile());
         } catch (IOException ex) {
-            Logger.getLogger(WorldConfig.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save world config file for world " + worldName, ex);
         }
     }
 
@@ -374,11 +371,11 @@ public class WorldConfig {
                 BlockData blockData = Bukkit.createBlockData(entry);
                 noInteraction.add(blockData);
             } catch(IllegalArgumentException ex) {
-                Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Illegal block data for no interaction block.");
+                Log.warn("Illegal block data for no-interaction entry '" + entry + "' in world " + worldName + ": " + ex.getMessage());
             }
         }
     }
-    
+
     private void createNoInteraction(ConfigurationSection config) {
         List<String> list = new ArrayList<>();
         list.add("minecraft:acacia_fence_gate");
@@ -416,7 +413,7 @@ public class WorldConfig {
                 BlockData blockData = Bukkit.createBlockData(entry);
                 noConnection.add(blockData);
             } catch(IllegalArgumentException ex) {
-                Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Illegal block data for no connection block.");
+                Log.warn("Illegal block data for no-connection entry '" + entry + "' in world " + worldName + ": " + ex.getMessage());
             }
         }
     }
@@ -529,7 +526,7 @@ public class WorldConfig {
                 BlockData blockData = Bukkit.createBlockData(entry);
                 disabledBlockStates.add(blockData);
             } catch(IllegalArgumentException ex) {
-                Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Illegal block data for disabled block states.");
+                Log.warn("Illegal block data for disabled-block-state entry '" + entry + "' in world " + worldName + ": " + ex.getMessage());
             }
         }
 //Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.INFO,blockData.getAsString());

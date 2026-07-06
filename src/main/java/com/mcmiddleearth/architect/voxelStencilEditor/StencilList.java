@@ -16,13 +16,13 @@
  */
 package com.mcmiddleearth.architect.voxelStencilEditor;
 
+import com.mcmiddleearth.architect.Log;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -57,7 +57,7 @@ public class StencilList {
             }
             return newList;
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(StencilList.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to load stencil list '" + name + "'", ex);
             return null;
         } finally {
             try {
@@ -65,7 +65,7 @@ public class StencilList {
                     fr.close();
                 }
             } catch (IOException ex) {
-                Logger.getLogger(StencilList.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to close stencil list file reader for '" + name + "'", ex);
             }
         }
     }
@@ -111,7 +111,7 @@ public class StencilList {
             }
             return true;
         } catch (IOException ex) {
-            Logger.getLogger(StencilList.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save stencil list '" + name + "'", ex);
             return false;
         } finally {
             try {
@@ -119,7 +119,7 @@ public class StencilList {
                     fw.close();
                 }
             } catch (IOException ex) {
-                Logger.getLogger(StencilList.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to close stencil list file writer for '" + name + "'", ex);
             }
         }
     }

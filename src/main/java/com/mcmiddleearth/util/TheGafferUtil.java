@@ -16,11 +16,10 @@
  */
 package com.mcmiddleearth.util;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -50,7 +49,8 @@ public class TheGafferUtil {
                 Method getBuildPermMethod = theGaffer.getClass().getMethod("hasBuildPermission", Player.class, Location.class);
                 return (boolean) getBuildPermMethod.invoke(null, player, location);
             } catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(PluginData.class.getName()).log(Level.SEVERE, "Error getting BuildPermission from TheGaffer", ex);
+                Log.error("Failed to reflectively invoke TheGaffer.hasBuildPermission for player " + player.getName()
+                        + " at " + location + "; failing open (permission granted)", ex);
                 return true;
             }
         }
@@ -65,7 +65,8 @@ public class TheGafferUtil {
                 Method getBuildPermMethod = theGaffer.getClass().getMethod("getBuildProtectionMessage", Player.class, Location.class);
                 return (String) getBuildPermMethod.invoke(null, player, location);
             } catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(PluginData.class.getName()).log(Level.SEVERE, "Error getting BuildProtectionMessage from TheGaffer", ex);
+                Log.error("Failed to reflectively invoke TheGaffer.getBuildProtectionMessage for player " + player.getName()
+                        + " at " + location, ex);
                 return "";
             }
         }

@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -30,8 +31,6 @@ import com.sk89q.worldedit.regions.Region;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.block.data.BlockData;
@@ -97,7 +96,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                             try {
                                 NoPhysicsData.save();
                             } catch (IOException ex) {
-                                Logger.getLogger(NoPhysicsCommand.class.getName()).log(Level.SEVERE, null, ex);
+                                Log.error("Failed to save no-physics exception area '" + args[2] + "' set by " + p.getName(), ex);
                                 PluginData.getMessageUtil().sendIOError(p);
                                 return true;
                             }
@@ -118,7 +117,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                         try {
                             NoPhysicsData.save();
                         } catch (IOException ex) {
-                            Logger.getLogger(NoPhysicsCommand.class.getName()).log(Level.SEVERE, null, ex);
+                            Log.error("Failed to save after deleting no-physics exception area '" + args[2] + "' by " + p.getName(), ex);
                             PluginData.getMessageUtil().sendIOError(p);
                             return true;
                         }
