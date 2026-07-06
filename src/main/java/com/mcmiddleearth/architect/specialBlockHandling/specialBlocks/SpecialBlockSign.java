@@ -26,7 +26,6 @@ import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
-import java.util.logging.Logger;
 
 public class SpecialBlockSign extends SpecialBlock {
 

@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,8 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
@@ -145,18 +144,17 @@ public class GetData {
         }
         try {
             config.save(dataFile);
-//Logger.getGlobal().info("saved");
         } catch (IOException ex) {
-            Logger.getLogger(GetData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save item sets to " + dataFile, ex);
         }
     }
-    
+
     public static void load() {
         YamlConfiguration config = new YamlConfiguration();
         try {
             config.load(dataFile);
         } catch (IOException | InvalidConfigurationException ex) {
-            Logger.getLogger(GetData.class.getName()).log(Level.WARNING, "Item set file not found.");
+            Log.warn("Item set file not found: " + dataFile + " (starting with no saved item sets)");
         }
         for(String name: config.getKeys(false)) {
             ConfigurationSection section = config.getConfigurationSection(name);

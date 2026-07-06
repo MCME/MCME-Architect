@@ -18,6 +18,7 @@ package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.google.common.collect.Sets;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
@@ -43,8 +44,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -125,7 +124,7 @@ public class SpecialBlockInventoryData {
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Logger.getLogger(SpecialBlockInventoryData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to load block inventory categories file " + file + " for RP " + rpName, ex);
         }
         ConfigurationSection categoryConfig = config.getConfigurationSection("Categories");
         if(categoryConfig!=null) {
@@ -157,7 +156,7 @@ public class SpecialBlockInventoryData {
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Logger.getLogger(SpecialBlockInventoryData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to load block inventory file " + file + " for RP " + rpName, ex);
         }
         int separator = file.getName().lastIndexOf(".");
         String categoryName = inventory.matchCategory(file.getName().substring(0,separator));
@@ -187,7 +186,7 @@ public class SpecialBlockInventoryData {
         try {
             config.save(file);
         } catch (IOException ex) {
-            Logger.getLogger(SpecialBlockInventoryData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save converted block inventory file " + file + " for RP " + rpName, ex);
         }
     }
 
@@ -503,8 +502,7 @@ Logger.getGlobal().info("block " + block.getBlockData().getAsString(true));
                 item.setItemMeta(im);
                 return item;
             } catch(IllegalArgumentException ex) {
-                Logger.getLogger(SpecialBlockInventoryData.class.getName())
-                        .warning("Not an item material: "+itemMat.name());
+                Log.warn("Not a valid item material for inventory entry '" + name + "' (RP " + rp + "): " + itemMat.name());
             }
         }
         return new ItemStack(Material.STONE);

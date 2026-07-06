@@ -30,7 +30,6 @@ import com.mcmiddleearth.pluginutil.message.MessageType;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;

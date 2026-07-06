@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryCategory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryState;
@@ -28,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -81,12 +80,12 @@ public class SpecialSavedInventoryData {
     }
     
     private static void loadFromFile(CustomInventory inventory, String rpName, File file) {
-        Logger.getGlobal().info("Loading items into to inventory for resource pack "+rpName+" from "+file.getName());
+        Log.info("Loading items into saved inventory for resource pack "+rpName+" from "+file.getName());
         YamlConfiguration config = new YamlConfiguration();
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Logger.getLogger(SpecialSavedInventoryData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to load saved inventory file " + file + " for RP " + rpName, ex);
         }
         String categoryName = file.getName().substring(0,file.getName().length()-4);
         ConfigurationSection categoryConfig = config.getConfigurationSection("category");
@@ -136,7 +135,8 @@ public class SpecialSavedInventoryData {
             loadFromFile(customInv,rpName,file);
             return true;
         } catch (IOException ex) {
-            Logger.getLogger(SpecialSavedInventoryData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save inventory category '" + categoryName + "' to " + file
+                    + " for RP " + rpName + " (player " + player.getName() + ")", ex);
             return false;
         }
     }
@@ -168,9 +168,6 @@ public class SpecialSavedInventoryData {
     
     public static void openInventory(Player p, String resourcePack) {
         CustomInventory inv = inventories.get(resourcePack);
-//Logger.getGlobal().info("savedInv: "+inventories.size());
-//Logger.getGlobal().info("savedInv: "+inventories.keySet().iterator().next());
-
         if(inv==null) {
             inv = inventories.get("Human");
         }

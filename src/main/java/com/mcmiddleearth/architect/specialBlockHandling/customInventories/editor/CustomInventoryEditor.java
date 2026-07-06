@@ -1,5 +1,6 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories.editor;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryCollectionState;
@@ -23,7 +24,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Logger;
 
 public class CustomInventoryEditor {
 
@@ -145,7 +145,7 @@ public class CustomInventoryEditor {
                             if (context.getSessionData("state") instanceof CustomInventoryCollectionState collection) {
                                 SpecialBlock baseBlock = collection.getBaseBlock();
                                 String baseId = baseBlock.getId().substring(baseBlock.getId().indexOf("/") + 1);
-                                Logger.getGlobal().info("BaseId: " + baseId);
+                                Log.debug("Custom inventory editor: collection base block ID resolved to " + baseId);
                                 ConfigurationSection baseSection = items.getConfigurationSection(baseId);
                                 assert baseSection != null;
                                 ConfigurationSection collectionSection = baseSection.getConfigurationSection("collection");
@@ -179,13 +179,15 @@ public class CustomInventoryEditor {
                     } catch (IOException | InvalidConfigurationException e) {
                         PluginData.getMessageUtil().sendErrorMessage(player, "Internal error" +
                                 " while saving custom inventory.");
-                        e.printStackTrace();
+                        Log.error("Failed to save custom inventory category file " + categoryFile
+                                + " for RP " + rpName + " (player " + player.getName() + ")", e);
                     }
                 } else {
                     PluginData.getMessageUtil().sendErrorMessage(player,
                             "Can't save custom inventory. Inventory config file not found: "
                                     +rpName+"/"+categoryFile.getName());
-                    Logger.getGlobal().warning("Not found! "+categoryFile);
+                    Log.warn("Custom inventory editor: config file not found: " + categoryFile
+                            + " for RP " + rpName + " (player " + player.getName() + ")");
                 }
             } else {
                 PluginData.getMessageUtil().sendErrorMessage(player, "Custom inventory editor conversation cancelled.");
@@ -230,12 +232,13 @@ public class CustomInventoryEditor {
                 config.load(categoryFile);
                 return config.getConfigurationSection("Items");
             } catch (IOException | InvalidConfigurationException e) {
-                Logger.getGlobal().warning("Error while reading inventory config! " + categoryFile);
-                e.printStackTrace();
+                Log.error("Failed to read inventory config " + categoryFile + " for RP " + rpName
+                        + " category " + category, e);
                 return null;
             }
         } else {
-            Logger.getGlobal().warning("Not found! " + categoryFile);
+            Log.warn("Custom inventory editor: config file not found: " + categoryFile
+                    + " for RP " + rpName + " category " + category);
             return null;
         }
     }
