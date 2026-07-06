@@ -35,7 +35,7 @@ Four parallel review lanes (security/input-handling, performance/thread-safety, 
 | B | `/inv delete` skips ownership check | One command, any builder | Deletes anyone's saved inventories | 🔴 High |
 | C | Missing/undeclared dependencies | Fresh deploy, or ProtocolLib/Via/Connect absent | **Plugin won't enable**, or RP system silently dead | 🔴 High |
 | D | Failure-blind loaders | One corrupt/edited YAML file | Blocks plugin enable, or overwrites good data with empty | 🔴 High |
-| E | Path traversal in file commands | `/chead /vv /banner /armor /get head` + `..` | Arbitrary `.yml` create/delete/read | 🟠 Med |
+| E | Path traversal in file commands | `/chead /vv /banner /armor /get head` + `..` | Arbitrary `.yml` create/delete/read | ✅ Fixed |
 | F | Async touches main-thread state | `/inv download`, `/chead submit` | Corrupts event dispatch / stalls ticks | 🟠 Med |
 | G | Data-layer correctness | Fresh DB, stale protocol map, item-block edits | RP settings never persist; NPE crashes | 🟠 Med |
 | H | Per-event cost & memory leaks | Busy build sessions over long uptime | Tick lag, slow heap growth | 🟡 Low-Med |
@@ -48,7 +48,7 @@ Full detail and every file:line reference is in [`audit.md`](audit.md).
 The individual bugs cluster into **five repeating patterns**. This is good news — it means we fix *classes* of bug with shared helpers, not 40 one-off patches:
 
 1. **Missing `return` after a guard** — e.g. the `/inv delete` auth bypass; 3 occurrences in `InvCommand` alone.
-2. **Path traversal via `new File(DIR + "/" + arg)`** with no `..` filter — 5 commands, one shared resolver fixes all.
+2. **Path traversal via `new File(DIR + "/" + arg)`** with no `..` filter — 5 commands, one shared resolver fixes all. ✅ *Fixed in Wave C via `PathSafety` (canonical-containment); the sweep also caught two-arg `new File(dir, arg)` sinks the first pass missed and a Windows-backslash Zip-Slip edge in `ZipUtil`.*
 3. **Empty-then-writeback data loss** — a swallowed load error followed by an unconditional save (4 files).
 4. **Unchecked command arguments** — no arg-count/precondition checks before dereference (4 commands).
 5. **NPE from unchecked lookup results** — `getSpecialBlock`/`getArmorStand`/`getConfigurationSection` dereferenced without null checks.
@@ -74,7 +74,7 @@ Small, isolated, high-impact. Each is a few lines and can go out as one PR.
 
 Fix the five patterns at the source with shared helpers, then grep-sweep every call site.
 
-- **Path-safety helper** — one "resolve and verify the canonical path stays under the base dir" utility; apply to `/chead`, `/vv`, `/banner`, `/armor`, `/get head` (Risk E). *M*
+- ✅ **Path-safety helper** *(done on `architect-rework-2026`, Wave C — commits `7d82b52`…`3a17216`)* — `com.mcmiddleearth.util.PathSafety` (canonical-containment, 9 unit tests) applied to `/chead` (recursive delete-walk also bounded to the head dirs + `listFiles()` NPE-guarded), `/banner`, `/armor`, `/vv` stencils, and `ZipUtil` extraction (Zip-Slip). A MockBukkit regression test proves a `/chead` traversal delete can no longer reach a sentinel file outside the head dirs. `/get head` read is covered via the guarded `getHeadData`. Deferred (tracked): `/inv` category-name sinks fold into the Risk B `/inv` work; region/UUID/world-name sinks are not arbitrary user input. (Risk E). *M*
 - **"Never save a config that failed to load" guard** — apply to `WorldConfig`, `SpecialBlockInventoryData`, `SpecialSavedInventoryData`, `GetData`; make the enable-time loaders **skip** a bad file instead of NPE-ing the whole plugin (Risk D). *M*
 - **Thread-safety corrections** — hop the `/inv download` reload back to the main thread (mirror how `RpCommand` already does it); move the `/chead submit` Mojang HTTP response off the main thread (Risk F). *M*
 - **Per-player state hygiene** — make the shared maps concurrent and clear them on `PlayerQuitEvent` (Risk H, memory half). *S–M*
