@@ -6,11 +6,14 @@ import java.io.File;
 import java.nio.file.Files;
 import static org.junit.jupiter.api.Assertions.*;
 
+// One mock/load per class: Architect caches getDataFolder()-derived paths in static fields at
+// class-load, so re-loading the plugin in the same JVM would use a stale (deleted) path. With
+// surefire reuseForks=false (a fresh JVM per test class), this keeps the path correct throughout.
 class LogFileTest {
-    private ArchitectPlugin plugin;
+    private static ArchitectPlugin plugin;
 
-    @BeforeEach void setUp() { MockBukkit.mock(); plugin = MockBukkit.load(ArchitectPlugin.class); }
-    @AfterEach  void tearDown() { if (MockBukkit.isMocked()) MockBukkit.unmock(); }
+    @BeforeAll static void setUp() { MockBukkit.mock(); plugin = MockBukkit.load(ArchitectPlugin.class); }
+    @AfterAll  static void tearDown() { if (MockBukkit.isMocked()) MockBukkit.unmock(); }
 
     @Test void logFileCreatedAndOutOfServerLog() {
         File[] logs = logs();
