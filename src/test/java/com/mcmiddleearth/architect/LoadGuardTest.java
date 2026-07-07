@@ -3,6 +3,7 @@ package com.mcmiddleearth.architect;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadData;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import org.junit.jupiter.api.*;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
@@ -36,5 +37,20 @@ class LoadGuardTest {
         Files.writeString(new File(accepted, "broken.yml").toPath(), ":\n  not: [valid");
         assertDoesNotThrow(CustomHeadManagerData::load,
                 "one corrupt head file must not break the enable-time load");
+    }
+
+    // ---- Task 3: Mode 2 (corrupt world config must not be overwritten) ----
+    @Test void worldConfigDoesNotOverwriteCorruptFile() throws Exception {
+        File worldDir = new File(plugin.getDataFolder(), "WorldConfig");
+        assertTrue(worldDir.exists() || worldDir.mkdirs());
+        File wf = new File(worldDir, "traptown.yml");
+        String original = "moduleX: [unclosed";      // invalid YAML
+        Files.writeString(wf.toPath(), original);
+
+        WorldConfig wc = new WorldConfig("traptown", new YamlConfiguration());
+        wc.setModuleEnabled(Modules.values()[0], false); // would trigger saveWorldConfig
+
+        assertEquals(original, Files.readString(wf.toPath()),
+                "a world config that failed to load must not be overwritten by a toggle");
     }
 }
