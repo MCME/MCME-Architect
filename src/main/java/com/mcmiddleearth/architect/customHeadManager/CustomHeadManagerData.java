@@ -67,10 +67,14 @@ public class CustomHeadManagerData {
         collection = new CustomHeadCollection();
         List<File> headFiles = getFiles(acceptedHeadDir);
         for(File headFile : headFiles) {
+            CustomHeadData data = CustomHeadData.fromFile(headFile);
+            if(data == null) {
+                continue; // fromFile already logged why; skip the bad file, keep loading the rest
+            }
             String headName = headFile.toString().substring(0,headFile.toString().lastIndexOf("."));
             headName = headName.replace('\\', '/');
             headName = headName.substring(acceptedHeadDir.toString().length()+1);
-            collection.addHead(headName, CustomHeadData.fromFile(headFile));
+            collection.addHead(headName, data);
         }
         if(!ArchitectPlugin.getPluginInstance().getConfig().isConfigurationSection(CONFIG_KEY)) {
             return;
