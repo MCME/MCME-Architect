@@ -85,12 +85,22 @@ public class SpecialSavedInventoryData {
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Log.error("Failed to load saved inventory file " + file + " for RP " + rpName, ex);
+            Log.error("Failed to load saved inventory file " + file + " for RP " + rpName + "; skipping it.", ex);
+            return;
         }
         String categoryName = file.getName().substring(0,file.getName().length()-4);
         ConfigurationSection categoryConfig = config.getConfigurationSection("category");
+        if(categoryConfig == null) {
+            Log.warn("Saved inventory file " + file + " for RP " + rpName + " has no 'category' section; skipping it.");
+            return;
+        }
         ItemStack item = (ItemStack) categoryConfig.get("item");
-        UUID owner = UUID.fromString(categoryConfig.getString("owner"));
+        String ownerString = categoryConfig.getString("owner");
+        if(ownerString == null) {
+            Log.warn("Saved inventory file " + file + " for RP " + rpName + " has no owner; skipping it.");
+            return;
+        }
+        UUID owner = UUID.fromString(ownerString);
         boolean isPrivate = categoryConfig.getBoolean("isPrivate");
         inventory.setCategoryItems(categoryName, owner, isPrivate, item,
                 CustomInventoryState.newPagingItem(CustomInventoryState.pagingMaterial,
