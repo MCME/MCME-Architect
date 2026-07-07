@@ -52,12 +52,17 @@ public class CustomHeadData {
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Log.error("Failed to load custom head data file " + file.getAbsolutePath(), ex);
+            Log.error("Failed to load custom head data file " + file.getAbsolutePath() + "; skipping it.", ex);
+            return null;
         }
-        return new CustomHeadData(UUID.fromString(config.getString("headId")), 
-                                  UUID.fromString(config.getString("owner")), 
-                                  config.getString("texture"));
-        
+        String headId = config.getString("headId");
+        String owner = config.getString("owner");
+        if (headId == null || owner == null) {
+            Log.warn("Custom head data file " + file.getAbsolutePath()
+                    + " is missing required 'headId'/'owner'; skipping it.");
+            return null;
+        }
+        return new CustomHeadData(UUID.fromString(headId), UUID.fromString(owner), config.getString("texture"));
     }
     
     public boolean saveToFile(File file) {
