@@ -136,5 +136,6 @@ public class RpListener implements Listener {
     @EventHandler
     public void playerQuit(PlayerQuitEvent event) {
         RpManager.removeSodiumClient(event.getPlayer());
+        RpManager.removePlayerData(event.getPlayer());
     }
 }
