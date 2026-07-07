@@ -34,7 +34,7 @@ Four parallel review lanes (security/input-handling, performance/thread-safety, 
 | A | `/armor place2 <n> 0` infinite loop | One command, builder-level (wrong perm) | **Server freeze / watchdog crash** | 🔴 High |
 | B | `/inv delete` skips ownership check | One command, any builder | Deletes anyone's saved inventories | 🔴 High |
 | C | Missing/undeclared dependencies | Fresh deploy, or ProtocolLib/Via/Connect absent | **Plugin won't enable**, or RP system silently dead | 🔴 High |
-| D | Failure-blind loaders | One corrupt/edited YAML file | Blocks plugin enable, or overwrites good data with empty | 🔴 High |
+| D | Failure-blind loaders | One corrupt/edited YAML file | Blocks plugin enable, or overwrites good data with empty | ✅ Fixed |
 | E | Path traversal in file commands | `/chead /vv /banner /armor /get head` + `..` | Arbitrary `.yml` create/delete/read | ✅ Fixed |
 | F | Async touches main-thread state | `/inv download`, `/chead submit` | Corrupts event dispatch / stalls ticks | 🟠 Med |
 | G | Data-layer correctness | Fresh DB, stale protocol map, item-block edits | RP settings never persist; NPE crashes | 🟠 Med |
@@ -49,7 +49,7 @@ The individual bugs cluster into **five repeating patterns**. This is good news 
 
 1. **Missing `return` after a guard** — e.g. the `/inv delete` auth bypass; 3 occurrences in `InvCommand` alone.
 2. **Path traversal via `new File(DIR + "/" + arg)`** with no `..` filter — 5 commands, one shared resolver fixes all. ✅ *Fixed in Wave C via `PathSafety` (canonical-containment); the sweep also caught two-arg `new File(dir, arg)` sinks the first pass missed and a Windows-backslash Zip-Slip edge in `ZipUtil`.*
-3. **Empty-then-writeback data loss** — a swallowed load error followed by an unconditional save (4 files).
+3. **Empty-then-writeback data loss** — a swallowed load error followed by an unconditional save (4 files). ✅ *Fixed in Wave C: loaders return/skip on a failed load and never save a config they couldn't read; the Mode-1 NPE loaders return null / skip the bad file.*
 4. **Unchecked command arguments** — no arg-count/precondition checks before dereference (4 commands).
 5. **NPE from unchecked lookup results** — `getSpecialBlock`/`getArmorStand`/`getConfigurationSection` dereferenced without null checks.
 
@@ -75,7 +75,7 @@ Small, isolated, high-impact. Each is a few lines and can go out as one PR.
 Fix the five patterns at the source with shared helpers, then grep-sweep every call site.
 
 - ✅ **Path-safety helper** *(done on `architect-rework-2026`, Wave C — commits `7d82b52`…`c4d15e7`)* — `com.mcmiddleearth.util.PathSafety` (canonical-containment, 9 unit tests) applied to `/chead` (recursive delete-walk also bounded to the head dirs + `listFiles()` NPE-guarded), `/banner`, `/armor`, `/vv` stencils, and `ZipUtil` extraction (Zip-Slip). A MockBukkit regression test proves a `/chead` traversal delete can no longer reach a sentinel file outside the head dirs. `/get head` read is covered via the guarded `getHeadData`. Deferred (tracked): `/inv` category-name sinks fold into the Risk B `/inv` work; region/UUID/world-name sinks are not arbitrary user input. Independently security-reviewed — the review caught (and this slice then fixed, with a regression test) a stencil-list **write**-path escape (`/sl create` + `/sl save`) that the first pass left open while guarding only the read methods. (Risk E). *M*
-- **"Never save a config that failed to load" guard** — apply to `WorldConfig`, `SpecialBlockInventoryData`, `SpecialSavedInventoryData`, `GetData`; make the enable-time loaders **skip** a bad file instead of NPE-ing the whole plugin (Risk D). *M*
+- ✅ **"Never save a config that failed to load" guard** *(done on `architect-rework-2026`, Wave C — commits `c5018af`…`d819a22`)* — Mode 1 (NPE-on-enable): `CustomHeadData.fromFile`/`CustomHeadManagerData.load` and `SpecialSavedInventoryData.loadFromFile` skip a corrupt/incomplete file instead of NPE-ing enable. Mode 2 (empty-then-writeback): `WorldConfig` (read-only flag), `SpecialBlockInventoryData`, `GetData` (first-run vs corrupt) and `ZipUtil.extract` (no destructive empty result) never overwrite a file they failed to read. MockBukkit regression tests reproduce the enable-NPE, the world-config wipe, and the `/get` scheduled wipe (all red→green). Independently reviewed — the review caught, and this slice then fixed with tests, a default-config `saveDefaultConfig` wipe (a second writer of the same file the read-only flag hadn't covered), a `SpecialSavedInventoryData` missing-`items` NPE, and an unguarded sibling loader `SpecialItemInventoryData` (which the audit itself missed). (Risk D). *M*
 - **Thread-safety corrections** — hop the `/inv download` reload back to the main thread (mirror how `RpCommand` already does it); move the `/chead submit` Mojang HTTP response off the main thread (Risk F). *M*
 - **Per-player state hygiene** — make the shared maps concurrent and clear them on `PlayerQuitEvent` (Risk H, memory half). *S–M*
 
