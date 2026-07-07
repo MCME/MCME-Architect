@@ -119,7 +119,9 @@ public class SpecialBlockItemBlock extends SpecialBlock {
         final Location playerLoc = player.getLocation();
         if (ItemBlockManager.allowPlace(blockPlace, player)) {
             super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
-            placeArmorStand(blockPlace, blockFace, playerLoc,contentDamage[NumericUtil.getRandom(0, contentDamage.length-1)]);
+            int currentDamage = contentDamage.length>0
+                    ? contentDamage[NumericUtil.getRandom(0, contentDamage.length-1)] : 0;
+            placeArmorStand(blockPlace, blockFace, playerLoc, currentDamage);
         } else {
             PluginData.getMessageUtil().sendErrorMessage(player, "Too many entities (paintings, item frames, item blocks and armorstands) in this chunk already. (Limit: "
                                                                  +ItemBlockManager.getLimit(blockPlace)+")");
@@ -261,7 +263,7 @@ public class SpecialBlockItemBlock extends SpecialBlock {
                 SpecialBlockItemBlock specialBlock = (SpecialBlockItemBlock) SpecialBlockInventoryData
                                                              .getSpecialBlock(SpecialBlockItemBlock
                                                                               .getIdFromArmorStand((ArmorStand)entity));
-                if(!specialBlock.isArmorStandChanged((ArmorStand)entity, loc.getBlock())) {
+                if(specialBlock!=null && !specialBlock.isArmorStandChanged((ArmorStand)entity, loc.getBlock())) {
                     return (ArmorStand) entity;
                 }
             }

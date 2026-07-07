@@ -52,7 +52,13 @@ public class ItemBlockData implements BlockData {
             if(data instanceof SpecialBlockItemBlock) {
                 SpecialBlockItemBlock itemBlockData = (SpecialBlockItemBlock) data;
                 ArmorStand armorStand = SpecialBlockItemBlock.getArmorStand(block.getLocation());
+                if(armorStand==null) {
+                    return null;
+                }
                 ItemStack contentItem = armorStand.getHelmet();
+                if(contentItem==null) {
+                    return null;
+                }
                 ItemMeta meta = contentItem.getItemMeta();
                 int contentDamage = 0;
                 if(meta instanceof Damageable) {
