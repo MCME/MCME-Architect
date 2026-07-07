@@ -272,7 +272,7 @@ public class GetCommand extends AbstractArchitectCommand {
     }
     
     private void giveItems(Player p, ItemStack[] items, boolean overwrite) {
-            for(int i=0; i<9; i++) {
+            for(int i=0; i<9 && i<items.length; i++) {
                 if(items[i]!=null && !items[i].getType().equals(Material.AIR)) {
                     if(overwrite) {
                         p.getInventory().setItem(i, items[i]);
