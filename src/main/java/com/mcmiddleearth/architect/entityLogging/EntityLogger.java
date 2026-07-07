@@ -49,7 +49,7 @@ public class EntityLogger{
     
     private static BukkitTask loggerTask;
     
-    private static final Map<Coordinates,Integer[]> logData = new HashMap<>();
+    private static final Map<Coordinates,Integer[]> logData = new java.util.concurrent.ConcurrentHashMap<>();
     
     private static final File logFile = new File(ArchitectPlugin.getPluginInstance().getDataFolder(),"entityLog.dat");
     
@@ -88,13 +88,14 @@ public class EntityLogger{
                             }
                             fw.println(""+coord.x+";"+coord.z+line);
                                 });
-                        //new BukkitRunnable() {
-                          //  @Override
-                           // public void  run() {
+                        final int max = maxValue;
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
                                 logData.forEach((coord,values)->
-                                    ELogDynmapUtil.createMarker(coord, entityTypes, values, maxValue, world));
-                            //}
-                        //}.runTask(ArchitectPlugin.getPluginInstance());
+                                    ELogDynmapUtil.createMarker(coord, entityTypes, values, max, world));
+                            }
+                        }.runTask(ArchitectPlugin.getPluginInstance());
                         Log.debug("Dumped entity logs for " + logData.size() + " chunk(s) to " + logFile.getName());
                     } catch (IOException ex) {
                         Log.error("Failed to write entity log file " + logFile.getAbsolutePath(), ex);
