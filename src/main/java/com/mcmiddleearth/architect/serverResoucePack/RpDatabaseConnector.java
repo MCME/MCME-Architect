@@ -180,12 +180,12 @@ public class RpDatabaseConnector {
                     dataMap.put(uuid,data);
                 } catch (SQLException ex) {
                     Log.error("Failed to read RP settings row for player " + uuid + " from database " + dbName, ex);
-                    dataMap.put(uuid,null);
+                    dataMap.put(uuid,new RpPlayerData()); // "load failed" marker: a default (ConcurrentHashMap forbids null)
                 }
             }
         } catch (SQLException ex) {
             Log.error("Failed to query RP settings for player " + uuid + " from database " + dbName, ex);
-            dataMap.put(uuid,null);
+            dataMap.put(uuid,new RpPlayerData()); // "load failed" marker: a default (ConcurrentHashMap forbids null)
             connected = false;
         }
 
