@@ -185,7 +185,10 @@ public class RpDatabaseConnector {
 
     private synchronized void loadRpSettingsSync(UUID uuid, Map<UUID, RpPlayerData> dataMap) {
         if(!connected || selectPlayerRpSettings==null) {
-            return; // no reachable DB: leave the entry absent (caller falls back to defaults)
+            // No reachable DB: seed a default so hasPlayerDataLoaded() is true and the join flow
+            // proceeds immediately with defaults instead of polling ~11s for a load that won't come.
+            dataMap.put(uuid, new RpPlayerData());
+            return;
         }
         try {
             selectPlayerRpSettings.setString(1, uuid.toString());
@@ -224,15 +227,15 @@ public class RpDatabaseConnector {
         }
         try {
             selectPlayerRpSettings.setString(1, player.getUniqueId().toString());
-            ResultSet result = selectPlayerRpSettings.executeQuery();
-            if(result.next()) {
-                result.close();
+            boolean exists;
+            try (ResultSet result = selectPlayerRpSettings.executeQuery()) {
+                exists = result.next();
+            }
+            if(exists) {
                 updateRpSettings(player, data);
             } else {
-                result.close();
                 insertRpSettings(player, data);
             }
-
         } catch (SQLException ex) {
             Log.error("Failed to save RP settings for player " + player.getName() + " (" + player.getUniqueId() + ") to database " + dbName, ex);
             connected = false;
