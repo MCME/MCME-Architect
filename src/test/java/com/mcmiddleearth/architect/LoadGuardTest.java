@@ -68,4 +68,18 @@ class LoadGuardTest {
         assertEquals(original, Files.readString(dataFile.toPath()),
                 "a corrupt itemSets.yml must be preserved, not overwritten with empty");
     }
+
+    // ---- Review follow-up: corrupt defaultWorldConfig.yml must not be overwritten via saveDefaultConfig ----
+    @Test void defaultWorldConfigNotOverwrittenWhenCorrupt() throws Exception {
+        File worldDir = new File(plugin.getDataFolder(), "WorldConfig");
+        assertTrue(worldDir.exists() || worldDir.mkdirs());
+        File df = new File(worldDir, "defaultWorldConfig.yml");
+        String original = "physics: [unclosed";     // invalid YAML
+        Files.writeString(df.toPath(), original);
+
+        new WorldConfig("defaultWorldConfig", new YamlConfiguration()); // loadX() -> saveDefaultConfig
+
+        assertEquals(original, Files.readString(df.toPath()),
+                "a corrupt defaultWorldConfig.yml must not be overwritten during construction");
+    }
 }
