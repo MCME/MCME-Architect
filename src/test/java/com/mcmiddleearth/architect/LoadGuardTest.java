@@ -2,6 +2,7 @@ package com.mcmiddleearth.architect;
 
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadData;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.GetData;
 import org.junit.jupiter.api.*;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.io.TempDir;
@@ -52,5 +53,19 @@ class LoadGuardTest {
 
         assertEquals(original, Files.readString(wf.toPath()),
                 "a world config that failed to load must not be overwritten by a toggle");
+    }
+
+    // ---- Task 5: Mode 2 (corrupt itemSets.yml must not be wiped by the delayed save) ----
+    @Test void getDataDoesNotWipeCorruptFile() throws Exception {
+        server.getScheduler().performTicks(2100L); // flush any save scheduled during enable
+        File dataFile = new File(plugin.getDataFolder(), "itemSets.yml");
+        String original = "set1: [unclosed";       // invalid YAML
+        Files.writeString(dataFile.toPath(), original);
+
+        GetData.load();
+        server.getScheduler().performTicks(2100L); // a scheduled save (if any) would fire here
+
+        assertEquals(original, Files.readString(dataFile.toPath()),
+                "a corrupt itemSets.yml must be preserved, not overwritten with empty");
     }
 }
