@@ -59,9 +59,9 @@ public class RpManager {
 
     private static final Map<String, RpRegion> regions = new HashMap<>();
 
-    private static final Map<UUID,RpPlayerData> playerRpData = new HashMap<>();
+    private static final Map<UUID,RpPlayerData> playerRpData = new java.util.concurrent.ConcurrentHashMap<>();
 
-    private static final Map<UUID, String> sodiumClients = new HashMap<>();
+    private static final Map<UUID, String> sodiumClients = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final RpDatabaseConnector dbConnector = new RpDatabaseConnector(ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(rpDatabaseConfig));
     
@@ -164,6 +164,10 @@ public class RpManager {
     
     public static boolean hasPlayerDataLoaded(Player player) {
         return playerRpData.containsKey(player.getUniqueId());
+    }
+
+    public static void removePlayerData(Player player) {
+        playerRpData.remove(player.getUniqueId());
     }
     
     /**
