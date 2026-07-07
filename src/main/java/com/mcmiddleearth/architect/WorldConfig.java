@@ -22,6 +22,7 @@ import org.bukkit.Material;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
@@ -61,6 +62,8 @@ public class WorldConfig {
     private final String worldName;
 
     private final YamlConfiguration worldConfig;
+
+    private boolean worldConfigReadOnly = false;
 
     private YamlConfiguration defaultConfig;
 
@@ -109,7 +112,16 @@ public class WorldConfig {
                 Log.error("Failed to save new world config file " + configFile.getAbsolutePath(), ex);
             }
         } else {
-            worldConfig = YamlConfiguration.loadConfiguration(configFile);
+            YamlConfiguration loaded = new YamlConfiguration();
+            try {
+                loaded.load(configFile);
+            } catch (IOException | InvalidConfigurationException ex) {
+                Log.error("Failed to load world config for world " + worldName + " from "
+                        + configFile.getAbsolutePath()
+                        + "; using defaults and NOT overwriting the file (fix the YAML and reload).", ex);
+                worldConfigReadOnly = true;
+            }
+            worldConfig = loaded;
         }
         convertNoPhysicsList();
         loadNoInteraction();
@@ -154,6 +166,11 @@ public class WorldConfig {
     }
 
     private void saveWorldConfig() {
+        if (worldConfigReadOnly) {
+            Log.warn("Refusing to save world config for world " + worldName
+                    + " because it failed to load (would overwrite the on-disk file with incomplete data).");
+            return;
+        }
         try {
             worldConfig.save(getConfigFile());
         } catch (IOException ex) {
