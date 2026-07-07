@@ -156,7 +156,9 @@ public class SpecialBlockInventoryData {
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Log.error("Failed to load block inventory file " + file + " for RP " + rpName, ex);
+            Log.error("Failed to load block inventory file " + file + " for RP " + rpName
+                    + "; skipping it (not overwriting).", ex);
+            return;
         }
         int separator = file.getName().lastIndexOf(".");
         String categoryName = inventory.matchCategory(file.getName().substring(0,separator));
