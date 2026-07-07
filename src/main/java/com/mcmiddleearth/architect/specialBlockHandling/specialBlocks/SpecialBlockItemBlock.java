@@ -211,6 +211,9 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     public int getNextDurability(int currentDurability) {
+        if(contentDamage.length==0) {
+            return 0;
+        }
         for(int i=0;i<contentDamage.length;i++) {
             if(contentDamage[i]==currentDurability) {
                 return ((i+1)<contentDamage.length?contentDamage[i+1]:contentDamage[0]);
@@ -220,6 +223,9 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     public int getPreviousDurability(int currentDurability) {
+        if(contentDamage.length==0) {
+            return 0;
+        }
         for(int i=0;i<contentDamage.length;i++) {
             if(contentDamage[i]==currentDurability) {
                 return ((i-1)>=0?contentDamage[i-1]:contentDamage[contentDamage.length-1]);
