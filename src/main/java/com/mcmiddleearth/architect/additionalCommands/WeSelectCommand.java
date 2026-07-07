@@ -36,6 +36,11 @@ public class WeSelectCommand extends AbstractArchitectCommand {
     private final static Map<UUID,String> weSelect = new HashMap<>();
     private final static Map<UUID,String> weSelectShift = new HashMap<>();
 
+    public static void removePlayer(UUID uuid) {
+        weSelect.remove(uuid);
+        weSelectShift.remove(uuid);
+    }
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
         if (!(sender instanceof Player)) {

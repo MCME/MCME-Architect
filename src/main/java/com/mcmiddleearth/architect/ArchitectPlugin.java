@@ -86,6 +86,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new ArmorStandListener(), this);
         pluginManager.registerEvents(new BannerListener(), this);
         pluginManager.registerEvents(new PaintingListener(), this);
+        pluginManager.registerEvents(new com.mcmiddleearth.architect.additionalListeners.PlayerDataCleanupListener(), this);
         pluginManager.registerEvents(new GameMechanicsListener(), this);
         pluginManager.registerEvents(new NoPhysicsListener(), this);
         pluginManager.registerEvents(new FbtListener(), this);
