@@ -98,11 +98,17 @@ public class StencilList {
     }
 
     public boolean fileExists() {
-        return getFile().exists();
+        try {
+            return getFile().exists();
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil-list name '" + name + "' for fileExists: " + ex.getMessage());
+            return false;
+        }
     }
-    
+
+    // Throws SecurityException for a traversal name; callers (saveToFile/fileExists) treat that as failure.
     private File getFile() {
-        return new File(VoxelConstants.STENCIL_LISTS_DIR,
+        return PathSafety.resolveInside(VoxelConstants.STENCIL_LISTS_DIR,
                                  name + "."+VoxelConstants.STENCIL_LIST_EXT);
     }
     
@@ -125,6 +131,9 @@ public class StencilList {
             return true;
         } catch (IOException ex) {
             Log.error("Failed to save stencil list '" + name + "'", ex);
+            return false;
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil-list name '" + name + "' for save: " + ex.getMessage());
             return false;
         } finally {
             try {
