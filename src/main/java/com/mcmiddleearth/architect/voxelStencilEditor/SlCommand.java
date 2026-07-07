@@ -102,6 +102,14 @@ public class SlCommand extends AbstractArchitectCommand implements Confirmationa
             return true;
         }
         if (args[0].equalsIgnoreCase("create")) {
+            try {
+                PathSafety.resolveInside(VoxelConstants.STENCIL_LISTS_DIR,
+                                         args[1] + "." + VoxelConstants.STENCIL_LIST_EXT);
+            } catch (SecurityException ex) {
+                Log.warn("Rejected unsafe stencil-list name '" + args[1] + "' for /sl create: " + ex.getMessage());
+                PluginData.getMessageUtil().sendErrorMessage(player, "Invalid list name.");
+                return true;
+            }
             stencilLists.put(player.getUniqueId(), new StencilList(args[1]));
             sendListCreatedMessage(player, args[1]);
             return true;
