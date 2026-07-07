@@ -24,6 +24,7 @@ import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.Regi
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ResourceUtil;
 import com.viaversion.viaversion.api.Via;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -443,17 +444,18 @@ public class RpManager {
                             }
                             for (ConfigurationSection section : sections) {
                                 URL url = new URL(section.getString("url"));
-                                InputStream fis = url.openStream();
                                 MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-
-                                byte[] data = new byte[1024];
-                                int read = 0;
-                                long time = System.currentTimeMillis();
-                                while ((read = fis.read(data)) != -1) {
-                                    sha1.update(data, 0, read);
-                                    if (System.currentTimeMillis() - time > 5000) {
-                                        time = System.currentTimeMillis();
-                                        PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ...");
+                                try (InputStream fis = url.openStream()) {
+                                    byte[] data = new byte[1024];
+                                    int read;
+                                    long time = System.currentTimeMillis();
+                                    while ((read = fis.read(data)) != -1) {
+                                        sha1.update(data, 0, read);
+                                        if (System.currentTimeMillis() - time > 5000) {
+                                            time = System.currentTimeMillis();
+                                            Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(),
+                                                    () -> PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ..."));
+                                        }
                                     }
                                 }
                                 byte[] hashBytes = sha1.digest();
@@ -461,9 +463,12 @@ public class RpManager {
                                 for (byte b : hashBytes) {
                                     sb.append(String.format("%02x", b));
                                 }
-                                String hashString = sb.toString();
-                                section.set("sha", hashString);
-                                ArchitectPlugin.getPluginInstance().saveConfig();
+                                final String hashString = sb.toString();
+                                final ConfigurationSection shaSection = section;
+                                Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
+                                    shaSection.set("sha", hashString);
+                                    ArchitectPlugin.getPluginInstance().saveConfig();
+                                });
                             }
                         } catch(IOException | NoSuchAlgorithmException ex){
                             Log.error("Failed to calculate SHA for RP '" + rp + "' client=" + clientKey
