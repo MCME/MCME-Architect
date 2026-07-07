@@ -50,7 +50,10 @@ public class RpDatabaseConnector {
 
     private boolean connected;
 
+    private final boolean dbConfigured;
+
     public RpDatabaseConnector(ConfigurationSection config) {
+        dbConfigured = (config != null);
         if(config==null) {
             config = new MemoryConfiguration();
         }
@@ -59,13 +62,18 @@ public class RpDatabaseConnector {
         dbName = config.getString("dbName","development");
         dbIp = config.getString("ip", "localhost");
         port = config.getInt("port",3306);
-        connect();
-        keepAliveTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                checkConnection();
-            }
-        }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(),0,1200);
+        if(dbConfigured) {
+            connect();
+            keepAliveTask = new BukkitRunnable() {
+                @Override
+                public void run() {
+                    checkConnection();
+                }
+            }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(),0,1200);
+        } else {
+            Log.info("No RP database configured; RP settings will not be persisted.");
+            keepAliveTask = null;
+        }
     }
 
     private void executeAsync(Consumer<Player> method, Player player) {
@@ -81,6 +89,9 @@ public class RpDatabaseConnector {
     }
 
     private synchronized void checkConnection() {
+        if(!dbConfigured) {
+            return;
+        }
         try {
             if(connected && dbConnection.isValid(5)) {
                 // connection healthy, nothing to do
@@ -129,9 +140,9 @@ public class RpDatabaseConnector {
         }
         if(dbConnection!=null) {
             try {
-                insertPlayerRpSettings.close();
-                updatePlayerRpSettings.close();
-                selectPlayerRpSettings.close();
+                if(insertPlayerRpSettings!=null) insertPlayerRpSettings.close();
+                if(updatePlayerRpSettings!=null) updatePlayerRpSettings.close();
+                if(selectPlayerRpSettings!=null) selectPlayerRpSettings.close();
                 dbConnection.close();
             } catch (SQLException ex) {
                 Log.error("Failed to close RP database connection to " + dbName + " at " + dbIp + ":" + port, ex);
@@ -173,11 +184,13 @@ public class RpDatabaseConnector {
     }
 
     private synchronized void loadRpSettingsSync(UUID uuid, Map<UUID, RpPlayerData> dataMap) {
+        if(!connected || selectPlayerRpSettings==null) {
+            return; // no reachable DB: leave the entry absent (caller falls back to defaults)
+        }
         try {
             selectPlayerRpSettings.setString(1, uuid.toString());
-            ResultSet result = selectPlayerRpSettings.executeQuery();
-            if(result.next()) {
-                try {
+            try (ResultSet result = selectPlayerRpSettings.executeQuery()) {
+                if(result.next()) {
                     RpPlayerData data = new RpPlayerData();
                     data.setAutoRp(result.getBoolean("auto"));
                     data.setCurrentRpUrl(result.getString("currentURL"));
@@ -185,19 +198,14 @@ public class RpDatabaseConnector {
                     data.setResolution(result.getInt("resolution"));
                     data.setClient(result.getString("client"));
                     if(data.getClient()==null) data.setClient("vanilla");
-                    result.close();
                     dataMap.put(uuid,data);
-                } catch (SQLException ex) {
-                    Log.error("Failed to read RP settings row for player " + uuid + " from database " + dbName, ex);
-                    dataMap.put(uuid,new RpPlayerData()); // "load failed" marker: a default (ConcurrentHashMap forbids null)
                 }
             }
         } catch (SQLException ex) {
-            Log.error("Failed to query RP settings for player " + uuid + " from database " + dbName, ex);
-            dataMap.put(uuid,new RpPlayerData()); // "load failed" marker: a default (ConcurrentHashMap forbids null)
+            Log.error("Failed to load RP settings for player " + uuid + " from database " + dbName, ex);
+            dataMap.put(uuid,new RpPlayerData()); // load-failed marker (default; ConcurrentHashMap forbids null)
             connected = false;
         }
-
     }
 
 
@@ -211,6 +219,9 @@ public class RpDatabaseConnector {
     }
 
     private synchronized void saveRpSettingsSync(Player player, RpPlayerData data) {
+        if(!connected || selectPlayerRpSettings==null) {
+            return; // no reachable DB: nothing to persist
+        }
         try {
             selectPlayerRpSettings.setString(1, player.getUniqueId().toString());
             ResultSet result = selectPlayerRpSettings.executeQuery();
