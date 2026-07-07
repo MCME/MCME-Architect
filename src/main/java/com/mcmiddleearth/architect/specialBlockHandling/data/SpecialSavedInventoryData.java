@@ -106,8 +106,10 @@ public class SpecialSavedInventoryData {
                 CustomInventoryState.newPagingItem(CustomInventoryState.pagingMaterial,
                                                  CustomInventoryState.pageDown, "page down"), false);
         List<?> itemConfig = config.getList("items");
-        for(Object itemData: itemConfig) {
-            inventory.add((ItemStack)itemData, categoryName, false);
+        if(itemConfig != null) {
+            for(Object itemData: itemConfig) {
+                inventory.add((ItemStack)itemData, categoryName, false);
+            }
         }
     }
     

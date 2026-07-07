@@ -158,6 +158,12 @@ public class WorldConfig {
     }
 
     private void saveDefaultConfig() {
+        if (worldConfigReadOnly) {
+            Log.warn("Refusing to save the default world config while world " + worldName
+                    + "'s config is in read-only mode (it failed to load); not overwriting "
+                    + defaultConfigFile.getAbsolutePath() + ".");
+            return;
+        }
         try {
             defaultConfig.save(defaultConfigFile);
         } catch (IOException ex) {

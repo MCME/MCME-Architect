@@ -102,12 +102,16 @@ public class SpecialItemInventoryData {
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Log.error("Failed to load item inventory file " + file + " for RP " + rpName, ex);
+            Log.error("Failed to load item inventory file " + file + " for RP " + rpName + "; skipping it.", ex);
+            return;
         }
         ConfigurationSection categoryConfig = config.getConfigurationSection("Categories");
         if(categoryConfig!=null) {
             for(String categoryKey: categoryConfig.getKeys(false)) {
                 ConfigurationSection section = categoryConfig.getConfigurationSection(categoryKey);
+                if(section == null) {
+                    continue;
+                }
                 ItemStack categoryItem = loadItemFromConfig(section, categoryKey, rpName);
                 ItemStack currentCategoryItem = loadItemFromConfig(section, categoryKey, rpName);
                 if(section.contains("damageCurrent")) {
