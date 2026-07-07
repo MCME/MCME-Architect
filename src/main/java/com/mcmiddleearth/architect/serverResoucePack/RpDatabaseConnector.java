@@ -143,8 +143,17 @@ public class RpDatabaseConnector {
         try {
             Log.debug("Checking RP database tables exist on " + dbName);
             String statement = "CREATE TABLE IF NOT EXISTS architect_rp (uuid VARCHAR(50), "
-                             + "auto BIT, variant VARCHAR(30), resolution INT, currentURL VARCHAR(100), KEY(uuid))";
+                             + "auto BIT, variant VARCHAR(30), resolution INT, client VARCHAR(30), "
+                             + "currentURL VARCHAR(100), KEY(uuid))";
             dbConnection.createStatement().execute(statement);
+            // Bring pre-existing tables (created before the client column existed) up to date.
+            try {
+                dbConnection.createStatement().execute("ALTER TABLE architect_rp ADD COLUMN client VARCHAR(30)");
+                Log.info("Added missing 'client' column to architect_rp on RP database " + dbName);
+            } catch (SQLException alterEx) {
+                // Expected when the column already exists (duplicate column) — nothing to do.
+                Log.debug("architect_rp already has the 'client' column on " + dbName);
+            }
         } catch (SQLException ex) {
             Log.error("Failed to create/verify architect_rp table on RP database " + dbName, ex);
         }
