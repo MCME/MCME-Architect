@@ -17,7 +17,6 @@
 package com.mcmiddleearth.architect.customHeadManager;
 
 import com.google.common.io.BaseEncoding;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -40,10 +39,6 @@ import org.bukkit.scheduler.BukkitRunnable;
  */
 public class HeadDataBuilderPlayer {
 
-    private boolean received;
-
-    private HttpURLConnection connection;
-
     private final String mojangSkinUrl = "https://sessionserver.mojang.com/session/minecraft/profile/%s";
 
     private final String mojangUuidUrl = "https://api.mojang.com/users/profiles/minecraft/%s";
@@ -56,110 +51,94 @@ public class HeadDataBuilderPlayer {
         fetchCustomHeadData(submitter, ownerName, name);
     }
 
+    /** Resolve a player name to a UUID (async), then continue on the main thread. */
     private void fetchCustomHeadData(final Player submitter, final String ownerName, final String name) {
-        received = false; 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if(received) {
-                    try {
-                        if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                            JsonObject jsonObject = (JsonObject) JsonParser.parseReader(new BufferedReader(new InputStreamReader(connection.getInputStream())));
-                            String uuidString = jsonObject.get("id").getAsString();
-                            UUID ownerId = UUID.fromString(uuidString
-                                                        .replaceFirst("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
-                                                        "$1-$2-$3-$4-$5"));
-                            fetchCustomHeadData(submitter, ownerId, name);
-                        } else {
-                            PluginData.getMessageUtil().sendErrorMessage(submitter, "Player name not found.");
-                        }
-                        cancel();
-                        return;
-                    } catch (IOException | JsonSyntaxException ex) {
-                        Log.error("Failed to parse Mojang UUID lookup response for player name " + ownerName, ex);
-                    } finally {
-                        cancel();
-                    }
-                    PluginData.getMessageUtil().sendErrorMessage(submitter, "Error. Your head has not been submitted.");
-                }
-            }
-        }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 10, 10);
         new BukkitRunnable() {
             @Override
             public void run() {
                 try {
-                    URL url = new URL(String.format(mojangUuidUrl, ownerName));
-                    connection = (HttpURLConnection) url.openConnection();
-                    connection.setReadTimeout(5000);
-                    connection.connect();
-                } catch (IOException ex) {
-                    Log.error("Failed to connect to Mojang UUID lookup for player name " + ownerName, ex);
-                } finally {
-                    received = true;
+                    JsonObject jsonObject = readJson(String.format(mojangUuidUrl, ownerName));
+                    if (jsonObject == null) {
+                        sendOnMain(submitter, "Player name not found.");
+                        return;
+                    }
+                    final UUID ownerId = UUID.fromString(jsonObject.get("id").getAsString()
+                            .replaceFirst("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5"));
+                    runOnMain(() -> fetchCustomHeadData(submitter, ownerId, name));
+                } catch (IOException | JsonSyntaxException | IllegalStateException | NullPointerException ex) {
+                    Log.error("Failed Mojang UUID lookup for player name " + ownerName, ex);
+                    sendOnMain(submitter, "Error. Your head has not been submitted.");
                 }
             }
         }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
     }
 
+    /** Fetch a player's skin texture (async), then submit the head on the main thread. */
     private void fetchCustomHeadData(final Player submitter, final UUID ownerId, final String name) {
-        received = false; 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if(received) {
-                    try {
-                        if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                            JsonObject jsonObject = (JsonObject) JsonParser.parseReader(new BufferedReader(new InputStreamReader(connection.getInputStream())));
-                            JsonArray jProperties = jsonObject.getAsJsonArray("properties");
-                            String textures="";
-                            for(JsonElement jProperty : jProperties) {
-                                if(jProperty.getAsJsonObject().has("name")
-                                        && jProperty.getAsJsonObject().get("name").getAsString().equals("textures")) {
-                                    textures = jProperty.getAsJsonObject().get("value").getAsString();
-                                    break;
-                                }
-                            }
-                            jsonObject = new JsonParser().parse(new String(BaseEncoding.base64().decode(textures)))
-                                                         .getAsJsonObject();
-                            jsonObject = jsonObject.getAsJsonObject("textures");
-                            jsonObject = jsonObject.getAsJsonObject("SKIN");
-                            String url = jsonObject.get("url").getAsString();
-                            url = BaseEncoding.base64().encode(String.format("{textures:{SKIN:{url:\"%s\"}}}", url).getBytes());
-                            CustomHeadData headData = new CustomHeadData(ownerId, url);
-                            //ToDo check for heads with same texture
-                            if(CustomHeadManagerData.addReviewHead(name, headData)) {
-                                PluginData.getMessageUtil().sendInfoMessage(submitter,"Head has been submitted.");
-                                cancel();
-                                return;
-                            }
-                        } else {
-                            PluginData.getMessageUtil().sendErrorMessage(submitter, "Error. Invalid UUID or too many requests. Wait one minute at last before you try again.");
-                            cancel();
-                            return;
-                            }
-                    } catch (IOException | JsonSyntaxException ex) {
-                        Log.error("Failed to parse Mojang skin lookup response for player " + ownerId, ex);
-                    } finally {
-                        cancel();
-                    }
-                    PluginData.getMessageUtil().sendErrorMessage(submitter, "Error. Your head has not been submitted.");
-                }
-            }
-        }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 10, 10);
         new BukkitRunnable() {
             @Override
             public void run() {
                 try {
-                    URL url = new URL(String.format(mojangSkinUrl, ownerId.toString().replace("-", "")));
-                    connection = (HttpURLConnection) url.openConnection();
-                    connection.setReadTimeout(5000);
-                    connection.connect();
-                } catch (IOException ex) {
-                    Log.error("Failed to connect to Mojang skin lookup for player " + ownerId, ex);
-                } finally {
-                    received = true;
+                    JsonObject jsonObject = readJson(String.format(mojangSkinUrl, ownerId.toString().replace("-", "")));
+                    if (jsonObject == null) {
+                        sendOnMain(submitter, "Error. Invalid UUID or too many requests. Wait one minute at least before you try again.");
+                        return;
+                    }
+                    String textures = "";
+                    for (JsonElement jProperty : jsonObject.getAsJsonArray("properties")) {
+                        if (jProperty.getAsJsonObject().has("name")
+                                && jProperty.getAsJsonObject().get("name").getAsString().equals("textures")) {
+                            textures = jProperty.getAsJsonObject().get("value").getAsString();
+                            break;
+                        }
+                    }
+                    JsonObject skin = JsonParser.parseString(new String(BaseEncoding.base64().decode(textures)))
+                            .getAsJsonObject().getAsJsonObject("textures").getAsJsonObject("SKIN");
+                    final String url = BaseEncoding.base64().encode(
+                            String.format("{textures:{SKIN:{url:\"%s\"}}}", skin.get("url").getAsString()).getBytes());
+                    runOnMain(() -> {
+                        CustomHeadData headData = new CustomHeadData(ownerId, url);
+                        if (CustomHeadManagerData.addReviewHead(name, headData)) {
+                            PluginData.getMessageUtil().sendInfoMessage(submitter, "Head has been submitted.");
+                        } else {
+                            PluginData.getMessageUtil().sendErrorMessage(submitter, "Error. Your head has not been submitted.");
+                        }
+                    });
+                } catch (IOException | JsonSyntaxException | IllegalStateException | NullPointerException ex) {
+                    Log.error("Failed Mojang skin lookup for player " + ownerId, ex);
+                    sendOnMain(submitter, "Error. Your head has not been submitted.");
                 }
             }
         }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
+    }
+
+    /** Blocking HTTP GET on the CALLING (async) thread. @return parsed body, or null on a non-200 response. */
+    private static JsonObject readJson(String urlString) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) new URL(urlString).openConnection();
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(5000);
+        try {
+            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                return null;
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                return (JsonObject) JsonParser.parseReader(reader);
+            }
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    private static void runOnMain(Runnable task) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                task.run();
+            }
+        }.runTask(ArchitectPlugin.getPluginInstance());
+    }
+
+    private static void sendOnMain(final Player submitter, final String message) {
+        runOnMain(() -> PluginData.getMessageUtil().sendErrorMessage(submitter, message));
     }
 }
