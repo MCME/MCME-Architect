@@ -107,18 +107,23 @@ public class ZipUtil {
 //Logger.getGlobal().info("search for "+matchStart);
 //Logger.getGlobal().info("temp later "+temp);
             File[] files = temp.listFiles();
-//Logger.getGlobal().info("temp files "+files);
-            if(files!=null) {
+            if(files != null && files.length > 0) {
                 downloadedFiles = files.length;
-                for(File file: outPath.listFiles()) {
-                    file.delete();
+                File[] existing = outPath.listFiles();
+                if(existing != null) {
+                    for(File file: existing) {
+                        if(!file.equals(temp)) {
+                            file.delete();
+                        }
+                    }
                 }
-                for(File file: temp.listFiles()) {
-//Logger.getGlobal().info("toPath "+file.toPath());
-//Logger.getGlobal().info("fromPath "+new File(outPath,file.getName()));
-                    Files.move(file.toPath(),new File(outPath,file.getName()).toPath(), 
+                for(File file: files) {
+                    Files.move(file.toPath(), new File(outPath,file.getName()).toPath(),
                                StandardCopyOption.REPLACE_EXISTING);
                 }
+            } else {
+                Log.warn("Zip extraction for " + sourceURL + " matched no entries; keeping the existing files in "
+                        + outPath.getAbsolutePath() + " instead of clearing them.");
             }
             temp.delete();
         } 
