@@ -37,7 +37,7 @@ Four parallel review lanes (security/input-handling, performance/thread-safety, 
 | D | Failure-blind loaders | One corrupt/edited YAML file | Blocks plugin enable, or overwrites good data with empty | ✅ Fixed |
 | E | Path traversal in file commands | `/chead /vv /banner /armor /get head` + `..` | Arbitrary `.yml` create/delete/read | ✅ Fixed |
 | F | Async touches main-thread state | `/inv download`, `/chead submit` | Corrupts event dispatch / stalls ticks | ✅ Fixed |
-| G | Data-layer correctness | Fresh DB, stale protocol map, item-block edits | RP settings never persist; NPE crashes | 🟠 Med |
+| G | Data-layer correctness | Fresh DB, stale protocol map, item-block edits | RP settings never persist; NPE crashes | ✅ Fixed |
 | H | Per-event cost & memory leaks | Busy build sessions over long uptime | Tick lag, slow heap growth | 🟡 Low-Med |
 | I | Dead code, logging, hygiene | Always | Log spam, maintenance drag, one broken `/armor rollback` | 🟡 Low |
 
@@ -83,9 +83,9 @@ Fix the five patterns at the source with shared helpers, then grep-sweep every c
 
 ### Phase 2 — Correctness & data layer (target: following sprint) · effort **M**
 
-- **Fix the RP database schema** — add the missing `client` column to the `CREATE TABLE`; close the leaked `ResultSet`/`InputStream`/executors (Risk G). Needed for any fresh deployment of the RP feature. *S*
-- **Refresh `protocolVersions.yml`** (add 768/769, fix the 1.21.2 mapping) and null-guard `getLatestVersion` so 1.21.2–1.21.4 clients get the right packs (Risk G). *S*
-- **Item-block robustness** — null-check the `getSpecialBlock`/`getArmorStand` results; guard the empty `contentDamage` array; de-duplicate invisible item frames (Risk G). *M*
+- ✅ **Fix the RP database schema** *(done on `architect-rework-2026`, Wave C — commits `922e49b`…`5a26073`)* — added the missing `client` column to `CREATE TABLE` (+ an idempotent `ALTER ADD COLUMN` to patch pre-existing tables); closed the leaked `ResultSet` (try-with-resources) and the executors (in the thread-safety slice); the connector now degrades to a logged no-op when no DB is configured instead of NPE-spamming the async thread. Independently reviewed — the review caught, and this slice fixed, a no-DB join-stall regression the guard introduced (it now seeds a default entry so joins don't poll ~11s for a load that will never come), plus the same-root-cause empty-array durability accessors and the save-path `ResultSet`. (The `refreshSHA` `InputStream` leak remains a deferred Risk-F follow-up.) *S*
+- ✅ **Refresh `protocolVersions.yml`** and null-guard `getLatestVersion` — done: `protocolVersions.yml` was refreshed in the 26.2 migration (26_2/26_1 added, 1.21.2 fixed) and `getLatestVersion` is already null-guarded (`RpManager.java:486` `if(boxed==null) continue;`). (Risk G). *S*
+- ✅ **Item-block robustness** *(done, Wave C — commit `5a26073`)* — null-guarded the `getSpecialBlock`/`getArmorStand`/`getHelmet` dereferences and the empty `contentDamage` array (was an `IllegalArgumentException` from `getRandom(0,-1)`). (Invisible-item-frame de-duplication remains a smaller follow-up.) *M*
 - **Per-event cost** (optional, measure first) — cache the TheGaffer reflective `Method`; reduce the per-`BlockBreakEvent` config-tree walk and O(n) special-block scans (Risk H). *M*
 
 **Validation:** fresh-DB integration test; connect a 1.21.4 + a 1.21.2 client and confirm correct pack selection.
