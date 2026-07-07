@@ -34,7 +34,11 @@ import org.bukkit.util.Vector;
 public class ArmorStandEditorCommand extends AbstractArchitectCommand {
 
     private final static Map<UUID, ArmorStandEditorConfig> configList = new HashMap<>();
-    
+
+    public static void removePlayer(UUID uuid) {
+        configList.remove(uuid);
+    }
+
     private final int maxStepSize = 360;
     
     @Override
