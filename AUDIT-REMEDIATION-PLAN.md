@@ -50,7 +50,7 @@ The individual bugs cluster into **five repeating patterns**. This is good news 
 1. **Missing `return` after a guard** — e.g. the `/inv delete` auth bypass; 3 occurrences in `InvCommand` alone.
 2. **Path traversal via `new File(DIR + "/" + arg)`** with no `..` filter — 5 commands, one shared resolver fixes all. ✅ *Fixed in Wave C via `PathSafety` (canonical-containment); the sweep also caught two-arg `new File(dir, arg)` sinks the first pass missed and a Windows-backslash Zip-Slip edge in `ZipUtil`.*
 3. **Empty-then-writeback data loss** — a swallowed load error followed by an unconditional save (4 files). ✅ *Fixed in Wave C: loaders return/skip on a failed load and never save a config they couldn't read; the Mode-1 NPE loaders return null / skip the bad file.*
-4. **Unchecked command arguments** — no arg-count/precondition checks before dereference (4 commands).
+4. **Unchecked command arguments** — no arg-count/precondition checks before dereference (4 commands). ✅ *Fixed: `/armor place2` (debug subcommand removed, Phase 0), `/sign` (`isEditor` precheck), `/weselect` (`args.length` guards) already done; `/get` short-array AIOOBE and `RandomiserConfig.setProbs` empty/over-100 AIOOBE fixed in Wave C (commits `ccb76b1`/`aec9650`, with a unit test); independently reviewed — no issues found.*
 5. **NPE from unchecked lookup results** — `getSpecialBlock`/`getArmorStand`/`getConfigurationSection` dereferenced without null checks.
 
 ---
