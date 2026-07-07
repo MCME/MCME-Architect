@@ -58,7 +58,14 @@ public class CopyPasteManager {
             clipboardFolder.mkdir();
         }
     }
-    
+
+    public static void removePlayer(Player player) {
+        UUID uuid = player.getUniqueId();
+        clipboards.remove(uuid);
+        undoData.remove(uuid);
+        redoData.remove(uuid);
+    }
+
     public static boolean copyToClipboard(Player player, CuboidRegion weRegion) throws CopyPasteException{
 //Logger.getGlobal().info("2");
         Clipboard cb = new Clipboard(player.getLocation(),weRegion);
