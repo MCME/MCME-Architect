@@ -45,10 +45,6 @@ public class SlCommand extends AbstractArchitectCommand implements Confirmationa
 
     public static HashMap<UUID, StencilList> stencilLists = new HashMap<>();
 
-    public static void removePlayer(UUID uuid) {
-        stencilLists.remove(uuid);
-    }
-
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {

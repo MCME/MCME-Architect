@@ -37,10 +37,6 @@ public class BannerEditorCommand extends AbstractArchitectCommand {
 
     private final static Map<UUID, BannerEditorConfig> configList = new HashMap<>();
 
-    public static void removePlayer(UUID uuid) {
-        configList.remove(uuid);
-    }
-
     @Override
     public boolean onCommand(CommandSender cs, Command cmd, String c, String[] args) {
         if (!(cs instanceof Player)) {

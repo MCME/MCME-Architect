@@ -39,7 +39,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -55,11 +54,6 @@ import java.util.Map;
 public class BlockCycleListener implements Listener {
 
     private final Map<Player, BlockDataManager> playerBlockDataManager = new HashMap<>();
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        playerBlockDataManager.remove(event.getPlayer());
-    }
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     private void cycleAttribute(PlayerInteractEvent event) {
