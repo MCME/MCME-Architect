@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.mcmiddleearth.util.DevUtil;
 import com.sk89q.worldedit.math.BlockVector2;
@@ -24,8 +25,6 @@ import com.sk89q.worldedit.math.BlockVector3;
 //import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.regions.Region;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.configuration.ConfigurationSection;
@@ -59,7 +58,7 @@ public class RpDynmapUtil {
         }
         Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
         if(dynmap==null) {
-            Logger.getGlobal().info("Dynmap not found");
+            Log.warn("Dynmap RP region markers are enabled in config but the Dynmap plugin is not installed; skipping marker setup.");
         }
         else {
             try{
@@ -74,7 +73,7 @@ public class RpDynmapUtil {
                 ArchitectPlugin.getPluginInstance().saveConfig();
                 init = true;
             } catch(Exception e) {
-                Logger.getLogger(RpDynmapUtil.class.getName()).log(Level.WARNING, "Dynmap plugin not compatible",e);
+                Log.error("Failed to initialize Dynmap RP region markers; installed Dynmap version may be incompatible with this Architect build", e);
             }
         }
     }

@@ -1,13 +1,5 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.BlockPosition;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.signEditor.SignEditorData;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
@@ -34,7 +26,6 @@ import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
-import java.util.logging.Logger;
 
 public class SpecialBlockSign extends SpecialBlock {
 
@@ -124,74 +115,63 @@ public class SpecialBlockSign extends SpecialBlock {
                                                                                     interactionPoint, player),
                                                         ArchitectPlugin.getPluginInstance());*/
                 sendSignEditorOpen(blockPlace, player, Side.FRONT);
-                ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
-                protocolManager.addPacketListener(new SignPacketListener(blockPlace, player, Side.FRONT));
+                Bukkit.getPluginManager().registerEvents(new SignEditListener(blockPlace, player, Side.FRONT),
+                                                        ArchitectPlugin.getPluginInstance());
             }
         },3);
     }
 
     public void sendSignEditorOpen(Block blockPlace, Player player, Side side) {
-        ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
-        BlockPosition blockPosition = new BlockPosition(blockPlace.getX(), blockPlace.getY(), blockPlace.getZ());
-        PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.OPEN_SIGN_EDITOR);
-        packet.getBlockPositionModifier().write(0, blockPosition);
-        packet.getBooleans().write(0, side.equals(Side.FRONT));
-        try {
-            protocolManager.sendServerPacket(player, packet);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        org.bukkit.block.Sign sign = (org.bukkit.block.Sign) blockPlace.getState();
+        player.openSign(sign, side);
     }
 
-    public static class SignPacketListener extends PacketAdapter {
+    /**
+     * Reads back the lines a player typed into the native sign editor GUI
+     * (opened via {@link Player#openSign(org.bukkit.block.Sign, Side)}) and
+     * applies MCME's custom formatting ({@link SignEditorData#parseLine}) to
+     * them, replacing the vanilla plain-text write. This is the native
+     * {@link SignChangeEvent} replacement for the old ProtocolLib
+     * UPDATE_SIGN packet listener.
+     */
+    public static class SignEditListener implements Listener {
 
-        private final SignPacketListener instance;
-        private Block blockPlace;
-        private Player player;
-        private Side side;
+        private final SignEditListener instance;
+        private final Block blockPlace;
+        private final Player player;
+        private final Side side;
+        private final BukkitTask expiryTask;
 
-        public SignPacketListener(Block blockPlace, Player player, Side side) {
-            super(ArchitectPlugin.getPluginInstance(), ListenerPriority.NORMAL, PacketType.Play.Client.UPDATE_SIGN);
+        public SignEditListener(Block blockPlace, Player player, Side side) {
             this.instance = this;
             this.blockPlace = blockPlace;
             this.player = player;
             this.side = side;
-            ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
-            Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), new Runnable() {
+            this.expiryTask = Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), new Runnable() {
                 @Override
                 public void run() {
-                    protocolManager.removePacketListener(instance);
+                    HandlerList.unregisterAll(instance);
                 }
-            }, 6000);
+            }, 6000); // 20*60*5 = 6000 ticks = 5 minutes
         }
 
-        @Override
-        public void onPacketReceiving(PacketEvent event) {
-            PacketContainer packet = event.getPacket();
-            BlockPosition blockPosition = packet.getBlockPositionModifier().read(0);
-            if(blockPlace.getX() == blockPosition.getX()
-                    && blockPlace.getY() == blockPosition.getY()
-                    && blockPlace.getZ() == blockPosition.getZ()
-                    && player.equals(event.getPlayer())) {
+        @EventHandler
+        public void onSignChange(SignChangeEvent event) {
+            if(event.getBlock().equals(blockPlace) && player.equals(event.getPlayer())) {
                 event.setCancelled(true);
+                expiryTask.cancel();
                 Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), new Runnable() {
                     @Override
                     public void run() {
-                        ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
-                        String[] lines = packet.getStringArrays().read(0);
+                        String[] lines = event.getLines();
                         org.bukkit.block.Sign sign = (org.bukkit.block.Sign) blockPlace.getState();
                         for (int i = 0; i < lines.length; i++) {
                             sign.getSide(side).line(i, SignEditorData.parseLine(lines[i]));
                         }
                         sign.update(true, false);
-                        /*if(side == Side.FRONT) {
-                            sendSignEditorOpen(blockPlace, player, Side.BACK);
-                            side = Side.BACK;
-                        } else {*/
-                        protocolManager.removePacketListener(instance);
-                        //}
                     }
                 });
+                HandlerList.unregisterAll(instance);
             }
         }
     }

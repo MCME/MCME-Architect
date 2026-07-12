@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.util;
 
+import com.mcmiddleearth.architect.Log;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,7 +34,22 @@ import java.util.zip.ZipInputStream;
  */
 public class ZipUtil {
 
-    public static synchronized int extract(String sourceURL, InputStream in, 
+    /**
+     * Resolve the on-disk target for a zip entry inside {@code temp}, guarding against Zip-Slip.
+     * Only the entry's leaf name is used, and the result must stay within {@code temp}.
+     * @return the safe target file, or {@code null} if the entry name escapes {@code temp} (logged).
+     */
+    private static File safeExtractTarget(File temp, String entryName) {
+        String leaf = entryName.substring(entryName.lastIndexOf("/")+1);
+        try {
+            return PathSafety.resolveInside(temp, leaf);
+        } catch (SecurityException ex) {
+            Log.warn("Skipping unsafe zip entry '" + entryName + "' during extraction: " + ex.getMessage());
+            return null;
+        }
+    }
+
+    public static synchronized int extract(String sourceURL, InputStream in,
                                String matchStart, File outPath) throws IOException{
         int downloadedFiles = 0;
         URL url = new URL(sourceURL);
@@ -71,20 +87,19 @@ public class ZipUtil {
 //Logger.getGlobal().info("entry "+entry.getName());
                 if(!entry.isDirectory() && entry.getName().startsWith(matchStart)) {
                     int BUFFER = 2048;
-                    File file = new File(temp,entry.getName()
-                                              .substring(entry.getName().lastIndexOf("/")+1));
-                    //Files.move(file.toPath(),file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    //if(!file.exists()) file.mkdirs();
-                    FileOutputStream fos = new FileOutputStream(file);
-                    dest = new BufferedOutputStream(fos, BUFFER);
-                    int count;
-                    byte[] data = new byte[BUFFER];
-                    while ((count = zin.read(data, 0, BUFFER)) != -1) {
-                       dest.write(data, 0, count);
+                    File file = safeExtractTarget(temp, entry.getName());
+                    if(file != null) {
+                        FileOutputStream fos = new FileOutputStream(file);
+                        dest = new BufferedOutputStream(fos, BUFFER);
+                        int count;
+                        byte[] data = new byte[BUFFER];
+                        while ((count = zin.read(data, 0, BUFFER)) != -1) {
+                           dest.write(data, 0, count);
+                        }
+                        dest.flush();
+                        dest.close();
+                        fos.close();
                     }
-                    dest.flush();
-                    dest.close();
-                    fos.close();
                     //System.out.println("extracted");
                 }
                 entry = zin.getNextEntry();
@@ -92,18 +107,23 @@ public class ZipUtil {
 //Logger.getGlobal().info("search for "+matchStart);
 //Logger.getGlobal().info("temp later "+temp);
             File[] files = temp.listFiles();
-//Logger.getGlobal().info("temp files "+files);
-            if(files!=null) {
+            if(files != null && files.length > 0) {
                 downloadedFiles = files.length;
-                for(File file: outPath.listFiles()) {
-                    file.delete();
+                File[] existing = outPath.listFiles();
+                if(existing != null) {
+                    for(File file: existing) {
+                        if(!file.equals(temp)) {
+                            file.delete();
+                        }
+                    }
                 }
-                for(File file: temp.listFiles()) {
-//Logger.getGlobal().info("toPath "+file.toPath());
-//Logger.getGlobal().info("fromPath "+new File(outPath,file.getName()));
-                    Files.move(file.toPath(),new File(outPath,file.getName()).toPath(), 
+                for(File file: files) {
+                    Files.move(file.toPath(), new File(outPath,file.getName()).toPath(),
                                StandardCopyOption.REPLACE_EXISTING);
                 }
+            } else {
+                Log.warn("Zip extraction for " + sourceURL + " matched no entries; keeping the existing files in "
+                        + outPath.getAbsolutePath() + " instead of clearing them.");
             }
             temp.delete();
         } 

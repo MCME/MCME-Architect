@@ -34,7 +34,7 @@ import org.bukkit.util.Vector;
 public class ArmorStandEditorCommand extends AbstractArchitectCommand {
 
     private final static Map<UUID, ArmorStandEditorConfig> configList = new HashMap<>();
-    
+
     private final int maxStepSize = 360;
     
     @Override
@@ -121,17 +121,11 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                     playerConfig.placeArmorStand(loc.toLocation(p.getWorld()),false);
                     return true;
                 }
-                if(args[0].equalsIgnoreCase("place2") && PluginData.hasPermission(p,Permission.RANDOMISER_MATERIALS)) {
-                    for(int i = 0 ; i < NumericUtil.getInt(args[1]);i+=NumericUtil.getInt(args[2])) {
-                        for( int j = 0; j< NumericUtil.getInt(args[1]);j+=NumericUtil.getInt(args[2])) {
-                            playerConfig.placeArmorStand(new Location(p.getWorld(),
-                                                                      p.getLocation().getBlockX()+i,
-                                                                      p.getLocation().getBlockY(),
-                                                                      p.getLocation().getBlockZ()+j),true);
-                    }
-                    }
-                    return true;
-                }
+                // 'place2' debug subcommand removed (audit Phase 0): it ran an unbounded
+                // armor-stand placement loop on the main thread that became an INFINITE loop
+                // when the step argument was 0 (/armor place2 <n> 0), freezing the server;
+                // it also threw ArrayIndexOutOfBounds on missing args and was gated by an
+                // unrelated permission. Re-add as a properly bounded/validated feature if needed.
                 if(args[0].equalsIgnoreCase("delete")) {
                     if(args.length>1) {
                         if(!playerConfig.existsFile(args[1])) {

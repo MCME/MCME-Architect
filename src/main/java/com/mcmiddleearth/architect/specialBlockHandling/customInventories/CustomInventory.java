@@ -246,8 +246,6 @@ public class CustomInventory implements Listener {
 
     /*@EventHandler
     public void onPlayerInventoryClick(final InventoryClickEvent event) {
-        Logger.getLogger("CustomInventory").info(""+event.getClickedInventory().getType());
-        Logger.getLogger("CustomInventory").info(""+event.getSlotType());
         if(event.getSlotType().equals(SlotType.QUICKBAR)) {//event.getClickedInventory().getType().equals(InventoryType.PLAYER)){
             new BukkitRunnable() {
                 @Override

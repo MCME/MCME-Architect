@@ -25,8 +25,6 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 
-import java.util.logging.Logger;
-
 /**
  *
  * @author Eriol_Eandur

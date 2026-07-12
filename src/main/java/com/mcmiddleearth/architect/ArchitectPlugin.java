@@ -5,8 +5,6 @@
  */
 package com.mcmiddleearth.architect;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
 import com.mcmiddleearth.architect.WorldGeneration.WorldGenerationManager;
 import com.mcmiddleearth.architect.additionalCommands.*;
 import com.mcmiddleearth.architect.additionalListeners.*;
@@ -38,7 +36,6 @@ import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockListe
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
 import com.mcmiddleearth.architect.specialBlockHandling.listener.*;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceCommand;
-import com.mcmiddleearth.architect.viewDistance.ViewDistanceListener;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceManager;
 import com.mcmiddleearth.architect.voxelStencilEditor.SlCommand;
 import com.mcmiddleearth.architect.voxelStencilEditor.VvCommand;
@@ -75,6 +72,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         getConfig().options().copyDefaults(true);
         saveDefaultConfig();
         pluginInstance = this;
+        LogFileManager.install(this);
         //ProtocolLibUtil.init(this);
         //DoorListener.addOpenHalfDoorListener();
         PluginData.getMessageUtil().setPluginName("Architect");
@@ -110,15 +108,17 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
+        if(getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            com.mcmiddleearth.architect.viewDistance.ViewDistanceProtocol.register(this);
+        } else {
+            Log.warn("ProtocolLib not found - /viewdistance chunk-retention features are disabled.");
+        }
 //        pluginManager.registerEvents(new AfkListener(), this);
 
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "mcme-modpack-marker:hello", new RpPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "minecraft:brand", new TestPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "l:fmlhs", new TestPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "wdl:init", new TestPluginMessageListener());
-
-        ProtocolManager manager = ProtocolLibrary.getProtocolManager();
-        manager.addPacketListener(new ViewDistanceListener(this));
 
         // all CommandExecutors should be subclasses of AbstractArchitectCommand
         // AbstractArchitectCommand methods are used by command /architect help
@@ -159,7 +159,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         ItemBlockManager.startEntityGlowTask();
         
         
-        getLogger().info("MCME-Architect Enabled!");
+        Log.info("MCME-Architect Enabled!");
     }
     
     @Override
@@ -167,6 +167,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
+        LogFileManager.uninstall(this);
     }
     
     public void setCommandExecutor(String command, AbstractArchitectCommand executor) {

@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.data;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,8 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
@@ -145,23 +144,34 @@ public class GetData {
         }
         try {
             config.save(dataFile);
-//Logger.getGlobal().info("saved");
         } catch (IOException ex) {
-            Logger.getLogger(GetData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save item sets to " + dataFile, ex);
         }
     }
-    
+
     public static void load() {
         YamlConfiguration config = new YamlConfiguration();
-        try {
-            config.load(dataFile);
-        } catch (IOException | InvalidConfigurationException ex) {
-            Logger.getLogger(GetData.class.getName()).log(Level.WARNING, "Item set file not found.");
+        if (dataFile.exists()) {
+            try {
+                config.load(dataFile);
+            } catch (IOException | InvalidConfigurationException ex) {
+                Log.error("Failed to load item sets from " + dataFile
+                        + "; keeping the file untouched for recovery (not overwriting).", ex);
+                return;
+            }
         }
         for(String name: config.getKeys(false)) {
             ConfigurationSection section = config.getConfigurationSection(name);
+            if(section == null) {
+                continue;
+            }
+            String ownerString = section.getString("owner");
+            if(ownerString == null) {
+                Log.warn("Item set '" + name + "' in " + dataFile + " has no owner; skipping it.");
+                continue;
+            }
             ItemSet itemSet = new ItemSet(null,null,false,null);
-            itemSet.owner = UUID.fromString(section.getString("owner"));
+            itemSet.owner = UUID.fromString(ownerString);
             itemSet.description = section.getString("description","no description");
             itemSet.isPrivate = section.getBoolean("isPrivate",false);
             itemSet.items = section.getList("items", new ArrayList<ItemStack>())

@@ -16,13 +16,14 @@
  */
 package com.mcmiddleearth.architect.voxelStencilEditor;
 
+import com.mcmiddleearth.architect.Log;
+import com.mcmiddleearth.util.PathSafety;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -38,11 +39,17 @@ public class StencilList {
         this.name = name;
     }
     
-    public static StencilList loadFromFile(String name) { 
+    public static StencilList loadFromFile(String name) {
+        File file;
+        try {
+            file = PathSafety.resolveInside(VoxelConstants.STENCIL_LISTS_DIR,
+                                 name + "."+VoxelConstants.STENCIL_LIST_EXT);
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil-list name '" + name + "' for load: " + ex.getMessage());
+            return null;
+        }
         FileReader fr = null;
         try {
-            File file = new File(VoxelConstants.STENCIL_LISTS_DIR,
-                                 name + "."+VoxelConstants.STENCIL_LIST_EXT);
             if(!file.exists()) {
                 return null;
             }
@@ -57,7 +64,7 @@ public class StencilList {
             }
             return newList;
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(StencilList.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to load stencil list '" + name + "'", ex);
             return null;
         } finally {
             try {
@@ -65,14 +72,20 @@ public class StencilList {
                     fr.close();
                 }
             } catch (IOException ex) {
-                Logger.getLogger(StencilList.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to close stencil list file reader for '" + name + "'", ex);
             }
         }
     }
 
     public boolean addStencil(String stencilName) {
-        File file = new File(VoxelConstants.STENCILS_DIR+"/"
-                             +stencilName + "."+VoxelConstants.STENCIL_EXT);
+        File file;
+        try {
+            file = PathSafety.resolveInside(VoxelConstants.STENCILS_DIR,
+                                 stencilName + "."+VoxelConstants.STENCIL_EXT);
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil name '" + stencilName + "' for addStencil: " + ex.getMessage());
+            return false;
+        }
         if(!file.exists()) {
             return false;
         }
@@ -85,11 +98,17 @@ public class StencilList {
     }
 
     public boolean fileExists() {
-        return getFile().exists();
+        try {
+            return getFile().exists();
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil-list name '" + name + "' for fileExists: " + ex.getMessage());
+            return false;
+        }
     }
-    
+
+    // Throws SecurityException for a traversal name; callers (saveToFile/fileExists) treat that as failure.
     private File getFile() {
-        return new File(VoxelConstants.STENCIL_LISTS_DIR,
+        return PathSafety.resolveInside(VoxelConstants.STENCIL_LISTS_DIR,
                                  name + "."+VoxelConstants.STENCIL_LIST_EXT);
     }
     
@@ -111,7 +130,10 @@ public class StencilList {
             }
             return true;
         } catch (IOException ex) {
-            Logger.getLogger(StencilList.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save stencil list '" + name + "'", ex);
+            return false;
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil-list name '" + name + "' for save: " + ex.getMessage());
             return false;
         } finally {
             try {
@@ -119,7 +141,7 @@ public class StencilList {
                     fw.close();
                 }
             } catch (IOException ex) {
-                Logger.getLogger(StencilList.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to close stencil list file writer for '" + name + "'", ex);
             }
         }
     }

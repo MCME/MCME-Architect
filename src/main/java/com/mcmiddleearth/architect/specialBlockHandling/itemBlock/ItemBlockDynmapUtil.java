@@ -17,13 +17,12 @@
 package com.mcmiddleearth.architect.specialBlockHandling.itemBlock;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.util.DevUtil;
 import com.sk89q.worldedit.math.BlockVector2;
 //import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.regions.Region;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.configuration.ConfigurationSection;
@@ -57,7 +56,7 @@ public class ItemBlockDynmapUtil {
         }
         Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
         if(dynmap==null) {
-            Logger.getGlobal().info("Dynmap not found");
+            Log.info("Dynmap plugin not found; item block region markers will not be shown on the map.");
         }
         else {
             try{
@@ -72,7 +71,7 @@ public class ItemBlockDynmapUtil {
                 ArchitectPlugin.getPluginInstance().saveConfig();
                 init = true;
             } catch(Exception e) {
-                Logger.getLogger(ItemBlockDynmapUtil.class.getName()).log(Level.WARNING, "Dynmap plugin not compatible",e);
+                Log.warn("Dynmap plugin found but not compatible with item block region markers: " + e.getMessage());
             }
         }
     }

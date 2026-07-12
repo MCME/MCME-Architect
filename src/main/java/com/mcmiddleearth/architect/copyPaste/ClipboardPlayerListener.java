@@ -30,5 +30,5 @@ public class ClipboardPlayerListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         CopyPasteManager.loadClipboard(event.getPlayer());
     }
-    
+
 }

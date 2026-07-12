@@ -25,8 +25,6 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
-import java.util.logging.Logger;
-
 /**
  *
  * @author Eriol_Eandur

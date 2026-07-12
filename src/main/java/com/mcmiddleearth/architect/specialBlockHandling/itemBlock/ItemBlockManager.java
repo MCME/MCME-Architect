@@ -17,9 +17,9 @@
 package com.mcmiddleearth.architect.specialBlockHandling.itemBlock;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
-import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.util.DevUtil;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -33,8 +33,6 @@ import org.bukkit.scheduler.BukkitTask;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -83,7 +81,7 @@ public class ItemBlockManager {
                     }
                 }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 200, 20);
             } catch (IOException | InvalidConfigurationException ex) {
-                Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to load item block region file " + file, ex);
             }
         }
     }
@@ -154,7 +152,8 @@ public class ItemBlockManager {
             config.set("itemBlockRegion", region.saveToMap());
             config.save(new File(regionFolder,region.getName()+".reg"));
         } catch (IOException ex) {
-            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save item block region '" + region.getName() + "' to "
+                    + new File(regionFolder, region.getName() + ".reg"), ex);
         }
     }
 

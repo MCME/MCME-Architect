@@ -17,12 +17,12 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import com.mcmiddleearth.pluginutil.developer.DevUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
-import com.viaversion.viaversion.api.Via;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -32,9 +32,6 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -69,7 +66,6 @@ public class RpListener implements Listener {
         Player player = event.getPlayer();
         DevUtil devUtil = ArchitectPlugin.getPluginInstance().getDevUtil();
         devUtil.log(2,"PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
-//Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
         int version = player.getProtocolVersion();
         String snapshot = "";
         if(version > 0x40000000) {
@@ -77,7 +73,7 @@ public class RpListener implements Listener {
             version = version - 0x40000000;
         }
         devUtil.log(2,"Bukkit Protocol Version: "+snapshot + version);
-        devUtil.log(2,"ViaVersion Protocol Version: "+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+        devUtil.log(2,"Client Protocol Version: "+RpManager.getClientProtocolVersion(player));
         devUtil.log(2,"Sodium client: "+RpManager.isSodiumClient(player));
         devUtil.log(2,"Incomming plugin channels:");
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
@@ -88,7 +84,7 @@ public class RpListener implements Listener {
                 public void run() {
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
                         RpPlayerData data = RpManager.getPlayerData(player);
-                        data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+                        data.setProtocolVersion(RpManager.getClientProtocolVersion(player));
                         if(RpManager.isSodiumClient(player)) {
                             data.setClient("sodium");
                         } else if(!"fabric".equalsIgnoreCase(player.getClientBrandName())) {
@@ -130,7 +126,7 @@ public class RpListener implements Listener {
                         cancel();
                     } else counter --;
                     if(counter==0) {
-                        Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Could not get player rp settings from the database");        
+                        Log.warn("Timed out waiting for RP settings to load from the database for player " + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
                     }
                 }
             }.runTaskTimer(ArchitectPlugin.getPluginInstance(),30,20);
@@ -140,5 +136,6 @@ public class RpListener implements Listener {
     @EventHandler
     public void playerQuit(PlayerQuitEvent event) {
         RpManager.removeSodiumClient(event.getPlayer());
+        RpManager.removePlayerData(event.getPlayer());
     }
 }

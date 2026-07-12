@@ -18,14 +18,12 @@ package com.mcmiddleearth.util;
 
 import com.google.gson.JsonSyntaxException;
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
+import com.mcmiddleearth.architect.Log;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.scheduler.BukkitRunnable;
 
 /**
@@ -69,7 +67,7 @@ public abstract class HttpTextInputHandler {
                         cancel();
                         return;
                     } catch (IOException | JsonSyntaxException ex) {
-                        Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.SEVERE, null, ex);
+                        Log.error("Failed to read HTTP response from " + httpURL, ex);
                     } finally {
                         cancel();
                     }
@@ -87,7 +85,7 @@ public abstract class HttpTextInputHandler {
                     connection.connect();
                 } catch (IOException ex) {
                     error = true;
-                    Logger.getLogger(CustomHeadManagerData.class.getName()).log(Level.SEVERE, null, ex);
+                    Log.error("Failed to open HTTP connection to " + httpURL, ex);
                 } finally {
                     received = true;
                 }
