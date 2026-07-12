@@ -45,7 +45,7 @@ public class ViewDistanceManager {
     }
 
     private static void sendViewDistancePacket(Player player, int viewDistance) {
-        player.setSendViewDistance(viewDistance);
+        ViewDistanceProtocol.sendViewDistance(player, viewDistance);
     }
 
     public static void saveViewDistances() {

@@ -36,7 +36,6 @@ import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockListe
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
 import com.mcmiddleearth.architect.specialBlockHandling.listener.*;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceCommand;
-import com.mcmiddleearth.architect.viewDistance.ViewDistanceListener;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceManager;
 import com.mcmiddleearth.architect.voxelStencilEditor.SlCommand;
 import com.mcmiddleearth.architect.voxelStencilEditor.VvCommand;
@@ -110,7 +109,11 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
-        pluginManager.registerEvents(new ViewDistanceListener(), this);
+        if(getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            com.mcmiddleearth.architect.viewDistance.ViewDistanceProtocol.register(this);
+        } else {
+            Log.warn("ProtocolLib not found - /viewdistance chunk-retention features are disabled.");
+        }
 //        pluginManager.registerEvents(new AfkListener(), this);
 
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "mcme-modpack-marker:hello", new RpPluginMessageListener());

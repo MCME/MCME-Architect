@@ -79,6 +79,24 @@
             <version>26.1.2.build.72-stable</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Compiled against the stable 5.x API; scope=provided (server supplies the jar).
+             The SERVER must run a ProtocolLib dev build (5.5.0+) for Minecraft 26.x support:
+             https://github.com/dmulloy2/ProtocolLib/releases/tag/dev-build -->
+        <dependency>
+            <groupId>com.comphenix.protocol</groupId>
+            <artifactId>ProtocolLib</artifactId>
+            <version>5.3.0</version>
+            <scope>provided</scope>
+            <exclusions>
+                <!-- API-only for compilation; the server supplies the full shaded jar at runtime.
+                     Excluding transitives avoids ProtocolLib's byte-buddy 1.15.1 clashing with the
+                     newer byte-buddy MockBukkit needs for Java-25 proxying. -->
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>com.mcmiddleearth</groupId>
             <artifactId>PluginUtils</artifactId>

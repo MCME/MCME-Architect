@@ -3,7 +3,7 @@ main: com.mcmiddleearth.architect.ArchitectPlugin
 version: ${project.version}
 author: Eriol_Eandur
 load: STARTUP
-softdepend: [Essentials,dynmap,ViaVersion,MCME-Connect]
+softdepend: [ProtocolLib,Essentials,dynmap,ViaVersion,MCME-Connect]
 depend: [PluginUtils]
 api-version: 26.1.2
 
