@@ -71,6 +71,20 @@
             <id>dynmap-repo</id>
             <url>https://repo.mikeprimm.com/</url>
         </repository>
+        <!-- MCME's own Reposilite, matching MCME-Connect. Serves com.mcmiddleearth artifacts
+             (PluginUtils, mcme-base, tbnbt) under MCME's groupId. -->
+        <repository>
+            <id>mcme-releases</id>
+            <url>https://repo.mcmiddleearth.com/releases</url>
+        </repository>
+        <repository>
+            <id>mcme-snapshots</id>
+            <url>https://repo.mcmiddleearth.com/snapshots</url>
+        </repository>
+        <repository>
+            <id>mcme-mirror</id>
+            <url>https://repo.mcmiddleearth.com/mirror</url>
+        </repository>
     </repositories>
     <dependencies>
         <dependency>
@@ -98,14 +112,25 @@
             </exclusions>
         </dependency>
         <dependency>
+            <!-- 2.0.2 is the first PluginUtils built against the 26.2 dev bundle, and is what
+                 the servers actually run. Resolved from repo.mcmiddleearth.com under MCME's own
+                 groupId rather than JitPack's com.github.MCME, so there is exactly one
+                 coordinate for this library and Maven's normal version conflict resolution
+                 applies to it (MCME-Connect still pulls an older com.mcmiddleearth:PluginUtils
+                 transitively; as a direct dependency this one wins on nearest-first). -->
             <groupId>com.mcmiddleearth</groupId>
             <artifactId>PluginUtils</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <version>2.0.2</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.mcmiddleearth</groupId>
+            <!-- Only one class is used: com.mcmiddleearth.connect.events.PlayerConnectEvent,
+                 in RpListener. 3.0.0 is the released 26.2 build, resolved from
+                 repo.mcmiddleearth.com rather than the old 2.0.1-SNAPSHOT, which existed only
+                 in a local ~/.m2 and predates the 26.2 port. -->
             <artifactId>MCME-Connect</artifactId>
-            <version>2.0.1-SNAPSHOT</version>
+            <version>3.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
