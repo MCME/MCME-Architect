@@ -37,6 +37,7 @@ import org.dynmap.markers.MarkerSet;
 public class ELogDynmapUtil {
     
     private static boolean init = false;
+    private static boolean initAttempted = false;
     private static final boolean enabled = getDynmapConfig().getBoolean("enabled",false);
     
     private static DynmapAPI dynmapPlugin;
@@ -49,14 +50,22 @@ public class ELogDynmapUtil {
     private static double areaOpacity;
 
     private static void init() {
-        if(!enabled) {
+        if(!enabled || initAttempted) {
             return;
         }
-        Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
-        if(dynmap==null) {
-            Log.info("Dynmap plugin not found; entity-log markers on the map are disabled.");
+        // One attempt per server start. Without this every createMarker()/clearMarkers()
+        // call re-enters init(), because `init` stays false when setup fails - re-running
+        // the lookup and re-logging the same failure for the life of the server.
+        initAttempted = true;
+        // isPluginEnabled(), not getPlugin()!=null. Dynmap has no 26.x build, so it is
+        // present on disk, gets loaded, fails to enable, and is left with a null internal
+        // core. Its class still implements DynmapAPI, so the cast below succeeds and the
+        // first marker call NPEs inside Dynmap.
+        if(!Bukkit.getServer().getPluginManager().isPluginEnabled("dynmap")) {
+            Log.info("Dynmap plugin not enabled; entity-log markers on the map are disabled.");
         }
         else {
+            Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
             try{
                 dynmapPlugin = (DynmapAPI) dynmap;
                 markerSet = dynmapPlugin.getMarkerAPI().createMarkerSet("entities.markerset", "Entities", null, false);
@@ -69,7 +78,7 @@ public class ELogDynmapUtil {
                 ArchitectPlugin.getPluginInstance().saveConfig();
                 init = true;
                 clearMarkers();
-            } catch(Exception e) {
+            } catch(Throwable e) {  // Throwable: an incompatible Dynmap surfaces as Error, not Exception
                 Log.warn("Dynmap plugin is not compatible with the entity-log marker API", e);
             }
         }

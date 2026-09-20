@@ -39,6 +39,7 @@ import org.dynmap.markers.MarkerSet;
 public class ItemBlockDynmapUtil {
     
     private static boolean init = false;
+    private static boolean initAttempted = false;
     private static final boolean enabled = getDynmapConfig().getBoolean("enabled",false);
     
     private static DynmapAPI dynmapPlugin;
@@ -51,14 +52,22 @@ public class ItemBlockDynmapUtil {
     private static double areaOpacity;
 
     private static void init() {
-        if(!enabled) {
+        if(!enabled || initAttempted) {
             return;
         }
-        Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
-        if(dynmap==null) {
-            Log.info("Dynmap plugin not found; item block region markers will not be shown on the map.");
+        // One attempt per server start. Without this every createMarker()/clearMarkers()
+        // call re-enters init(), because `init` stays false when setup fails - re-running
+        // the lookup and re-logging the same failure for the life of the server.
+        initAttempted = true;
+        // isPluginEnabled(), not getPlugin()!=null. Dynmap has no 26.x build, so it is
+        // present on disk, gets loaded, fails to enable, and is left with a null internal
+        // core. Its class still implements DynmapAPI, so the cast below succeeds and the
+        // first marker call NPEs inside Dynmap.
+        if(!Bukkit.getServer().getPluginManager().isPluginEnabled("dynmap")) {
+            Log.info("Dynmap plugin not enabled; item block region markers will not be shown on the map.");
         }
         else {
+            Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
             try{
                 dynmapPlugin = (DynmapAPI) dynmap;
                 markerSet = dynmapPlugin.getMarkerAPI().createMarkerSet("itemBlockLimit.markerset", "itemBlockLimit", null, false);
@@ -70,7 +79,7 @@ public class ItemBlockDynmapUtil {
                 areaOpacity = getDynmapConfig().getDouble("areaOpacity",0.25);
                 ArchitectPlugin.getPluginInstance().saveConfig();
                 init = true;
-            } catch(Exception e) {
+            } catch(Throwable e) {  // Throwable: an incompatible Dynmap surfaces as Error, not Exception
                 Log.warn("Dynmap plugin found but not compatible with item block region markers: " + e.getMessage());
             }
         }
