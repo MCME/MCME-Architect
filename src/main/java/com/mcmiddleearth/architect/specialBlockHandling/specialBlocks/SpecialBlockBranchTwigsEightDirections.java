@@ -24,8 +24,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import java.util.logging.Logger;
-
 /**
  *
  * @author Eriol_Eandur
@@ -40,9 +38,7 @@ public class SpecialBlockBranchTwigsEightDirections extends SpecialBlockEightFac
     @Override
     public Block getBlock(Block clicked, BlockFace blockFace, Location interactionPoint, Player player) {
         Block target = super.getBlock(clicked, blockFace, interactionPoint, player);
-Logger.getGlobal().info("EightFaceTwig: "+target);
         BlockFace face = getBlockFaceFine(player.getLocation().getYaw());
-Logger.getGlobal().info("Face: "+face.name());
         return getBranchBlock(target, clicked, blockFace, interactionPoint,
                 player, face);
     }
@@ -79,7 +75,6 @@ Logger.getGlobal().info("Face: "+face.name());
 
     public static SpecialBlockBranchTwigsEightDirections loadFromConfig(ConfigurationSection config, String id) {
         BlockData[] data = loadBlockDataFromConfig(config, eightFaces);
-Logger.getGlobal().info("Data: "+data);
         if(data==null) {
             return null;
         }

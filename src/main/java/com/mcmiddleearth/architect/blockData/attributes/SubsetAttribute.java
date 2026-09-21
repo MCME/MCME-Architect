@@ -5,10 +5,9 @@
  */
 package com.mcmiddleearth.architect.blockData.attributes;
 
+import com.mcmiddleearth.architect.Log;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.block.data.BlockData;
 
 /**
@@ -48,9 +47,9 @@ public class SubsetAttribute extends SetAttribute {
                 if(found) {
                     clazz.getDeclaredMethod("set"+name, enumm).invoke(blockData, values[0]);
                 }
-            } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                     | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(SubsetAttribute.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to cycle subset attribute '" + name + "' on " + clazz.getSimpleName(), ex);
             }
         }
     }
@@ -58,9 +57,9 @@ public class SubsetAttribute extends SetAttribute {
     protected Set<Object> getAllowed() {
         try {
             return (Set<Object>) clazz.getDeclaredMethod(allowedMethod).invoke(blockData);
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                 | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(SubsetAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to reflectively invoke " + allowedMethod + "() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
         }
         return null;
     }
@@ -81,9 +80,9 @@ public class SubsetAttribute extends SetAttribute {
                     return;
                 }
             }
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                 | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(SetAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to set subset attribute '" + name + "' to " + newValue + " on " + clazz.getSimpleName(), ex);
         }
     }
 

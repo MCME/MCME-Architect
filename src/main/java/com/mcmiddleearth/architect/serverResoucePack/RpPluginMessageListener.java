@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
@@ -8,23 +9,18 @@ import org.jetbrains.annotations.NotNull;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.logging.Logger;
 
 public class RpPluginMessageListener implements PluginMessageListener {
 
     @Override
     public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte[] bytes) {
-        //Logger.getGlobal().info("Sodium client detected: "+player.getName());
-
-//Logger.getGlobal().info("Received message from player " + player.getName() + " on channel "
-//        + channel + " with data " + Arrays.toString(bytes));
         try (var dataStream = new DataInputStream(new ByteArrayInputStream(bytes))) {
             int stringLength = readVarInt(dataStream);
             String jsonString = new String(dataStream.readNBytes(stringLength));
             ArchitectPlugin.getPluginInstance().getDevUtil().log(2,"data = " + jsonString);
         } catch (IOException e) {
-            Logger.getGlobal().warning("Received invalid MCME Modpack marker data from player " + player.getName() + " (" + player.getUniqueId() + "): " + Arrays.toString(bytes));
+            Log.warn("Received malformed MCME Modpack marker data (" + bytes.length + " bytes) on channel "
+                    + channel + " from player " + player.getName() + " (" + player.getUniqueId() + "): " + e.getMessage());
         }
 
         RpManager.addSodiumClient(player,"unknown");

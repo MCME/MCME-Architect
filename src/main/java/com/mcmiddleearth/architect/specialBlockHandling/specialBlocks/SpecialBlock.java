@@ -17,11 +17,11 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
-import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.util.DevUtil;
@@ -39,8 +39,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -84,9 +82,7 @@ public class SpecialBlock {
             case BRANCH_TRUNK_CONNECT -> SpecialBlockBranchTrunkConnect.loadFromConfig(section, fullName);
             case BRANCH_TRUNK_CONNECT_COMPLEX ->
                     SpecialBlockBranchTrunkConnectComplex.loadFromConfig(section, fullName);
-            case BLOCK_CONNECT ->
-//Logger.getGlobal().info("Block connect:"+itemKey);
-                    SpecialBlockConnect.loadFromConfig(section, fullName);
+            case BLOCK_CONNECT -> SpecialBlockConnect.loadFromConfig(section, fullName);
             case DIAGONAL_CONNECT -> SpecialBlockDiagonalConnect.loadFromConfig(section, fullName);
             case BISECTED -> SpecialBlockBisected.loadFromConfig(section, fullName);
             case THREE_AXIS -> SpecialBlockThreeAxis.loadFromConfig(section, fullName);
@@ -174,7 +170,7 @@ public class SpecialBlock {
                      -> collection.put(key, SpecialBlockInventoryData.fullName(rpName,(String) entry)));
             }
         } catch(ClassCastException ex) {
-            Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING, "Error while loading special block collection!", ex);
+            Log.warn("Error while loading block collection for '" + getId() + "' (RP " + rpName + "): " + ex.getMessage());
         }
     }
     

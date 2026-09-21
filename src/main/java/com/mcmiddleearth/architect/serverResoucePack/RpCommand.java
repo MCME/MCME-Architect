@@ -11,6 +11,7 @@ import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
+import com.mcmiddleearth.architect.util.WorldEditGuard;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
@@ -256,6 +257,7 @@ public class RpCommand extends AbstractArchitectCommand {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "A rp region with that name already exists.");
                         return true;
                     }
+                    if (!WorldEditGuard.require(cs)) return true;
                     Region weRegion = WEUtil.getSelection((Player)cs);
                     if(weRegion==null) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "Please make a WE selection first.");

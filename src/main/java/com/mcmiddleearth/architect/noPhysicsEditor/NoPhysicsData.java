@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.WorldConfig;
@@ -29,8 +30,6 @@ import org.bukkit.util.Vector;
 
 import java.io.*;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -171,7 +170,7 @@ public class NoPhysicsData {
                 exceptionAreas.put(name,new RedstoneCircuitArea(world,minPoint,maxPoint));
             }
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(NoPhysicsData.class.getName()).log(Level.WARNING,"No physics exception data file not found.");
+            Log.warn("No-physics exception area data file not found (expected on first run): " + dataFile.getAbsolutePath());
         }
     }
 

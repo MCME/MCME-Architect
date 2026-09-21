@@ -21,8 +21,6 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger;
-import com.mcmiddleearth.pluginutil.nms.AccessInventory;
-import com.mcmiddleearth.pluginutil.nms.NMSUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
@@ -313,12 +311,9 @@ public class ArchitectCommand extends AbstractArchitectCommand{
     private String getNBT(CommandSender sender, ItemStack item) {
         String nbt = "";
         if(item!=null) {
-            nbt = AccessInventory.getItemNBT(item).toString();
-            /*try {
-                Object nmsItem = NMSUtil.getCraftBukkitDeclaredField("inventory.CraftItemStack","handle",item);
-                Object tag = NMSUtil.invokeNMS("ItemStack", "getTag", new Class[]{}, nmsItem);
-                nbt = NBTTagUtil.asString(tag);
-            } catch(NullPointerException ex) {}*/
+            // Native data-component dump (Paper's ItemStack#toString() already includes it),
+            // plus the plugin's persistent-data container contents.
+            nbt = item.getPersistentDataContainer() + " " + item;
         }
         return nbt;
     }

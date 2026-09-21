@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.copyPaste;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.pluginutil.plotStoring.*;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import org.bukkit.Bukkit;
@@ -30,8 +31,6 @@ import org.bukkit.util.BoundingBox;
 
 import java.io.*;
 import java.util.Collection;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -103,12 +102,12 @@ public class Clipboard implements IStoragePlot {
             outStream.close();
             nbtData = byteOut.toByteArray();
         } catch (IOException ex) {
-            Logger.getLogger(Clipboard.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to serialize clipboard selection at " + referencePoint, ex);
             return false;
         }
         return true;
     }
-    
+
     public boolean cutToClipboard() {
         if(copyToClipboard()) {
             Collection<Entity> entities = lowCorner.getWorld()
@@ -190,7 +189,7 @@ public class Clipboard implements IStoragePlot {
     }
     
     private void log(String name, Location loc) {
-        Logger.getGlobal().info(name+" "+loc.getBlockX()+" "+loc.getBlockY()+" "+loc.getBlockZ());
+        Log.debug(name + " " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ());
     }
     
     public IStoragePlot getPastePlot(Location location) throws CopyPasteException {
@@ -226,7 +225,7 @@ public class Clipboard implements IStoragePlot {
                                  new ByteArrayInputStream(nbtData))))) {
             new MCMEPlotFormat().load(paste, rotation, flip, withAir, withBiome, null, in);
         } catch (IOException | InvalidRestoreDataException ex) {
-            Logger.getLogger(Clipboard.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to paste clipboard data at " + paste, ex);
             return false;
         }
         return true;
@@ -272,7 +271,7 @@ public class Clipboard implements IStoragePlot {
                     }
                     outStream.flush();
                 } catch (IOException ex) {
-                    Logger.getLogger(Clipboard.class.getName()).log(Level.SEVERE, null, ex);
+                    Log.error("Failed to save clipboard to file " + file.getAbsolutePath(), ex);
                 }
             }
         }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());

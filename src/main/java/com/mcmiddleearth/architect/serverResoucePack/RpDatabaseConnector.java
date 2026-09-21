@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.entity.Player;
@@ -27,8 +28,6 @@ import java.sql.*;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -51,7 +50,10 @@ public class RpDatabaseConnector {
 
     private boolean connected;
 
+    private final boolean dbConfigured;
+
     public RpDatabaseConnector(ConfigurationSection config) {
+        dbConfigured = (config != null);
         if(config==null) {
             config = new MemoryConfiguration();
         }
@@ -60,15 +62,18 @@ public class RpDatabaseConnector {
         dbName = config.getString("dbName","development");
         dbIp = config.getString("ip", "localhost");
         port = config.getInt("port",3306);
-        connect();
-        keepAliveTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                checkConnection();
-                //Logger.getGlobal().info("ArchitectTasks: " + Bukkit.getScheduler().getPendingTasks().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
-                //Logger.getGlobal().info("ArchitectWorker: " + Bukkit.getScheduler().getActiveWorkers().stream().filter(task -> task.getOwner().equals(ArchitectPlugin.getPluginInstance())).count());
-            }
-        }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(),0,1200);
+        if(dbConfigured) {
+            connect();
+            keepAliveTask = new BukkitRunnable() {
+                @Override
+                public void run() {
+                    checkConnection();
+                }
+            }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(),0,1200);
+        } else {
+            Log.info("No RP database configured; RP settings will not be persisted.");
+            keepAliveTask = null;
+        }
     }
 
     private void executeAsync(Consumer<Player> method, Player player) {
@@ -84,19 +89,21 @@ public class RpDatabaseConnector {
     }
 
     private synchronized void checkConnection() {
+        if(!dbConfigured) {
+            return;
+        }
         try {
             if(connected && dbConnection.isValid(5)) {
-                //ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO,
-                //        "Successfully checked connection to rp database.");
+                // connection healthy, nothing to do
             } else {
                 if(dbConnection!=null) {
                     dbConnection.close();
                 }
                 connect();
-                ArchitectPlugin.getPluginInstance().getLogger().log(Level.INFO, "Reconnecting to rp database.");
+                Log.info("Reconnecting to RP database " + dbName + " at " + dbIp + ":" + port);
             }
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to check/reconnect RP database connection to " + dbName + " at " + dbIp + ":" + port, ex);
             connected = false;
         }
     }
@@ -121,7 +128,7 @@ public class RpDatabaseConnector {
 
             connected = true;
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to connect to RP database " + dbName + " at " + dbIp + ":" + port + " as user " + dbUser, ex);
             connected = false;
         }
     }
@@ -133,24 +140,33 @@ public class RpDatabaseConnector {
         }
         if(dbConnection!=null) {
             try {
-                insertPlayerRpSettings.close();
-                updatePlayerRpSettings.close();
-                selectPlayerRpSettings.close();
+                if(insertPlayerRpSettings!=null) insertPlayerRpSettings.close();
+                if(updatePlayerRpSettings!=null) updatePlayerRpSettings.close();
+                if(selectPlayerRpSettings!=null) selectPlayerRpSettings.close();
                 dbConnection.close();
             } catch (SQLException ex) {
-                Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to close RP database connection to " + dbName + " at " + dbIp + ":" + port, ex);
             }
         }
     }
 
     private synchronized void checkTablesSync(){
         try {
-            Logger.getLogger(ArchitectPlugin.class.getName()).info("checking tables...");
+            Log.debug("Checking RP database tables exist on " + dbName);
             String statement = "CREATE TABLE IF NOT EXISTS architect_rp (uuid VARCHAR(50), "
-                             + "auto BIT, variant VARCHAR(30), resolution INT, currentURL VARCHAR(100), KEY(uuid))";
+                             + "auto BIT, variant VARCHAR(30), resolution INT, client VARCHAR(30), "
+                             + "currentURL VARCHAR(100), KEY(uuid))";
             dbConnection.createStatement().execute(statement);
+            // Bring pre-existing tables (created before the client column existed) up to date.
+            try {
+                dbConnection.createStatement().execute("ALTER TABLE architect_rp ADD COLUMN client VARCHAR(30)");
+                Log.info("Added missing 'client' column to architect_rp on RP database " + dbName);
+            } catch (SQLException alterEx) {
+                // Expected when the column already exists (duplicate column) — nothing to do.
+                Log.debug("architect_rp already has the 'client' column on " + dbName);
+            }
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to create/verify architect_rp table on RP database " + dbName, ex);
         }
     }
 
@@ -168,11 +184,16 @@ public class RpDatabaseConnector {
     }
 
     private synchronized void loadRpSettingsSync(UUID uuid, Map<UUID, RpPlayerData> dataMap) {
+        if(!connected || selectPlayerRpSettings==null) {
+            // No reachable DB: seed a default so hasPlayerDataLoaded() is true and the join flow
+            // proceeds immediately with defaults instead of polling ~11s for a load that won't come.
+            dataMap.put(uuid, new RpPlayerData());
+            return;
+        }
         try {
             selectPlayerRpSettings.setString(1, uuid.toString());
-            ResultSet result = selectPlayerRpSettings.executeQuery();
-            if(result.next()) {
-                try {
+            try (ResultSet result = selectPlayerRpSettings.executeQuery()) {
+                if(result.next()) {
                     RpPlayerData data = new RpPlayerData();
                     data.setAutoRp(result.getBoolean("auto"));
                     data.setCurrentRpUrl(result.getString("currentURL"));
@@ -180,19 +201,14 @@ public class RpDatabaseConnector {
                     data.setResolution(result.getInt("resolution"));
                     data.setClient(result.getString("client"));
                     if(data.getClient()==null) data.setClient("vanilla");
-                    result.close();
                     dataMap.put(uuid,data);
-                } catch (SQLException ex) {
-                    Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
-                    dataMap.put(uuid,null);
                 }
             }
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
-            dataMap.put(uuid,null);
+            Log.error("Failed to load RP settings for player " + uuid + " from database " + dbName, ex);
+            dataMap.put(uuid,new RpPlayerData()); // load-failed marker (default; ConcurrentHashMap forbids null)
             connected = false;
         }
-
     }
 
 
@@ -206,19 +222,22 @@ public class RpDatabaseConnector {
     }
 
     private synchronized void saveRpSettingsSync(Player player, RpPlayerData data) {
+        if(!connected || selectPlayerRpSettings==null) {
+            return; // no reachable DB: nothing to persist
+        }
         try {
             selectPlayerRpSettings.setString(1, player.getUniqueId().toString());
-            ResultSet result = selectPlayerRpSettings.executeQuery();
-            if(result.next()) {
-                result.close();
+            boolean exists;
+            try (ResultSet result = selectPlayerRpSettings.executeQuery()) {
+                exists = result.next();
+            }
+            if(exists) {
                 updateRpSettings(player, data);
             } else {
-                result.close();
                 insertRpSettings(player, data);
             }
-
         } catch (SQLException ex) {
-            Logger.getLogger(RpDatabaseConnector.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save RP settings for player " + player.getName() + " (" + player.getUniqueId() + ") to database " + dbName, ex);
             connected = false;
         }
     }

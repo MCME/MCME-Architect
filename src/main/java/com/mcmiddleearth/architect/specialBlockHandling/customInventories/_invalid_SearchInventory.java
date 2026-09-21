@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -73,17 +72,13 @@ public class _invalid_SearchInventory implements Listener {
     public void open(Player player) {
         int size = ITEM_SLOTS;
         Inventory inventory = Bukkit.createInventory(null, InventoryType.ANVIL);//, name);
-Logger.getGlobal().info("Inventory "+items.size());
         _invalid_SearchInventoryState state = new _invalid_SearchInventoryState(items, inventory, player);
         openInventories.put(inventory, state);
-Logger.getGlobal().info("Inventory 2c");
         state.update();
-Logger.getGlobal().info("Inventory 2d");
         //fillInventory(inventory, startCategory, 0);
-        
+
         player.openInventory(inventory);
         //player.openInventory(Bukkit.createInventory(player, InventoryType.CHEST));
-Logger.getGlobal().info("Inventory 2");
     }
     
     public void destroy() {
@@ -104,8 +99,6 @@ Logger.getGlobal().info("Inventory 2");
             
     @EventHandler(priority=EventPriority.HIGHEST, ignoreCancelled=true)
     void onInventoryClick(final InventoryClickEvent event) {
-Logger.getGlobal().info("click size "+event.getInventory().getSize());
-Logger.getGlobal().info("click slot "+event.getRawSlot());
         if (openInventories.containsKey(event.getInventory())) { //.getTitle.equals(name)) {
             if(event.getSlotType().equals(InventoryType.SlotType.OUTSIDE)
                     || event.getRawSlot() >= event.getInventory().getSize()+ ITEM_SLOTS) {//items.size()/9+1)*9 
@@ -134,15 +127,12 @@ Logger.getGlobal().info("click slot "+event.getRawSlot());
             if(event.getRawSlot()<event.getInventory().getSize()) {
                 return;
             }
-//Logger.getGlobal().info("click "+event.getRawSlot());
             if(state.isPageUpSlot(event.getRawSlot())) {
-//Logger.getGlobal().info("click at up");
                 state.pageUp();
                 state.update();
                 return;
             }
             if(state.isPageDownSlot(event.getRawSlot())) {
-//Logger.getGlobal().info("click at down");
                 state.pageDown();
                 state.update();
                 return;
@@ -192,10 +182,8 @@ Logger.getGlobal().info("click slot "+event.getRawSlot());
     
     @EventHandler(priority=EventPriority.HIGHEST, ignoreCancelled=true)
     void onClose(final InventoryCloseEvent event) {
-Logger.getGlobal().info("Close");
         if(openInventories.containsKey(event.getInventory())) {
             _invalid_SearchInventoryState state = openInventories.get(event.getInventory());
-Logger.getGlobal().info("Close2");
             state.restorePlayerInventory();
             openInventories.remove(event.getInventory());
         }

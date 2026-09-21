@@ -16,7 +16,6 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.listener;
 
-import java.util.logging.Logger;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;

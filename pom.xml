@@ -4,21 +4,74 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mcmiddleearth</groupId>
     <artifactId>MCME-Architect</artifactId>
-    <version>2.10.6</version>
+    <version>3.0.0</version>
     <packaging>jar</packaging>
     <properties>
+        <!-- Build kind for the jar name: RELEASE | SNAPSHOT | DEV. Override with -Dbuild.type=DEV. -->
+        <build.type>DEV</build.type>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
     </properties>
+    <distributionManagement>
+        <repository>
+            <id>mcme</id>
+            <url>https://repo.mcmiddleearth.com/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>mcme</id>
+            <url>https://repo.mcmiddleearth.com/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <build>
+        <!-- MCME jar naming: {PluginName}-{A.B.C}-{SNAPSHOT|DEV|RELEASE}-{commit id}.
+             Three different trees called themselves MCME-Architect 2.10.6 - master, this branch
+             before the RpPlayerStatus restore, and after it - so the version string alone could
+             not identify a jar. Do NOT declare git.commit.id.abbrev as a property: Maven
+             interpolates finalName during model building, before the plugin runs, and a declared
+             value would win. -->
+        <finalName>${project.artifactId}-${project.version}-${build.type}-${git.commit.id.abbrev}</finalName>
         <plugins>
+            <plugin>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
+                <version>9.0.1</version>
+                <executions>
+                    <execution>
+                        <id>resolve-git-commit</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <abbrevLength>7</abbrevLength>
+                    <generateGitPropertiesFile>false</generateGitPropertiesFile>
+                    <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <includeOnlyProperties>
+                        <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
+                    </includeOnlyProperties>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.0</version>
                 <configuration>
-                    <release>21</release>
+                    <release>25</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <!-- Fresh JVM per test class: Architect caches data-folder paths in static
+                         fields at class-load, so test classes must not share a fork (a prior
+                         class's plugin load would leave a stale path for the next). -->
+                    <reuseForks>false</reuseForks>
                 </configuration>
             </plugin>
         </plugins>
@@ -37,6 +90,10 @@
     </build>
     <repositories>
         <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+        <repository>
             <id>mojang</id>
             <url>https://libraries.minecraft.net/</url>
         </repository>
@@ -52,28 +109,70 @@
             <id>viaversion-repo</id>
             <url>https://repo.viaversion.com</url>
         </repository>
+        <repository>
+            <id>dynmap-repo</id>
+            <url>https://repo.mikeprimm.com/</url>
+        </repository>
+        <!-- MCME's own Reposilite, matching MCME-Connect. Serves com.mcmiddleearth artifacts
+             (PluginUtils, mcme-base, tbnbt) under MCME's groupId. -->
+        <repository>
+            <id>mcme-releases</id>
+            <url>https://repo.mcmiddleearth.com/releases</url>
+        </repository>
+        <repository>
+            <id>mcme-snapshots</id>
+            <url>https://repo.mcmiddleearth.com/snapshots</url>
+        </repository>
+        <repository>
+            <id>mcme-mirror</id>
+            <url>https://repo.mcmiddleearth.com/mirror</url>
+        </repository>
     </repositories>
     <dependencies>
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.21.4-R0.1-SNAPSHOT</version>
+            <version>26.1.2.build.72-stable</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Compiled against the stable 5.x API; scope=provided (server supplies the jar).
+             The SERVER must run a ProtocolLib dev build (5.5.0+) for Minecraft 26.x support:
+             https://github.com/dmulloy2/ProtocolLib/releases/tag/dev-build -->
         <dependency>
             <groupId>com.comphenix.protocol</groupId>
             <artifactId>ProtocolLib</artifactId>
-            <version>4.8.0</version>
+            <version>5.3.0</version>
+            <scope>provided</scope>
+            <exclusions>
+                <!-- API-only for compilation; the server supplies the full shaded jar at runtime.
+                     Excluding transitives avoids ProtocolLib's byte-buddy 1.15.1 clashing with the
+                     newer byte-buddy MockBukkit needs for Java-25 proxying. -->
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
+            <!-- 2.0.2 is the first PluginUtils built against the 26.2 dev bundle, and is what
+                 the servers actually run. Resolved from repo.mcmiddleearth.com under MCME's own
+                 groupId rather than JitPack's com.github.MCME, so there is exactly one
+                 coordinate for this library and Maven's normal version conflict resolution
+                 applies to it (MCME-Connect still pulls an older com.mcmiddleearth:PluginUtils
+                 transitively; as a direct dependency this one wins on nearest-first). -->
             <groupId>com.mcmiddleearth</groupId>
             <artifactId>PluginUtils</artifactId>
-            <version>1.9.2</version>
+            <version>2.0.2</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.mcmiddleearth</groupId>
+            <!-- Only one class is used: com.mcmiddleearth.connect.events.PlayerConnectEvent,
+                 in RpListener. 3.0.0 is the released 26.2 build, resolved from
+                 repo.mcmiddleearth.com rather than the old 2.0.1-SNAPSHOT, which existed only
+                 in a local ~/.m2 and predates the 26.2 port. -->
             <artifactId>MCME-Connect</artifactId>
-            <version>1.4.5</version>
+            <version>3.0.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -107,6 +206,30 @@
             <artifactId>viaversion-api</artifactId>
             <version>[5.0.0,6.0.0)</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>us.dynmap</groupId>
+            <artifactId>dynmap-api</artifactId>
+            <version>3.5</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockbukkit.mockbukkit</groupId>
+            <artifactId>mockbukkit-v26.1.2</artifactId>
+            <version>4.114.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>6.1.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>6.1.0</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <name>MCME-Architect</name>

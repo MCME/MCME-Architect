@@ -6,6 +6,7 @@
 package com.mcmiddleearth.architect.blockData;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.blockData.attributes.*;
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import com.mcmiddleearth.util.DevUtil;
@@ -27,8 +28,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -358,9 +357,8 @@ public class BlockDataManager {
                             && MaterialComparator.isSimilar(mat, sortedMaterials.get(matCounter+1))
                             && isSingleState(sortedMaterials.get(matCounter+1)));
                     stateCounter += newStates;
-                    Logger.getGlobal().log(Level.INFO, 
-                                       "Material: {0} placing {1} blockstates, total blockstates: {2}", 
-                                       new Object[]{mat.name(), newStates, stateCounter});
+                    Log.info("Material: " + mat.name() + " placing " + newStates
+                            + " blockstates, total blockstates: " + stateCounter);
                     x = startX;
                     rowStarted = false;
                     placeBlockStates(cachedStatesTree,writer,true);
@@ -375,9 +373,9 @@ public class BlockDataManager {
                             if(writer!=null)
                                 writer.close();
                         } catch (IOException ex) {
-                            Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.SEVERE, null, ex);
+                            Log.error("Failed to close blockList.txt output writer", ex);
                         }
-                        Logger.getGlobal().log(Level.INFO,"Placed {0} blockstates in total.",stateCounter);
+                        Log.info("Placed " + stateCounter + " blockstates in total.");
                     }
                 }
                 
@@ -412,7 +410,7 @@ public class BlockDataManager {
                                     }
                                     writer.newLine();
                                 } catch (IOException ex) {
-                                    Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.SEVERE, null, ex);
+                                    Log.error("Failed to write blockstate line '" + lines.get(0) + "' to blockList.txt (material index " + matCounter + ")", ex);
                                 }
                             }
                         }
@@ -454,7 +452,7 @@ public class BlockDataManager {
                 }
             }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 1, 1);
         } catch (IOException ex) {
-            Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to open blockList.txt for placeAllBlocksStates output", ex);
         }
     }
     

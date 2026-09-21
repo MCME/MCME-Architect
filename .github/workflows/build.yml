@@ -1,0 +1,76 @@
+name: build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  # Publishing is a deliberate act, so it is reachable from the Actions tab
+  # ("Run workflow") rather than riding along with every push.
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The jar name carries the commit id, resolved by git-commit-id-maven-plugin,
+          # so the build needs real git history rather than a shallow clone.
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # paper-api 26.1.2 is Java 25 bytecode, and the pom compiles with release 25.
+          java-version: '25'
+          cache: maven
+          # Writes a settings.xml <server id="mcme"> whose credentials are read from these
+          # env var names at deploy time; matches <distributionManagement> in the pom.
+          server-id: mcme
+          server-username: MCME_MAVEN_NAME
+          server-password: MCME_MAVEN_SECRET
+
+      - name: Build and test
+        run: mvn -B -ntp clean verify
+
+      - name: Read version from the pom
+        id: version
+        run: |
+          echo "version=$(mvn -q -ntp org.apache.maven.plugins:maven-help-plugin:3.5.2:evaluate -Dexpression=project.version -DforceStdout)" >> "$GITHUB_OUTPUT"
+          # Resolve the built jar by glob rather than rebuilding its name: finalName carries the
+          # build type and commit id, so it is not simply artifactId-version.jar. This is the
+          # regression that broke MCME-Connect's CI when it gained a finalName.
+          jar=$(ls target/MCME-Architect-*.jar | head -n1)
+          echo "jar=$jar" >> "$GITHUB_OUTPUT"
+          echo "jarname=$(basename "$jar" .jar)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.jarname }}
+          path: ${{ steps.version.outputs.jar }}
+          if-no-files-found: error
+
+      - name: Check that the tag matches the pom version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          if [ "v${{ steps.version.outputs.version }}" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match pom version ${{ steps.version.outputs.version }}"
+            exit 1
+          fi
+
+      # Publishes com.mcmiddleearth:MCME-Architect to repo.mcmiddleearth.com - releases or
+      # snapshots is chosen by the pom version suffix. Deliberately NOT run on ordinary
+      # pushes: trigger it manually, or by pushing a v* tag.
+      - name: Deploy to repo.mcmiddleearth.com
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+        env:
+          MCME_MAVEN_NAME: ${{ secrets.MCME_MAVEN_NAME }}
+          MCME_MAVEN_SECRET: ${{ secrets.MCME_MAVEN_SECRET }}
+        run: mvn -B -ntp deploy -DskipTests -Dbuild.type=RELEASE

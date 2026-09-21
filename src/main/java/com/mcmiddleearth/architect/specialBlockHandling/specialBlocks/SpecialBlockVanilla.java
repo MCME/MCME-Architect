@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import org.bukkit.Bukkit;
@@ -27,8 +28,6 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-
-import java.util.logging.Logger;
 
 /**
  *
@@ -58,11 +57,8 @@ public class SpecialBlockVanilla extends SpecialBlock {
             config.set("dataValue",null);
         }
         // end convert old data
-//Logger.getGlobal().info("\n"+id);
         String name = config.getString("itemMaterial","AIR");
-//Logger.getGlobal().info(name);
         BlockData data = matchBlockData(name);
-//Logger.getGlobal().info(data.getAsString());
         return new SpecialBlockVanilla(id, data);
     }
 
@@ -74,11 +70,10 @@ public class SpecialBlockVanilla extends SpecialBlock {
         if(material == null) {
             material = Material.AIR;
         }
-//Logger.getGlobal().info(material.name());
         try {
             return material.createBlockData();
         } catch(NullPointerException | IllegalArgumentException ex){
-            Logger.getGlobal().warning("SpecialBlockVanilla.matchBlockData "+ex.getMessage());
+            Log.warn("Failed to create block data for vanilla material '" + itemMaterial + "': " + ex.getMessage());
             return Material.AIR.createBlockData();
         }
     }

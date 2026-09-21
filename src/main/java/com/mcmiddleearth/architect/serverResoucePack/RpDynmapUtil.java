@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.mcmiddleearth.util.DevUtil;
 import com.sk89q.worldedit.math.BlockVector2;
@@ -24,8 +25,6 @@ import com.sk89q.worldedit.math.BlockVector3;
 //import com.sk89q.worldedit.BlockVector2D;
 import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.regions.Region;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.configuration.ConfigurationSection;
@@ -42,6 +41,7 @@ import org.dynmap.markers.MarkerSet;
 public class RpDynmapUtil {
     
     private static boolean init = false;
+    private static boolean initAttempted = false;
     private static final boolean enabled = getDynmapConfig().getBoolean("enabled",false);
     
     private static DynmapAPI dynmapPlugin;
@@ -54,14 +54,22 @@ public class RpDynmapUtil {
     private static double areaOpacity;
 
     private static void init() {
-        if(!enabled) {
+        if(!enabled || initAttempted) {
             return;
         }
-        Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
-        if(dynmap==null) {
-            Logger.getGlobal().info("Dynmap not found");
+        // One attempt per server start. Without this every createMarker()/clearMarkers()
+        // call re-enters init(), because `init` stays false when setup fails - re-running
+        // the lookup and re-logging the same failure for the life of the server.
+        initAttempted = true;
+        // isPluginEnabled(), not getPlugin()!=null. Dynmap has no 26.x build, so it is
+        // present on disk, gets loaded, fails to enable, and is left with a null internal
+        // core. Its class still implements DynmapAPI, so the cast below succeeds and the
+        // first marker call NPEs inside Dynmap.
+        if(!Bukkit.getServer().getPluginManager().isPluginEnabled("dynmap")) {
+            Log.warn("Dynmap RP region markers are enabled in config but the Dynmap plugin is not enabled; skipping marker setup.");
         }
         else {
+            Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
             try{
                 dynmapPlugin = (DynmapAPI) dynmap;
                 markerSet = dynmapPlugin.getMarkerAPI().createMarkerSet("rpregions.markerset", "RpRegions", null, false);
@@ -73,8 +81,8 @@ public class RpDynmapUtil {
                 areaOpacity = getDynmapConfig().getDouble("areaOpacity",0.25);
                 ArchitectPlugin.getPluginInstance().saveConfig();
                 init = true;
-            } catch(Exception e) {
-                Logger.getLogger(RpDynmapUtil.class.getName()).log(Level.WARNING, "Dynmap plugin not compatible",e);
+            } catch(Throwable e) {  // Throwable: an incompatible Dynmap surfaces as Error, not Exception
+                Log.error("Failed to initialize Dynmap RP region markers; installed Dynmap version may be incompatible with this Architect build", e);
             }
         }
     }

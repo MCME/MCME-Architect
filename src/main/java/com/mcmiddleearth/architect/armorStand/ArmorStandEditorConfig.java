@@ -2,10 +2,12 @@
 package com.mcmiddleearth.architect.armorStand;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.armorStand.guard.ArmorStandGuard;
 import com.mcmiddleearth.pluginutil.FileUtil;
+import com.mcmiddleearth.util.PathSafety;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -88,7 +90,24 @@ public class ArmorStandEditorConfig {
         return hasCopiedArmorStand;
     }
     
+    /**
+     * @return true if {@code filename} is safe to use inside the armor-stand directory; false
+     *         (logged) if it would escape via directory traversal.
+     */
+    private static boolean isSafeArmorName(String filename, String operation) {
+        try {
+            PathSafety.resolveInside(dataDir, filename);
+            return true;
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe armor-stand name '" + filename + "' for " + operation + ": " + ex.getMessage());
+            return false;
+        }
+    }
+
     public boolean isCreator(String filename, UUID creator) {
+        if(!isSafeArmorName(filename, "isCreator")) {
+            return false;
+        }
         File file = new File(dataDir,filename+"."+fileExtension);
         if(file.exists()) {
             try {
@@ -105,6 +124,9 @@ public class ArmorStandEditorConfig {
     }
     
     public boolean saveArmorStand(String filename, String description, UUID creator) throws IOException {
+        if(!isSafeArmorName(filename, "save")) {
+            return false;
+        }
         YamlConfiguration data = new YamlConfiguration();
         data.set("creator", creator.toString());
         data.set("description", description);
@@ -120,6 +142,9 @@ public class ArmorStandEditorConfig {
     }
     
     public boolean loadArmorStand(String filename) throws IOException, InvalidConfigurationException {
+        if(!isSafeArmorName(filename, "load")) {
+            return false;
+        }
         File file = new File(dataDir,filename+"."+fileExtension);
         if(file.exists()) {
             YamlConfiguration data = new YamlConfiguration();
@@ -141,6 +166,9 @@ public class ArmorStandEditorConfig {
             dir = dataDir;
         }
         else {
+            if(!isSafeArmorName(folder, "list")) {
+                return new File[0];
+            }
             dir = new File(dataDir,folder);
         }
         List<File> list = new ArrayList<File>();
@@ -160,6 +188,9 @@ public class ArmorStandEditorConfig {
     }
     
     public boolean existsFile(String filename) {
+        if(!isSafeArmorName(filename, "exists")) {
+            return false;
+        }
         File file = new File(dataDir, filename+".yml");
         if(file.exists()) {
             return true;
@@ -170,6 +201,9 @@ public class ArmorStandEditorConfig {
     }
     
     public boolean deleteFile(String filename) {
+        if(!isSafeArmorName(filename, "delete")) {
+            return false;
+        }
         boolean result = false;
         File file = new File(dataDir, filename+".yml");
         if(file.exists()) {
@@ -192,6 +226,9 @@ public class ArmorStandEditorConfig {
     }
     
     public boolean renameFile(String filename, String newName) {
+        if(!isSafeArmorName(filename, "rename") || !isSafeArmorName(newName, "rename")) {
+            return false;
+        }
         boolean result = false;
         File file = new File(dataDir, filename+".yml");
         File newFile = new File(dataDir, newName+".yml");

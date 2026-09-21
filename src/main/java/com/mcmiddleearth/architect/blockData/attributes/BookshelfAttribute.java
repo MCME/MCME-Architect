@@ -5,6 +5,7 @@
  */
 package com.mcmiddleearth.architect.blockData.attributes;
 
+import com.mcmiddleearth.architect.Log;
 import org.bukkit.block.data.type.BrewingStand;
 import org.bukkit.block.data.type.ChiseledBookshelf;
 import org.bukkit.configuration.ConfigurationSection;
@@ -12,8 +13,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -75,9 +74,9 @@ public class BookshelfAttribute extends Attribute {
             Method getAllowed = clazz.getDeclaredMethod("getOccupiedSlots");
             Set<Integer> allowed = (Set<Integer>) getAllowed.invoke(blockData);
             return allowed;
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                 | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(BookshelfAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to reflectively invoke getOccupiedSlots() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
         }
         return null;
     }

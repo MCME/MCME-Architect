@@ -29,8 +29,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import java.util.logging.Logger;
-
 /**
  *
  * @author Eriol_Eandur
@@ -112,7 +110,7 @@ public abstract class SpecialBlockOrientable extends SpecialBlock {
         BlockData[] data = new BlockData[orientations.length];
         //convert old data
         if(!containsAllBlockData(config, orientations)) {
-            Logger.getGlobal().info("Incomplete data! Trying conversion of 1.12 data.");
+            DevUtil.log("Incomplete orientable block data in config; trying conversion of legacy 1.12 data.");
             for(int i = 0; i<orientations.length; i++) {
                 Material blockMat =  Material.matchMaterial(config
                                              .getString("blockMaterial"+orientations[i].configKey,""));

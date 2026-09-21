@@ -24,7 +24,6 @@ package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 
 import java.util.*;
-import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;

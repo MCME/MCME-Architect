@@ -1,20 +1,15 @@
 package com.mcmiddleearth.architect.viewDistance;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLib;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.NumericUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -50,13 +45,7 @@ public class ViewDistanceManager {
     }
 
     private static void sendViewDistancePacket(Player player, int viewDistance) {
-        PacketContainer packet = new PacketContainer(PacketType.Play.Server.VIEW_DISTANCE);
-        packet.getIntegers().write(0, viewDistance);
-        try {
-            ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
+        ViewDistanceProtocol.sendViewDistance(player, viewDistance);
     }
 
     public static void saveViewDistances() {
@@ -65,11 +54,11 @@ public class ViewDistanceManager {
                 try {
                     fileWriter.write(uuid.toString()+" "+viewdistance+"\n");
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    Log.error("Failed to write view distance entry for player " + uuid + " to " + viewDistancesFile.getAbsolutePath(), e);
                 }
             });
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.error("Failed to save view distances file " + viewDistancesFile.getAbsolutePath(), e);
         }
     }
 
@@ -80,7 +69,7 @@ public class ViewDistanceManager {
                 viewDistances.put(UUID.fromString(line[0]), NumericUtil.getInt(line[1]));
             }
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            Log.warn("View distances file not found (expected on first run): " + viewDistancesFile.getAbsolutePath());
         }
     }
 

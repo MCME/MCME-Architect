@@ -5,10 +5,9 @@
  */
 package com.mcmiddleearth.architect.blockData.attributes;
 
+import com.mcmiddleearth.architect.Log;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -55,9 +54,9 @@ public class BooleanAttribute extends Attribute {
         try {
             Method getter = clazz.getDeclaredMethod(getMethod);
             return (boolean) getter.invoke(blockData);
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                 | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(BooleanAttribute.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to reflectively invoke " + getMethod + "() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
         }
         return false;
     }
@@ -80,9 +79,9 @@ public class BooleanAttribute extends Attribute {
             try {
                 Method setter = clazz.getDeclaredMethod("set"+name,boolean.class);
                 setter.invoke(blockData,newValue);
-            } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                     | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(BooleanAttribute.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to reflectively invoke set" + name + "() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
             }
         }
     }

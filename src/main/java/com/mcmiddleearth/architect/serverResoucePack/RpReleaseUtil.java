@@ -1,7 +1,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
-import com.mcmiddleearth.connect.log.Log;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.util.StreamGobbler;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -12,15 +12,16 @@ import java.io.IOException;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.logging.Logger;
 
 public class RpReleaseUtil {
 
     public static void releaseResourcePack(String rpName, String version, String title, BiConsumer<Boolean,Integer> callback ) {
         String finalRpName = RpManager.matchRpName(rpName);//.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase();
         Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
+            boolean exit = false;
+            int exitCode = -1;
+            ExecutorService executorService = null;
             try {
-                Process process;
                 boolean isWindows = System.getProperty("os.name")
                         .toLowerCase().startsWith("windows");
                 String gitHubOwner = getGitHubOwner(finalRpName);
@@ -28,28 +29,36 @@ public class RpReleaseUtil {
                 String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
                 String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
                 if (isWindows || gitHubOwner==null || gitHubRepo==null || releaseScript==null || scriptPath==null) {
-                    callback.accept(true, -1);
+                    runOnMain(callback, true, -1);
                     return;
-                } else {
-                    process = Runtime.getRuntime()
-                            .exec(new String[]{"sh", releaseScript, finalRpName, gitHubOwner, gitHubRepo, version, title}, null,
-                                    new File(scriptPath));
                 }
+                Process process = Runtime.getRuntime()
+                        .exec(new String[]{"sh", releaseScript, finalRpName, gitHubOwner, gitHubRepo, version, title}, null,
+                                new File(scriptPath));
                 StreamGobbler streamGobbler =
                         new StreamGobbler(process.getInputStream(), process.getErrorStream(),
-                                line -> Logger.getGlobal().info(line));
-                ExecutorService executorService = Executors.newSingleThreadExecutor();
+                                line -> Log.info("[RP release " + finalRpName + "] " + line));
+                executorService = Executors.newSingleThreadExecutor();
                 Future<?> future = executorService.submit(streamGobbler);
-                boolean exit = process.waitFor(5, TimeUnit.MINUTES);
+                exit = process.waitFor(5, TimeUnit.MINUTES);
                 future.get(5, TimeUnit.MINUTES);
                 process.destroy();
-                int exitCode = process.waitFor();
-                callback.accept(exit, exitCode);
+                exitCode = process.waitFor();
+                runOnMain(callback, exit, exitCode);
             } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
-                e.printStackTrace();
-                callback.accept(false, -1);
+                Log.error("Failed to run RP release script for '" + finalRpName + "' version " + version, e);
+                runOnMain(callback, false, -1);
+            } finally {
+                if (executorService != null) {
+                    executorService.shutdownNow();
+                }
             }
         });
+    }
+
+    // Deliver the release result on the main thread (the callback messages the command sender).
+    private static void runOnMain(BiConsumer<Boolean, Integer> callback, boolean exit, int exitCode) {
+        Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> callback.accept(exit, exitCode));
     }
 
     public static void setServerResourcePack(CommandSender cs, String rpName, String version, String requiredMcVersion,
@@ -81,8 +90,6 @@ public class RpReleaseUtil {
     }
 
     private static void updateSection(ConfigurationSection rpConfig, String path, String requiredMcVersion, String url) {
-Logger.getGlobal().info("Key search: "+path);
-rpConfig.getKeys(true).forEach(key -> Logger.getGlobal().info(key));
         ConfigurationSection section = rpConfig.getConfigurationSection(path);
         if(section.contains("url")) {
             section.set("url", null);

@@ -5,10 +5,9 @@
  */
 package com.mcmiddleearth.architect.blockData.attributes;
 
+import com.mcmiddleearth.architect.Log;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -44,9 +43,9 @@ public class InWallAttribute extends BooleanAttribute {
             try {
                 Method setter = clazz.getDeclaredMethod("setInWall",boolean.class);
                 setter.invoke(blockData,newValue);
-            } catch (NoSuchMethodException | SecurityException | IllegalAccessException 
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException
                     | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(InWallAttribute.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to reflectively invoke setInWall() on " + clazz.getSimpleName() + " for attribute '" + name + "'", ex);
             }
         }
     }

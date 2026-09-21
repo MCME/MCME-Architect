@@ -16,10 +16,12 @@
  */
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
+import com.mcmiddleearth.architect.util.WorldEditGuard;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
@@ -29,8 +31,6 @@ import com.sk89q.worldedit.regions.Region;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.block.data.BlockData;
@@ -80,6 +80,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                 }
                 if(args[1].equalsIgnoreCase("redstone")
                         || args[1].equalsIgnoreCase("water")) {
+                    if (!WorldEditGuard.require(cs)) return true;
                     Region region= null;
                     //try {
                         //1.13 removed region = WorldEdit.getInstance().getSession(p.getName()).getRegion();
@@ -95,7 +96,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                             try {
                                 NoPhysicsData.save();
                             } catch (IOException ex) {
-                                Logger.getLogger(NoPhysicsCommand.class.getName()).log(Level.SEVERE, null, ex);
+                                Log.error("Failed to save no-physics exception area '" + args[2] + "' set by " + p.getName(), ex);
                                 PluginData.getMessageUtil().sendIOError(p);
                                 return true;
                             }
@@ -116,7 +117,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                         try {
                             NoPhysicsData.save();
                         } catch (IOException ex) {
-                            Logger.getLogger(NoPhysicsCommand.class.getName()).log(Level.SEVERE, null, ex);
+                            Log.error("Failed to save after deleting no-physics exception area '" + args[2] + "' by " + p.getName(), ex);
                             PluginData.getMessageUtil().sendIOError(p);
                             return true;
                         }
