@@ -130,7 +130,7 @@
                  repo.mcmiddleearth.com rather than the old 2.0.1-SNAPSHOT, which existed only
                  in a local ~/.m2 and predates the 26.2 port. -->
             <artifactId>MCME-Connect</artifactId>
-            <version>3.0.0</version>
+            <version>3.0.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
