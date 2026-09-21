@@ -7,12 +7,54 @@
     <version>2.10.6</version>
     <packaging>jar</packaging>
     <properties>
+        <!-- Build kind for the jar name: RELEASE | SNAPSHOT | DEV. Override with -Dbuild.type=DEV. -->
+        <build.type>DEV</build.type>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
     </properties>
+    <distributionManagement>
+        <repository>
+            <id>mcme</id>
+            <url>https://repo.mcmiddleearth.com/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>mcme</id>
+            <url>https://repo.mcmiddleearth.com/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <build>
+        <!-- MCME jar naming: {PluginName}-{A.B.C}-{SNAPSHOT|DEV|RELEASE}-{commit id}.
+             Three different trees have called themselves MCME-Architect 2.10.6 - master, this
+             branch before the RpPlayerStatus restore, and after it - so the version string alone
+             cannot identify a jar. Do NOT declare git.commit.id.abbrev as a property: Maven
+             interpolates finalName during model building, before the plugin runs, and a declared
+             value would win. -->
+        <finalName>${project.artifactId}-${project.version}-${build.type}-${git.commit.id.abbrev}</finalName>
         <plugins>
+            <plugin>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
+                <version>9.0.1</version>
+                <executions>
+                    <execution>
+                        <id>resolve-git-commit</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <abbrevLength>7</abbrevLength>
+                    <generateGitPropertiesFile>false</generateGitPropertiesFile>
+                    <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <includeOnlyProperties>
+                        <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
+                    </includeOnlyProperties>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
