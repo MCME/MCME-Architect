@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mcmiddleearth</groupId>
     <artifactId>MCME-Architect</artifactId>
-    <version>2.10.6</version>
+    <version>3.0.0</version>
     <packaging>jar</packaging>
     <properties>
         <!-- Build kind for the jar name: RELEASE | SNAPSHOT | DEV. Override with -Dbuild.type=DEV. -->
@@ -26,9 +26,9 @@
 
     <build>
         <!-- MCME jar naming: {PluginName}-{A.B.C}-{SNAPSHOT|DEV|RELEASE}-{commit id}.
-             Three different trees have called themselves MCME-Architect 2.10.6 - master, this
-             branch before the RpPlayerStatus restore, and after it - so the version string alone
-             cannot identify a jar. Do NOT declare git.commit.id.abbrev as a property: Maven
+             Three different trees called themselves MCME-Architect 2.10.6 - master, this branch
+             before the RpPlayerStatus restore, and after it - so the version string alone could
+             not identify a jar. Do NOT declare git.commit.id.abbrev as a property: Maven
              interpolates finalName during model building, before the plugin runs, and a declared
              value would win. -->
         <finalName>${project.artifactId}-${project.version}-${build.type}-${git.commit.id.abbrev}</finalName>
