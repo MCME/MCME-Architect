@@ -359,6 +359,11 @@ public class RpManager {
         if(url!=null && data!=null && !url.equals("") && (force || !url.equals(data.getCurrentRpUrl()))) {
             data.setCurrentRpUrl(url);
             player.setResourcePack(url, getSHA(rpName, player));
+            // Remember what the player's pack state was before this send, then mark the pack as
+            // offered. Bukkit reports nothing until the client replies, so without this the
+            // window between sending and the reply is indistinguishable from a refusal.
+            data.setLastRpStatus(data.getCurrentRpStatus());
+            data.setCurrentRpStatus(RpPlayerStatus.SENT);
             savePlayerData(player);
             return true;
         }
