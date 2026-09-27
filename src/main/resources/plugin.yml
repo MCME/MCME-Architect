@@ -124,7 +124,7 @@ permissions:
             architect.inventory.edit: true
             architect.get.other: true
             architect.weather: true
-            archtiect.resourcePackAdmin: true
+            architect.resourcePackAdmin: true
             architect.itemBlock: true
             architect.itemBlock.remove: true
             architect.itemBlock.region.limit: true
@@ -412,4 +412,10 @@ permissions:
       default: op
     architect.viewdistance:
         descriptions: Allows to change client view distance
+        default: op
+    architect.weselect:
+        description: Allows to use command /weselect
+        default: op
+    architect.switchstick:
+        description: Allows to use command /switchstick
         default: op
