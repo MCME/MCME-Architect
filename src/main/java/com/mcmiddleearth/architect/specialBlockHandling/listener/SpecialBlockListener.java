@@ -288,7 +288,9 @@ public class SpecialBlockListener extends WatchedListener{
             String rp = RpManager.getCurrentRpName(event.getPlayer());
             if(rp.equalsIgnoreCase("")) {
                 RpRegion rpRegion = RpManager.getRegion(event.getBlock().getLocation());
-                rp = rpRegion.getRp();
+                if(rpRegion!=null) {
+                    rp = rpRegion.getRp();
+                }
             }
             if(rp!=null && !rp.equals("")) {
                 BlockData data = PluginData.getOrCreateWorldConfig(event.getBlock().getWorld().getName())
