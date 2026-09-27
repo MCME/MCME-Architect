@@ -247,11 +247,11 @@ public class ArchitectCommand extends AbstractArchitectCommand{
         }
         if(args[0].equalsIgnoreCase("eLog")) {
             if(args.length>1 && args[1].equalsIgnoreCase("true")) {
-                EntityLogger.setLogging(true,((Player)sender).getWorld());
-                PluginData.getMessageUtil().sendInfoMessage(sender, "Entity logging on!");
+                PluginData.getMessageUtil().sendInfoMessage(sender, EntityLogger.start()
+                        ? "Entity logging on!" : "Entity logging is already on.");
             } else {
-                EntityLogger.setLogging(false,((Player)sender).getWorld());
-                PluginData.getMessageUtil().sendInfoMessage(sender, "Entity logging off!");
+                PluginData.getMessageUtil().sendInfoMessage(sender, EntityLogger.stop()
+                        ? "Entity logging off!" : "Entity logging is already off.");
             }
             return true;
         }
