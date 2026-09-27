@@ -18,6 +18,7 @@ import com.mcmiddleearth.architect.copyPaste.*;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadListener;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import com.mcmiddleearth.architect.customHeadManager.HeadCommand;
+import com.mcmiddleearth.architect.entityLogging.EntityLogger;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsCommand;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsData;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
@@ -167,6 +168,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
+        EntityLogger.stop();
         LogFileManager.uninstall(this);
     }
     
