@@ -100,9 +100,7 @@ public class ItemBlockManager {
             limit = region.getLimit();
         }
         return limit> Arrays.asList(block.getChunk().getEntities())
-                                 .stream().filter(entity -> entity instanceof ArmorStand
-                                                          || entity instanceof Painting
-                                                          || entity instanceof ItemFrame).count();
+                                 .stream().filter(ItemBlockCount::countsTowardLimit).count();
     }
     
     public static int getLimit(Block block) {
