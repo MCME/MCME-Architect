@@ -139,6 +139,19 @@ class ItemBlockBudgetTest {
     }
 
     @Test
+    void aRefreshCountsLoadedChunksNoEventAnnounced() {
+        Chunk chunk = world.getChunkAt(5, 5);
+        spawn(chunk, ArmorStand.class);
+        spawn(chunk, ItemFrame.class);
+
+        budget.recountLoaded();
+
+        assertEquals(2, budget.counts().get(key(chunk)).total());
+        server.getScheduler().performTicks(20);
+        assertEquals(1, changes.get(), "and the map hears of it");
+    }
+
+    @Test
     void aChunkLeftWithNothingThatCountsIsForgotten() {
         Chunk chunk = world.getChunkAt(0, 0);
         load(chunk, spawn(chunk, ArmorStand.class));

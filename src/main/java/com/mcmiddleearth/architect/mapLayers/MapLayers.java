@@ -106,6 +106,28 @@ public final class MapLayers {
         }
     }
 
+    /**
+     * For {@code /architect maplayers refresh}: every layer gathers its own data again, and everything is drawn again
+     * on a map looked up afresh, with nothing cached. That also restores markers edited by hand, and tries a map that
+     * failed once more.
+     */
+    public static void refreshAll() {
+        if (active == null) {
+            return;
+        }
+        for (MapLayer layer : active.layers.values()) {
+            try {
+                layer.refresh();
+            } catch (RuntimeException | LinkageError e) {
+                active.plugin.getLogger().log(Level.WARNING, "Map layer " + layer.markerSetId()
+                        + " could not refresh", e);
+            }
+        }
+        active.backend = null;
+        active.failed = null;
+        changedAll();
+    }
+
     private void mark(Collection<String> ids) {
         changed.addAll(ids);
         if (redraw == null) {

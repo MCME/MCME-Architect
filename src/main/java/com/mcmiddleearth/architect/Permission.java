@@ -102,7 +102,9 @@ public enum Permission {
 
     VIEW_DISTANCE         ("architect.viewdistance"),
     
-    CHECK_NBT  ("architect.checknbt");
+    CHECK_NBT  ("architect.checknbt"),
+
+    MAP_LAYERS            ("architect.maplayers");
 
     private final String permissionNode;
 

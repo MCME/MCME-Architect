@@ -21,6 +21,7 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
@@ -151,6 +152,20 @@ public class ArchitectCommand extends AbstractArchitectCommand{
                 return true;
             }
             PluginData.getMessageUtil().sendInvalidSubcommandError(sender);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("maplayers")) {
+            if (!(sender instanceof ConsoleCommandSender || PluginData.hasPermission(sender, Permission.MAP_LAYERS))) {
+                PluginData.getMessageUtil().sendNoPermissionError(sender);
+                return true;
+            }
+            if (args.length < 2 || !args[1].equalsIgnoreCase("refresh")) {
+                PluginData.getMessageUtil().sendErrorMessage(sender, "Usage: /architect maplayers refresh");
+                return true;
+            }
+            MapLayers.refreshAll();
+            PluginData.getMessageUtil().sendInfoMessage(sender,
+                    "Architect's map layers are drawn again, and loaded chunks recounted.");
             return true;
         }
         if(!(sender instanceof ConsoleCommandSender 
@@ -339,7 +354,7 @@ public class ArchitectCommand extends AbstractArchitectCommand{
 
     @Override
     public String getUsageDescription() {
-        return " help | world | dev | version | reload [#page]: Argument 'help' shows information about Architect commands. 'world' shows a list of all server worlds. 'dev' switches on/off debug messages. 'version' displays Architect version. 'reload' reloads Architect plugin.";
+        return " help | world | dev | version | reload | maplayers refresh [#page]: Argument 'help' shows information about Architect commands. 'world' shows a list of all server worlds. 'dev' switches on/off debug messages. 'version' displays Architect version. 'reload' reloads Architect plugin. 'maplayers refresh' redraws Architect's web-map layers.";
     }
 
 }

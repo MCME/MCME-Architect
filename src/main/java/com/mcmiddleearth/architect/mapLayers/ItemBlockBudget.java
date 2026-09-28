@@ -162,6 +162,15 @@ final class ItemBlockBudget implements Listener {
         }
     }
 
+    /** Counts every loaded chunk now, for when the map seems off. */
+    void recountLoaded() {
+        for (World world : plugin.getServer().getWorlds()) {
+            for (Chunk chunk : world.getLoadedChunks()) {
+                count(chunk, Arrays.asList(chunk.getEntities()));
+            }
+        }
+    }
+
     private void count(Chunk chunk, List<Entity> entities) {
         int[] kinds = new int[ItemBlockCount.values().length];
         for (Entity entity : entities) {

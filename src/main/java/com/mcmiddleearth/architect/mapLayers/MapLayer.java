@@ -25,4 +25,8 @@ public interface MapLayer {
     /** Called when map layers stop, on disable or reload. */
     default void stop() {
     }
+
+    /** For {@code /architect maplayers refresh}: gather the layer's own data again. */
+    default void refresh() {
+    }
 }

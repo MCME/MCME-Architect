@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.mapLayers;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.entityLogging.FakeDynmap;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsData;
 import com.mcmiddleearth.architect.noPhysicsEditor.WaterFlowArea;
@@ -215,6 +216,32 @@ class MapLayersWiringTest {
 
     @Test
     @Order(8)
+    void theRefreshCommandCountsWhatNoEventAnnounced() {
+        org.bukkit.World world = server.getWorld("world");
+        world.getChunkAt(6, 6);
+        for (int i = 0; i < 5; i++) {
+            world.spawn(new org.bukkit.Location(world, 104, 64, 104), org.bukkit.entity.ArmorStand.class);
+        }
+        MarkerSet budget = set(ItemBlockBudgetLayer.ID);
+        server.getScheduler().performTicks(41);
+        assertNull(budget.findAreaMarker("budget.world.6.6"), "no event told the budget of these");
+
+        PlayerMock builder = server.addPlayer();
+        builder.performCommand("architect maplayers refresh");
+        server.getScheduler().performOneTick();
+        assertNull(budget.findAreaMarker("budget.world.6.6"), "a builder may not refresh");
+
+        PlayerMock mapper = server.addPlayer();
+        mapper.addAttachment(plugin, Permission.MAP_LAYERS.getPermissionNode(), true);
+        mapper.performCommand("architect maplayers refresh");
+        server.getScheduler().performOneTick();
+        org.dynmap.markers.AreaMarker tile = budget.findAreaMarker("budget.world.6.6");
+        assertNotNull(tile, "architect.maplayers alone is enough to refresh");
+        assertEquals(0xff0000, tile.getFillColor(), "5 of the base limit of 5: full");
+    }
+
+    @Test
+    @Order(9)
     void disablingArchitectTakesItsLayersOffTheMap() {
         server.getPluginManager().disablePlugin(plugin);
 

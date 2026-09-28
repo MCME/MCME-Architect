@@ -311,6 +311,19 @@ class MapLayersTest {
     }
 
     @Test
+    void aRefreshLooksTheMapUpAgainAndRedrawsEverything() {
+        start(new TestLayer("test.debug.a", "one"));
+        server.getScheduler().performOneTick();
+        set("test.debug.a").findAreaMarker("one").setLabel("edited by hand");
+
+        MapLayers.refreshAll();
+        server.getScheduler().performOneTick();
+
+        assertEquals(2, lookups.get(), "a fresh map, with nothing cached");
+        assertEquals("one", set("test.debug.a").findAreaMarker("one").getLabel(), "the hand edit is undone");
+    }
+
+    @Test
     void changedAllRedrawsEveryLayer() {
         TestLayer a = new TestLayer("test.debug.a", "one");
         TestLayer b = new TestLayer("test.debug.b", "two");

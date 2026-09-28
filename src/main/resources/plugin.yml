@@ -125,6 +125,7 @@ permissions:
             architect.get.other: true
             architect.weather: true
             architect.resourcePackAdmin: true
+            architect.maplayers: true
             architect.itemBlock: true
             architect.itemBlock.remove: true
             architect.itemBlock.region.limit: true
@@ -403,6 +404,9 @@ permissions:
         default: op
     architect.checknbt:
         descriptions: Allows to check item NBTs
+        default: op
+    architect.maplayers:
+        description: Allows to redraw Architect's web-map layers with /architect maplayers refresh
         default: op
     architect.inventory.ignoreProtection:
       descriptions: Allows to edit inventory content without build permission

@@ -106,6 +106,11 @@ public final class ItemBlockBudgetLayer implements MapLayer {
     }
 
     @Override
+    public void refresh() {
+        budget.recountLoaded();
+    }
+
+    @Override
     public List<MapShape> shapes() {
         return shapesFor(budget.counts());
     }
