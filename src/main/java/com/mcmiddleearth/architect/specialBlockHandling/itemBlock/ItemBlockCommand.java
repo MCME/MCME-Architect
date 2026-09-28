@@ -185,6 +185,7 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
             region.setLimit(limit);
             PluginData.getMessageUtil().sendInfoMessage(p, "Region limit set to "+limit+".");
             ItemBlockManager.saveItemBlockRegion(region);
+            ItemBlockManager.updateDynmapRegions();
             return true;
         }
         PluginData.getMessageUtil().sendInvalidSubcommandError(cs);

@@ -4,6 +4,9 @@ import org.bukkit.Color;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class MapLayerConfigTest {
@@ -85,6 +88,28 @@ class MapLayerConfigTest {
         assertFalse(layer(off, "itemBlockLimit", true).enabled());
         assertFalse(layer(silent, "rpRegions", true).enabled(), "a dynmap section without 'enabled' was off");
         assertTrue(layer(new YamlConfiguration(), "rpRegions", true).enabled(), "no dynmap section at all was on");
+    }
+
+    // The worst case: with copyDefaults on, as Architect's onEnable sets it, isSet() counts values that are only
+    // defaults, so a mapLayers block for these layers in the shipped config.yml would make every existing server
+    // drop its dynmap settings. (loadData's reloadConfig replaces that config object, but no test should rely on it.)
+    @Test
+    void anExistingConfigKeepsItsDynmapSettingsDespiteTheShippedDefaults() throws Exception {
+        YamlConfiguration shipped;
+        try (var in = new InputStreamReader(MapLayerConfigTest.class.getResourceAsStream("/config.yml"),
+                StandardCharsets.UTF_8)) {
+            shipped = YamlConfiguration.loadConfiguration(in);
+        }
+        YamlConfiguration existing = new YamlConfiguration();
+        existing.set("dynmap.enabled", true);
+        existing.set("dynmap.hide", false);
+        existing.setDefaults(shipped);
+        existing.options().copyDefaults(true);
+
+        MapLayerConfig.Layer rp = layer(existing, "rpRegions", true);
+
+        assertTrue(rp.legacy(), "the shipped config.yml must not define mapLayers");
+        assertFalse(rp.hidden());
     }
 
     @Test

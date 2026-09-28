@@ -20,6 +20,8 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.mapLayers.ItemBlockRegionLayer;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.util.DevUtil;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -123,11 +125,9 @@ public class ItemBlockManager {
         return regions.get(name);
     }
     
+    /** The regions or their limits changed: the web map's item-block layer is drawn again. */
     public static void updateDynmapRegions() {
-        ItemBlockDynmapUtil.clearMarkers();
-        regions.values().forEach((region) -> {
-            ItemBlockDynmapUtil.createMarker(region);
-        });
+        MapLayers.changed(ItemBlockRegionLayer.ID);
     }
     
     public static boolean removeRegion(String name) {

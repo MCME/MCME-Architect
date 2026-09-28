@@ -20,6 +20,8 @@ import com.google.gson.Gson;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
+import com.mcmiddleearth.architect.mapLayers.RpRegionLayer;
 import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.RegionEditConversationFactory;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ResourceUtil;
@@ -131,10 +133,9 @@ public class RpManager {
         return regions.get(name);
     }
     
+    /** The regions changed: the web map's RP-region layer is drawn again. */
     public static void updateDynmapRegions() {
-        RpDynmapUtil.clearMarkers();
-        regions.values().stream().sorted(Comparator.comparingInt(RpRegion::getWeight))
-               .forEach(RpDynmapUtil::createMarker);
+        MapLayers.changed(RpRegionLayer.ID);
     }
     
     public static boolean removeRegion(String name) {
