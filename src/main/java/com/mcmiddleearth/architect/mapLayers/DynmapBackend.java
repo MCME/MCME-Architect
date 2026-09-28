@@ -1,5 +1,7 @@
 package com.mcmiddleearth.architect.mapLayers;
 
+import org.bukkit.plugin.Plugin;
+import org.dynmap.DynmapAPI;
 import org.dynmap.markers.AreaMarker;
 import org.dynmap.markers.CircleMarker;
 import org.dynmap.markers.GenericMarker;
@@ -9,10 +11,11 @@ import org.dynmap.markers.MarkerSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 /**
  * Draws map layers through dynmap's marker API. It is the only map-layers class that imports dynmap; the entity
- * logger keeps its own layer.
+ * logger keeps its own layer. Touch it only once dynmap is enabled: without dynmap's classes it cannot be linked.
  * <p>
  * A layer is updated in place: a marker is created, rewritten when its shape changed, and deleted when its shape is
  * gone, because every change is an update dynmap sends to the web map's clients. Whether a shape changed is judged
@@ -30,6 +33,27 @@ final class DynmapBackend implements MapBackend {
 
     DynmapBackend(MarkerAPI api) {
         this.api = api;
+    }
+
+    /** dynmap's map if dynmap is enabled and compatible; otherwise no map, and the log says why. */
+    static MapBackend lookup(Plugin plugin) {
+        // isPluginEnabled, not getPlugin() != null: a dynmap that failed to enable still implements DynmapAPI, but
+        // its core is null, so the first marker call would fail inside dynmap.
+        if (!plugin.getServer().getPluginManager().isPluginEnabled("dynmap")) {
+            plugin.getLogger().info("dynmap is not enabled, so Architect's map layers are not drawn.");
+            return MapBackend.NONE;
+        }
+        try {
+            MarkerAPI api = ((DynmapAPI) plugin.getServer().getPluginManager().getPlugin("dynmap")).getMarkerAPI();
+            if (api != null) {
+                return new DynmapBackend(api);
+            }
+            plugin.getLogger().warning("dynmap has no marker API, so Architect's map layers are not drawn.");
+        } catch (RuntimeException | LinkageError e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "dynmap is not compatible, so Architect's map layers are not drawn.", e);
+        }
+        return MapBackend.NONE;
     }
 
     @Override
