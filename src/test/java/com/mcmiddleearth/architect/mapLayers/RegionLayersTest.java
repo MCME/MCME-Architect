@@ -130,11 +130,13 @@ class RegionLayersTest {
     void architectsLayersFollowTheirOwnSwitchAndSettings() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("mapLayers.rpRegions.enabled", false);
+        config.set("mapLayers.noPhysics.enabled", false);
         config.set("mapLayers.itemBlockLimit.color", "#00ff00");
 
         List<MapLayer> layers = ArchitectLayers.fromConfig(config);
 
         assertTrue(layers.stream().noneMatch(layer -> layer.markerSetId().equals(RpRegionLayer.ID)), "switched off");
+        assertTrue(layers.stream().noneMatch(NoPhysicsLayer.class::isInstance), "switched off too");
         ItemBlockRegionLayer items = layers.stream().filter(ItemBlockRegionLayer.class::isInstance)
                 .map(ItemBlockRegionLayer.class::cast).findFirst().orElseThrow();
         assertEquals(0x00ff00, items.style().fillColor());

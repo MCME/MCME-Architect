@@ -21,14 +21,18 @@ import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.WorldConfig;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
+import com.mcmiddleearth.architect.mapLayers.NoPhysicsLayer;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.util.Vector;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.util.*;
 
 /**
@@ -121,10 +125,12 @@ public class NoPhysicsData {
         } else {
             exceptionAreas.put(name, new WaterFlowArea(region));
         }
+        MapLayers.changed(NoPhysicsLayer.ID);
     }
     
     public static void deleteExceptionArea(String name) {
         exceptionAreas.remove(name);
+        MapLayers.changed(NoPhysicsLayer.ID);
     }
     
     public static boolean exceptionAreaExists(String name) {
@@ -136,13 +142,10 @@ public class NoPhysicsData {
         if(temp.exists()) {
             temp.delete();
         }
-        try (FileWriter fw = new FileWriter(temp);
+        try (FileWriter fw = new FileWriter(temp, StandardCharsets.UTF_8);
             PrintWriter writer = new PrintWriter(fw)) {
             for(String name: exceptionAreas.keySet()) {
-                ExceptionArea area = exceptionAreas.get(name);
-                writer.println(area.getX()+";"+area.getY()+";"+area.getZ()+";"
-                        +area.getDX()+";"+area.getDY()+";"+area.getDZ()+";"
-                        +area.getWorldUID()+";"+name);
+                writer.println(ExceptionAreaLine.format(name, exceptionAreas.get(name)));
             }
         }
         if(dataFile.exists()) {
@@ -151,27 +154,32 @@ public class NoPhysicsData {
         temp.renameTo(dataFile);
     }
     
+    /** Reads NoPhyExceptionAreas.txt; a line that cannot be read is skipped and logged. */
     public static void loadExceptionAreas() {
-        try (Scanner scanner = new Scanner(dataFile)) {
-            scanner.useDelimiter(";");
-            while(scanner.hasNext()) {
-                int minX = scanner.nextInt();
-                int minY = scanner.nextInt();
-                int minZ = scanner.nextInt();
-                int maxX = minX+scanner.nextInt();
-                int maxY = minY+scanner.nextInt();
-                int maxZ = minZ+scanner.nextInt();
-                Vector minPoint = new Vector(minX,minY,minZ);
-                Vector maxPoint = new Vector(maxX,maxY,maxZ);
-                UUID world = UUID.fromString(scanner.next());
-                String name = scanner.nextLine().substring(1);
-//Logger.getGlobal().info("loadnophy "+name+" "+world);
-                if(world==null) continue;
-                exceptionAreas.put(name,new RedstoneCircuitArea(world,minPoint,maxPoint));
+        try {
+            // decoded leniently: a stray byte costs one character of a name, not every area
+            String text = new String(Files.readAllBytes(dataFile.toPath()), StandardCharsets.UTF_8);
+            if(text.startsWith("\uFEFF")) {
+                text = text.substring(1);
             }
-        } catch (FileNotFoundException ex) {
+            for(String line: text.lines().toList()) {
+                if(line.isBlank()) {
+                    continue;
+                }
+                try {
+                    Map.Entry<String, ExceptionArea> read = ExceptionAreaLine.parse(line);
+                    exceptionAreas.put(read.getKey(), read.getValue());
+                } catch(RuntimeException ex) {
+                    Log.warn("Skipping an unreadable line in " + dataFile.getName() + " (" + ex
+                            + "; it is dropped at the next save): " + line);
+                }
+            }
+        } catch (NoSuchFileException ex) {
             Log.warn("No-physics exception area data file not found (expected on first run): " + dataFile.getAbsolutePath());
+        } catch (IOException ex) {
+            Log.error("Failed to read no-physics exception areas from " + dataFile.getAbsolutePath(), ex);
         }
+        MapLayers.changed(NoPhysicsLayer.ID);
     }
 
     public static Map<String, ExceptionArea> getExceptionAreas() {

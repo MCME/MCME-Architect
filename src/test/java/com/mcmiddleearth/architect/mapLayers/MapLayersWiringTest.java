@@ -2,6 +2,8 @@ package com.mcmiddleearth.architect.mapLayers;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.entityLogging.FakeDynmap;
+import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsData;
+import com.mcmiddleearth.architect.noPhysicsEditor.WaterFlowArea;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
@@ -96,10 +98,39 @@ class MapLayersWiringTest {
 
     @Test
     @Order(4)
+    void noPhysicsAreasComeBackWithTheirTypeAndReachTheMap() throws Exception {
+        java.util.UUID world = server.getWorld("world").getUID();
+        java.nio.file.Files.writeString(new java.io.File(plugin.getDataFolder(), "NoPhyExceptionAreas.txt").toPath(),
+                String.join(System.lineSeparator(), "0;60;0;9;10;19;" + world + ";water;Fountain", "not an area", "",
+                        "20;60;0;9;10;19;" + world + ";Old mill") + System.lineSeparator());
+
+        NoPhysicsData.loadExceptionAreas();
+        server.getScheduler().performOneTick();
+
+        assertInstanceOf(WaterFlowArea.class, NoPhysicsData.getExceptionAreas().get("Fountain"));
+        assertInstanceOf(com.mcmiddleearth.architect.noPhysicsEditor.RedstoneCircuitArea.class,
+                NoPhysicsData.getExceptionAreas().get("Old mill"), "an unreadable line costs only itself");
+        org.dynmap.markers.AreaMarker marker = set(NoPhysicsLayer.ID).findAreaMarker("nophysics.Fountain");
+        assertEquals("world", marker.getWorld());
+        assertEquals(0x1e64ff, marker.getFillColor(), "blue: a water area");
+
+        server.addSimpleWorld(NullWorld.getInstance().getName()); // setExceptionArea finds the world by name
+        NoPhysicsData.setExceptionArea("Mill", box(), "redstone");
+        server.getScheduler().performOneTick();
+        assertNotNull(set(NoPhysicsLayer.ID).findAreaMarker("nophysics.Mill"), "drawn when set");
+
+        NoPhysicsData.deleteExceptionArea("Fountain");
+        server.getScheduler().performOneTick();
+        assertNull(set(NoPhysicsLayer.ID).findAreaMarker("nophysics.Fountain"), "gone when deleted");
+    }
+
+    @Test
+    @Order(5)
     void disablingArchitectTakesItsLayersOffTheMap() {
         server.getPluginManager().disablePlugin(plugin);
 
         assertNull(set(RpRegionLayer.ID));
         assertNull(set(ItemBlockRegionLayer.ID));
+        assertNull(set(NoPhysicsLayer.ID));
     }
 }
