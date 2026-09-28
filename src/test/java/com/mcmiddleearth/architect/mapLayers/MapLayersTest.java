@@ -57,7 +57,7 @@ class MapLayersTest {
     }
 
     /** A layer whose shapes come from a supplier, counting how often it is asked. */
-    private static final class TestLayer implements MapLayer {
+    private static class TestLayer implements MapLayer {
         final String id;
         final AtomicInteger asked = new AtomicInteger();
         Supplier<List<MapShape>> shapes;
@@ -289,6 +289,25 @@ class MapLayersTest {
         assertDoesNotThrow(() -> server.getScheduler().performOneTick());
         assertNotNull(set("test.debug.a"));
         assertTrue(warnings.isEmpty(), "nothing to report: " + warnings);
+    }
+
+    @Test
+    void layersThatGatherTheirOwnDataAreStartedAndStopped() {
+        List<String> calls = new ArrayList<>();
+        TestLayer broken = new TestLayer("test.debug.a", "one") {
+            @Override public void start(Plugin p) { throw new IllegalStateException("cannot start"); }
+            @Override public void stop() { throw new IllegalStateException("cannot stop"); }
+        };
+        TestLayer gathering = new TestLayer("test.debug.b", "two") {
+            @Override public void start(Plugin p) { calls.add("start"); }
+            @Override public void stop() { calls.add("stop"); }
+        };
+
+        start(broken, gathering);
+        MapLayers.stop();
+
+        assertEquals(List.of("start", "stop"), calls, "a layer that cannot start or stop does not hold the others up");
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("test.debug.a could not start")), warnings.toString());
     }
 
     @Test

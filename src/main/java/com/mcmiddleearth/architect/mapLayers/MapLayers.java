@@ -51,7 +51,8 @@ public final class MapLayers {
 
     /**
      * Starts with these layers, all drawn on the next tick. A running instance is stopped first, which takes its
-     * layers off the map: that is how {@code /architect reload} drops a layer switched off in the config.
+     * layers off the map. {@code /architect reload} stops the layers itself, before it reloads Architect's data,
+     * then starts only those the config switches on.
      */
     public static void start(Plugin plugin, List<MapLayer> layers) {
         start(plugin, layers, MapLayers::lookupMap);
@@ -61,6 +62,13 @@ public final class MapLayers {
         stop();
         active = new MapLayers(plugin, layers, lookup);
         plugin.getServer().getPluginManager().registerEvents(active.dynmapWatch, plugin);
+        for (MapLayer layer : layers) {
+            try {
+                layer.start(plugin);
+            } catch (RuntimeException | LinkageError e) {
+                plugin.getLogger().log(Level.WARNING, "Map layer " + layer.markerSetId() + " could not start", e);
+            }
+        }
         changedAll();
     }
 
@@ -76,7 +84,7 @@ public final class MapLayers {
         return DynmapBackend.lookup(plugin);
     }
 
-    /** Takes Architect's layers off the map. */
+    /** Stops Architect's layers, so those that keep data (the budget) save it, and takes them off the map. */
     public static void stop() {
         if (active != null) {
             active.shutdown();
@@ -149,6 +157,13 @@ public final class MapLayers {
         if (redraw != null) {
             redraw.cancel();
             redraw = null;
+        }
+        for (MapLayer layer : layers.values()) {
+            try {
+                layer.stop();
+            } catch (RuntimeException | LinkageError e) {
+                plugin.getLogger().log(Level.WARNING, "Map layer " + layer.markerSetId() + " could not stop", e);
+            }
         }
         MapBackend map = backend != null && backend != MapBackend.NONE ? backend : failed;
         if (map == null) {

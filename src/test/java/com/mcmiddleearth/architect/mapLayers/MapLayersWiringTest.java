@@ -126,11 +126,103 @@ class MapLayersWiringTest {
 
     @Test
     @Order(5)
+    void aChunkFillingUpWithItemBlocksShowsOnTheMap() {
+        org.bukkit.World world = server.getWorld("world");
+        java.util.List<org.bukkit.entity.Entity> stands = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            stands.add(world.spawn(new org.bukkit.Location(world, 72, 64, 72), org.bukkit.entity.ArmorStand.class));
+        }
+
+        server.getPluginManager().callEvent(new org.bukkit.event.world.EntitiesLoadEvent(world.getChunkAt(4, 4), stands));
+        server.getScheduler().performTicks(41); // the budget reports once a second; the redraw follows a tick later
+
+        org.dynmap.markers.AreaMarker tile = set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.4.4");
+        assertNotNull(tile, "4 of the world's base limit of 5 is 80%");
+        assertEquals(0xff8c00, tile.getFillColor(), "orange");
+    }
+
+    // A world named in the budget's file may load later, or be gone. While it is not loaded, its chunks get no tile,
+    // no world config is made for it, and their counts stay in the file as they were.
+    @Test
+    @Order(6)
+    void aChunkInAWorldThatIsNotLoadedKeepsItsCountButHasNoTile() throws Exception {
+        java.io.File folder = new java.io.File(plugin.getDataFolder(), "notLoaded");
+        java.nio.file.Path file = folder.toPath().resolve("mapLayers/itemBlockBudget.yml");
+        java.nio.file.Files.createDirectories(file.getParent());
+        java.nio.file.Files.writeString(file, "chunks:\n- gone;0;0;9;0;0;500\n- later;0;0;3;0;0;500\n");
+        ItemBlockBudgetLayer layer = ArchitectLayers.fromConfig(plugin.getConfig(), folder).stream()
+                .filter(ItemBlockBudgetLayer.class::isInstance).map(ItemBlockBudgetLayer.class::cast).findFirst()
+                .orElseThrow();
+
+        layer.start(plugin);
+        try {
+            assertEquals(java.util.List.of(), layer.shapes(), "no tile while its world is not loaded");
+            server.addSimpleWorld("later");
+            assertEquals(java.util.List.of("budget.later.0.0"), layer.shapes().stream().map(MapShape::id).toList(),
+                    "a tile once its world loads");
+        } finally {
+            layer.stop();
+        }
+
+        assertTrue(java.nio.file.Files.readString(file).contains("gone;0;0;9;0;0;500"), "kept as it was");
+        assertFalse(new java.io.File(plugin.getDataFolder(), "WorldConfig/gone.yml").exists(),
+                "no world config is made for a world that is not loaded");
+    }
+
+    // A region's limit is also its chunks' limit, and a new one shows at once. /architect reload saves the budget
+    // before Architect clears its item-block regions, which load again only later.
+    @Test
+    @Order(7)
+    void aChunkInALowLimitRegionShowsANewLimitAtOnceAndIsKeptOverAReload() throws Exception {
+        NullWorld weWorld = new NullWorld() {
+            @Override
+            public String getName() {
+                return "world";
+            }
+        };
+        ItemBlockManager.addRegion(new ItemBlockRegion("Pier", new CuboidRegion(weWorld, BlockVector3.at(128, 0, 128),
+                BlockVector3.at(143, 255, 143))));
+        org.bukkit.World world = server.getWorld("world");
+        server.getPluginManager().callEvent(new org.bukkit.event.world.EntitiesLoadEvent(world.getChunkAt(8, 8),
+                java.util.List.of(world.spawn(new org.bukkit.Location(world, 136, 64, 136),
+                        org.bukkit.entity.ArmorStand.class))));
+        server.getScheduler().performTicks(41);
+        assertEquals(0xff0000, set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.8.8").getFillColor(),
+                "a new region's limit is 0, so one stand fills it");
+        PlayerMock admin = server.addPlayer();
+        admin.setOp(true);
+
+        admin.performCommand("itemblock limit Pier 2");
+        server.getScheduler().performOneTick();
+        assertEquals(0xffd700, set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.8.8").getFillColor(),
+                "1 of the new limit of 2: yellow, at once");
+        assertTrue(set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.8.8").getDescription()
+                .contains("= 1 of 2 (region 'Pier')"), "the popup names the region placing uses");
+        admin.performCommand("itemblock limit -base 4");
+        server.getScheduler().performOneTick();
+        assertEquals(0xff0000, set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.4.4").getFillColor(),
+                "4 of the new base limit of 4: full, at once");
+        admin.performCommand("itemblock limit -base 5");
+        server.getScheduler().performOneTick();
+
+        admin.performCommand("architect reload");
+        server.getScheduler().performOneTick();
+        String saved = java.nio.file.Files.readString(
+                new java.io.File(plugin.getDataFolder(), "mapLayers/itemBlockBudget.yml").toPath());
+        assertTrue(saved.contains("world;8;8;1;0;0;"), "judged against the region's 2, not the base limit of 5");
+        assertNotNull(set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.4.4"), "drawn again from the file");
+    }
+
+    @Test
+    @Order(8)
     void disablingArchitectTakesItsLayersOffTheMap() {
         server.getPluginManager().disablePlugin(plugin);
 
         assertNull(set(RpRegionLayer.ID));
         assertNull(set(ItemBlockRegionLayer.ID));
         assertNull(set(NoPhysicsLayer.ID));
+        assertNull(set(ItemBlockBudgetLayer.ID));
+        assertTrue(new java.io.File(plugin.getDataFolder(), "mapLayers/itemBlockBudget.yml").exists(),
+                "the budget is kept for the next start");
     }
 }

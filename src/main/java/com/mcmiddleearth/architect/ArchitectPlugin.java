@@ -167,11 +167,11 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     
     @Override
     public void onDisable() {
+        MapLayers.stop(); // first, so the budget saves its counts even if other teardown fails
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
         EntityLogger.stop();
-        MapLayers.stop();
         LogFileManager.uninstall(this);
     }
     
@@ -181,6 +181,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     }
     
     public void loadData() {
+        MapLayers.stop(); // first: the old layers save while Architect's data is still loaded
         reloadConfig();
         PluginData.load();
         NoPhysicsData.loadExceptionAreas();
@@ -193,7 +194,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         RpManager.init();
         ItemBlockManager.init();
         ViewDistanceManager.loadViewDistances();
-        MapLayers.start(this, ArchitectLayers.fromConfig(getConfig()));
+        MapLayers.start(this, ArchitectLayers.fromConfig(getConfig(), getDataFolder()));
     }
 
     public static ArchitectPlugin getPluginInstance() {

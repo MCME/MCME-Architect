@@ -20,6 +20,7 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.mapLayers.ItemBlockBudgetLayer;
 import com.mcmiddleearth.architect.mapLayers.ItemBlockRegionLayer;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.util.DevUtil;
@@ -51,6 +52,8 @@ public class ItemBlockManager {
     
     
     private static BukkitTask glowTask;
+
+    private static int limitsVersion;
     
     public static void init() {
         //loadPlayerData();
@@ -59,6 +62,7 @@ public class ItemBlockManager {
             regionFolder.mkdir();
         }
         regions.clear();
+        updateDynmapRegions(); // every region is gone until it loads again, below
         for(File file: regionFolder.listFiles((File dir, String name) -> name.endsWith(".reg"))) {
             try {
                 YamlConfiguration config = new YamlConfiguration();
@@ -123,9 +127,30 @@ public class ItemBlockManager {
         return regions.get(name);
     }
     
-    /** The regions or their limits changed: the web map's item-block layer is drawn again. */
+    /** The region with the highest limit whose footprint holds this block column, whatever the height; or null. */
+    public static ItemBlockRegion regionForColumn(String world, int x, int z) {
+        ItemBlockRegion best = null;
+        for(ItemBlockRegion region: regions.values()) {
+            if((best==null || region.getLimit() > best.getLimit()) && region.coversColumn(world, x, z)) {
+                best = region;
+            }
+        }
+        return best;
+    }
+
+    /** The regions or the limits changed: the web map's item-block layers are drawn again. */
     public static void updateDynmapRegions() {
+        limitsVersion++;
         MapLayers.changed(ItemBlockRegionLayer.ID);
+        MapLayers.changed(ItemBlockBudgetLayer.ID);
+    }
+
+    /**
+     * Moves on at every change to the regions or the limits, as each goes through {@link #updateDynmapRegions()}:
+     * the web map keeps each chunk's limit until it does.
+     */
+    public static int limitsVersion() {
+        return limitsVersion;
     }
     
     public static boolean removeRegion(String name) {

@@ -13,6 +13,7 @@ import com.sk89q.worldedit.world.NullWorld;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -132,10 +133,12 @@ class RegionLayersTest {
         config.set("mapLayers.rpRegions.enabled", false);
         config.set("mapLayers.noPhysics.enabled", false);
         config.set("mapLayers.itemBlockLimit.color", "#00ff00");
+        config.set("mapLayers.itemBlockBudget.enabled", false);
 
-        List<MapLayer> layers = ArchitectLayers.fromConfig(config);
+        List<MapLayer> layers = ArchitectLayers.fromConfig(config, new File("unused"));
 
         assertTrue(layers.stream().noneMatch(layer -> layer.markerSetId().equals(RpRegionLayer.ID)), "switched off");
+        assertTrue(layers.stream().noneMatch(ItemBlockBudgetLayer.class::isInstance), "the budget's tracker too");
         assertTrue(layers.stream().noneMatch(NoPhysicsLayer.class::isInstance), "switched off too");
         ItemBlockRegionLayer items = layers.stream().filter(ItemBlockRegionLayer.class::isInstance)
                 .map(ItemBlockRegionLayer.class::cast).findFirst().orElseThrow();

@@ -175,6 +175,7 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
             if(args[1].equalsIgnoreCase("-base")) {
                 PluginData.setItemBlockBaseLimit(p.getWorld(), limit);
                 PluginData.getMessageUtil().sendInfoMessage(p, "Item block base limit set to "+limit+".");
+                ItemBlockManager.updateDynmapRegions();
                 return true;
             }
             ItemBlockRegion region = ItemBlockManager.getRegion(args[1]);
