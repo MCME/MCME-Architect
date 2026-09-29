@@ -163,9 +163,14 @@ public class ArchitectCommand extends AbstractArchitectCommand{
                 PluginData.getMessageUtil().sendErrorMessage(sender, "Usage: /architect maplayers refresh");
                 return true;
             }
-            MapLayers.refreshAll();
-            PluginData.getMessageUtil().sendInfoMessage(sender,
-                    "Architect's map layers are drawn again, and loaded chunks recounted.");
+            switch (MapLayers.refreshAll()) {
+                case NOT_RUNNING -> PluginData.getMessageUtil().sendErrorMessage(sender,
+                        "Architect's map layers are not running.");
+                case NO_MAP -> PluginData.getMessageUtil().sendInfoMessage(sender,
+                        "dynmap is not enabled here, so Architect's map layers are not drawn.");
+                case DRAWN -> PluginData.getMessageUtil().sendInfoMessage(sender,
+                        "Architect's map layers are drawn again, and loaded chunks recounted.");
+            }
             return true;
         }
         if(!(sender instanceof ConsoleCommandSender 

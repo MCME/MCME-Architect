@@ -34,7 +34,8 @@ class DynmapLookupTest {
         FakeDynmap dynmap = MockBukkit.loadWith(FakeDynmap.class, FakeDynmap.description());
         MockBukkit.getMock().getPluginManager().disablePlugin(dynmap);
 
-        assertSame(MapBackend.NONE, DynmapBackend.lookup(plugin), "its core may be missing, as when it failed to start");
+        assertSame(MapBackend.NONE, DynmapBackend.lookup(plugin),
+                "its core may be missing, as when it failed to start");
     }
 
     @Test

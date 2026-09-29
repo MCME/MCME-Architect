@@ -31,7 +31,7 @@ class DynmapBackendTest {
 
     private static MapShape.Area box(String id, String world, double x1, double z1, double x2, double z2) {
         return new MapShape.Area(id, id + " label", "<b>" + id + "</b><br>popup", RED, world,
-                new double[]{x1, x2, x2, x1}, new double[]{z1, z1, z2, z2}, 0, 255);
+                new double[]{x1, x2, x2, x1}, new double[]{z1, z1, z2, z2});
     }
 
     private static MapShape.Circle circle(String id, double radiusX, double radiusZ) {
@@ -59,8 +59,8 @@ class DynmapBackendTest {
         assertEquals(4, area.getCornerCount());
         assertEquals(16, area.getCornerX(1));
         assertEquals(32, area.getCornerZ(2));
-        assertEquals(255, area.getTopY());
-        assertEquals(0, area.getBottomY());
+        assertEquals(64, area.getTopY(), "flat, at dynmap's default height: see MapShape.Area");
+        assertEquals(64, area.getBottomY());
         assertEquals(0xff0000, area.getLineColor());
         assertEquals(0.4, area.getLineOpacity());
         assertEquals(2, area.getLineWeight());
@@ -87,13 +87,13 @@ class DynmapBackendTest {
     void showingTheSameShapesAgainWritesNothing() {
         MapLayer layer = layer("test.debug.a", "Test A", true);
         MapShape.Area named = new MapShape.Area("three", "Tom & Jerry's", "<b>Tom &amp; Jerry's</b><br>popup", RED,
-                "world", new double[]{0, 16, 16, 0}, new double[]{0, 0, 16, 16}, 0, 255);
+                "world", new double[]{0, 16, 16, 0}, new double[]{0, 0, 16, 16});
         backend.show(layer, List.of(box("one", "world", 0, 0, 16, 32), circle("two", 8, 5), named));
         int writes = dynmap.writes();
 
         backend.show(layer, List.of(box("one", "world", 0, 0, 16, 32), circle("two", 8, 5),
                 new MapShape.Area("three", "Tom & Jerry's", "<b>Tom &amp; Jerry's</b><br>popup", RED, "world",
-                        new double[]{0, 16, 16, 0}, new double[]{0, 0, 16, 16}, 0, 255)));
+                        new double[]{0, 16, 16, 0}, new double[]{0, 0, 16, 16})));
 
         assertEquals(writes, dynmap.writes(), "unchanged markers are left alone, so web clients get no updates, "
                 + "although dynmap stores labels and descriptions in other forms");
@@ -107,18 +107,18 @@ class DynmapBackendTest {
         CircleMarker round = set().findCircleMarker("two");
 
         backend.show(layer, List.of(
-                new MapShape.Area("one", "new label", "new popup", BLUE, "world",
-                        new double[]{0, 48, 48, 0}, new double[]{0, 0, 40, 40}, 10, 20),
+                new MapShape.Area("one", "Tom & Jerry's", "new popup", BLUE, "world",
+                        new double[]{0, 48, 48, 0}, new double[]{0, 0, 40, 40}),
                 new MapShape.Circle("two", "new round", "round popup", RED, "world",
                         30, 70, 40, 12, 7, 60, 80)));
 
         assertSame(area, set().findAreaMarker("one"), "the same marker, rewritten");
         assertEquals(48, area.getCornerX(1));
         assertEquals(40, area.getCornerZ(2));
-        assertEquals("new label", area.getLabel());
+        assertEquals("Tom &amp; Jerry&#39;s", area.getLabel(), "as dynmap stores it");
         assertEquals("new popup", area.getDescription());
-        assertEquals(20, area.getTopY());
-        assertEquals(10, area.getBottomY());
+        assertEquals(64, area.getTopY(), "still flat");
+        assertEquals(64, area.getBottomY());
         assertEquals(0x1e64ff, area.getLineColor());
         assertEquals(0.6, area.getLineOpacity());
         assertEquals(3, area.getLineWeight());
@@ -141,29 +141,37 @@ class DynmapBackendTest {
 
         int labels = dynmap.labelWrites();
         backend.show(layer, List.of(
-                new MapShape.Area("one", "new label", "new popup", BLUE, "world",
-                        new double[]{0, 64, 64, 0}, new double[]{0, 0, 40, 40}, 10, 20),
+                new MapShape.Area("one", "Tom & Jerry's", "new popup", BLUE, "world",
+                        new double[]{0, 64, 64, 0}, new double[]{0, 0, 40, 40}),
                 new MapShape.Circle("two", "new round", "round popup", RED, "world",
                         30, 70, 40, 12, 9, 60, 80)));
         assertEquals(64, area.getCornerX(1));
         assertEquals(9, round.getRadiusZ());
-        assertEquals(labels, dynmap.labelWrites(), "an unchanged label is not sent again: dynmap sends every one");
+        assertEquals(labels, dynmap.labelWrites(), "an unchanged label is not sent again (dynmap sends every one), "
+                + "although it reads back escaped");
     }
 
     @Test
     void aShowThatFailsPartwayIsPutRightByTheNextOne() {
         MapLayer layer = layer("test.debug.a", "Test A", true);
         List<MapShape> shapes = List.of(circle("two", 8, 5), box("one", "world", 0, 0, 16, 32));
+        List<MapShape> moved = List.of(
+                new MapShape.Circle("two", "two label", "two popup", BLUE, "world", 99, 64, -20.5, 8, 5, 40, 90),
+                box("one", "world", 0, 0, 48, 32));
         backend.show(layer, shapes);
 
-        dynmap.failDrawing(true); // the circle is moved, then drawing the area fails
-        assertThrows(NoSuchMethodError.class, () -> backend.show(layer, List.of(
-                new MapShape.Circle("two", "two label", "two popup", BLUE, "world", 99, 64, -20.5, 8, 5, 40, 90),
-                box("one", "world", 0, 0, 16, 32))));
+        dynmap.failDrawing(true); // both move: the circle is moved, then drawing the area fails
+        assertThrows(NoSuchMethodError.class, () -> backend.show(layer, moved));
         dynmap.failDrawing(false);
         backend.show(layer, shapes);
-
         assertEquals(10.5, set().findCircleMarker("two").getCenterX(), "back where the layer says");
+
+        dynmap.failDrawing(true);
+        assertThrows(NoSuchMethodError.class, () -> backend.show(layer, moved));
+        dynmap.failDrawing(false);
+        backend.show(layer, moved);
+        assertEquals(48, set().findAreaMarker("one").getCornerX(1),
+                "the same shapes shown again: the area that failed is drawn now");
     }
 
     @Test
@@ -222,7 +230,8 @@ class DynmapBackendTest {
     void aMarkerSetLeftByAnEarlierRunIsTakenOver() {
         MarkerSet old = dynmap.api().createMarkerSet("test.debug.a", "Old label", null, false);
         old.createAreaMarker("stale", "stale", false, "world", new double[]{0, 1, 1}, new double[]{0, 0, 1}, false);
-        old.createAreaMarker("one", "old label", false, "world", new double[]{0, 1, 1}, new double[]{0, 0, 1}, false);
+        old.createAreaMarker("one", "old label", false, "world", new double[]{0, 1, 1}, new double[]{0, 0, 1}, false)
+                .setRangeY(255, 0); // a 3D outline, from a hand edit or another build
 
         backend.show(layer("test.debug.a", "Test A", false), List.of(box("one", "world", 0, 0, 16, 32)));
 
@@ -232,6 +241,8 @@ class DynmapBackendTest {
         assertNull(set().findAreaMarker("stale"));
         assertEquals("one label", set().findAreaMarker("one").getLabel(), "a marker it did not draw is rewritten");
         assertEquals(16, set().findAreaMarker("one").getCornerX(1));
+        assertEquals(64, set().findAreaMarker("one").getTopY(), "flat again");
+        assertEquals(64, set().findAreaMarker("one").getBottomY());
     }
 
     @Test
@@ -243,11 +254,13 @@ class DynmapBackendTest {
         backend.remove("test.debug.never-shown");
 
         assertNull(set());
-        backend.show(layer, List.of(box("one", "world", 0, 0, 16, 32)));
+        List<MapShape> shapes = List.of(box("one", "world", 0, 0, 16, 32), circle("two", 8, 5));
+        backend.show(layer, shapes);
         assertNotNull(set().findAreaMarker("one"), "shown again after a remove, it is drawn from scratch");
 
         set().deleteMarkerSet(); // behind the backend's back, as /dmarker deleteset would
-        backend.show(layer, List.of(box("one", "world", 0, 0, 16, 32)));
+        backend.show(layer, shapes);
         assertNotNull(set().findAreaMarker("one"), "a marker that vanished is drawn again");
+        assertNotNull(set().findCircleMarker("two"), "a circle too");
     }
 }

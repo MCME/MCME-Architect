@@ -233,11 +233,37 @@ class MapLayersWiringTest {
 
         PlayerMock mapper = server.addPlayer();
         mapper.addAttachment(plugin, Permission.MAP_LAYERS.getPermissionNode(), true);
+        mapper.performCommand("architect maplayers");
+        assertTrue(mapper.nextMessage().contains("Usage: /architect maplayers refresh"));
+        mapper.performCommand("architect maplayers now");
+        assertTrue(mapper.nextMessage().contains("Usage: /architect maplayers refresh"));
+        server.getScheduler().performOneTick();
+        assertNull(budget.findAreaMarker("budget.world.6.6"), "only 'refresh' refreshes");
+
         mapper.performCommand("architect maplayers refresh");
+        assertTrue(mapper.nextMessage().contains("drawn again"));
         server.getScheduler().performOneTick();
         org.dynmap.markers.AreaMarker tile = budget.findAreaMarker("budget.world.6.6");
         assertNotNull(tile, "architect.maplayers alone is enough to refresh");
         assertEquals(0xff0000, tile.getFillColor(), "5 of the base limit of 5: full");
+
+        // The reply says what the refresh found. Each case is undone in a finally, so the next test still runs.
+        server.getPluginManager().disablePlugin(dynmap); // the first half of /dynmap reload
+        try {
+            mapper.performCommand("architect maplayers refresh");
+            assertTrue(mapper.nextMessage().contains("dynmap is not enabled here"), "not 'drawn' without dynmap");
+        } finally {
+            server.getPluginManager().enablePlugin(dynmap);
+            server.getScheduler().performOneTick();
+        }
+        MapLayers.stop(); // as an /architect reload that failed partway leaves them
+        try {
+            mapper.performCommand("architect maplayers refresh");
+            assertTrue(mapper.nextMessage().contains("not running"));
+        } finally {
+            MapLayers.start(plugin, ArchitectLayers.fromConfig(plugin.getConfig(), plugin.getDataFolder()));
+            server.getScheduler().performOneTick();
+        }
     }
 
     @Test

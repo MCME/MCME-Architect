@@ -110,6 +110,14 @@ class RegionLayersTest {
     }
 
     @Test
+    void itemBlockRegionsAreListedByName() {
+        ItemBlockRegionLayer layer = new ItemBlockRegionLayer(DEFAULTS, () -> List.of(
+                new ItemBlockRegion("Pier", box(0, 0, 10, 10)), new ItemBlockRegion("Market", box(20, 20, 30, 30))));
+
+        assertEquals(List.of("market.marker", "pier.marker"), layer.shapes().stream().map(MapShape::id).toList());
+    }
+
+    @Test
     void theLayersTakeTheirColourAndVisibilityFromTheConfig() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("mapLayers.rpRegions.hidden", false);
@@ -143,5 +151,11 @@ class RegionLayersTest {
         ItemBlockRegionLayer items = layers.stream().filter(ItemBlockRegionLayer.class::isInstance)
                 .map(ItemBlockRegionLayer.class::cast).findFirst().orElseThrow();
         assertEquals(0x00ff00, items.style().fillColor());
+
+        YamlConfiguration itemsOff = new YamlConfiguration();
+        itemsOff.set("mapLayers.itemBlockLimit.enabled", false);
+        List<MapLayer> others = ArchitectLayers.fromConfig(itemsOff, new File("unused"));
+        assertTrue(others.stream().noneMatch(ItemBlockRegionLayer.class::isInstance), "switched off");
+        assertTrue(others.stream().anyMatch(RpRegionLayer.class::isInstance), "each layer has its own switch");
     }
 }

@@ -3,11 +3,13 @@ package com.mcmiddleearth.architect.mapLayers;
 import org.bukkit.Color;
 import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.MemoryConfiguration;
 
 /**
  * The mapLayers section of config.yml, one block per layer. The RP-region and item-block layers predate it: until
  * one of them has a block of its own there, it reads the older dynmap section instead, so an existing config keeps
- * its settings.
+ * its settings. A layer set to just true or false, such as {@code rpRegions: false}, is switched by it and keeps every
+ * other default; any other value that is not a block counts as not set.
  */
 public final class MapLayerConfig {
 
@@ -18,8 +20,14 @@ public final class MapLayerConfig {
     }
 
     public Layer layer(String key, boolean predatesMapLayers) {
-        if (config.isSet("mapLayers." + key)) {
-            return new Layer(config.getConfigurationSection("mapLayers." + key), false);
+        String path = "mapLayers." + key;
+        if (config.isConfigurationSection(path)) {
+            return new Layer(config.getConfigurationSection(path), false);
+        }
+        if (config.isBoolean(path)) {
+            MemoryConfiguration onlySwitch = new MemoryConfiguration();
+            onlySwitch.set("enabled", config.getBoolean(path));
+            return new Layer(onlySwitch, false);
         }
         return new Layer(predatesMapLayers ? config.getConfigurationSection("dynmap") : null, predatesMapLayers);
     }

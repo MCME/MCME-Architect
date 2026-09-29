@@ -78,14 +78,13 @@ public final class NoPhysicsLayer implements MapLayer {
             double z1 = area.getZ();
             double z2 = area.getZ() + area.getDZ() + 1;
             result.add(new MapShape.Area("nophysics." + name, name, description(name, area, isWater),
-                    isWater ? water : redstone, world, new double[]{x1, x2, x2, x1}, new double[]{z1, z1, z2, z2},
-                    RegionShapes.FLAT_Y, RegionShapes.FLAT_Y)); // flat, as RegionShapes explains
+                    isWater ? water : redstone, world, new double[]{x1, x2, x2, x1}, new double[]{z1, z1, z2, z2}));
         });
         return result;
     }
 
     private static String description(String name, ExceptionArea area, boolean isWater) {
-        return "<b>" + RegionShapes.html(name) + "</b>"
+        return "<b>" + MapShape.html(name) + "</b>"
                 + "<br>" + (isWater ? "Water area" : "Redstone area")
                 + "<br>Y " + area.getY() + " to " + (area.getY() + area.getDY())
                 + "<br>" + (isWater ? WATER : REDSTONE)

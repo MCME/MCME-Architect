@@ -15,15 +15,15 @@ class MapShapeTest {
     @Test
     void anAreaNeedsAsManyXAsZCornersAndAtLeastThree() {
         assertThrows(IllegalArgumentException.class, () -> new MapShape.Area("a", "a", "", STYLE, "world",
-                new double[]{0, 1}, new double[]{0, 1}, 0, 1));
+                new double[]{0, 1}, new double[]{0, 1}));
         assertThrows(IllegalArgumentException.class, () -> new MapShape.Area("a", "a", "", STYLE, "world",
-                new double[]{0, 1, 1}, new double[]{0, 0, 1, 1}, 0, 1));
+                new double[]{0, 1, 1}, new double[]{0, 0, 1, 1}));
     }
 
     @Test
     void aShapeRefusesMissingParts() {
         assertThrows(NullPointerException.class, () -> new MapShape.Area("a", null, "", STYLE, "world",
-                new double[]{0, 1, 1}, new double[]{0, 0, 1}, 0, 1));
+                new double[]{0, 1, 1}, new double[]{0, 0, 1}));
         assertThrows(NullPointerException.class, () -> new MapShape.Circle("c", "c", "", STYLE, null,
                 0, 0, 0, 1, 1, 0, 1));
     }
@@ -31,16 +31,23 @@ class MapShapeTest {
     @Test
     void areasCompareTheirCornersByValueAndKeepTheirOwnCopy() {
         double[] x = {0, 16, 16, 0};
-        MapShape.Area area = new MapShape.Area("a", "a", "", STYLE, "world", x, new double[]{0, 0, 16, 16}, 0, 1);
+        MapShape.Area area = new MapShape.Area("a", "a", "", STYLE, "world", x, new double[]{0, 0, 16, 16});
 
         assertEquals(new MapShape.Area("a", "a", "", STYLE, "world", new double[]{0, 16, 16, 0},
-                new double[]{0, 0, 16, 16}, 0, 1), area);
+                new double[]{0, 0, 16, 16}), area);
         assertEquals(new MapShape.Area("a", "a", "", STYLE, "world", new double[]{0, 16, 16, 0},
-                new double[]{0, 0, 16, 16}, 0, 1).hashCode(), area.hashCode());
+                new double[]{0, 0, 16, 16}).hashCode(), area.hashCode());
         x[1] = 99;
         assertEquals(16, area.x()[1], "the caller's array is not the shape's");
         area.x()[1] = 99;
         assertEquals(16, area.x()[1], "nor is the array it hands out");
+        area.z()[1] = 99;
+        assertEquals(0, area.z()[1], "for z too");
+    }
+
+    @Test
+    void htmlInNamesIsEscaped() {
+        assertEquals("a&lt;b&gt; &amp; &quot;c&quot;", MapShape.html("a<b> & \"c\""));
     }
 
     // The map skips a marker whose shape equals the one drawn last time, so every part must count in equals,
@@ -48,7 +55,7 @@ class MapShapeTest {
     @Test
     void anAreaDiffersFromOneThatDiffersInAnyPart() throws Exception {
         MapShape.Area area = new MapShape.Area("a", "label", "<b>popup</b>", STYLE, "world",
-                new double[]{0, 16, 16, 0}, new double[]{0, 0, 16, 16}, 0, 1);
+                new double[]{0, 16, 16, 0}, new double[]{0, 0, 16, 16});
         RecordComponent[] parts = MapShape.Area.class.getRecordComponents();
         Class<?>[] types = Arrays.stream(parts).map(RecordComponent::getType).toArray(Class<?>[]::new);
         for (int i = 0; i < parts.length; i++) {
@@ -56,6 +63,8 @@ class MapShapeTest {
             for (int j = 0; j < parts.length; j++) {
                 values[j] = parts[j].getAccessor().invoke(area);
             }
+            assertEquals(area, MapShape.Area.class.getDeclaredConstructor(types).newInstance(values),
+                    "rebuilt from its own parts, it is equal: otherwise the check below proves nothing");
             values[i] = different(values[i]);
             MapShape.Area changed = MapShape.Area.class.getDeclaredConstructor(types).newInstance(values);
             assertNotEquals(area, changed, parts[i].getName() + " must count in equals");
@@ -65,7 +74,6 @@ class MapShapeTest {
     private static Object different(Object value) {
         return switch (value) {
             case String text -> text + "!";
-            case Double number -> number + 1;
             case double[] numbers -> {
                 double[] copy = numbers.clone();
                 copy[copy.length - 1]++;

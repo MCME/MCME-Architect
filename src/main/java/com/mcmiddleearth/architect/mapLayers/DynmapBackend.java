@@ -26,6 +26,12 @@ final class DynmapBackend implements MapBackend {
 
     private static final String AREA = "area ";
     private static final String CIRCLE = "circle ";
+    /**
+     * Every area is drawn flat at Y 64, set on every write: dynmap starts a new area at its world's sea level, and one
+     * taken over may have a range of its own. LiveAtlas draws an area with a Y range as a hollow 3D outline, as
+     * {@link MapShape.Area} explains.
+     */
+    private static final double FLAT_Y = 64;
 
     private final MarkerAPI api;
     /** Per marker set, the shapes drawn last time, by kind and id. */
@@ -129,7 +135,7 @@ final class DynmapBackend implements MapBackend {
             relabel(marker, shape, last);
         }
         marker.setDescription(shape.description());
-        marker.setRangeY(shape.yMax(), shape.yMin());
+        marker.setRangeY(FLAT_Y, FLAT_Y); // on every write: a marker taken over may have a range of its own
         MapShape.Style style = shape.style();
         marker.setLineStyle(style.lineWidth(), style.lineOpacity(), style.lineColor());
         marker.setFillStyle(style.fillOpacity(), style.fillColor());

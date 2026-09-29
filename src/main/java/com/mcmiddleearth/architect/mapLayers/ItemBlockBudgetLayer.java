@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -19,10 +20,11 @@ import java.util.Map;
  * highPercent and red when full, where placing an item block is refused.
  * <p>
  * Every report weighs every chunk counted, so each chunk's limit is looked up once, and kept until the limits'
- * version changes. For about 10 seconds after a start or {@code /architect reload}, Architect has not loaded its
- * item-block regions yet, so the tiles are judged against the world's base limit. Loading the regions changes the
- * version, and the tiles are judged again. A stop inside that window saves the counts judged that way too, so chunks in
- * regions whose limit is below the base limit drop out of the file until they are counted again.
+ * version changes or a refresh. For about 10 seconds after a start or {@code /architect reload}, Architect has not
+ * loaded its item-block regions yet, so the tiles are judged against the world's base limit. Loading the regions
+ * changes the version, and the tiles are judged again. A stop inside that window saves the counts judged that way
+ * too, so chunks in regions whose limit is below the base limit can drop out of the file until they are counted
+ * again.
  */
 public final class ItemBlockBudgetLayer implements MapLayer {
 
@@ -43,7 +45,7 @@ public final class ItemBlockBudgetLayer implements MapLayer {
         }
     }
 
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z")
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm z", Locale.ENGLISH)
             .withZone(ZoneId.systemDefault());
 
     private final boolean hidden;
@@ -61,9 +63,10 @@ public final class ItemBlockBudgetLayer implements MapLayer {
     /** {@code file} keeps the counts across restarts. */
     public ItemBlockBudgetLayer(MapLayerConfig.Layer config, File file, Limits limits) {
         this.hidden = config.hidden();
-        // kept in range: above 100 would hide the full chunks, and orange must not start before yellow
+        // warn is kept from 1 to 100: above 100 it would hide the full chunks. High needs no clamp: a tile shows only
+        // from warn, and red wins from 100.
         this.warnPercent = Math.max(1, Math.min(100, config.integer("warnPercent", 50)));
-        this.highPercent = Math.max(warnPercent, Math.min(100, config.integer("highPercent", 80)));
+        this.highPercent = config.integer("highPercent", 80);
         double fillOpacity = config.number("areaOpacity", 0.35);
         this.warn = style(config.color("warnColor", 0xffd700), fillOpacity);
         this.high = style(config.color("highColor", 0xff8c00), fillOpacity);
@@ -105,8 +108,10 @@ public final class ItemBlockBudgetLayer implements MapLayer {
         budget.stop();
     }
 
+    /** Looks every chunk's limit up again, and recounts the loaded chunks: a refresh starts from scratch. */
     @Override
     public void refresh() {
+        cache.clear();
         budget.recountLoaded();
     }
 
@@ -139,7 +144,7 @@ public final class ItemBlockBudgetLayer implements MapLayer {
             result.add(new MapShape.Area("budget." + chunk.world() + "." + chunk.x() + "." + chunk.z(),
                     "Chunk " + chunk.x() + ", " + chunk.z(), description(chunk, tile.count(), tile.limit(),
                     tile.percent()), style, chunk.world(), new double[]{x1, x1 + 16, x1 + 16, x1},
-                    new double[]{z1, z1, z1 + 16, z1 + 16}, RegionShapes.FLAT_Y, RegionShapes.FLAT_Y));
+                    new double[]{z1, z1, z1 + 16, z1 + 16}));
         }
         return result;
     }
@@ -149,7 +154,7 @@ public final class ItemBlockBudgetLayer implements MapLayer {
 
     /**
      * Read at the chunk's centre: a region edge can cross a chunk, while placing checks the exact block. Kept until
-     * the limits' version changes; a world that is not loaded is asked about again, as it may load.
+     * the limits' version changes or a refresh; a world that is not loaded is asked about again, as it may load.
      */
     private Limit limitOf(ChunkKey chunk) {
         int version = limits.version();
@@ -173,11 +178,11 @@ public final class ItemBlockBudgetLayer implements MapLayer {
     }
 
     private static String description(ChunkKey chunk, Count count, Limit limit, int percent) {
-        return "<b>Chunk " + chunk.x() + ", " + chunk.z() + "</b> in " + RegionShapes.html(chunk.world())
+        return "<b>Chunk " + chunk.x() + ", " + chunk.z() + "</b> in " + MapShape.html(chunk.world())
                 + "<br>" + plural(count.armorStands(), "armor stand") + ", " + plural(count.itemFrames(), "item frame")
                 + ", " + plural(count.paintings(), "painting") + " = " + count.total() + " of " + limit.value()
                 + (limit.region() == null ? " (world base limit)"
-                        : " (region '" + RegionShapes.html(limit.region()) + "')")
+                        : " (region '" + MapShape.html(limit.region()) + "')")
                 + (percent >= 100 ? "<br><b>Full: placing an item block here is refused.</b>" : "")
                 + "<br>Last changed " + TIME.format(Instant.ofEpochMilli(count.changedAt()))
                 + "<br><i>The limit is read at the chunk's centre; a region edge can cross a chunk.</i>";

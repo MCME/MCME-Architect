@@ -5,6 +5,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.event.server.PluginEnableEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -37,11 +38,13 @@ public final class MapLayers {
     private final Function<Plugin, MapBackend> lookup;
     private final Set<String> changed = new LinkedHashSet<>();
     private final Set<String> reported = new HashSet<>();
-    private final Listener dynmapWatch = new DynmapWatch();
+    private final Listener watch = new ServerWatch();
     private MapBackend backend;
     /** A map that failed: kept only to take the layers off it at stop, if it still can. */
     private MapBackend failed;
     private BukkitTask redraw;
+    /** Set by a refresh: the next redraw looks the map up afresh, and a stop before then still has the old one. */
+    private boolean lookAgain;
 
     private MapLayers(Plugin plugin, List<MapLayer> layers, Function<Plugin, MapBackend> lookup) {
         this.plugin = plugin;
@@ -61,7 +64,7 @@ public final class MapLayers {
     static void start(Plugin plugin, List<MapLayer> layers, Function<Plugin, MapBackend> lookup) {
         stop();
         active = new MapLayers(plugin, layers, lookup);
-        plugin.getServer().getPluginManager().registerEvents(active.dynmapWatch, plugin);
+        plugin.getServer().getPluginManager().registerEvents(active.watch, plugin);
         for (MapLayer layer : layers) {
             try {
                 layer.start(plugin);
@@ -106,14 +109,24 @@ public final class MapLayers {
         }
     }
 
+    /** What {@link #refreshAll} found, for the command's reply. */
+    public enum Refresh {
+        /** Map layers are not running, so there was nothing to refresh. */
+        NOT_RUNNING,
+        /** The layers gathered their data again, but dynmap is not enabled, so nothing is drawn. */
+        NO_MAP,
+        /** The layers gathered their data again, and are drawn on the next tick. */
+        DRAWN
+    }
+
     /**
      * For {@code /architect maplayers refresh}: every layer gathers its own data again, and everything is drawn again
-     * on a map looked up afresh, with nothing cached. That also restores markers edited by hand, and tries a map that
-     * failed once more.
+     * on a map looked up afresh, with nothing cached. That also restores markers edited by hand, tries a map that
+     * failed once more, and logs again why a layer cannot be built.
      */
-    public static void refreshAll() {
+    public static Refresh refreshAll() {
         if (active == null) {
-            return;
+            return Refresh.NOT_RUNNING;
         }
         for (MapLayer layer : active.layers.values()) {
             try {
@@ -123,9 +136,11 @@ public final class MapLayers {
                         + " could not refresh", e);
             }
         }
-        active.backend = null;
-        active.failed = null;
+        active.lookAgain = true;
+        active.reported.clear();
         changedAll();
+        return active.plugin.getServer().getPluginManager().isPluginEnabled("dynmap") ? Refresh.DRAWN
+                : Refresh.NO_MAP;
     }
 
     private void mark(Collection<String> ids) {
@@ -137,7 +152,8 @@ public final class MapLayers {
 
     private void redraw() {
         redraw = null;
-        if (backend == null) {
+        if (backend == null || lookAgain) {
+            lookAgain = false;
             try {
                 backend = lookup.apply(plugin);
             } catch (RuntimeException | LinkageError e) {
@@ -175,7 +191,7 @@ public final class MapLayers {
     }
 
     private void shutdown() {
-        HandlerList.unregisterAll(dynmapWatch);
+        HandlerList.unregisterAll(watch);
         if (redraw != null) {
             redraw.cancel();
             redraw = null;
@@ -200,8 +216,13 @@ public final class MapLayers {
         }
     }
 
-    /** {@code /dynmap reload} disables and enables dynmap, which makes a new marker API. */
-    private final class DynmapWatch implements Listener {
+    /**
+     * What else calls for a redraw: {@code /dynmap reload} disables and enables dynmap, which makes a new marker API,
+     * and a world loaded later ({@code /mv load}) has no-physics areas and budget tiles the layers left out while it
+     * was not loaded. Its RP and item-block regions still need {@code /architect reload}: their managers drop a region
+     * whose world is not loaded.
+     */
+    private final class ServerWatch implements Listener {
 
         @EventHandler
         public void onDynmapDisabled(PluginDisableEvent event) {
@@ -218,6 +239,11 @@ public final class MapLayers {
                 failed = null;
                 mark(layers.keySet());
             }
+        }
+
+        @EventHandler
+        public void onWorldLoaded(WorldLoadEvent event) {
+            mark(layers.keySet());
         }
     }
 }

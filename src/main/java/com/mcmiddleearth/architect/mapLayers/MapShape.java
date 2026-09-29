@@ -6,8 +6,9 @@ import java.util.Objects;
 /**
  * One marker on a map layer, as plain data, so a layer can be built and tested without a map.
  * <ul>
- *     <li>Coordinates are block coordinates, and corners and {@code yMax} are outer edges: a block at 15 ends at 16.
- *     </li>
+ *     <li>Coordinates are block coordinates. A box's corners are outer edges: a block at 15 ends at 16. A polygon
+ *     from a WorldEdit region is drawn through its points as they are, which are block corners, so its east and
+ *     south edges stop a block short of a box's, as {@link RegionShapes} explains.</li>
  *     <li>The label is plain text; the description is the popup's HTML.</li>
  * </ul>
  */
@@ -25,16 +26,22 @@ public sealed interface MapShape {
 
     String world();
 
-    double yMin();
-
-    double yMax();
+    /** Plain text made safe for a popup's HTML; nothing for null. */
+    static String html(String text) {
+        return text == null ? ""
+                : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+    }
 
     /**
      * A polygon by its corners, at least 3: a box is its 4 corners. The corners are copied in and out, and compared
      * by value.
+     * <p>
+     * An area has no height: the map draws every area flat. LiveAtlas draws an area with a Y range as a 3D outline,
+     * which on MCME's top-down flat map has no fill and opens its popup only from its border. The popup gives the
+     * heights instead.
      */
-    record Area(String id, String label, String description, Style style, String world, double[] x, double[] z,
-                double yMin, double yMax) implements MapShape {
+    record Area(String id, String label, String description, Style style, String world, double[] x, double[] z)
+            implements MapShape {
 
         public Area {
             Objects.requireNonNull(id, "id");
@@ -63,20 +70,18 @@ public sealed interface MapShape {
         public boolean equals(Object other) {
             return other instanceof Area area && id.equals(area.id) && label.equals(area.label)
                     && description.equals(area.description) && style.equals(area.style) && world.equals(area.world)
-                    && Arrays.equals(x, area.x) && Arrays.equals(z, area.z)
-                    && Double.compare(yMin, area.yMin) == 0 && Double.compare(yMax, area.yMax) == 0;
+                    && Arrays.equals(x, area.x) && Arrays.equals(z, area.z);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(id, label, description, style, world, Arrays.hashCode(x), Arrays.hashCode(z), yMin,
-                    yMax);
+            return Objects.hash(id, label, description, style, world, Arrays.hashCode(x), Arrays.hashCode(z));
         }
 
         @Override
         public String toString() {
             return "Area[" + id + " '" + label + "' in " + world + ": x " + Arrays.toString(x) + ", z "
-                    + Arrays.toString(z) + ", y " + yMin + " to " + yMax + ", " + style + "]";
+                    + Arrays.toString(z) + ", " + style + "]";
         }
     }
 

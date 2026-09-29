@@ -3,6 +3,7 @@ package com.mcmiddleearth.architect.mapLayers;
 import com.mcmiddleearth.architect.testsupport.FakeMarkerApi;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.event.server.PluginEnableEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.plugin.Plugin;
 import org.dynmap.markers.MarkerSet;
 import org.junit.jupiter.api.AfterEach;
@@ -14,6 +15,7 @@ import org.mockbukkit.mockbukkit.ServerMock;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -37,7 +39,9 @@ class MapLayersTest {
         server = MockBukkit.mock();
         plugin = MockBukkit.createMockPlugin();
         plugin.getLogger().addHandler(new Handler() {
-            @Override public void publish(LogRecord record) { warnings.add(record.getMessage()); }
+            @Override public void publish(LogRecord record) {
+                warnings.add(record.getLevel() + ": " + record.getMessage());
+            }
             @Override public void flush() {}
             @Override public void close() {}
         });
@@ -67,7 +71,7 @@ class MapLayersTest {
             List<MapShape> list = new ArrayList<>();
             for (String box : boxes) {
                 list.add(new MapShape.Area(box, box, box, STYLE, "world",
-                        new double[]{0, 16, 16, 0}, new double[]{0, 0, 16, 16}, 0, 255));
+                        new double[]{0, 16, 16, 0}, new double[]{0, 0, 16, 16}));
             }
             shapes = () -> list;
         }
@@ -132,6 +136,23 @@ class MapLayersTest {
     }
 
     @Test
+    void aLayerWithAMissingShapeIsSkippedAndTheMapStaysOn() {
+        TestLayer a = new TestLayer("test.debug.a", "one");
+        TestLayer b = new TestLayer("test.debug.b", "two");
+        start(a, b);
+        server.getScheduler().performOneTick();
+
+        a.shapes = () -> Arrays.asList((MapShape) null);
+        MapLayers.changed("test.debug.a");
+        MapLayers.changed("test.debug.b");
+        server.getScheduler().performOneTick();
+
+        assertEquals(2, b.asked.get(), "the other layer is still drawn");
+        assertNotNull(set("test.debug.a").findAreaMarker("one"), "the broken layer keeps its markers");
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("switched off")), warnings.toString());
+    }
+
+    @Test
     void aMapThatFailsIsSwitchedOff() {
         TestLayer a = new TestLayer("test.debug.a", "one");
         start(a);
@@ -167,6 +188,21 @@ class MapLayersTest {
         assertEquals(2, a.asked.get(), "and every layer is drawn again");
     }
 
+    // /mv load: the layers leave out what lies in a world that is not loaded, so a world loaded later needs a redraw.
+    @Test
+    void aWorldLoadedLaterRedrawsEveryLayer() {
+        TestLayer a = new TestLayer("test.debug.a", "one");
+        TestLayer b = new TestLayer("test.debug.b", "two");
+        start(a, b);
+        server.getScheduler().performOneTick();
+
+        server.getPluginManager().callEvent(new WorldLoadEvent(server.addSimpleWorld("later")));
+        server.getScheduler().performOneTick();
+
+        assertEquals(2, a.asked.get());
+        assertEquals(2, b.asked.get());
+    }
+
     // A server without the dynmap jar: no org.dynmap class can load, and Architect must start all the same.
     @Test
     void mapLayersStartWithoutDynmapInstalled() throws Exception {
@@ -192,8 +228,8 @@ class MapLayersTest {
             server.getScheduler().performOneTick();
             isolated.getMethod("stop").invoke(null);
         }
-        assertTrue(warnings.contains("dynmap is not enabled, so Architect's map layers are not drawn."),
-                warnings.toString());
+        assertTrue(warnings.contains("INFO: dynmap is not enabled, so Architect's map layers are not drawn."),
+                "INFO, not a warning: a server without dynmap is no fault " + warnings);
     }
 
     @Test
@@ -208,7 +244,8 @@ class MapLayersTest {
         assertDoesNotThrow(() -> server.getScheduler().performOneTick());
 
         assertEquals(0, a.asked.get(), "no layer is built for a map that is not there");
-        assertEquals(1, warnings.stream().filter(w -> w.contains("not compatible")).count(), "logged once: " + warnings);
+        assertEquals(1, warnings.stream().filter(w -> w.contains("not compatible")).count(),
+                "logged once: " + warnings);
     }
 
     @Test
@@ -269,6 +306,26 @@ class MapLayersTest {
     }
 
     @Test
+    void aLayerThatCannotBeRemovedDoesNotKeepTheOthersOnTheMap() {
+        List<String> removed = new ArrayList<>();
+        MapLayers.start(plugin, List.of(new TestLayer("test.debug.a"), new TestLayer("test.debug.b")),
+                p -> new MapBackend() {
+                    @Override public void show(MapLayer layer, List<MapShape> shapes) {}
+                    @Override public void remove(String markerSetId) {
+                        if (markerSetId.equals("test.debug.a")) {
+                            throw new IllegalStateException("stuck");
+                        }
+                        removed.add(markerSetId);
+                    }
+                });
+        server.getScheduler().performOneTick();
+
+        MapLayers.stop();
+
+        assertEquals(List.of("test.debug.b"), removed);
+    }
+
+    @Test
     void startingAgainReplacesTheLayers() {
         start(new TestLayer("test.debug.a", "one"));
         server.getScheduler().performOneTick();
@@ -321,6 +378,81 @@ class MapLayersTest {
 
         assertEquals(2, lookups.get(), "a fresh map, with nothing cached");
         assertEquals("one", set("test.debug.a").findAreaMarker("one").getLabel(), "the hand edit is undone");
+
+        int writes = dynmap.writes();
+        MapLayers.changed("test.debug.a");
+        server.getScheduler().performOneTick();
+        assertEquals(2, lookups.get(), "only the redraw right after the refresh looks the map up again");
+        assertEquals(writes, dynmap.writes(), "so later redraws of unchanged shapes write nothing");
+    }
+
+    @Test
+    void aRefreshSaysWhatItFound() {
+        assertEquals(MapLayers.Refresh.NOT_RUNNING, MapLayers.refreshAll());
+        start(new TestLayer("test.debug.a", "one"));
+        assertEquals(MapLayers.Refresh.NO_MAP, MapLayers.refreshAll(), "no dynmap plugin here");
+        MockBukkit.createMockPlugin("dynmap");
+        assertEquals(MapLayers.Refresh.DRAWN, MapLayers.refreshAll());
+    }
+
+    @Test
+    void aLayerThatCannotRefreshDoesNotHoldTheOthersUp() {
+        List<String> calls = new ArrayList<>();
+        TestLayer broken = new TestLayer("test.debug.a", "one") {
+            @Override public void refresh() { throw new IllegalStateException("cannot refresh"); }
+        };
+        TestLayer gathering = new TestLayer("test.debug.b", "two") {
+            @Override public void refresh() { calls.add("refresh"); }
+        };
+        start(broken, gathering);
+        server.getScheduler().performOneTick();
+
+        assertDoesNotThrow(MapLayers::refreshAll);
+        server.getScheduler().performOneTick();
+
+        assertEquals(List.of("refresh"), calls, "a layer that cannot refresh does not hold the others up");
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("test.debug.a could not refresh")), warnings.toString());
+        assertEquals(2, broken.asked.get(), "and it is drawn again all the same");
+    }
+
+    @Test
+    void aRefreshTriesAMapThatFailedOnceMore() {
+        start(new TestLayer("test.debug.a", "one"));
+        dynmap.failDrawing(true);
+        server.getScheduler().performOneTick();
+        dynmap.failDrawing(false);
+
+        MapLayers.refreshAll();
+        server.getScheduler().performOneTick();
+
+        assertNotNull(set("test.debug.a").findAreaMarker("one"));
+    }
+
+    @Test
+    void aRefreshLogsAgainWhyALayerCannotBeBuilt() {
+        TestLayer a = new TestLayer("test.debug.a", "one");
+        a.shapes = () -> { throw new IllegalStateException("broken region"); };
+        start(a);
+        server.getScheduler().performOneTick();
+        MapLayers.changed("test.debug.a");
+        server.getScheduler().performOneTick();
+
+        MapLayers.refreshAll();
+        server.getScheduler().performOneTick();
+
+        assertEquals(2, warnings.stream().filter(w -> w.contains("test.debug.a could not be built")).count(),
+                "once, then once more for the refresh: " + warnings);
+    }
+
+    @Test
+    void aStopRightAfterARefreshStillTakesTheLayersOff() {
+        start(new TestLayer("test.debug.a", "one"));
+        server.getScheduler().performOneTick();
+
+        MapLayers.refreshAll();
+        MapLayers.stop(); // in the same tick, before the redraw: say a scripted refresh, then /architect reload
+
+        assertNull(set("test.debug.a"));
     }
 
     @Test

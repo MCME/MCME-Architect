@@ -152,6 +152,18 @@ class ItemBlockBudgetTest {
     }
 
     @Test
+    void aRefreshCountsEveryWorld() {
+        WorldMock other = server.addSimpleWorld("other");
+        Chunk chunk = other.getChunkAt(1, 1);
+        other.spawn(new Location(other, 24, 64, 24), ArmorStand.class);
+
+        budget.recountLoaded();
+
+        assertNotNull(budget.counts().get(key(chunk)), "a chunk in the second world is counted too");
+        assertEquals(1, budget.counts().get(key(chunk)).total());
+    }
+
+    @Test
     void aChunkLeftWithNothingThatCountsIsForgotten() {
         Chunk chunk = world.getChunkAt(0, 0);
         load(chunk, spawn(chunk, ArmorStand.class));

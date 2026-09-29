@@ -203,4 +203,25 @@ class ItemBlockBudgetLayerTest {
         assertEquals(2, limits.lookups.get(), "neither the second report nor the save looks a limit up again");
         assertFalse(Files.readString(file).contains("world;1;0;"), "1 of 5 is not kept");
     }
+
+    // A refresh starts from scratch: a limit the version never saw change (a world unloaded since) is read again.
+    @Test
+    void aRefreshLooksEveryLimitUpAgain(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("itemBlockBudget.yml");
+        Files.writeString(file, "chunks:\n- world;0;0;3;0;0;500\n");
+        CountingLimits limits = new CountingLimits();
+        ItemBlockBudgetLayer layer = layer(limits, file.toFile());
+        MockBukkit.mock();
+        try {
+            layer.start(MockBukkit.createMockPlugin());
+            layer.shapes();
+            layer.refresh();
+            layer.shapes();
+            layer.stop();
+        } finally {
+            MockBukkit.unmock();
+        }
+
+        assertEquals(2, limits.lookups.get(), "looked up again after the refresh, although the version is the same");
+    }
 }

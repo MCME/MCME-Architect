@@ -60,9 +60,9 @@ public final class RpRegionLayer implements MapLayer {
     }
 
     private static String description(RpRegion region) {
-        return "<b>" + RegionShapes.html(region.getName()) + "</b>"
+        return "<b>" + MapShape.html(region.getName()) + "</b>"
                 + "<br>Resource pack: " + (region.getRp() == null || region.getRp().isBlank() ? "none"
-                        : RegionShapes.html(region.getRp()))
+                        : MapShape.html(region.getRp()))
                 + "<br>Weight: " + region.getWeight()
                 + "<br>" + RegionShapes.yRange(region.getRegion())
                 + "<br><i>Where regions overlap, the highest weight wins.</i>";

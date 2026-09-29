@@ -33,8 +33,6 @@ class RegionShapesTest {
 
         assertArrayEquals(new double[]{1, 11, 11, 1}, box.x());
         assertArrayEquals(new double[]{2, 2, 21, 21}, box.z());
-        assertEquals(RegionShapes.FLAT_Y, box.yMin(), "flat: LiveAtlas draws an area with a Y range hollow");
-        assertEquals(RegionShapes.FLAT_Y, box.yMax());
         assertEquals(WORLD, box.world());
         assertEquals("id", box.id());
         assertEquals("popup", box.description());
@@ -48,8 +46,6 @@ class RegionShapesTest {
 
         assertArrayEquals(new double[]{0, 10, 5}, polygon.x());
         assertArrayEquals(new double[]{0, 0, 8}, polygon.z());
-        assertEquals(RegionShapes.FLAT_Y, polygon.yMin());
-        assertEquals(RegionShapes.FLAT_Y, polygon.yMax());
     }
 
     @Test
@@ -57,6 +53,21 @@ class RegionShapesTest {
         assertTrue(RegionShapes.of(new Polygonal2DRegion(NullWorld.getInstance(),
                 List.of(BlockVector2.at(0, 0), BlockVector2.at(10, 0)), 10, 20), "id", "label", "popup", STYLE)
                 .isEmpty(), "it holds no block: WorldEdit's contains() is false everywhere");
+    }
+
+    @Test
+    void aRegionWhoseWorldIsGoneIsLeftOff() {
+        NullWorld unloaded = new NullWorld() {
+            @Override
+            public String getName() { // as WorldEdit's BukkitWorld does once its world is unloaded
+                throw new NullPointerException("The world was unloaded and the reference is unavailable");
+            }
+        };
+
+        assertTrue(RegionShapes.of(new CuboidRegion(unloaded, BlockVector3.at(0, 0, 0), BlockVector3.at(9, 9, 9)),
+                "id", "label", "popup", STYLE).isEmpty(), "its world was unloaded");
+        assertTrue(RegionShapes.of(new CuboidRegion(BlockVector3.at(0, 0, 0), BlockVector3.at(9, 9, 9)),
+                "id", "label", "popup", STYLE).isEmpty(), "no world at all");
     }
 
     @Test
@@ -90,10 +101,5 @@ class RegionShapesTest {
     void theYRangeIsInclusiveInText() {
         assertEquals("Y 10 to 20", RegionShapes.yRange(new Polygonal2DRegion(NullWorld.getInstance(),
                 List.of(BlockVector2.at(0, 0), BlockVector2.at(10, 0), BlockVector2.at(5, 8)), 10, 20)));
-    }
-
-    @Test
-    void htmlInNamesIsEscaped() {
-        assertEquals("a&lt;b&gt; &amp; &quot;c&quot;", RegionShapes.html("a<b> & \"c\""));
     }
 }

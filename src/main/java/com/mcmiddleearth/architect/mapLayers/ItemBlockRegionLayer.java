@@ -56,7 +56,7 @@ public final class ItemBlockRegionLayer implements MapLayer {
     }
 
     private static String description(ItemBlockRegion region) {
-        return "<b>" + RegionShapes.html(region.getName()) + "</b>"
+        return "<b>" + MapShape.html(region.getName()) + "</b>"
                 + "<br>Limit: " + region.getLimit() + " item blocks per chunk"
                 + " (armor stands, item frames and paintings count)"
                 + "<br>" + RegionShapes.yRange(region.getRegion())

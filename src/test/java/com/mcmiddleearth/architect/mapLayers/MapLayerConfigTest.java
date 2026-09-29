@@ -4,6 +4,7 @@ import org.bukkit.Color;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
@@ -13,6 +14,14 @@ class MapLayerConfigTest {
 
     private static MapLayerConfig.Layer layer(YamlConfiguration config, String key, boolean predatesMapLayers) {
         return new MapLayerConfig(config).layer(key, predatesMapLayers);
+    }
+
+    /** The config.yml Architect ships, which a server's own config.yml has as its defaults. */
+    private static YamlConfiguration shipped() throws IOException {
+        try (var in = new InputStreamReader(MapLayerConfigTest.class.getResourceAsStream("/config.yml"),
+                StandardCharsets.UTF_8)) {
+            return YamlConfiguration.loadConfiguration(in);
+        }
     }
 
     @Test
@@ -75,35 +84,59 @@ class MapLayerConfigTest {
                 "a block for another layer leaves this one on the dynmap section");
     }
 
-    // As the old utils read it: a dynmap section without 'enabled' was off, and a missing dynmap section was made
-    // with enabled: true.
+    // As the old utils read it: a dynmap section without 'enabled' was off. On a server, a config.yml without a
+    // dynmap section is read with the shipped config.yml as its defaults, whose dynmap section Bukkit hands out
+    // empty: off as well. Only a config without defaults, as in a unit test, has no dynmap section at all; the old
+    // utils then wrote one with enabled: true.
     @Test
-    void theOlderLayersAreOnOnlyWhereTheOldUtilsHadThemOn() {
+    void theOlderLayersAreOnOnlyWhereTheOldUtilsHadThemOn() throws Exception {
         YamlConfiguration off = new YamlConfiguration();
         off.set("dynmap.enabled", false);
         YamlConfiguration silent = new YamlConfiguration();
         silent.set("dynmap.hide", true);
+        YamlConfiguration server = new YamlConfiguration(); // a server's config.yml without a dynmap section
+        server.setDefaults(shipped()); // as JavaPlugin.reloadConfig() sets them
 
         assertFalse(layer(off, "rpRegions", true).enabled());
         assertFalse(layer(off, "itemBlockLimit", true).enabled());
         assertFalse(layer(silent, "rpRegions", true).enabled(), "a dynmap section without 'enabled' was off");
-        assertTrue(layer(new YamlConfiguration(), "rpRegions", true).enabled(), "no dynmap section at all was on");
+        assertFalse(layer(server, "rpRegions", true).enabled(),
+                "the shipped defaults give an empty dynmap section: off, as the old utils had it");
+        assertTrue(layer(new YamlConfiguration(), "rpRegions", true).enabled(),
+                "without any defaults, the old utils wrote a dynmap section with enabled: true");
     }
 
-    // The worst case: with copyDefaults on, as Architect's onEnable sets it, isSet() counts values that are only
-    // defaults, so a mapLayers block for these layers in the shipped config.yml would make every existing server
-    // drop its dynmap settings. (loadData's reloadConfig replaces that config object, but no test should rely on it.)
+    // Not a block: true or false switches the layer and leaves every other setting at its default, and any other
+    // value counts as not set.
+    @Test
+    void aLayerSetToJustTrueOrFalseIsSwitchedByIt() throws Exception {
+        YamlConfiguration config = new YamlConfiguration();
+        config.loadFromString("""
+                dynmap: {enabled: true, hide: false}
+                mapLayers: {rpRegions: off, itemBlockLimit: true}
+                """);
+        YamlConfiguration quoted = new YamlConfiguration();
+        quoted.loadFromString("""
+                dynmap: {enabled: true, hide: false}
+                mapLayers: {rpRegions: 'false'}
+                """);
+
+        assertFalse(layer(config, "rpRegions", true).enabled(),
+                "YAML reads off as false, and the dynmap section, which says enabled, is not read");
+        assertTrue(layer(config, "itemBlockLimit", true).enabled());
+        assertTrue(layer(config, "itemBlockLimit", true).hidden(), "the default, not the dynmap section's hide");
+        assertTrue(layer(quoted, "rpRegions", true).legacy(), "a string is no switch: as if not set");
+    }
+
+    // The worst case: isConfigurationSection() and isBoolean() fall back to the defaults, which reloadConfig() sets
+    // from the shipped config.yml. So a live mapLayers block for these layers there would make every existing server
+    // drop its dynmap settings: that is why the shipped file has only a commented example.
     @Test
     void anExistingConfigKeepsItsDynmapSettingsDespiteTheShippedDefaults() throws Exception {
-        YamlConfiguration shipped;
-        try (var in = new InputStreamReader(MapLayerConfigTest.class.getResourceAsStream("/config.yml"),
-                StandardCharsets.UTF_8)) {
-            shipped = YamlConfiguration.loadConfiguration(in);
-        }
         YamlConfiguration existing = new YamlConfiguration();
         existing.set("dynmap.enabled", true);
         existing.set("dynmap.hide", false);
-        existing.setDefaults(shipped);
+        existing.setDefaults(shipped());
         existing.options().copyDefaults(true);
 
         MapLayerConfig.Layer rp = layer(existing, "rpRegions", true);
