@@ -56,6 +56,42 @@ public class TheGafferUtil {
         }
     }
     
+    // TheGaffer's recordExternalBuild, looked up once per TheGaffer class. TheGaffer before 3.0.0 has none: null.
+    private static Class<?> recordClass;
+    private static Method recordMethod;
+
+    /**
+     * Tells TheGaffer that the player placed a new special block, so it counts in their job's stats. Architect sets
+     * such blocks itself, and TheGaffer counts only the BlockPlaceEvents it sees. Does nothing without an enabled
+     * TheGaffer; one that cannot record builds is logged once.
+     */
+    public static void recordPlace(Player player, Location location) {
+        Plugin theGaffer = Bukkit.getPluginManager().getPlugin("TheGaffer");
+        if(theGaffer == null || !theGaffer.isEnabled()) {
+            return;
+        }
+        if(theGaffer.getClass() != recordClass) {
+            recordClass = theGaffer.getClass();
+            try {
+                recordMethod = recordClass.getMethod("recordExternalBuild", Player.class, Location.class,
+                        boolean.class);
+            } catch (NoSuchMethodException | SecurityException ex) {
+                recordMethod = null;
+                Log.warn("TheGaffer " + theGaffer.getPluginMeta().getVersion() + " cannot count the special blocks"
+                        + " Architect places, so job stats leave them out. TheGaffer 3.0.0 counts them.");
+            }
+        }
+        if(recordMethod == null) {
+            return;
+        }
+        try {
+            recordMethod.invoke(null, player, location, true);
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+            Log.error("Failed to reflectively invoke TheGaffer.recordExternalBuild for player " + player.getName()
+                    + " at " + location, ex);
+        }
+    }
+
     public static String getGafferProtectionMessage(Player player, Location location) {
         Plugin theGaffer = Bukkit.getPluginManager().getPlugin("TheGaffer");
         if(theGaffer == null) {

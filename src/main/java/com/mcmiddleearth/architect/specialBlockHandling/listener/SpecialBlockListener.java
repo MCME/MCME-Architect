@@ -192,14 +192,18 @@ public class SpecialBlockListener extends WatchedListener{
         }*/
         if((player.isSneaking() && data.isEditOnSneaking())
             || data.canPlace(blockPlace))  {
-            Location permissionLocation = ((player.isSneaking() && data.isEditOnSneaking())?
-                                                        event.getClickedBlock().getLocation():
-                                                        blockPlace.getLocation());
-            if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
+            // A sneak-edit changes the clicked block; anything else places a new block next to it.
+            boolean edit = player.isSneaking() && data.isEditOnSneaking();
+            Location permissionLocation = (edit? event.getClickedBlock().getLocation():
+                                                 blockPlace.getLocation());
+            if(!TheGafferUtil.hasGafferPermission(player,permissionLocation)) {
                 return;
             }
 //Logger.getGlobal().info("Block place");
             data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
+            if(!edit) {
+                TheGafferUtil.recordPlace(player, blockPlace.getLocation());
+            }
         }
     }
 
