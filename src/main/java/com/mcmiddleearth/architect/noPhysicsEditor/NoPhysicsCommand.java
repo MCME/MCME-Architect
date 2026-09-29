@@ -139,6 +139,12 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                 }
                 return true;
             }
+            if(!(args[0].equalsIgnoreCase("list") || args[0].equalsIgnoreCase("add")
+                    || args[0].equalsIgnoreCase("remove"))) {
+                PluginData.getMessageUtil().sendInvalidSubcommandError(p);
+                sendHelpMessage(p,1);
+                return true;
+            }
             if(!args[1].equals(PluginData.getDefaultKey()) && (Bukkit.getWorld(args[1]) == null)) {
                 sendWorldNotFoundMessage((Player)cs);
                 return true;
@@ -183,9 +189,6 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                         sendMaterialNotNpMessage(p);
                     }
                 }
-            } else {
-                PluginData.getMessageUtil().sendInvalidSubcommandError(p);
-                sendHelpMessage(p,1);
             }
         }
         return true;
@@ -278,9 +281,10 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
         help = new String[][]{{"/noPhy list ","<world>|-default",": Shows no physics list.","You may use '-default' instead of a worldname to show the default no physics lists of all worlds without specific settings."},
                                        {"/noPhy add ","<world>|-default <material>",": Adds a material"," to "+inverted+" physics list. Argument <material> must be a block state descriptor."},
                                        {"/noPhy remove ","<world>|-default <material>",": Removes a material"," from "+inverted+" physics list. Argument <material> must be a block state descriptor."},
-                                       {"/noPhy exception set ","<name>",": Creates ", "a new exception area."},
-                                       {"/noPhy exception delete "," <name>",": Deletes ", "an exception area."},
-                                       {"/noPhy exception list "," [#page]",": Displays a list", " of all exception areas."}};
+                                       {"/noPhy exception redstone ","<name>",": Creates ", "a redstone exception area from your cuboid WorldEdit selection."},
+                                       {"/noPhy exception water ","<name>",": Creates ", "a water exception area from your cuboid WorldEdit selection."},
+                                       {"/noPhy exception delete ","<name>",": Deletes ", "an exception area."},
+                                       {"/noPhy exception list ","[page]",": Displays a list", " of all exception areas."}};
         super.sendHelpMessage(player, page);
     }
 
