@@ -19,6 +19,8 @@ import com.mcmiddleearth.architect.customHeadManager.CustomHeadListener;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import com.mcmiddleearth.architect.customHeadManager.HeadCommand;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger;
+import com.mcmiddleearth.architect.mapLayers.ArchitectLayers;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsCommand;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsData;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
@@ -165,6 +167,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     
     @Override
     public void onDisable() {
+        MapLayers.stop(); // first, so the budget saves its counts even if other teardown fails
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
@@ -178,6 +181,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     }
     
     public void loadData() {
+        MapLayers.stop(); // first: the old layers save while Architect's data is still loaded
         reloadConfig();
         PluginData.load();
         NoPhysicsData.loadExceptionAreas();
@@ -190,6 +194,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         RpManager.init();
         ItemBlockManager.init();
         ViewDistanceManager.loadViewDistances();
+        MapLayers.start(this, ArchitectLayers.fromConfig(getConfig(), getDataFolder()));
     }
 
     public static ArchitectPlugin getPluginInstance() {

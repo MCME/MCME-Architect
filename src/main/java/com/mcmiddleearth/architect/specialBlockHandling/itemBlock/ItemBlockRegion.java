@@ -60,6 +60,24 @@ public class ItemBlockRegion {
                 && region.contains(BlockVector3.at(loc.getX(),loc.getY(),loc.getZ()));
     }
 
+    /**
+     * Whether the region's footprint holds this block column: tested at the region's middle height. A region
+     * without a world, or whose world was unloaded, holds none, rather than failing the lookup for every column.
+     */
+    public boolean coversColumn(String world, int x, int z) {
+        if (region.getWorld() == null) {
+            return false;
+        }
+        String regionWorld;
+        try {
+            regionWorld = region.getWorld().getName();
+        } catch (NullPointerException e) { // WorldEdit's BukkitWorld after its world was unloaded
+            return false;
+        }
+        int y = (region.getMinimumPoint().y() + region.getMaximumPoint().y()) / 2;
+        return regionWorld.equals(world) && region.contains(BlockVector3.at(x, y, z));
+    }
+
     public Map<String, Object> saveToMap() {
         Map<String,Object> result = new HashMap<>();
         result.put("name", name);
