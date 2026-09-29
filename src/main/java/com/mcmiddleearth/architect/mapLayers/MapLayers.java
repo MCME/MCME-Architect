@@ -26,8 +26,8 @@ import java.util.logging.Level;
  * is a command, an event or a scheduled task.
  * <p>
  * The map is looked up at the first redraw, because Architect enables before dynmap does, and again whenever dynmap
- * starts again: {@code /dynmap reload} replaces its marker API. A layer that fails to build keeps its old markers; a
- * map that fails is switched off until dynmap or Architect starts again.
+ * starts again, since that replaces its marker API. A layer that fails to build keeps its old markers; a map that
+ * fails is switched off until {@code /architect maplayers refresh}, or until dynmap or Architect starts again.
  */
 public final class MapLayers {
 
@@ -183,7 +183,7 @@ public final class MapLayers {
                 backend.show(layer, shapes);
             } catch (RuntimeException | LinkageError e) {
                 plugin.getLogger().log(Level.WARNING, "The web map failed, so Architect's map layers are switched off"
-                        + " until dynmap or Architect starts again", e);
+                        + " until /architect maplayers refresh, or until dynmap or Architect starts again", e);
                 failed = backend;
                 backend = MapBackend.NONE;
             }
@@ -217,10 +217,10 @@ public final class MapLayers {
     }
 
     /**
-     * What else calls for a redraw: {@code /dynmap reload} disables and enables dynmap, which makes a new marker API,
-     * and a world loaded later ({@code /mv load}) has no-physics areas and budget tiles the layers left out while it
-     * was not loaded. Its RP and item-block regions still need {@code /architect reload}: their managers drop a region
-     * whose world is not loaded.
+     * What else calls for a redraw: a dynmap restart makes a new marker API (dynmap disables and enables, as
+     * {@code /dynmap reload} does on builds that have one), and a world loaded later ({@code /mv load}) has no-physics
+     * areas and budget tiles the layers left out while it was not loaded. Its RP and item-block regions still need
+     * {@code /architect reload}: their managers drop, at a start or reload, a region whose world is not loaded yet.
      */
     private final class ServerWatch implements Listener {
 

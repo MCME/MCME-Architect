@@ -23,7 +23,8 @@ public final class NoPhysicsLayer implements MapLayer {
             + " enchanting tables, beacons and undamaged anvils keep their block physics here, and so do iron doors"
             + " and trapdoors, and the doors, gates and trapdoors of oak, spruce, birch, jungle, acacia and dark oak:"
             + " they connect and update. Redstone power itself stays frozen on the whole server, but pistons,"
-            + " dispensers, droppers and hoppers here still react to a redstone block.";
+            + " dispensers, droppers and hoppers here still react to power that is already there, such as a redstone"
+            + " block.";
     private static final String WATER = "Water and lava flow here.";
     // A container opens in an area only if the area affects its block, and a water area affects only water and lava.
     private static final String CONTAINERS = "Dispensers, droppers, hoppers, dyed shulker boxes, enchanting tables,"

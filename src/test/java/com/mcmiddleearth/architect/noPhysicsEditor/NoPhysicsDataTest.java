@@ -51,6 +51,7 @@ class NoPhysicsDataTest {
         Map<String, ExceptionArea> areas = NoPhysicsData.getExceptionAreas();
         areas.put("Mill", new RedstoneCircuitArea(WORLD, new Vector(0, 60, 0), new Vector(9, 70, 19)));
         areas.put("Fountain", new WaterFlowArea(WORLD, new Vector(100, 50, 100), new Vector(104, 55, 104)));
+        assertTrue(new File(file.getPath() + ".tmp").mkdir(), "a leftover .tmp that cannot be written to");
 
         NoPhysicsData.save();
         areas.clear();

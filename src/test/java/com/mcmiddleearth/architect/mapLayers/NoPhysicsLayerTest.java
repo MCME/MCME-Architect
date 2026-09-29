@@ -61,7 +61,8 @@ class NoPhysicsLayerTest {
         assertTrue(redstone.contains("pistons (not sticky ones)"), redstone);
         assertTrue(redstone.contains("trapdoors of oak, spruce, birch, jungle, acacia and dark oak:"),
                 "no newer wood: " + redstone);
-        assertTrue(redstone.contains("still react to a redstone block"), "what reads power without the event");
+        assertTrue(redstone.contains("still react to power that is already there, such as a redstone block"),
+                "what reads power without the event: " + redstone);
         assertTrue(redstone.contains("beacons and undamaged anvils keep"), "chipped ones are not: " + redstone);
         assertTrue(redstone.contains("beacons and undamaged anvils set to"), "nor in the container line: " + redstone);
         assertTrue(redstone.contains("Redstone power itself stays frozen on the whole server"),

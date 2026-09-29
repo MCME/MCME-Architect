@@ -27,9 +27,9 @@ final class DynmapBackend implements MapBackend {
     private static final String AREA = "area ";
     private static final String CIRCLE = "circle ";
     /**
-     * Every area is drawn flat at Y 64, set on every write: dynmap starts a new area at its world's sea level, and one
-     * taken over may have a range of its own. LiveAtlas draws an area with a Y range as a hollow 3D outline, as
-     * {@link MapShape.Area} explains.
+     * Every area is drawn flat at Y 64, set on every write: dynmap starts a new area at its world's sea level + 1,
+     * and one taken over may have a range of its own. LiveAtlas draws an area with a Y range as a hollow 3D outline,
+     * as {@link MapShape.Area} explains.
      */
     private static final double FLAT_Y = 64;
 
