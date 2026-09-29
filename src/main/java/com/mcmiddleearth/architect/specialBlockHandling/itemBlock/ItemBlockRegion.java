@@ -46,9 +46,10 @@ public class ItemBlockRegion {
     private int limit = 0;
     private Region region;
     
+    // A copy: /itemblock create passes the admin's live WorldEdit selection, which //pos1 and //pos2 reshape.
     public ItemBlockRegion(String name, Region region){
         this.name = name;
-        this.region = region;
+        this.region = region.clone();
     }
     
     public boolean contains(Location loc) {
@@ -196,6 +197,6 @@ public class ItemBlockRegion {
     }
 
     public void setRegion(Region region) {
-        this.region = region;
+        this.region = region.clone();
     }
 }
