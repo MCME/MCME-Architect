@@ -219,7 +219,7 @@ public class SpecialBlockListener extends WatchedListener{
      * handles breaking of special blocks from the MCME custom inventories.
      * @param event
      */
-    @EventHandler(priority = EventPriority.LOW)
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void breakSpecialBlock(BlockBreakEvent event) {
 //Logger.getGlobal().info("Block break");
 //event.setCancelled(true);
