@@ -10,6 +10,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -180,8 +181,11 @@ class SpecialBlockGafferTest {
         Block target = wall.getRelative(BlockFace.EAST);
 
         rightClick("frame", wall, BlockFace.EAST);
+        server.getScheduler().performTicks(3); // the frame is hung three ticks later, in this test and not the next
 
         assertEquals(List.of(target.getLocation()), FakeGaffer.asked, "asked about the frame's block");
+        assertEquals(1, Arrays.stream(target.getChunk().getEntities()).filter(entity -> entity instanceof ItemFrame)
+                .count(), "the frame was hung");
         assertEquals(List.of(), FakeGaffer.builds);
     }
 
