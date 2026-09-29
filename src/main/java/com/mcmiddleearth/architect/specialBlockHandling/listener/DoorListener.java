@@ -199,6 +199,8 @@ public class DoorListener extends WatchedListener{
                              .getBlockData()).getHinge().equals(Door.Hinge.RIGHT);
         ((SpecialBlockVanillaDoor)data).placeBlock(blockPlace, BlockFace.SELF, 
                                                    player, hingeRight);
+        // The vanilla place was cancelled above, before TheGaffer's listener saw it: report the door (one place).
+        TheGafferUtil.recordPlace(player, blockPlace.getLocation());
     }
     
 }

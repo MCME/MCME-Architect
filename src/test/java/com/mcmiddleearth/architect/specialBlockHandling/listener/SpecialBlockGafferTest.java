@@ -3,10 +3,13 @@ package com.mcmiddleearth.architect.specialBlockHandling.listener;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.util.FakeGaffer;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.MultipleFacing;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.EntityType;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -23,6 +26,7 @@ import org.mockbukkit.mockbukkit.world.WorldMock;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -56,6 +60,15 @@ class SpecialBlockGafferTest {
                     type: MULTI_FACE
                     blockData: minecraft:oak_fence
                     itemMaterial: OAK_FENCE
+                  itemblock:
+                    type: ITEM_BLOCK
+                    blockData: minecraft:barrier
+                    contentItem: DIAMOND_HOE
+                    contentDamage: '1'
+                    itemMaterial: DIAMOND_HOE
+                  frame:
+                    type: ITEM_FRAME
+                    itemMaterial: PAPER
                 """);
         SpecialBlockInventoryData.loadInventories();
     }
@@ -73,7 +86,6 @@ class SpecialBlockGafferTest {
         FakeGaffer.builds.clear();
         FakeGaffer.allowed = location -> true;
         player.setSneaking(false);
-        server.getScheduler().performOneTick(); // the listener takes one click per block and tick
     }
 
     // The item as the block inventory makes it: the tag, then the special block's id.
@@ -141,5 +153,53 @@ class SpecialBlockGafferTest {
 
         assertEquals(List.of(fence.getLocation()), FakeGaffer.asked, "asked about the fence, not its neighbour");
         assertFalse(hasFace(fence, BlockFace.WEST), "refused: the fence itself is outside the job's area");
+    }
+
+    private static long armorStands(Block block) {
+        return Arrays.stream(block.getChunk().getEntities()).filter(entity -> entity instanceof ArmorStand).count();
+    }
+
+    @Test
+    void aPlacedItemBlockIsReported() {
+        Block ground = world.getBlockAt(8, 64, 0);
+        ground.setType(Material.DIRT);
+
+        rightClick("itemblock", ground, BlockFace.UP);
+        server.getScheduler().performTicks(3); // the armor stand gets its item two ticks later
+
+        Block placed = ground.getRelative(BlockFace.UP);
+        assertEquals(Material.BARRIER, placed.getType(), "placed");
+        assertEquals(List.of(new FakeGaffer.Build(player.getName(), placed.getLocation(), true)), FakeGaffer.builds);
+    }
+
+    // TheGaffer counts no item frame, placed or broken: they are entities. So a special one is not counted either.
+    @Test
+    void anItemFrameIsNotCounted() {
+        Block wall = world.getBlockAt(12, 64, 0);
+        wall.setType(Material.STONE);
+        Block target = wall.getRelative(BlockFace.EAST);
+
+        rightClick("frame", wall, BlockFace.EAST);
+
+        assertEquals(List.of(target.getLocation()), FakeGaffer.asked, "asked about the frame's block");
+        assertEquals(List.of(), FakeGaffer.builds);
+    }
+
+    // An item block is refused in a chunk that holds too many entities already (5 by default): no new block.
+    @Test
+    void anItemBlockRefusedForTooManyEntitiesIsNotReported() {
+        Block ground = world.getBlockAt(40, 64, 0); // a chunk of its own
+        ground.setType(Material.DIRT);
+        for (int i = 0; i < 5; i++) {
+            world.spawnEntity(new Location(world, 40.5 + i, 70, 8.5), EntityType.ARMOR_STAND);
+        }
+        assertEquals(5, armorStands(ground), "the chunk is at its limit");
+
+        rightClick("itemblock", ground, BlockFace.UP);
+
+        String message = player.nextMessage();
+        assertTrue(message != null && message.contains("Too many entities"), "refused: " + message);
+        assertEquals(Material.AIR, ground.getRelative(BlockFace.UP).getType(), "not placed");
+        assertEquals(List.of(), FakeGaffer.builds);
     }
 }

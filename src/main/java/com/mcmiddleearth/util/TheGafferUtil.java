@@ -20,6 +20,7 @@ import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -30,6 +31,10 @@ import org.bukkit.plugin.Plugin;
  * @author Eriol_Eandur
  */
 public class TheGafferUtil {
+
+    // TheGaffer's recordExternalBuild, looked up once per TheGaffer class; null for one without it (before 3.0.0).
+    private static Class<?> recordClass;
+    private static Method recordMethod;
     
     public static boolean checkGafferPermission(Player p, Location loc) {
         if(!hasGafferPermission(p,loc)) {
@@ -56,14 +61,10 @@ public class TheGafferUtil {
         }
     }
     
-    // TheGaffer's recordExternalBuild, looked up once per TheGaffer class. TheGaffer before 3.0.0 has none: null.
-    private static Class<?> recordClass;
-    private static Method recordMethod;
-
     /**
-     * Tells TheGaffer that the player placed a new special block, so it counts in their job's stats. Architect sets
-     * such blocks itself, and TheGaffer counts only the BlockPlaceEvents it sees. Does nothing without an enabled
-     * TheGaffer; one that cannot record builds is logged once.
+     * Tells TheGaffer that the player placed a new block, so it counts in their job's stats. Architect sets such
+     * blocks itself, and TheGaffer counts only the BlockPlaceEvents it sees. Main thread only. Does nothing without an
+     * enabled TheGaffer; one that cannot record builds is logged once.
      */
     public static void recordPlace(Player player, Location location) {
         Plugin theGaffer = Bukkit.getPluginManager().getPlugin("TheGaffer");
@@ -71,15 +72,22 @@ public class TheGafferUtil {
             return;
         }
         if(theGaffer.getClass() != recordClass) {
-            recordClass = theGaffer.getClass();
+            Method method;
             try {
-                recordMethod = recordClass.getMethod("recordExternalBuild", Player.class, Location.class,
+                method = theGaffer.getClass().getMethod("recordExternalBuild", Player.class, Location.class,
                         boolean.class);
             } catch (NoSuchMethodException | SecurityException ex) {
-                recordMethod = null;
-                Log.warn("TheGaffer " + theGaffer.getPluginMeta().getVersion() + " cannot count the special blocks"
-                        + " Architect places, so job stats leave them out. TheGaffer 3.0.0 counts them.");
+                method = null;
             }
+            if(method != null && !Modifier.isStatic(method.getModifiers())) {
+                method = null;
+            }
+            if(method == null) {
+                Log.warn("TheGaffer " + theGaffer.getPluginMeta().getVersion() + " cannot count the blocks Architect"
+                        + " places. TheGaffer 3.0.0 counts them in job stats.");
+            }
+            recordMethod = method;
+            recordClass = theGaffer.getClass();
         }
         if(recordMethod == null) {
             return;
