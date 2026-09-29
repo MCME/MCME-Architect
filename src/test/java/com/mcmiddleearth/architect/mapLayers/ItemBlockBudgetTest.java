@@ -58,7 +58,12 @@ class ItemBlockBudgetTest {
     }
 
     private ItemBlockBudget newBudget() {
-        return new ItemBlockBudget(new File(dir.toFile(), "itemBlockBudget.yml"), changes::incrementAndGet, clock::get);
+        return newBudget(1); // reports every second, so each step below is seen at once
+    }
+
+    private ItemBlockBudget newBudget(int reportSeconds) {
+        return new ItemBlockBudget(new File(dir.toFile(), "itemBlockBudget.yml"), changes::incrementAndGet,
+                reportSeconds, clock::get);
     }
 
     private static ItemBlockBudget.ChunkKey key(Chunk chunk) {
@@ -89,6 +94,27 @@ class ItemBlockBudgetTest {
         assertEquals(0, changes.get(), "chunks load all the time, so the map hears once a second");
         server.getScheduler().performTicks(20);
         assertEquals(1, changes.get());
+    }
+
+    // Each report costs a redraw, and dynmap a rebuild of the world's marker file, so on the server the budget
+    // reports at most every 10 s. A change after a quiet spell still shows within a second.
+    @Test
+    void aBusyMapHearsAtMostOncePerReportInterval() {
+        budget.stop();
+        budget = newBudget(10);
+        budget.start(plugin, entry -> true);
+        Chunk chunk = world.getChunkAt(0, 0);
+
+        load(chunk, spawn(chunk, ArmorStand.class));
+        server.getScheduler().performTicks(20);
+        assertEquals(1, changes.get(), "the first change after a quiet spell, within a second");
+
+        load(chunk, spawn(chunk, ArmorStand.class), spawn(chunk, ArmorStand.class));
+        server.getScheduler().performTicks(9 * 20);
+        assertEquals(2, budget.counts().get(key(chunk)).total(), "counted at once");
+        assertEquals(1, changes.get(), "but not reported within 10 s of the last report");
+        server.getScheduler().performTicks(20);
+        assertEquals(2, changes.get(), "10 s after it");
     }
 
     @Test

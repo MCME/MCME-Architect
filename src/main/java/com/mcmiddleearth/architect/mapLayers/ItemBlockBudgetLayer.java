@@ -30,6 +30,11 @@ public final class ItemBlockBudgetLayer implements MapLayer {
 
     public static final String ID = "architect.debug.itemblockbudget";
     static final String KEY = "itemBlockBudget";
+    /**
+     * Budget changes reach the map at most this often. Each report weighs every counted chunk, and a changed tile
+     * makes dynmap rebuild its world's whole marker file on the main thread, at about 1 to 3 microseconds a marker.
+     */
+    private static final int REPORT_SECONDS = 10;
 
     /** A chunk's limit: from the item-block region with the highest limit there, or the world's base limit. */
     public record Limit(int value, String region) {}
@@ -71,7 +76,7 @@ public final class ItemBlockBudgetLayer implements MapLayer {
         this.warn = style(config.color("warnColor", 0xffd700), fillOpacity);
         this.high = style(config.color("highColor", 0xff8c00), fillOpacity);
         this.full = style(config.color("fullColor", 0xff0000), fillOpacity);
-        this.budget = new ItemBlockBudget(file, () -> MapLayers.changed(ID), System::currentTimeMillis);
+        this.budget = new ItemBlockBudget(file, () -> MapLayers.changed(ID), REPORT_SECONDS, System::currentTimeMillis);
         this.limits = limits;
     }
 

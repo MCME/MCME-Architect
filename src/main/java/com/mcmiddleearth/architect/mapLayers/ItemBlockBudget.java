@@ -37,8 +37,9 @@ import java.util.logging.Level;
 /**
  * Counts, per chunk, the entities that count toward the item-block limit: when a chunk's entities load or unload,
  * and, in a batch once a second, in loaded chunks where such an entity came or went. An unloaded chunk keeps its last
- * count. Changes are reported at most once a second, since chunks load all the time. The counts the map shows are
- * kept in a file, so they are back after a restart.
+ * count. Changes are reported at most once per report interval, since chunks load all the time; a change after a
+ * quiet spell is reported within a second. The counts the map shows are kept in a file, so they are back after a
+ * restart.
  * <p>
  * A move between two loaded chunks, such as a teleport by {@code /tp} or by the {@code /armor} editor, fires no event.
  * Both chunks then stay off by one until they are counted again: as they unload or load, or when an entity that
@@ -63,17 +64,24 @@ final class ItemBlockBudget implements Listener {
     private final Set<ChunkKey> marked = new LinkedHashSet<>();
     private final File file;
     private final Runnable changed;
+    private final int reportSeconds;
     private final LongSupplier clock;
     private Plugin plugin;
     private Predicate<Map.Entry<ChunkKey, Count>> keep;
     private final List<BukkitTask> tasks = new ArrayList<>();
     private boolean unsaved;
     private boolean unreported;
+    private int secondsSinceReport;
 
-    /** {@code changed} runs, at most once a second, after counts changed; {@code clock} gives epoch milliseconds. */
-    ItemBlockBudget(File file, Runnable changed, LongSupplier clock) {
+    /**
+     * {@code changed} runs after counts changed, at most once every {@code reportSeconds}; {@code clock} gives epoch
+     * milliseconds.
+     */
+    ItemBlockBudget(File file, Runnable changed, int reportSeconds, LongSupplier clock) {
         this.file = file;
         this.changed = changed;
+        this.reportSeconds = reportSeconds;
+        this.secondsSinceReport = reportSeconds; // so the first change is reported at the next second
         this.clock = clock;
     }
 
@@ -146,7 +154,10 @@ final class ItemBlockBudget implements Listener {
         }
     }
 
-    /** Recounts marked chunks, then reports any change. Only loaded chunks: entities also leave as a chunk unloads. */
+    /**
+     * Recounts marked chunks, then reports any change, unless the last report was less than {@code reportSeconds} ago.
+     * Only loaded chunks: entities also leave as a chunk unloads.
+     */
     private void everySecond() {
         for (ChunkKey key : marked) {
             World world = plugin.getServer().getWorld(key.world());
@@ -156,8 +167,12 @@ final class ItemBlockBudget implements Listener {
             }
         }
         marked.clear();
-        if (unreported) {
+        if (secondsSinceReport < reportSeconds) {
+            secondsSinceReport++;
+        }
+        if (unreported && secondsSinceReport >= reportSeconds) {
             unreported = false;
+            secondsSinceReport = 0;
             changed.run();
         }
     }

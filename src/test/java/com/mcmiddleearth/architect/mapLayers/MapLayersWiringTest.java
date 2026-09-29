@@ -143,7 +143,7 @@ class MapLayersWiringTest {
 
         server.getPluginManager().callEvent(
                 new org.bukkit.event.world.EntitiesLoadEvent(world.getChunkAt(4, 4), stands));
-        server.getScheduler().performTicks(41); // the budget reports once a second; the redraw follows a tick later
+        server.getScheduler().performTicks(201); // the budget reports at most every 10 s; the redraw follows a tick later
 
         org.dynmap.markers.AreaMarker tile = set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.4.4");
         assertNotNull(tile, "4 of the world's base limit of 5 is 80%");
@@ -195,7 +195,7 @@ class MapLayersWiringTest {
         server.getPluginManager().callEvent(new org.bukkit.event.world.EntitiesLoadEvent(world.getChunkAt(8, 8),
                 java.util.List.of(world.spawn(new org.bukkit.Location(world, 136, 64, 136),
                         org.bukkit.entity.ArmorStand.class))));
-        server.getScheduler().performTicks(41);
+        server.getScheduler().performTicks(201);
         assertEquals(0xff0000, set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.8.8").getFillColor(),
                 "a new region's limit is 0, so one stand fills it");
         PlayerMock admin = server.addPlayer();
@@ -231,6 +231,8 @@ class MapLayersWiringTest {
             world.spawn(new org.bukkit.Location(world, 104, 64, 104), org.bukkit.entity.ArmorStand.class);
         }
         MarkerSet budget = set(ItemBlockBudgetLayer.ID);
+        // The reload made a new budget, which reports a first change within a second. Waiting longer would run the
+        // region loader the reload scheduled, which needs a real WorldEdit.
         server.getScheduler().performTicks(41);
         assertNull(budget.findAreaMarker("budget.world.6.6"), "no event told the budget of these");
 
