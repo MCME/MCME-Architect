@@ -199,6 +199,10 @@ public class DoorListener extends WatchedListener{
                              .getBlockData()).getHinge().equals(Door.Hinge.RIGHT);
         ((SpecialBlockVanillaDoor)data).placeBlock(blockPlace, BlockFace.SELF, 
                                                    player, hingeRight);
+        // The vanilla place was cancelled above, so TheGaffer never counts it: report the door (one place). Both
+        // listen at NORMAL, and Architect (load: STARTUP) runs first; were TheGaffer to run first, it would count the
+        // door too.
+        TheGafferUtil.recordPlace(player, blockPlace.getLocation());
     }
     
 }

@@ -24,8 +24,10 @@ import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
+import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
+import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemFrame;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.util.DevUtil;
@@ -192,14 +194,23 @@ public class SpecialBlockListener extends WatchedListener{
         }*/
         if((player.isSneaking() && data.isEditOnSneaking())
             || data.canPlace(blockPlace))  {
-            Location permissionLocation = ((player.isSneaking() && data.isEditOnSneaking())?
-                                                        event.getClickedBlock().getLocation():
-                                                        blockPlace.getLocation());
-            if(!TheGafferUtil.hasGafferPermission(player,blockPlace.getLocation())) {
+            // A sneak-edit changes the clicked block; anything else places a new block at blockPlace.
+            boolean edit = player.isSneaking() && data.isEditOnSneaking();
+            Location permissionLocation = (edit? event.getClickedBlock().getLocation():
+                                                 blockPlace.getLocation());
+            if(!TheGafferUtil.hasGafferPermission(player,permissionLocation)) {
                 return;
             }
 //Logger.getGlobal().info("Block place");
+            // Counted as a vanilla place would be: no edit, and no item frame (TheGaffer counts no item frames).
+            // Nor an item block refused for too many entities in its chunk: asked before placing, as placing one
+            // adds an armor stand to that count.
+            boolean newBlock = !edit && !(data instanceof SpecialBlockItemFrame)
+                    && (!(data instanceof SpecialBlockItemBlock) || ItemBlockManager.allowPlace(blockPlace, player));
             data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
+            if(newBlock) {
+                TheGafferUtil.recordPlace(player, blockPlace.getLocation());
+            }
         }
     }
 
