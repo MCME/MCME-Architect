@@ -38,6 +38,31 @@ class ItemBlockRegionTest {
         return region;
     }
 
+    // /itemblock create hands over the admin's live WorldEdit selection, which //pos1 and //pos2 go on reshaping.
+    @Test
+    void aRegionKeepsItsOwnCopyOfTheSelectionItWasMadeFrom() {
+        CuboidRegion selection = new CuboidRegion(NullWorld.getInstance(), BlockVector3.at(0, 0, 0),
+                BlockVector3.at(31, 255, 31));
+        ItemBlockRegion region = new ItemBlockRegion("Pier", selection);
+
+        selection.setPos1(BlockVector3.at(500, 0, 500)); // the admin's next //pos1
+
+        assertEquals(BlockVector3.at(0, 0, 0), region.getRegion().getMinimumPoint(), "the region stays put");
+        assertTrue(region.coversColumn(WORLD, 8, 8));
+    }
+
+    @Test
+    void aNewShapeIsCopiedToo() {
+        ItemBlockRegion region = region("Pier", NullWorld.getInstance(), 3);
+        CuboidRegion selection = new CuboidRegion(NullWorld.getInstance(), BlockVector3.at(64, 0, 64),
+                BlockVector3.at(95, 255, 95));
+
+        region.setRegion(selection);
+        selection.setPos1(BlockVector3.at(0, 0, 0));
+
+        assertEquals(BlockVector3.at(64, 0, 64), region.getRegion().getMinimumPoint());
+    }
+
     // A stale region must not fail every lookup: the budget layer would keep its old tiles and stop saving.
     @Test
     void aRegionWhoseWorldIsGoneCoversNoColumnAndTheOthersStillCount() {

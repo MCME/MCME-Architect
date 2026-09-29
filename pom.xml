@@ -212,6 +212,30 @@
             <artifactId>dynmap-api</artifactId>
             <version>3.5</version>
             <scope>provided</scope>
+            <exclusions>
+                <!-- Bukkit 1.7.10-R0.1-SNAPSHOT: paper-api is the Bukkit API here. dynmap-api's POM on
+                     repo.mikeprimm.com declares it, but the copy on repo.mcmiddleearth.com/mirror does not, so without
+                     this the test classpath depended on which repository answered (see ClasspathTest). -->
+                <exclusion>
+                    <groupId>org.bukkit</groupId>
+                    <artifactId>bukkit</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <!-- PluginUtils 2.0.2's MessageUtil needs json-simple but its POM does not declare it (2.0.4's does); the
+                 server provides it. It used to reach the classpath only inside dynmap-api's old Bukkit (see
+                 ClasspathTest). -->
+            <groupId>com.googlecode.json-simple</groupId>
+            <artifactId>json-simple</artifactId>
+            <version>1.1.1</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.mockbukkit.mockbukkit</groupId>
