@@ -18,14 +18,16 @@ public final class NoPhysicsLayer implements MapLayer {
     static final String KEY = "noPhysics";
 
     // As RedstoneCircuitArea.isAffected lists them.
-    private static final String REDSTONE = "Redstone wire, repeaters, comparators, redstone torches and lamps, pistons,"
-            + " dispensers, droppers, hoppers, dyed shulker boxes, enchanting tables, beacons and anvils keep their block"
-            + " physics here, and so do iron doors and trapdoors and the doors, gates and trapdoors of the six oldest"
-            + " woods: they connect and update. Redstone power itself stays frozen on the whole server.";
+    private static final String REDSTONE = "Redstone wire, repeaters, comparators, redstone torches (not on walls),"
+            + " redstone lamps, pistons (not sticky ones), dispensers, droppers, hoppers, dyed shulker boxes,"
+            + " enchanting tables, beacons and undamaged anvils keep their block physics here, and so do iron doors"
+            + " and trapdoors, and the doors, gates and trapdoors of oak, spruce, birch, jungle, acacia and dark oak:"
+            + " they connect and update. Redstone power itself stays frozen on the whole server, but pistons,"
+            + " dispensers, droppers and hoppers here still react to a redstone block.";
     private static final String WATER = "Water and lava flow here.";
     // A container opens in an area only if the area affects its block, and a water area affects only water and lava.
     private static final String CONTAINERS = "Dispensers, droppers, hoppers, dyed shulker boxes, enchanting tables,"
-            + " beacons and anvils set to 'exception' in the world config can be opened here.";
+            + " beacons and undamaged anvils set to EXCEPTION in the world config can be opened here.";
 
     private final boolean hidden;
     private final MapShape.Style redstone;

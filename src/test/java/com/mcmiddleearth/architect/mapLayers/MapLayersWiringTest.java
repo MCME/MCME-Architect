@@ -101,9 +101,12 @@ class MapLayersWiringTest {
     @Order(4)
     void noPhysicsAreasComeBackWithTheirTypeAndReachTheMap() throws Exception {
         java.util.UUID world = server.getWorld("world").getUID();
-        java.nio.file.Files.writeString(new java.io.File(plugin.getDataFolder(), "NoPhyExceptionAreas.txt").toPath(),
-                String.join(System.lineSeparator(), "0;60;0;9;10;19;" + world + ";water;Fountain", "not an area", "",
-                        "20;60;0;9;10;19;" + world + ";Old mill") + System.lineSeparator());
+        java.nio.file.Path file = new java.io.File(plugin.getDataFolder(), "NoPhyExceptionAreas.txt").toPath();
+        // a byte-order mark, CRLF and LF, a bad line, a blank line, and a name saved in Latin-1, not UTF-8
+        java.nio.file.Files.writeString(file, "\uFEFF0;60;0;9;10;19;" + world + ";water;Fountain\r\n"
+                + "not an area\n\n20;60;0;9;10;19;" + world + ";Old mill\r\n");
+        java.nio.file.Files.write(file, ("40;60;0;1;1;1;" + world + ";Caf\u00e9\n")
+                .getBytes(java.nio.charset.StandardCharsets.ISO_8859_1), java.nio.file.StandardOpenOption.APPEND);
 
         NoPhysicsData.loadExceptionAreas();
         server.getScheduler().performOneTick();
@@ -111,6 +114,10 @@ class MapLayersWiringTest {
         assertInstanceOf(WaterFlowArea.class, NoPhysicsData.getExceptionAreas().get("Fountain"));
         assertInstanceOf(com.mcmiddleearth.architect.noPhysicsEditor.RedstoneCircuitArea.class,
                 NoPhysicsData.getExceptionAreas().get("Old mill"), "an unreadable line costs only itself");
+        assertTrue(NoPhysicsData.getExceptionAreas().containsKey("Caf\uFFFD"), "a stray byte costs one character");
+        assertArrayEquals(java.nio.file.Files.readAllBytes(file),
+                java.nio.file.Files.readAllBytes(NoPhysicsData.backupFile().toPath()),
+                "the file as it was, byte for byte, since the next save drops the unreadable line");
         org.dynmap.markers.AreaMarker marker = set(NoPhysicsLayer.ID).findAreaMarker("nophysics.Fountain");
         assertEquals("world", marker.getWorld());
         assertEquals(0x1e64ff, marker.getFillColor(), "blue: a water area");
@@ -134,7 +141,8 @@ class MapLayersWiringTest {
             stands.add(world.spawn(new org.bukkit.Location(world, 72, 64, 72), org.bukkit.entity.ArmorStand.class));
         }
 
-        server.getPluginManager().callEvent(new org.bukkit.event.world.EntitiesLoadEvent(world.getChunkAt(4, 4), stands));
+        server.getPluginManager().callEvent(
+                new org.bukkit.event.world.EntitiesLoadEvent(world.getChunkAt(4, 4), stands));
         server.getScheduler().performTicks(41); // the budget reports once a second; the redraw follows a tick later
 
         org.dynmap.markers.AreaMarker tile = set(ItemBlockBudgetLayer.ID).findAreaMarker("budget.world.4.4");

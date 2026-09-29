@@ -33,6 +33,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 /**
@@ -137,31 +139,35 @@ public class NoPhysicsData {
         return exceptionAreas.containsKey(name);
     }
     
+    /**
+     * Writes every area to a temporary file, then moves that over NoPhyExceptionAreas.txt in one step: the file is
+     * never missing, and a failed write never replaces it. Any failure throws, so the command says it failed.
+     */
     public static void save() throws IOException {
-        File temp = new File(dataFile.getAbsoluteFile()+".tmp");
-        if(temp.exists()) {
-            temp.delete();
+        Path temp = new File(dataFile.getAbsoluteFile()+".tmp").toPath();
+        List<String> lines = new ArrayList<>();
+        for(String name: exceptionAreas.keySet()) {
+            lines.add(ExceptionAreaLine.format(name, exceptionAreas.get(name)));
         }
-        try (FileWriter fw = new FileWriter(temp, StandardCharsets.UTF_8);
-            PrintWriter writer = new PrintWriter(fw)) {
-            for(String name: exceptionAreas.keySet()) {
-                writer.println(ExceptionAreaLine.format(name, exceptionAreas.get(name)));
-            }
-        }
-        if(dataFile.exists()) {
-            dataFile.delete();
-        }
-        temp.renameTo(dataFile);
+        Files.deleteIfExists(temp); // a leftover the server may not be allowed to write to
+        Files.write(temp, lines, StandardCharsets.UTF_8); // unlike a PrintWriter, it throws a write error
+        // the same folder is always the same file system, so the move can always be atomic
+        Files.move(temp, dataFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     }
     
-    /** Reads NoPhyExceptionAreas.txt; a line that cannot be read is skipped and logged. */
+    /**
+     * Reads NoPhyExceptionAreas.txt; a line that cannot be read is skipped and logged. The next save drops such a
+     * line, so the file as it was is then kept in {@link #backupFile()}.
+     */
     public static void loadExceptionAreas() {
         try {
+            byte[] bytes = Files.readAllBytes(dataFile.toPath());
             // decoded leniently: a stray byte costs one character of a name, not every area
-            String text = new String(Files.readAllBytes(dataFile.toPath()), StandardCharsets.UTF_8);
+            String text = new String(bytes, StandardCharsets.UTF_8);
             if(text.startsWith("\uFEFF")) {
                 text = text.substring(1);
             }
+            boolean skipped = false;
             for(String line: text.lines().toList()) {
                 if(line.isBlank()) {
                     continue;
@@ -170,9 +176,13 @@ public class NoPhysicsData {
                     Map.Entry<String, ExceptionArea> read = ExceptionAreaLine.parse(line);
                     exceptionAreas.put(read.getKey(), read.getValue());
                 } catch(RuntimeException ex) {
+                    skipped = true;
                     Log.warn("Skipping an unreadable line in " + dataFile.getName() + " (" + ex
                             + "; it is dropped at the next save): " + line);
                 }
+            }
+            if(skipped) {
+                keepCopy(bytes);
             }
         } catch (NoSuchFileException ex) {
             Log.warn("No-physics exception area data file not found (expected on first run): " + dataFile.getAbsolutePath());
@@ -180,6 +190,22 @@ public class NoPhysicsData {
             Log.error("Failed to read no-physics exception areas from " + dataFile.getAbsolutePath(), ex);
         }
         MapLayers.changed(NoPhysicsLayer.ID);
+    }
+
+    /** A whole-file failure, such as a file saved as UTF-16, skips every line: the next save would lose them all. */
+    private static void keepCopy(byte[] bytes) {
+        try {
+            Files.write(backupFile().toPath(), bytes);
+            Log.warn("A copy of " + dataFile.getName() + " with the skipped lines is kept in "
+                    + backupFile().getName());
+        } catch(IOException ex) {
+            Log.error("Could not keep a copy of " + dataFile.getName() + " in " + backupFile().getName(), ex);
+        }
+    }
+
+    /** Where a load that skipped a line keeps NoPhyExceptionAreas.txt as it was, replacing an older copy. */
+    public static File backupFile() {
+        return new File(dataFile.getPath() + ".bak");
     }
 
     public static Map<String, ExceptionArea> getExceptionAreas() {

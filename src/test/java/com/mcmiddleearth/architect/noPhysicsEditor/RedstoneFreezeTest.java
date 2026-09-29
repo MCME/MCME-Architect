@@ -18,7 +18,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-// Pins the server-wide redstone freeze (kept on purpose: the RP reuses redstone states as decoration).
+// Pins the server-wide redstone freeze (kept on purpose: the resource packs reuse redstone states as decoration).
 // One mock/load per class, as Architect caches data-folder paths in static fields.
 class RedstoneFreezeTest {
 

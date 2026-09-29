@@ -55,10 +55,21 @@ class NoPhysicsLayerTest {
         assertTrue(redstone.startsWith("<b>Mill&amp;Co</b>"), "the name, escaped: " + redstone);
         assertTrue(redstone.contains("Redstone area"), redstone);
         assertTrue(redstone.contains("can be opened here"), redstone);
+        assertTrue(redstone.contains("set to EXCEPTION in the world config"), "as the config spells it: " + redstone);
         assertTrue(redstone.contains("keep their block physics here"), redstone);
+        assertTrue(redstone.contains("redstone torches (not on walls)"), "wall torches are other blocks: " + redstone);
+        assertTrue(redstone.contains("pistons (not sticky ones)"), redstone);
+        assertTrue(redstone.contains("trapdoors of oak, spruce, birch, jungle, acacia and dark oak:"),
+                "no newer wood: " + redstone);
+        assertTrue(redstone.contains("still react to a redstone block"), "what reads power without the event");
+        assertTrue(redstone.contains("beacons and undamaged anvils keep"), "chipped ones are not: " + redstone);
+        assertTrue(redstone.contains("beacons and undamaged anvils set to"), "nor in the container line: " + redstone);
         assertTrue(redstone.contains("Redstone power itself stays frozen on the whole server"),
                 "the server-wide freeze stays (Eriol, 2026-09-27): " + redstone);
         assertTrue(redstone.contains("Y 60 to 70"), redstone);
+        ExceptionArea parts = new RedstoneCircuitArea(OVERWORLD, new Vector(0, 0, 0), new Vector(0, 0, 0));
+        assertEquals(48, java.util.Arrays.stream(org.bukkit.Material.values()).filter(parts::isAffected).count(),
+                "RedstoneCircuitArea's parts changed: REDSTONE and CONTAINERS must say so");
         assertTrue(water.contains("Water and lava flow here"), water);
         assertFalse(water.contains("can be opened"), "no container is water or lava, so none opens here: " + water);
     }
