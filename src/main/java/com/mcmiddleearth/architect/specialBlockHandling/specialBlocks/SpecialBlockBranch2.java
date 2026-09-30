@@ -5,6 +5,7 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.util.DevUtil;
+import com.mcmiddleearth.util.TheGafferUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -437,6 +438,12 @@ public class SpecialBlockBranch2 extends SpecialBlock {
             if(placesNothing(state, blockPlace)) {
                 return List.of(); // laid level facing a diagonal
             }
+            // The branch may change the clicked wall as well, which may lie outside the job's area.
+            final Wall wall = changedWall(clicked, blockPlace, blockFace, interactionPoint, playerFace, width, slope,
+                                          negativeSlope);
+            if(wall != null && !TheGafferUtil.hasGafferPermission(player, clicked.getLocation())) {
+                return List.of();
+            }
             final int finalWidth = width;
             final int finalSlope = slope;
             new BukkitRunnable() {
@@ -454,35 +461,41 @@ public class SpecialBlockBranch2 extends SpecialBlock {
                 }
             }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
 
-            if(!negativeSlope && clicked.getBlockData().matches(blockDataWall)) {
-                Wall wall = (Wall) clicked.getBlockData();
-                if (isUpperPlace(interactionPoint, blockFace)) {
-                    if(clicked.getLocation().equals(blockPlace.getRelative(BlockFace.DOWN).getLocation())){
-                        wall.setUp(true);
-                        clicked.setBlockData(wall, false);
-                    }
-                } else {
-                    Wall.Height height = (width == thin ? Wall.Height.TALL : Wall.Height.LOW);
-                    if (slope == diagonal && isMainDirection(playerFace)) {
-                        wall.setHeight(playerFace, height);
-                        if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                            clicked.setBlockData(wall, false);
-                        }
-                    } else if (slope == steep && isMainDirection(playerFace)) {
-                        wall.setHeight(playerFace, Wall.Height.NONE);
-                        if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                            clicked.setBlockData(wall, false);
-                        }
-                    } else if (slope == vertical) {
-                        wall.setUp(true);
-                        if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                            clicked.setBlockData(wall, false);
-                        }
-                    }
-                }
+            if(wall != null) {
+                clicked.setBlockData(wall, false);
             }
             return List.of(blockPlace);
         }
+    }
+
+    // What a branch placed from the clicked wall makes of that wall, or null where it leaves the wall as it is.
+    private Wall changedWall(Block clicked, Block blockPlace, BlockFace blockFace, Location interactionPoint,
+                             BlockFace playerFace, int width, int slope, boolean negativeSlope) {
+        if(negativeSlope || !clicked.getBlockData().matches(blockDataWall)) {
+            return null;
+        }
+        Wall wall = (Wall) clicked.getBlockData().clone();
+        if (isUpperPlace(interactionPoint, blockFace)) {
+            if(!clicked.getLocation().equals(blockPlace.getRelative(BlockFace.DOWN).getLocation())){
+                return null;
+            }
+            wall.setUp(true);
+        } else {
+            Wall.Height height = (width == thin ? Wall.Height.TALL : Wall.Height.LOW);
+            if (slope == diagonal && isMainDirection(playerFace)) {
+                wall.setHeight(playerFace, height);
+            } else if (slope == steep && isMainDirection(playerFace)) {
+                wall.setHeight(playerFace, Wall.Height.NONE);
+            } else if (slope == vertical) {
+                wall.setUp(true);
+            } else {
+                return null;
+            }
+            if (!PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
+                return null;
+            }
+        }
+        return wall.equals(clicked.getBlockData()) ? null : wall;
     }
 
     private int getSlope(Location playerLoc) {
