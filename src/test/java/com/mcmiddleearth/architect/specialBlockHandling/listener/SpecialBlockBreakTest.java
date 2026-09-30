@@ -4,7 +4,9 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.util.FakeGaffer;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Waterlogged;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
@@ -25,11 +27,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-// For a special block, breakSpecialBlock asks TheGaffer first, then schedules handleBlockBreak, which sets a
-// waterlogged one to air six ticks later. A break another plugin cancelled first, at LOWEST, is no break: TheGaffer is
-// not asked and nothing is scheduled. (MockBukkit's block states lose their block data type, so the air itself cannot
-// be seen here.) The player's RP is Human, from the default config.yml. One mock/load per class, as in
-// SpecialBlockGafferTest.
+// For a special block, breakSpecialBlock asks TheGaffer first, then schedules handleBlockBreak. A waterlogged block
+// broken turns to water (NoPhysicsListener, at MONITOR), and six ticks later handleBlockBreak takes the water away. A
+// break another plugin cancelled first, at LOWEST, is no break: TheGaffer is not asked and nothing is scheduled. One
+// cancelled later is scheduled, and must keep its block. The player's RP is Human, from the default config.yml. One
+// mock/load per class, as in SpecialBlockGafferTest.
 class SpecialBlockBreakTest {
 
     private static final String STAIRS = "minecraft:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=true]";
@@ -77,8 +79,11 @@ class SpecialBlockBreakTest {
         FakeGaffer.allowed = location -> true;
     }
 
+    // MockBukkit keeps a block's state apart from its data, so both are set: the state is what the break keeps.
     private static Block waterloggedStairs(int x) {
         Block block = world.getBlockAt(x, 64, 0);
+        block.setType(Material.OAK_STAIRS);
+        block.getState().setBlockData(server.createBlockData(STAIRS));
         block.setBlockData(server.createBlockData(STAIRS));
         return block;
     }
@@ -118,5 +123,38 @@ class SpecialBlockBreakTest {
         breakIt(block, EventPriority.LOWEST);
 
         assertEquals(List.of(), FakeGaffer.asked, "not handled as a break");
+    }
+
+    @Test
+    void aBrokenWaterloggedSpecialBlockLeavesNoWater() {
+        Block block = waterloggedStairs(4);
+
+        breakIt(block, null);
+        assertEquals(Material.WATER, block.getType(), "water at first");
+        server.getScheduler().performTicks(6);
+
+        assertEquals(Material.AIR, block.getType());
+    }
+
+    @Test
+    void aBreakAnotherPluginCancelledLaterKeepsItsBlock() {
+        Block block = waterloggedStairs(6);
+
+        breakIt(block, EventPriority.NORMAL);
+        server.getScheduler().performTicks(6);
+
+        assertEquals(Material.OAK_STAIRS, block.getType(), "kept");
+        assertTrue(((Waterlogged) block.getBlockData()).isWaterlogged(), "with its water");
+    }
+
+    @Test
+    void aBlockPlacedWhereTheSpecialBlockWasIsKept() {
+        Block block = waterloggedStairs(8);
+
+        breakIt(block, null);
+        block.setType(Material.STONE);
+        server.getScheduler().performTicks(6);
+
+        assertEquals(Material.STONE, block.getType());
     }
 }
