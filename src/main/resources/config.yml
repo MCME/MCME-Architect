@@ -35,6 +35,8 @@ headGalleryLocation:
     z: 18.49381355206614
     pitch: 30.449993
     yaw: 6.750458
+# /rp release runs a resource pack's release script. timeoutMinutes (optional, per pack) is how long the script may run
+# before Architect stops it: 30 by default.
 gitHubRpReleases:
     Human:
         owner: EriolEandur
