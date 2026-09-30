@@ -113,8 +113,10 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
         if(getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
             com.mcmiddleearth.architect.viewDistance.ViewDistanceProtocol.register(this);
+            com.mcmiddleearth.architect.gamemodeSwitcher.GamemodeSwitcherProtocol.register(this);
         } else {
             Log.warn("ProtocolLib not found - /viewdistance chunk-retention features are disabled.");
+            Log.warn("ProtocolLib not found - the game mode switcher for builders is off.");
         }
 //        pluginManager.registerEvents(new AfkListener(), this);
 

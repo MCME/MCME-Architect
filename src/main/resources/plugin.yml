@@ -408,6 +408,26 @@ permissions:
     architect.maplayers:
         description: Allows to redraw Architect's web-map layers with /architect maplayers refresh
         default: op
+    architect.gamemodeSwitcher:
+        description: Allows to switch to every game mode with the F3+F4 switcher, without op
+        default: false
+        children:
+            architect.gamemodeSwitcher.creative: true
+            architect.gamemodeSwitcher.survival: true
+            architect.gamemodeSwitcher.adventure: true
+            architect.gamemodeSwitcher.spectator: true
+    architect.gamemodeSwitcher.creative:
+        description: Allows to switch to creative mode with the F3+F4 switcher, without op
+        default: false
+    architect.gamemodeSwitcher.survival:
+        description: Allows to switch to survival mode with the F3+F4 switcher, without op
+        default: false
+    architect.gamemodeSwitcher.adventure:
+        description: Allows to switch to adventure mode with the F3+F4 switcher, without op
+        default: false
+    architect.gamemodeSwitcher.spectator:
+        description: Allows to switch to spectator mode with the F3+F4 switcher (or F3+N), without op
+        default: false
     architect.inventory.ignoreProtection:
       descriptions: Allows to edit inventory content without build permission
       default: op

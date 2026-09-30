@@ -99,6 +99,10 @@ public enum Permission {
     COPY_PASTE_UNLIMITED  ("architect.copypaste.unlimited"),
     WE_SELECT             ("architect.weselect"),
     SWITCH_STICK          ("architect.switchstick"),
+    GAMEMODE_SWITCHER_CREATIVE  ("architect.gamemodeSwitcher.creative"),
+    GAMEMODE_SWITCHER_SURVIVAL  ("architect.gamemodeSwitcher.survival"),
+    GAMEMODE_SWITCHER_ADVENTURE ("architect.gamemodeSwitcher.adventure"),
+    GAMEMODE_SWITCHER_SPECTATOR ("architect.gamemodeSwitcher.spectator"),
 
     VIEW_DISTANCE         ("architect.viewdistance"),
     
