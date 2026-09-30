@@ -36,6 +36,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -58,9 +59,9 @@ public class SpecialBlockUpshift extends SpecialBlock {
         return new SpecialBlockUpshift(id, data);
     }
     
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
-        super.placeBlock(blockPlace.getRelative(BlockFace.UP),blockFace,clicked,interactionPoint,player);
+        return super.placeBlock(blockPlace.getRelative(BlockFace.UP),blockFace,clicked,interactionPoint,player);
     }
     
 }

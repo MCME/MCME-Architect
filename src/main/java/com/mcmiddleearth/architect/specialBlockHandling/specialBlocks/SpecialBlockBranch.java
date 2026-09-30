@@ -21,6 +21,8 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.List;
+
 public class SpecialBlockBranch extends SpecialBlock {
 
     private static final SpecialBlockOrientable.Orientation[] eightFaces = new SpecialBlockOrientable.Orientation[] {
@@ -247,13 +249,14 @@ public class SpecialBlockBranch extends SpecialBlock {
     public boolean isEditOnSneaking() { return width>=0; }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         //Block clicked = getClicked(blockPlace, interactionPoint, player);
         if(width >= 0 && player.isSneaking()) {
             if(clicked.getBlockData().matches(blockDataWall)) {
                 SpecialBlockDiagonalConnect.editDiagonal(blockPlace, clicked, player, this);
             }
+            return List.of();
         } else {
             Location playerLoc = player.getLocation();
             BlockFace playerFace = getPlayerFace(playerLoc);
@@ -268,6 +271,9 @@ public class SpecialBlockBranch extends SpecialBlock {
             int slope = getSlope(playerLoc);
 
             final BlockState state = getBlockState(blockPlace, playerFace, width, slope);
+            if(placesNothing(state, blockPlace)) {
+                return List.of(); // laid level facing a diagonal
+            }
             final int finalWidth = width;
             final int finalSlope = slope;
             new BukkitRunnable() {
@@ -305,6 +311,7 @@ public class SpecialBlockBranch extends SpecialBlock {
                     }
                 }
             }
+            return List.of(blockPlace);
         }
     }
 

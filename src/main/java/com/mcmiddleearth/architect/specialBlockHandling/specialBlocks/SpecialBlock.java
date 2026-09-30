@@ -38,6 +38,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -199,9 +200,18 @@ public class SpecialBlock {
         return clicked.getRelative(blockFace);
     }
 
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
+    /**
+     * Places this special block at blockPlace, or, on a sneak-click where isEditOnSneaking allows it, edits the clicked
+     * block.
+     * @return the new blocks placed, one for each that a player breaks on its own (the two halves of a door break
+     *         together, so they are one), so that places and breaks count alike; empty if nothing new was placed
+     */
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
         final BlockState state = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
+        if(placesNothing(state, blockPlace)) {
+            return List.of();
+        }
         /*new BukkitRunnable() {
             @Override
             public void run() {*/
@@ -225,6 +235,13 @@ public class SpecialBlock {
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);*/
+        return List.of(blockPlace);
+    }
+
+    // A state that is missing, or that leaves the block as it is, places nothing: there is no block data for the
+    // clicked face, say.
+    protected static boolean placesNothing(BlockState state, Block block) {
+        return state == null || state.getBlockData().equals(block.getBlockData());
     }
 
     public void handleBlockBreak(BlockState state) {

@@ -24,10 +24,8 @@ import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
-import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlock;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
-import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemFrame;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
 import com.mcmiddleearth.pluginutil.EventUtil;
 import com.mcmiddleearth.util.DevUtil;
@@ -62,6 +60,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -202,14 +201,11 @@ public class SpecialBlockListener extends WatchedListener{
                 return;
             }
 //Logger.getGlobal().info("Block place");
-            // Counted as a vanilla place would be: no edit, and no item frame (TheGaffer counts no item frames).
-            // Nor an item block refused for too many entities in its chunk: asked before placing, as placing one
-            // adds an armor stand to that count.
-            boolean newBlock = !edit && !(data instanceof SpecialBlockItemFrame)
-                    && (!(data instanceof SpecialBlockItemBlock) || ItemBlockManager.allowPlace(blockPlace, player));
-            data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(), event.getInteractionPoint(), player);
-            if(newBlock) {
-                TheGafferUtil.recordPlace(player, blockPlace.getLocation());
+            // Counted as vanilla places would be: each new block placeBlock reports, and none for an edit.
+            List<Block> placed = data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(),
+                    event.getInteractionPoint(), player);
+            if(!edit) {
+                placed.forEach(block -> TheGafferUtil.recordPlace(player, block.getLocation()));
             }
         }
     }
@@ -550,6 +546,7 @@ public class SpecialBlockListener extends WatchedListener{
                     return;
                 }
                 Block b = event.getClickedBlock().getRelative(event.getBlockFace());
+                boolean wasAir = b.getType().equals(Material.AIR);
                 BlockState bs = b.getState();
                 bs = switch (p.getItemInHand().getType()) {
                     case BROWN_MUSHROOM -> handleInteract(event.getClickedBlock(), event.getBlockFace(),
@@ -584,6 +581,11 @@ public class SpecialBlockListener extends WatchedListener{
                     default -> bs;
                 };
                 bs.update(true,false);
+                // A plant where there was air is a new block, set without a BlockPlaceEvent, so TheGaffer is told of
+                // it here. A click on a plant of the same kind changes that plant instead.
+                if(wasAir && !b.getType().equals(Material.AIR)) {
+                    TheGafferUtil.recordPlace(p, b.getLocation());
+                }
             }
         }
     }
@@ -656,6 +658,8 @@ public class SpecialBlockListener extends WatchedListener{
                             bs.update(true, false);
                         }
                     }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+                    // set a tick later, without a BlockPlaceEvent, so TheGaffer is told of it here
+                    TheGafferUtil.recordPlace(p, b.getLocation());
                 }
             }
         }
@@ -719,6 +723,8 @@ public class SpecialBlockListener extends WatchedListener{
                             blockState.update(true, false);
                         }
                     }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+                    // set without a BlockPlaceEvent, so TheGaffer is told of it here
+                    TheGafferUtil.recordPlace(p, block.getLocation());
                 }
             }
         }
@@ -752,6 +758,8 @@ public class SpecialBlockListener extends WatchedListener{
 
                     blockState.setType(doorItemToBlock(item.getType()));
                     blockState.setRawData(data);
+                    // set a tick later, without a BlockPlaceEvent, so TheGaffer is told of it here
+                    TheGafferUtil.recordPlace(p, block.getLocation());
                 }
                 new BukkitRunnable() {
                     @Override

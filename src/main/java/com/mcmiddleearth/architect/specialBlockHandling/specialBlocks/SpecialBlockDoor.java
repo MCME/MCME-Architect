@@ -32,6 +32,8 @@ import org.bukkit.entity.Player;
 // 1.13 remove import org.bukkit.material.Door;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.List;
+
 /**
  *
  * @author Eriol_Eandur
@@ -76,10 +78,11 @@ public class SpecialBlockDoor extends SpecialBlock {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, getBlockData().getMaterial(), powered, false, hingeRight, false);
+        return List.of(blockPlace);
     }
     
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, 
