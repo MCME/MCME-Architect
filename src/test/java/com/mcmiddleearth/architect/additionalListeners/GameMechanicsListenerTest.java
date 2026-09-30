@@ -12,6 +12,8 @@ import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 import org.mockbukkit.mockbukkit.world.WorldMock;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 // Survival flight: where playerSurvivalFly is on, players may fly in survival. Paper fires PlayerGameModeChangeEvent
@@ -64,32 +66,54 @@ class GameMechanicsListenerTest {
         tick();
 
         assertTrue(builder.getAllowFlight(), "flight is allowed once the server has ticked");
+        assertFalse(builder.isFlying(), "a builder who was not flying is not lifted");
+    }
+
+    // A builder in the air would otherwise drop, and could take fall damage.
+    @Test
+    void aBuilderWhoWasFlyingFliesOnOnceTheServerHasTicked() {
+        PlayerMock builder = builderInCreative(world);
+        builder.setFlying(true);
+
+        builder.setGameMode(GameMode.SURVIVAL);
+        tick();
+
+        assertTrue(builder.getAllowFlight());
+        assertTrue(builder.isFlying(), "still in the air once the server has ticked");
     }
 
     @Test
     void notInAWorldWithoutSurvivalFly() {
         PlayerMock builder = builderInCreative(worldWithoutSurvivalFly);
+        builder.setFlying(true);
 
         builder.setGameMode(GameMode.SURVIVAL);
         tick();
 
         assertFalse(builder.getAllowFlight());
+        assertFalse(builder.isFlying());
     }
 
     @Test
     void notForAPlayerWhoLeftSurvivalTheWorldOrTheServerBeforeTheTick() {
         PlayerMock toAdventure = builderInCreative(world);
+        toAdventure.setFlying(true);
         toAdventure.setGameMode(GameMode.SURVIVAL);
         toAdventure.setGameMode(GameMode.ADVENTURE);
         PlayerMock toOtherWorld = builderInCreative(world);
+        toOtherWorld.setFlying(true);
         toOtherWorld.setGameMode(GameMode.SURVIVAL);
         toOtherWorld.teleport(worldWithoutSurvivalFly.getSpawnLocation());
         PlayerMock leaving = builderInCreative(world);
+        leaving.setFlying(true);
         leaving.setGameMode(GameMode.SURVIVAL);
         leaving.disconnect();
 
         tick();
 
+        for (PlayerMock player : List.of(toAdventure, toOtherWorld, leaving)) {
+            assertFalse(player.isFlying(), player.getName() + " flies");
+        }
         assertFalse(toAdventure.getAllowFlight(), "in adventure by then");
         assertFalse(toOtherWorld.getAllowFlight(), "in a world without survival flight by then");
         assertFalse(leaving.getAllowFlight(), "gone by then");

@@ -163,12 +163,17 @@ public class GameMechanicsListener extends WatchedListener{
         if (PluginData.isModuleEnabled(event.getPlayer().getWorld(), Modules.PLAYER_SURVIVAL_FLY)
                 && event.getNewGameMode().equals(GameMode.SURVIVAL)) {
             // The server gives the player survival's own abilities after this event, and they turn flight off. So
-            // flight is allowed a tick later, if the player is still online, in survival and in such a world.
+            // flight is allowed a tick later, if the player is still online, in survival and in such a world, and a
+            // player who was flying flies on rather than drop.
             Player player = event.getPlayer();
+            boolean wasFlying = player.isFlying();
             Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), () -> {
                 if (player.isOnline() && player.getGameMode().equals(GameMode.SURVIVAL)
                         && PluginData.isModuleEnabled(player.getWorld(), Modules.PLAYER_SURVIVAL_FLY)) {
                     player.setAllowFlight(true);
+                    if (wasFlying) {
+                        player.setFlying(true);
+                    }
                 }
             }, 1);
         }
