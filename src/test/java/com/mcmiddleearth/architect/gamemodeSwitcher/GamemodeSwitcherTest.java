@@ -320,7 +320,8 @@ class GamemodeSwitcherTest {
         builder.setAllowFlight(false);
 
         switcher.onSwitchRequest(builder, GameMode.SURVIVAL);
-        tick();
+        tick(); // the switch
+        tick(); // and the flight, which GameMechanicsListener allows a tick after the switch
 
         assertEquals(GameMode.SURVIVAL, builder.getGameMode());
         assertTrue(builder.getAllowFlight());
