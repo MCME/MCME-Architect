@@ -103,6 +103,7 @@ public enum Permission {
     GAMEMODE_SWITCHER_SURVIVAL  ("architect.gamemodeSwitcher.survival"),
     GAMEMODE_SWITCHER_ADVENTURE ("architect.gamemodeSwitcher.adventure"),
     GAMEMODE_SWITCHER_SPECTATOR ("architect.gamemodeSwitcher.spectator"),
+    INVISIBLE_BLOCKS      ("architect.invisibleBlocks"),
 
     VIEW_DISTANCE         ("architect.viewdistance"),
     

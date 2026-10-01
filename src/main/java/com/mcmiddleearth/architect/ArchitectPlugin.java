@@ -20,6 +20,7 @@ import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import com.mcmiddleearth.architect.customHeadManager.HeadCommand;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger;
 import com.mcmiddleearth.architect.gamemodeSwitcher.GamemodeSwitcher;
+import com.mcmiddleearth.architect.gamemodeSwitcher.InvisibleBlockListener;
 import com.mcmiddleearth.architect.mapLayers.ArchitectLayers;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsCommand;
@@ -112,6 +113,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
+        pluginManager.registerEvents(new InvisibleBlockListener(), this);
         if(getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
             com.mcmiddleearth.architect.viewDistance.ViewDistanceProtocol.register(this);
             com.mcmiddleearth.architect.gamemodeSwitcher.GamemodeSwitcherProtocol.register(this);

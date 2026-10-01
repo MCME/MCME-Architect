@@ -80,4 +80,14 @@ class PluginYmlPermissionsTest {
         parent.getChildren().forEach((child, value) -> children.put(child.toLowerCase(Locale.ROOT), value));
         assertEquals(modes, children);
     }
+
+    // Declared, so that a permission plugin lists it; an undeclared node would fall back to ops alone as well.
+    @Test void theInvisibleBlocksPermissionIsForOpsByDefault() throws Exception {
+        Permission permission = description().getPermissions().stream()
+                .filter(declared -> declared.getName().equalsIgnoreCase("architect.invisibleBlocks"))
+                .findFirst().orElse(null);
+
+        assertNotNull(permission, "architect.invisibleBlocks is not declared");
+        assertEquals(PermissionDefault.OP, permission.getDefault());
+    }
 }
