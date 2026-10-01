@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public class RpReleaseUtil {
 
@@ -21,9 +22,9 @@ public class RpReleaseUtil {
     // another time. A Human release took over 5 minutes in September 2026.
     static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(30);
 
-    // How long a script that is being stopped has to end, and how long the rest of a script's output may take.
-    private static final Duration STOP_WAIT = Duration.ofSeconds(10);
-    private static final Duration OUTPUT_WAIT = Duration.ofMinutes(1);
+    // How long a script that is being stopped, and what it started, have to end, and how long the rest of a script's
+    // output may take once it has ended.
+    static final Duration GRACE = Duration.ofSeconds(10);
 
     /** How a release script ended: whether by itself, in the time it had, and its exit code (-1 if it has none). */
     record ScriptResult(boolean terminated, int exitCode) {}
@@ -46,7 +47,7 @@ public class RpReleaseUtil {
                         .exec(new String[]{"sh", releaseScript, finalRpName, gitHubOwner, gitHubRepo, version, title}, null,
                                 new File(scriptPath));
                 Duration timeout = getTimeout(ArchitectPlugin.getPluginInstance().getConfig(), finalRpName);
-                ScriptResult result = awaitScript(process, timeout,
+                ScriptResult result = awaitScript(process, timeout, GRACE,
                         line -> Log.info("[RP release " + finalRpName + "] " + line));
                 if (!result.terminated()) {
                     Log.warn("The RP release script for '" + finalRpName + "' version " + version + " still ran after "
@@ -69,10 +70,10 @@ public class RpReleaseUtil {
 
     /**
      * Waits up to timeout for a release script to end, while its output goes to output line by line. A script still
-     * running then is stopped, with the processes it started. The thread that reads the output is shut down in every
-     * case.
+     * running then is stopped, with the processes it started; whatever still runs after the grace time is killed. The
+     * thread that reads the output is shut down in every case.
      */
-    static ScriptResult awaitScript(Process process, Duration timeout, Consumer<String> output)
+    static ScriptResult awaitScript(Process process, Duration timeout, Duration grace, Consumer<String> output)
             throws InterruptedException {
         ExecutorService reader = Executors.newSingleThreadExecutor(task -> {
             Thread thread = new Thread(task, "Architect RP release output");
@@ -84,10 +85,10 @@ public class RpReleaseUtil {
                     output));
             boolean terminated = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
             if (!terminated) {
-                stop(process);
+                stop(process, grace);
             }
             try {
-                lines.get(OUTPUT_WAIT.toMillis(), TimeUnit.MILLISECONDS);
+                lines.get(grace.toMillis(), TimeUnit.MILLISECONDS);
             } catch (ExecutionException | TimeoutException ex) {
                 // Some output is lost, not the result: the exit code tells how the script ended.
             }
@@ -97,15 +98,24 @@ public class RpReleaseUtil {
         }
     }
 
-    // Stops a script that is still running, and what it started, which may hold its output open.
-    private static void stop(Process process) throws InterruptedException {
+    // Stops a script that is still running, and what it started, which may hold its output open. Each is asked to
+    // end; whatever still runs when the grace time is over is killed. The script itself ending is no sign: sh ends at
+    // once when it is asked to.
+    private static void stop(Process process, Duration grace) throws InterruptedException {
         List<ProcessHandle> started = process.descendants().toList();
         process.destroy();
         started.forEach(ProcessHandle::destroy);
-        if (!process.waitFor(STOP_WAIT.toMillis(), TimeUnit.MILLISECONDS)) {
-            process.destroyForcibly();
-            started.forEach(ProcessHandle::destroyForcibly);
+        CompletableFuture<?>[] ends = Stream.concat(Stream.of(process.onExit()),
+                started.stream().map(ProcessHandle::onExit)).toArray(CompletableFuture[]::new);
+        try {
+            CompletableFuture.allOf(ends).get(grace.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (ExecutionException | TimeoutException ex) {
+            // what still runs is killed below
         }
+        if (process.isAlive()) {
+            process.destroyForcibly();
+        }
+        started.stream().filter(ProcessHandle::isAlive).forEach(ProcessHandle::destroyForcibly);
     }
 
     // Deliver the release result on the main thread (the callback messages the command sender).

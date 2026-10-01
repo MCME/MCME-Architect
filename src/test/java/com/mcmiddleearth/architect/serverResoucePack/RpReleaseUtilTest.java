@@ -14,17 +14,21 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-// A release script runs for minutes: Toti's Human release of 2026-09-30 took 5m12s and ended with exit code 0, yet was
-// reported as an error, since Architect gave it 5 minutes. The scripts here are fakes whose time passes only while they
-// are waited for, so no test waits for real. No Bukkit server is needed.
+// A release script runs for minutes: a Human release of 2026-09-30 took 5m12s and ended with exit code 0, yet was
+// reported as an error, since Architect gave it 5 minutes. The scripts here are fakes whose time passes only while
+// they are waited for, so no test waits for real. No Bukkit server is needed.
 @Timeout(10)
 class RpReleaseUtilTest {
+
+    private static final String READER = "Architect RP release output";
 
     private final List<String> output = new ArrayList<>();
 
@@ -32,22 +36,42 @@ class RpReleaseUtilTest {
     void aReleaseThatEndsAfterFiveMinutesIsASuccess() throws Exception {
         FakeScript script = new FakeScript(Duration.ofSeconds(312), 0, "Release run v4.1.3: OK");
 
-        ScriptResult result = RpReleaseUtil.awaitScript(script, RpReleaseUtil.DEFAULT_TIMEOUT, output::add);
+        ScriptResult result = RpReleaseUtil.awaitScript(script, RpReleaseUtil.DEFAULT_TIMEOUT, RpReleaseUtil.GRACE,
+                output::add);
 
         assertEquals(new ScriptResult(true, 0), result);
-        assertFalse(script.isStopped(), "left to end by itself");
+        assertEquals(0, script.destroyCalls(), "a script that has ended is left alone");
         assertEquals(List.of("Release run v4.1.3: OK"), output, "its output is logged");
+        assertTrue(script.readByDaemon(), "read by a daemon thread, which cannot keep the server from stopping");
+        assertNoReaderLeft();
     }
 
     // Its output stays open while it runs, as a real script's does.
     @Test
-    void aScriptStillRunningAfterItsTimeIsStopped() throws Exception {
-        FakeScript script = new FakeScript(Duration.ofHours(2), 0).withOutputOpenUntilItEnds();
+    void aScriptStillRunningAfterItsTimeIsStoppedWithWhatItStarted() throws Exception {
+        FakeChild child = new FakeChild(true);
+        FakeScript script = new FakeScript(Duration.ofHours(2), 0).withOutputOpenUntilItEnds().withChild(child);
 
-        ScriptResult result = RpReleaseUtil.awaitScript(script, Duration.ofMillis(100), output::add);
+        ScriptResult result = RpReleaseUtil.awaitScript(script, Duration.ofMillis(100), RpReleaseUtil.GRACE,
+                output::add);
 
-        assertTrue(script.isStopped(), "stopped");
         assertEquals(new ScriptResult(false, FakeScript.STOPPED), result);
+        assertTrue(script.destroyCalls() > 0, "stopped");
+        assertTrue(child.destroyed, "what it started is stopped too");
+        assertFalse(child.killed, "and not killed, as it ended when asked to");
+        assertNoReaderLeft();
+    }
+
+    // On Linux, sh ends at once when it is asked to, so its end does not mean that what it started has ended.
+    @Test
+    void whatAStoppedScriptStartedIsKilledIfItDoesNotEnd() throws Exception {
+        FakeChild child = new FakeChild(false);
+        FakeScript script = new FakeScript(Duration.ofHours(2), 0).withChild(child);
+
+        RpReleaseUtil.awaitScript(script, Duration.ofMillis(100), Duration.ofMillis(100), output::add);
+
+        assertTrue(child.destroyed, "asked to end");
+        assertTrue(child.killed, "killed when it did not");
     }
 
     @Test
@@ -58,7 +82,22 @@ class RpReleaseUtilTest {
 
         assertEquals(Duration.ofMinutes(30), RpReleaseUtil.getTimeout(config, "Human"));
         assertEquals(Duration.ofMinutes(45), RpReleaseUtil.getTimeout(config, "Dwarf"));
-        assertEquals(Duration.ofMinutes(30), RpReleaseUtil.getTimeout(config, "Rohan"), "less than a minute is no time");
+        assertEquals(Duration.ofMinutes(30), RpReleaseUtil.getTimeout(config, "Rohan"),
+                "less than a minute is no time");
+    }
+
+    // The reader is shut down when awaitScript returns, and its thread ends a moment later.
+    private static void assertNoReaderLeft() throws InterruptedException {
+        long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        while (readerAlive() && System.nanoTime() < until) {
+            Thread.sleep(10);
+        }
+        assertFalse(readerAlive(), "the reader thread has ended");
+    }
+
+    private static boolean readerAlive() {
+        return Thread.getAllStackTraces().keySet().stream()
+                .anyMatch(thread -> thread.getName().equals(READER) && thread.isAlive());
     }
 
     /**
@@ -74,9 +113,13 @@ class RpReleaseUtilTest {
         private final int exitCode;
         private final byte[] lines;
         private final CountDownLatch end = new CountDownLatch(1);
+        private final CompletableFuture<Process> exit = new CompletableFuture<>();
         private boolean outputOpenUntilItEnds;
+        private FakeChild child;
         private Duration ranFor = Duration.ZERO;
         private boolean stopped;
+        private int destroyCalls;
+        private volatile boolean readByDaemon;
 
         FakeScript(Duration runTime, int exitCode, String... lines) {
             this.runTime = runTime;
@@ -89,14 +132,24 @@ class RpReleaseUtilTest {
             return this;
         }
 
-        synchronized boolean isStopped() {
-            return stopped;
+        FakeScript withChild(FakeChild child) {
+            this.child = child;
+            return this;
+        }
+
+        synchronized int destroyCalls() {
+            return destroyCalls;
+        }
+
+        boolean readByDaemon() {
+            return readByDaemon;
         }
 
         private synchronized boolean hasEnded() {
             boolean ended = stopped || ranFor.compareTo(runTime) >= 0;
             if (ended) {
                 end.countDown();
+                exit.complete(this);
             }
             return ended;
         }
@@ -127,6 +180,7 @@ class RpReleaseUtilTest {
 
         @Override
         public synchronized void destroy() {
+            destroyCalls++;
             if (!hasEnded()) {
                 stopped = true;
                 hasEnded();
@@ -134,8 +188,13 @@ class RpReleaseUtilTest {
         }
 
         @Override
+        public CompletableFuture<Process> onExit() {
+            return exit;
+        }
+
+        @Override
         public Stream<ProcessHandle> descendants() {
-            return Stream.empty();
+            return child == null ? Stream.empty() : Stream.of(child);
         }
 
         @Override
@@ -143,6 +202,7 @@ class RpReleaseUtilTest {
             return new SequenceInputStream(new ByteArrayInputStream(lines), new InputStream() {
                 @Override
                 public int read() throws InterruptedIOException {
+                    readByDaemon = Thread.currentThread().isDaemon();
                     if (outputOpenUntilItEnds) {
                         try {
                             end.await();
@@ -163,6 +223,80 @@ class RpReleaseUtilTest {
         @Override
         public OutputStream getOutputStream() {
             return OutputStream.nullOutputStream();
+        }
+    }
+
+    /** A process the script started: one that ends when it is asked to, or one that ends only when killed. */
+    private static final class FakeChild implements ProcessHandle {
+
+        private final boolean endsWhenAsked;
+        private final CompletableFuture<ProcessHandle> exit = new CompletableFuture<>();
+        volatile boolean destroyed;
+        volatile boolean killed;
+
+        FakeChild(boolean endsWhenAsked) {
+            this.endsWhenAsked = endsWhenAsked;
+        }
+
+        @Override
+        public boolean destroy() {
+            destroyed = true;
+            if (endsWhenAsked) {
+                exit.complete(this);
+            }
+            return true;
+        }
+
+        @Override
+        public boolean destroyForcibly() {
+            killed = true;
+            exit.complete(this);
+            return true;
+        }
+
+        @Override
+        public boolean isAlive() {
+            return !exit.isDone();
+        }
+
+        @Override
+        public CompletableFuture<ProcessHandle> onExit() {
+            return exit;
+        }
+
+        @Override
+        public long pid() {
+            return 4242;
+        }
+
+        @Override
+        public Optional<ProcessHandle> parent() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Stream<ProcessHandle> children() {
+            return Stream.empty();
+        }
+
+        @Override
+        public Stream<ProcessHandle> descendants() {
+            return Stream.empty();
+        }
+
+        @Override
+        public Info info() {
+            throw new UnsupportedOperationException("not needed here");
+        }
+
+        @Override
+        public boolean supportsNormalTermination() {
+            return true;
+        }
+
+        @Override
+        public int compareTo(ProcessHandle other) {
+            return Long.compare(pid(), other.pid());
         }
     }
 }
