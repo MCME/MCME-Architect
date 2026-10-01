@@ -223,7 +223,9 @@ public class SpecialBlockDoor extends SpecialBlock {
                    return false;
                }
            }
-           return powered == (block.getData()>9);
+           // From the door's block data, not its legacy data value: on Paper, the first read of one builds the whole
+           // legacy material table on the main thread, which holds the server up for seconds.
+           return block.getBlockData() instanceof Door door && powered == door.isPowered();
         }
         return false;
     }

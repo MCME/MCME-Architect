@@ -22,6 +22,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Bisected;
+import org.bukkit.block.data.type.Door;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
@@ -76,11 +78,11 @@ public class SpecialBlockThinWall extends SpecialBlockDoor {
                     return false;
                 }
             }
-            if(block.getData()<8) {
-                return false;
-            }
-            return (hingeRight == (block.getData()%2==1))
-                && (powered == (block.getData()>9));
+            // The upper half, which holds the hinge, read from its block data, as in SpecialBlockDoor.
+            return block.getBlockData() instanceof Door door
+                && door.getHalf().equals(Bisected.Half.TOP)
+                && hingeRight == door.getHinge().equals(Door.Hinge.RIGHT)
+                && powered == door.isPowered();
         }
         return false;
     }
