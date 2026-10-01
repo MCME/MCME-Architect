@@ -42,7 +42,7 @@ public final class GamemodeSwitcherProtocol {
                     + e + ").");
             return;
         }
-        plugin.getServer().getPluginManager().registerEvents(switcher, plugin);
+        switcher.start();
         Log.info("The game mode switcher for builders is on.");
     }
 

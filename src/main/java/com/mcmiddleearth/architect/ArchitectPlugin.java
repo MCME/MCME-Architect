@@ -19,6 +19,7 @@ import com.mcmiddleearth.architect.customHeadManager.CustomHeadListener;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import com.mcmiddleearth.architect.customHeadManager.HeadCommand;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger;
+import com.mcmiddleearth.architect.gamemodeSwitcher.GamemodeSwitcher;
 import com.mcmiddleearth.architect.mapLayers.ArchitectLayers;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsCommand;
@@ -174,6 +175,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
         EntityLogger.stop();
+        GamemodeSwitcher.stopRunning();
         LogFileManager.uninstall(this);
     }
     
@@ -197,6 +199,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         ItemBlockManager.init();
         ViewDistanceManager.loadViewDistances();
         MapLayers.start(this, ArchitectLayers.fromConfig(getConfig(), getDataFolder()));
+        GamemodeSwitcher.updateRunning(); // the reload may have turned the switcher's module on or off in a world
     }
 
     public static ArchitectPlugin getPluginInstance() {

@@ -9,6 +9,7 @@ import org.bukkit.GameMode;
 import org.bukkit.GameRules;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerCommandSendEvent;
@@ -46,6 +47,9 @@ public final class GamemodeSwitcher implements Listener {
     /** Paper lets holders of this permission use the switcher, as it does ops. */
     private static final String GAMEMODE_COMMAND = "minecraft.command.gamemode";
 
+    /** The switcher Architect runs, once ProtocolLib has let it start. Main thread only. */
+    private static GamemodeSwitcher running;
+
     /** Tells a player's client its permission level, 0 to 4. */
     @FunctionalInterface
     public interface LevelSender {
@@ -67,6 +71,51 @@ public final class GamemodeSwitcher implements Listener {
     /** The switcher for a server, where Paper tells each client its level. */
     public static GamemodeSwitcher forServer(Plugin plugin) {
         return new GamemodeSwitcher(plugin, (player, level) -> player.sendOpLevel((byte) level));
+    }
+
+    /**
+     * Starts listening, and gives the players online their level a tick later: they may have joined before the
+     * switcher started, as when plugins are reloaded.
+     */
+    public void start() {
+        stopRunning();
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        running = this;
+        updateAllLater();
+    }
+
+    /** Gives the players online their level again a tick later: /architect reload may have changed the modules. */
+    public static void updateRunning() {
+        if (running != null) {
+            running.updateAllLater();
+        }
+    }
+
+    /**
+     * Architect is stopping, and nothing will answer the switcher's requests: the players it gave the switcher to get
+     * level 0 back at once, as nothing may be scheduled then.
+     */
+    public static void stopRunning() {
+        GamemodeSwitcher switcher = running;
+        running = null;
+        if (switcher == null) {
+            return;
+        }
+        HandlerList.unregisterAll(switcher);
+        for (UUID id : switcher.withSwitcher) {
+            Player player = switcher.plugin.getServer().getPlayer(id);
+            if (player != null && !player.isOp()) {
+                switcher.levelSender.send(player, PLAYER_LEVEL);
+            }
+        }
+        switcher.withSwitcher.clear();
+        switcher.pending.clear();
+    }
+
+    private void updateAllLater() {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            updateLevelLater(player);
+        }
     }
 
     @EventHandler
