@@ -104,16 +104,21 @@ class SpecialBlockBreakTest {
         }
     }
 
-    // Shows the break reaches the special-block handling: it asks TheGaffer, which refuses here.
+    // Shows the break reaches the special-block handling: it asks TheGaffer, which refuses here, and says why.
     @Test
     void aBreakTheGafferRefusesIsCancelled() {
         Block block = waterloggedStairs(0);
         FakeGaffer.allowed = location -> false;
+        while (player.nextMessage() != null) {
+            // what came before
+        }
 
         BlockBreakEvent event = breakIt(block, null);
 
         assertTrue(event.isCancelled());
         assertEquals(List.of(block.getLocation()), FakeGaffer.asked);
+        String message = player.nextMessage();
+        assertTrue(message != null && message.contains("You are not in the job's area."), "told why: " + message);
     }
 
     @Test

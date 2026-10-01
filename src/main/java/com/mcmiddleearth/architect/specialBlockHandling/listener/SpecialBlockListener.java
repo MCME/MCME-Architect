@@ -197,7 +197,7 @@ public class SpecialBlockListener extends WatchedListener{
             boolean edit = player.isSneaking() && data.isEditOnSneaking();
             Location permissionLocation = (edit? event.getClickedBlock().getLocation():
                                                  blockPlace.getLocation());
-            if(!TheGafferUtil.hasGafferPermission(player,permissionLocation)) {
+            if(!TheGafferUtil.checkGafferPermission(player,permissionLocation)) {
                 return;
             }
 //Logger.getGlobal().info("Block place");
@@ -242,7 +242,7 @@ public class SpecialBlockListener extends WatchedListener{
                             SpecialBlockInventoryData.getItem(event.getBlock(), rpName)));
             if (data == null) return;
 //Logger.getGlobal().info("Found special block data: "+data.getId());
-            if (!TheGafferUtil.hasGafferPermission(player, event.getBlock().getLocation())) {
+            if (!TheGafferUtil.checkGafferPermission(player, event.getBlock().getLocation())) {
 //Logger.getGlobal().warning("Cancel block break!");
                 event.setCancelled(true);
                 return;

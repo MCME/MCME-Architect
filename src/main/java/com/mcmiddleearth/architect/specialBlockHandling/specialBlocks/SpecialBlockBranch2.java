@@ -444,7 +444,7 @@ public class SpecialBlockBranch2 extends SpecialBlock {
             // The branch may change the clicked wall as well, which may lie outside the job's area.
             final Wall wall = changedWall(clicked, blockPlace, blockFace, interactionPoint, playerFace, width, slope,
                                           negativeSlope);
-            if(wall != null && !TheGafferUtil.hasGafferPermission(player, clicked.getLocation())) {
+            if(wall != null && !TheGafferUtil.checkGafferPermission(player, clicked.getLocation())) {
                 return List.of();
             }
             final int finalWidth = width;

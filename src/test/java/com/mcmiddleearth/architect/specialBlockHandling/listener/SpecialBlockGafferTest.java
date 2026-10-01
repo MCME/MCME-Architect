@@ -134,6 +134,9 @@ class SpecialBlockGafferTest {
         FakeGaffer.builds.clear();
         FakeGaffer.allowed = location -> true;
         player.setSneaking(false);
+        while (player.nextMessage() != null) {
+            // what an earlier test was told
+        }
     }
 
     @AfterEach
@@ -195,6 +198,8 @@ class SpecialBlockGafferTest {
         assertEquals(List.of(target.getLocation()), FakeGaffer.asked, "asked about the new block");
         assertEquals(Material.AIR, target.getType(), "not placed");
         assertEquals(List.of(), FakeGaffer.builds);
+        String message = player.nextMessage();
+        assertTrue(message != null && message.contains("You are not in the job's area."), "told why: " + message);
     }
 
     @Test

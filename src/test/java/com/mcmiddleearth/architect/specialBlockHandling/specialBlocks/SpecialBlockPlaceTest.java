@@ -140,6 +140,9 @@ class SpecialBlockPlaceTest {
         Block target = wall.getRelative(BlockFace.UP);
         FakeGaffer.allowed = location -> !location.equals(wall.getLocation()); // the job's area ends above the wall
         player.setRotation(0, 90);
+        while (player.nextMessage() != null) {
+            // what came before
+        }
 
         assertEquals(List.of(), branch.placeBlock(target, BlockFace.UP, wall, null, player), "nothing placed");
         server.getScheduler().performTicks(7);
@@ -147,6 +150,8 @@ class SpecialBlockPlaceTest {
         assertEquals(List.of(wall.getLocation()), FakeGaffer.asked, "asked about the wall");
         assertFalse(((Wall) wall.getBlockData()).isUp(), "the wall is left as it was");
         assertEquals(Material.AIR, target.getType(), "no branch");
+        String message = player.nextMessage();
+        assertTrue(message != null && message.contains("You are not in the job's area."), "told why: " + message);
     }
 
     @Test
