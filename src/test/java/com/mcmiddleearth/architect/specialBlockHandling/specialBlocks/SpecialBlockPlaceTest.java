@@ -160,4 +160,18 @@ class SpecialBlockPlaceTest {
         assertEquals(List.of(wall.getLocation()), FakeGaffer.asked, "asked about the wall");
         assertTrue(((Wall) wall.getBlockData()).isUp(), "the wall's post is raised");
     }
+
+    // A wall that has its post already is left as it is, so its place in the job does not matter.
+    @Test
+    void aBranchLeavingAWallOutsideTheJobAsItIsIsPlaced() {
+        SpecialBlockBranch2 branch = thickBranchOnAndesiteWalls();
+        Block wall = world.getBlockAt(12, 64, 0);
+        wall.setBlockData(server.createBlockData("minecraft:andesite_wall[up=true]"));
+        Block target = wall.getRelative(BlockFace.UP);
+        FakeGaffer.allowed = location -> !location.equals(wall.getLocation());
+        player.setRotation(0, 90);
+
+        assertEquals(List.of(target), branch.placeBlock(target, BlockFace.UP, wall, null, player), "placed");
+        assertEquals(List.of(), FakeGaffer.asked, "nothing asked about the wall");
+    }
 }

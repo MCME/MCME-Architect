@@ -43,7 +43,7 @@ public class SpecialBlockMultiFace extends SpecialBlock {
     @Override
     protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
                                        Player player, Location interactionPoint) {
-        BlockData data = blockPlace.getBlockData();
+        BlockData data = blockPlace.getBlockData().clone(); // a copy, so the block changes only when it is set
         boolean newBlock = false;
 //Logger.getGlobal().info("BlockData1: "+data);
         if(!data.getMaterial().equals(getBlockData().getMaterial())) {

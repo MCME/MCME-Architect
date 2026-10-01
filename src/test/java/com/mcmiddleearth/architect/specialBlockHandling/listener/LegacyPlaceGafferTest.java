@@ -179,4 +179,17 @@ class LegacyPlaceGafferTest {
         assertEquals(Material.AIR, above.getType(), "nothing new");
         assertEquals(List.of(), FakeGaffer.builds);
     }
+
+    // A plant goes only where there is air.
+    @Test
+    void aPlaceablePlantWhereABlockIsAlreadyIsNotReported() {
+        Block ground = ground(12);
+        Block above = ground.getRelative(BlockFace.UP);
+        above.setType(Material.STONE);
+
+        rightClick(Material.RED_MUSHROOM, "Placeable Mushroom", ground, BlockFace.UP);
+
+        assertEquals(Material.STONE, above.getType(), "left as it was");
+        assertEquals(List.of(), FakeGaffer.builds);
+    }
 }

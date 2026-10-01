@@ -110,6 +110,13 @@ class SpecialBlockGafferTest {
                     type: THIN_WALL
                     blockMaterial: JUNGLE_DOOR
                     itemMaterial: JUNGLE_DOOR
+                  upshift:
+                    type: UPSHIFT
+                    blockData: minecraft:stone
+                    itemMaterial: STONE
+                  signpost:
+                    type: SIGN_POST
+                    itemMaterial: OAK_SIGN
                 """);
         SpecialBlockInventoryData.loadInventories();
     }
@@ -297,6 +304,46 @@ class SpecialBlockGafferTest {
         rightClick("fence", ground, BlockFace.UP);
 
         assertNothingPlacedOrReported(ground.getRelative(BlockFace.UP));
+    }
+
+    // Placed against a fence of its kind, it joins that fence: no new block.
+    @Test
+    void aMultiFaceBlockJoiningOneOfItsKindIsNoNewBlock() {
+        Block wall = world.getBlockAt(44, 64, 0);
+        wall.setType(Material.STONE);
+        Block fence = wall.getRelative(BlockFace.EAST);
+        fence.setType(Material.OAK_FENCE);
+
+        rightClick("fence", wall, BlockFace.EAST);
+
+        assertTrue(hasFace(fence, BlockFace.WEST), "joined towards the clicked block");
+        assertEquals(List.of(), FakeGaffer.builds);
+    }
+
+    // An UPSHIFT block goes one block higher than where it was aimed.
+    @Test
+    void anUpshiftBlockIsReportedWhereItGoes() {
+        Block ground = world.getBlockAt(46, 64, 0);
+        ground.setType(Material.DIRT);
+
+        rightClick("upshift", ground, BlockFace.UP);
+
+        Block higher = ground.getRelative(BlockFace.UP, 2);
+        assertEquals(Material.STONE, higher.getType(), "placed");
+        assertEquals(placed(higher), FakeGaffer.builds);
+    }
+
+    // A SIGN_POST has block data for the top and the bottom only. Its sign editor opens three ticks after a sign is
+    // placed, and would fail on air.
+    @Test
+    void aSignClickedOnAFaceItHasNoDataForPlacesNothingAndOpensNoEditor() {
+        Block wall = world.getBlockAt(48, 64, 0);
+        wall.setType(Material.STONE);
+
+        rightClick("signpost", wall, BlockFace.EAST);
+        assertDoesNotThrow(() -> server.getScheduler().performTicks(3), "no editor for a sign that is not there");
+
+        assertNothingPlacedOrReported(wall.getRelative(BlockFace.EAST));
     }
 
     // Placing a MOB_SPAWNER_BLOCK is switched off.
