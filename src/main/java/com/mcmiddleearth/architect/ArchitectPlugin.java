@@ -170,12 +170,12 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     
     @Override
     public void onDisable() {
+        GamemodeSwitcher.stopRunning(); // before teardown that may fail, and it cannot fail itself
         MapLayers.stop(); // first, so the budget saves its counts even if other teardown fails
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
         EntityLogger.stop();
-        GamemodeSwitcher.stopRunning();
         LogFileManager.uninstall(this);
     }
     

@@ -27,6 +27,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
+import org.mockbukkit.mockbukkit.plugin.PluginMock;
 import org.mockbukkit.mockbukkit.world.WorldMock;
 
 import java.io.File;
@@ -540,6 +541,39 @@ class GamemodeSwitcherTest {
         } finally {
             HandlerList.unregisterAll(onServer);
         }
+    }
+
+    // The server marks a plugin disabled before its onDisable runs, and a disabled plugin may schedule nothing: a
+    // request in between, before the switcher is taken back, goes on to the server.
+    @Test
+    void aRequestWhileThePluginStopsGoesOnToTheServer() {
+        PluginMock stopping = MockBukkit.createMockPlugin("StoppingPlugin");
+        GamemodeSwitcher stoppingSwitcher = new GamemodeSwitcher(stopping, (player, level) -> { });
+        server.getPluginManager().registerEvents(stoppingSwitcher, stopping);
+        PlayerMock builder = builder(CREATIVE);
+
+        server.getPluginManager().disablePlugin(stopping);
+
+        assertFalse(stoppingSwitcher.onSwitchRequest(builder, GameMode.CREATIVE));
+    }
+
+    // Architect takes the switcher back first when it stops, before teardown that must still run, so this may not fail.
+    @Test
+    void takingTheSwitcherBackCarriesOnPastAClientItCannotReach() {
+        PlayerMock unreachable = builder(CREATIVE);
+        PlayerMock other = builder(CREATIVE);
+        List<String> told = new ArrayList<>();
+        new GamemodeSwitcher(plugin, (player, level) -> {
+            if (player == unreachable && level == 0) {
+                throw new IllegalStateException("the connection is gone");
+            }
+            told.add(player.getName() + " " + level);
+        }).start();
+        tick();
+        told.clear();
+
+        assertDoesNotThrow(GamemodeSwitcher::stopRunning);
+        assertTrue(told.contains(other.getName() + " 0"), told.toString());
     }
 
     /** Records the levels Paper would send; MockBukkit's player does not implement sendOpLevel. */

@@ -3,6 +3,7 @@ package com.mcmiddleearth.architect.gamemodeSwitcher;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
+import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
@@ -14,6 +15,7 @@ import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 import org.mockbukkit.mockbukkit.world.WorldMock;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -85,15 +87,25 @@ class GamemodeSwitcherResyncTest {
         assertEquals(List.of(builder.getName() + " 2", promoted.getName() + " 2"), sent, "and on again");
     }
 
-    // An op change sends the op's own level, which Architect must not take back.
+    // An op change sends the op's own level, which Architect must not take back. The rest of Architect's teardown may
+    // fail, as it does when Architect failed to start after the switcher had (here: no RP switch task to cancel).
     @Test
     @Order(3)
-    void stoppingArchitectTakesTheSwitcherBackAtOnce() {
+    void stoppingArchitectTakesTheSwitcherBackFirstAndAtOnce() throws ReflectiveOperationException {
         sent.clear();
         promoted.setOp(true);
+        Field rpSwitchTask = ArchitectPlugin.class.getDeclaredField("rpSwitchTask");
+        rpSwitchTask.setAccessible(true);
+        ((BukkitTask) rpSwitchTask.get(plugin)).cancel();
+        rpSwitchTask.set(plugin, null);
 
-        server.getPluginManager().disablePlugin(plugin);
+        try {
+            server.getPluginManager().disablePlugin(plugin);
+        } catch (NullPointerException expected) {
+            // the teardown that fails: a server logs it, MockBukkit passes it on
+        }
 
-        assertEquals(List.of(builder.getName() + " 0"), sent, "at once, as Architect may schedule nothing then");
+        assertEquals(List.of(builder.getName() + " 0"), sent,
+                "at once, as Architect may schedule nothing then, and before the teardown that fails");
     }
 }

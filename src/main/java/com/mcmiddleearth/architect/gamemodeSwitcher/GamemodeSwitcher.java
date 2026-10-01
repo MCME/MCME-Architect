@@ -97,7 +97,8 @@ public final class GamemodeSwitcher implements Listener {
 
     /**
      * Architect is stopping, and nothing will answer the switcher's requests: the players it gave the switcher to get
-     * level 0 back at once, as nothing may be scheduled then.
+     * level 0 back at once, as nothing may be scheduled then. Architect calls this before the rest of its teardown,
+     * so it carries on past a client it cannot reach.
      */
     public static void stopRunning() {
         GamemodeSwitcher switcher = running;
@@ -109,7 +110,11 @@ public final class GamemodeSwitcher implements Listener {
         for (UUID id : switcher.withSwitcher) {
             Player player = switcher.plugin.getServer().getPlayer(id);
             if (player != null && !player.isOp()) {
-                switcher.levelSender.send(player, PLAYER_LEVEL);
+                try {
+                    switcher.levelSender.send(player, PLAYER_LEVEL);
+                } catch (RuntimeException e) {
+                    Log.warn("Could not take the game mode switcher back from " + player.getName() + ": " + e);
+                }
             }
         }
         switcher.withSwitcher.clear();
@@ -175,11 +180,12 @@ public final class GamemodeSwitcher implements Listener {
      * in their world, or else they are told they can't switch to it there.
      * <p>
      * isOp and hasPermission are only read here, off the main thread, and either outcome is checked again on the main
-     * thread: by Architect's answer, or by the server's own handler.
+     * thread: by Architect's answer, or by the server's own handler. A stopping Architect, which the server marks
+     * disabled before its onDisable takes the switcher back, may schedule nothing: its requests go on to the server.
      */
     public boolean onSwitchRequest(Player player, GameMode mode) {
         UUID id = player.getUniqueId();
-        if (!withSwitcher.contains(id) || vanillaLetsSwitch(player)) {
+        if (!plugin.isEnabled() || !withSwitcher.contains(id) || vanillaLetsSwitch(player)) {
             return false;
         }
         if (pending.put(id, mode) == null) {
