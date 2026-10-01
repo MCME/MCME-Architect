@@ -272,7 +272,7 @@ class GamemodeSwitcherTest {
 
     @Test
     void aPermittedRequestSwitchesOnTheMainThreadAndSaysSoAsVanillaDoes() {
-        PlayerMock builder = join(CREATIVE);
+        PlayerMock builder = builder(CREATIVE);
         builder.setGameMode(GameMode.SURVIVAL);
         readMessages(builder);
 
@@ -292,7 +292,7 @@ class GamemodeSwitcherTest {
 
     @Test
     void theParentPermissionGivesEveryMode() {
-        PlayerMock builder = join("architect.gamemodeSwitcher");
+        PlayerMock builder = builder("architect.gamemodeSwitcher");
 
         for (GameMode mode : List.of(GameMode.CREATIVE, GameMode.ADVENTURE, GameMode.SPECTATOR, GameMode.SURVIVAL)) {
             assertTrue(switcher.onSwitchRequest(builder, mode));
@@ -303,7 +303,7 @@ class GamemodeSwitcherTest {
 
     @Test
     void aRequestForAModeWithoutItsPermissionIsRefused() {
-        PlayerMock builder = join(CREATIVE, SURVIVAL);
+        PlayerMock builder = builder(CREATIVE, SURVIVAL);
         builder.setGameMode(GameMode.CREATIVE);
         readMessages(builder);
 
@@ -314,18 +314,68 @@ class GamemodeSwitcherTest {
         assertEquals("You can't switch to spectator mode here.", plain(builder.nextComponentMessage()));
     }
 
+    // A move to a world without the module takes the switcher back a tick later; a request in between is still
+    // checked against the world on the main thread.
     @Test
-    void aRequestInAWorldWithoutTheModuleIsRefused() {
-        PlayerMock builder = join(CREATIVE);
+    void inAWorldWithoutTheModuleARequestIsRefusedAndThenLeftToVanilla() {
+        PlayerMock builder = builder(CREATIVE);
         builder.teleport(worldWithoutSwitcher.getSpawnLocation());
         builder.setGameMode(GameMode.SURVIVAL);
         readMessages(builder);
 
-        assertTrue(switcher.onSwitchRequest(builder, GameMode.CREATIVE));
+        assertTrue(switcher.onSwitchRequest(builder, GameMode.CREATIVE), "before the switcher is taken back");
         tick();
 
         assertEquals(GameMode.SURVIVAL, builder.getGameMode());
         assertEquals("You can't switch to creative mode here.", plain(builder.nextComponentMessage()));
+        assertFalse(switcher.onSwitchRequest(builder, GameMode.CREATIVE), "after it, the server refuses it itself");
+    }
+
+    // The server's packet limiter counts only packets that reach it, and Architect takes these before it does: so it
+    // takes only the requests of builders it gave the switcher to, and answers each of them once per tick.
+    @Test
+    void onlyBuildersGivenTheSwitcherHaveTheirRequestsTaken() {
+        PlayerMock stranger = builder();
+        PlayerMock newcomer = join(CREATIVE);
+
+        assertFalse(switcher.onSwitchRequest(stranger, GameMode.CREATIVE), "no mode permission");
+        assertFalse(switcher.onSwitchRequest(newcomer, GameMode.CREATIVE), "not given the switcher yet");
+        tick();
+
+        assertEquals(GameMode.SURVIVAL, stranger.getGameMode());
+        assertNull(stranger.nextComponentMessage());
+    }
+
+    @Test
+    void aFloodOfRequestsWithinATickGetsOneAnswer() {
+        PlayerMock builder = builder(CREATIVE);
+        readMessages(builder);
+        int tasks = server.getScheduler().getPendingTasks().size();
+
+        for (int i = 0; i < 100; i++) {
+            assertTrue(switcher.onSwitchRequest(builder, GameMode.SPECTATOR));
+        }
+        assertEquals(tasks + 1, server.getScheduler().getPendingTasks().size(), "one task for them all");
+        tick();
+
+        assertEquals("You can't switch to spectator mode here.", plain(builder.nextComponentMessage()));
+        assertNull(builder.nextComponentMessage(), "one answer");
+    }
+
+    @Test
+    void twoRequestsWithinATickGiveOneSwitchToTheLatest() {
+        PlayerMock builder = builder(CREATIVE, SURVIVAL);
+        builder.setGameMode(GameMode.ADVENTURE);
+        readMessages(builder);
+
+        switcher.onSwitchRequest(builder, GameMode.CREATIVE);
+        switcher.onSwitchRequest(builder, GameMode.SURVIVAL);
+        tick();
+
+        assertEquals(GameMode.SURVIVAL, builder.getGameMode());
+        assertEquals(Component.translatable("commands.gamemode.success.self",
+                Component.translatable("gameMode.survival")), builder.nextComponentMessage());
+        assertNull(builder.nextComponentMessage(), "one switch, one message");
     }
 
     @Test
@@ -447,7 +497,7 @@ class GamemodeSwitcherTest {
     // GameMechanicsListener lets players fly in survival where playerSurvivalFly is on, as it is by default.
     @Test
     void aSwitchToSurvivalStillGivesSurvivalFlight() {
-        PlayerMock builder = join(SURVIVAL);
+        PlayerMock builder = builder(SURVIVAL);
         builder.setGameMode(GameMode.CREATIVE);
         builder.setAllowFlight(false);
 

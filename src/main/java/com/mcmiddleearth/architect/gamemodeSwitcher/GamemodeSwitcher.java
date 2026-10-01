@@ -18,8 +18,10 @@ import org.bukkit.plugin.Plugin;
 
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Lets builders who are not op switch game mode with the vanilla switcher (F3+F4, and F3+N for spectator), with a
@@ -29,9 +31,9 @@ import java.util.UUID;
  * The client opens the switcher only at permission level 2 or more. The server sends each player their real level
  * when they join, respawn or change worlds, and when their op status changes, each time followed by the command tree.
  * So a builder is told level 2 a tick after each of these events and after each command tree, and level 0 again once
- * they no longer qualify. The server refuses a non-op's request from the switcher, so {@link #onSwitchRequest} takes
- * it first, and the mode is set here with the Bukkit API. {@link GamemodeSwitcherProtocol} does both packet jobs
- * with ProtocolLib.
+ * they no longer qualify. The server refuses a builder's request from the switcher, so {@link #onSwitchRequest}
+ * takes it first, and the mode is set here with the Bukkit API. {@link GamemodeSwitcherProtocol} does both packet
+ * jobs with ProtocolLib.
  */
 public final class GamemodeSwitcher implements Listener {
 
@@ -50,6 +52,10 @@ public final class GamemodeSwitcher implements Listener {
     private final LevelSender levelSender;
     /** Players whose client was told the switcher's level. Main thread only. */
     private final Set<UUID> withSwitcher = new HashSet<>();
+    /** The builders among them, whose requests Architect takes. Also read on the network thread. */
+    private final Set<UUID> answered = ConcurrentHashMap.newKeySet();
+    /** Each builder's latest request not yet answered, so that a tick answers a builder once. */
+    private final Map<UUID, GameMode> pending = new ConcurrentHashMap<>();
 
     public GamemodeSwitcher(Plugin plugin, LevelSender levelSender) {
         this.plugin = plugin;
@@ -79,6 +85,7 @@ public final class GamemodeSwitcher implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         withSwitcher.remove(event.getPlayer().getUniqueId());
+        answered.remove(event.getPlayer().getUniqueId());
     }
 
     /** A tick later, after the level the server sends in the tick of the event. */
@@ -90,31 +97,45 @@ public final class GamemodeSwitcher implements Listener {
         if (!player.isOnline()) {
             return;
         }
+        UUID id = player.getUniqueId();
         if (qualifies(player)) {
-            withSwitcher.add(player.getUniqueId());
+            withSwitcher.add(id);
+            answered.add(id);
             levelSender.send(player, SWITCHER_LEVEL);
-        } else if (withSwitcher.remove(player.getUniqueId()) && !player.isOp()) {
-            // an op's level came with the op change, and Bukkit does not tell what it is
-            levelSender.send(player, PLAYER_LEVEL);
+        } else {
+            answered.remove(id);
+            if (withSwitcher.remove(id) && !player.isOp()) {
+                // an op's level came with the op change, and Bukkit does not tell what it is
+                levelSender.send(player, PLAYER_LEVEL);
+            }
         }
     }
 
     /**
-     * A request from the switcher, passed on by the packet listener off the main thread. Returns false for a player
-     * the server lets switch: the packet goes on to vanilla. Otherwise Architect takes the request, and the packet
-     * must go no further: on the main thread, the mode is set if the player may use it in their world, or else they
-     * are told they can't switch to it there.
+     * A request from the switcher, passed on by the packet listener on the network thread. Returns true when
+     * Architect takes the request, and the packet must go no further. It takes only the requests of builders it gave
+     * the switcher to, whom the server would refuse: every other packet goes on to the server, which counts it
+     * against its packet limit and answers it itself. A builder's requests within a tick get one answer, on the main
+     * thread, for the latest: the mode is set if they may use it in their world, or else they are told they can't
+     * switch to it there.
+     * <p>
+     * isOp and hasPermission are only read here, off the main thread, and either outcome is checked again on the main
+     * thread: by Architect's answer, or by the server's own handler.
      */
     public boolean onSwitchRequest(Player player, GameMode mode) {
-        if (vanillaLetsSwitch(player)) {
+        UUID id = player.getUniqueId();
+        if (!answered.contains(id) || vanillaLetsSwitch(player)) {
             return false;
         }
-        plugin.getServer().getScheduler().runTask(plugin, () -> switchMode(player, mode));
+        if (pending.put(id, mode) == null) {
+            plugin.getServer().getScheduler().runTask(plugin, () -> answer(player));
+        }
         return true;
     }
 
-    private void switchMode(Player player, GameMode mode) {
-        if (!player.isOnline()) {
+    private void answer(Player player) {
+        GameMode mode = pending.remove(player.getUniqueId());
+        if (mode == null || !player.isOnline()) {
             return;
         }
         String name = mode.name().toLowerCase(Locale.ROOT);
