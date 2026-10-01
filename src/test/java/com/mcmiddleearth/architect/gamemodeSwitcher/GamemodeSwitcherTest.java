@@ -525,6 +525,38 @@ class GamemodeSwitcherTest {
         assertNull(builder.nextComponentMessage());
     }
 
+    // On a server, Paper tells the client its level, with the entity event vanilla sends for it and no command tree.
+    @Test
+    void onAServerPaperTellsTheClientItsLevel() {
+        GamemodeSwitcher onServer = GamemodeSwitcher.forServer(plugin);
+        server.getPluginManager().registerEvents(onServer, plugin);
+        try {
+            LevelRecordingPlayer builder = new LevelRecordingPlayer(server, "PaperBuilder");
+            server.addPlayer(builder);
+            builder.addAttachment(plugin, CREATIVE, true);
+            tick();
+
+            assertEquals(List.of((byte) 2), builder.levels);
+        } finally {
+            HandlerList.unregisterAll(onServer);
+        }
+    }
+
+    /** Records the levels Paper would send; MockBukkit's player does not implement sendOpLevel. */
+    private static final class LevelRecordingPlayer extends PlayerMock {
+
+        private final List<Byte> levels = new ArrayList<>();
+
+        LevelRecordingPlayer(ServerMock server, String name) {
+            super(server, name);
+        }
+
+        @Override
+        public void sendOpLevel(byte level) {
+            levels.add(level);
+        }
+    }
+
     /** Stops one player's game mode changes, as another plugin may. */
     public static final class Veto implements Listener {
 

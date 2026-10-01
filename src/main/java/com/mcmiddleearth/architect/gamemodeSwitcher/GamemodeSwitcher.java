@@ -32,9 +32,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * The client opens the switcher only at permission level 2 or more. The server sends each player their real level
  * when they join, respawn or change worlds, and when their op status changes, each time followed by the command tree.
  * So a builder is told level 2 a tick after each of these events and after each command tree, and level 0 again once
- * they no longer qualify. The server refuses a builder's request from the switcher, so {@link #onSwitchRequest}
- * takes it first, and the mode is set here with the Bukkit API. {@link GamemodeSwitcherProtocol} does both packet
- * jobs with ProtocolLib.
+ * they no longer qualify. Paper's Player#sendOpLevel tells the client a level as vanilla does, with no command tree
+ * after it. The server refuses a builder's request from the switcher, so {@link #onSwitchRequest} takes it first,
+ * and the mode is set here with the Bukkit API. {@link GamemodeSwitcherProtocol} hands each request over, with
+ * ProtocolLib.
  */
 public final class GamemodeSwitcher implements Listener {
 
@@ -61,6 +62,11 @@ public final class GamemodeSwitcher implements Listener {
     public GamemodeSwitcher(Plugin plugin, LevelSender levelSender) {
         this.plugin = plugin;
         this.levelSender = levelSender;
+    }
+
+    /** The switcher for a server, where Paper tells each client its level. */
+    public static GamemodeSwitcher forServer(Plugin plugin) {
+        return new GamemodeSwitcher(plugin, (player, level) -> player.sendOpLevel((byte) level));
     }
 
     @EventHandler

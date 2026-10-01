@@ -8,12 +8,12 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.mcmiddleearth.architect.Log;
 import org.bukkit.GameMode;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 /**
- * All ProtocolLib interaction for the game mode switcher. As with ViewDistanceProtocol, this class cannot even be
- * linked without ProtocolLib, so it is called only once the "ProtocolLib" plugin is known to be present.
+ * All ProtocolLib interaction for the game mode switcher: it hands each request from the switcher to Architect. As
+ * with ViewDistanceProtocol, this class cannot even be linked without ProtocolLib, so it is called only once the
+ * "ProtocolLib" plugin is known to be present.
  * <p>
  * ProtocolLib 5.3.0, which Architect compiles against, predates the switcher's packet, so its type is looked up at
  * run time from the server's own class. The server runs a ProtocolLib dev build (5.5.0+), which knows every packet the
@@ -24,8 +24,6 @@ public final class GamemodeSwitcherProtocol {
     /** The packet the switcher sends, for F3+F4 and F3+N. */
     private static final String CHANGE_GAME_MODE_PACKET =
             "net.minecraft.network.protocol.game.ServerboundChangeGameModePacket";
-    /** Entity event statuses 24 to 28 tell a client its own permission level, 0 to 4. */
-    private static final int LEVEL_ZERO_STATUS = 24;
 
     private GamemodeSwitcherProtocol() {
     }
@@ -35,13 +33,10 @@ public final class GamemodeSwitcherProtocol {
      * while nothing answers its requests. If ProtocolLib cannot give the packet's type, the switcher stays off.
      */
     public static void register(Plugin plugin) {
-        GamemodeSwitcher switcher = new GamemodeSwitcher(plugin, GamemodeSwitcherProtocol::sendLevel);
+        GamemodeSwitcher switcher = GamemodeSwitcher.forServer(plugin);
         try {
-            Class<?> packetClass = Class.forName(CHANGE_GAME_MODE_PACKET, false,
-                    plugin.getServer().getClass().getClassLoader());
-            PacketType changeGameMode = PacketType.fromClass(packetClass);
             ProtocolLibrary.getProtocolManager().addPacketListener(
-                    new SwitchRequestListener(plugin, changeGameMode, switcher));
+                    new SwitchRequestListener(plugin, changeGameModeType(plugin), switcher));
         } catch (ClassNotFoundException | RuntimeException | LinkageError e) {
             Log.warn("The game mode switcher for builders is off: ProtocolLib cannot listen for its packet ("
                     + e + ").");
@@ -51,16 +46,22 @@ public final class GamemodeSwitcherProtocol {
         Log.info("The game mode switcher for builders is on.");
     }
 
-    /** Tells the client its permission level, with the entity event the server itself sends for it. */
-    private static void sendLevel(Player player, int level) {
-        try {
-            PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_STATUS);
-            packet.getIntegers().write(0, player.getEntityId());
-            packet.getBytes().write(0, (byte) (LEVEL_ZERO_STATUS + level));
-            ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
-        } catch (Exception e) {
-            Log.error("Failed to send the permission level packet to " + player.getName(), e);
+    /**
+     * The switcher packet's type, looked up from the server's class. It must be a packet the client sends, with the
+     * one game mode the request carries: anything else would be read wrongly, so the lookup counts as failed.
+     */
+    private static PacketType changeGameModeType(Plugin plugin) throws ClassNotFoundException {
+        Class<?> packetClass = Class.forName(CHANGE_GAME_MODE_PACKET, false,
+                plugin.getServer().getClass().getClassLoader());
+        PacketType type = PacketType.fromClass(packetClass);
+        if (!type.isClient()) {
+            throw new IllegalStateException(type + " is not a packet the client sends");
         }
+        int gameModes = new PacketContainer(type).getGameModes().size();
+        if (gameModes != 1) {
+            throw new IllegalStateException(type + " has " + gameModes + " game mode fields, not one");
+        }
+        return type;
     }
 
     /** Hands each request from the switcher to Architect, and stops the packet when Architect takes it. */
