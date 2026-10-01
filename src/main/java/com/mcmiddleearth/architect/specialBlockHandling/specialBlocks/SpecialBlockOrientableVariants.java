@@ -115,12 +115,15 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
                 public void run() {
                     //state.update(true, false);
                     blockPlace.setBlockData(state.getBlockData(), false);
-                    DevUtil.log("Special block place: ID " + state.getType() + " - DV " + state.getRawData());
+                    DevUtil.log("Special block place: ID " + state.getType()
+                            + " - data " + state.getBlockData().getAsString());
                     final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
                     new BukkitRunnable() {
                         @Override
                         public void run() {
-                            DevUtil.log("Special block place x2: loc: " + tempState.getX() + " " + tempState.getY() + " " + tempState.getZ() + " - ID " + state.getType() + " - DV " + state.getRawData());
+                            DevUtil.log("Special block place x2: loc: " + tempState.getX() + " " + tempState.getY()
+                                    + " " + tempState.getZ() + " - ID " + state.getType()
+                                    + " - data " + state.getBlockData().getAsString());
                             //tempState.update(true, false);
                             blockPlace.setBlockData(tempState.getBlockData(), false);
                             // We just want VANILLA block type to connect.

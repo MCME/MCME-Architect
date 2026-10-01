@@ -79,17 +79,21 @@ public class SpecialBlockOpenHalfDoor extends SpecialBlockFourDirections {
             @Override
             public void run() {
                 state.getBlock().setBlockData(state.getBlockData(),false);//.update(true, false);
-                DevUtil.log("Special block place: ID "+state.getType()+" - DV "+state.getRawData());
+                DevUtil.log("Special block place: ID "+state.getType()+" - data "+state.getBlockData().getAsString());
                 final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        DevUtil.log("Special block place x2: loc: "+tempState.getX()+" "+tempState.getY()+" "+tempState.getZ()+" - ID "+state.getType()+" - DV "+state.getRawData());
+                        DevUtil.log("Special block place x2: loc: "+tempState.getX()+" "+tempState.getY()+" "
+                                +tempState.getZ()+" - ID "+state.getType()
+                                +" - data "+state.getBlockData().getAsString());
                         tempState.getBlock().setBlockData(tempState.getBlockData(),false);//.update(true, false);
                         new BukkitRunnable() {
                             @Override
                             public void run() {
-                                DevUtil.log("open half door place loc: "+tempState.getX()+" "+tempState.getY()+" "+tempState.getZ()+" - ID "+state.getType()+" - DV "+state.getRawData());
+                                DevUtil.log("open half door place loc: "+tempState.getX()+" "+tempState.getY()+" "
+                                        +tempState.getZ()+" - ID "+state.getType()
+                                        +" - data "+state.getBlockData().getAsString());
                                 state.getWorld().unloadChunkRequest(tempState.getChunk().getX(),
                                                                     tempState.getChunk().getZ());
                             }

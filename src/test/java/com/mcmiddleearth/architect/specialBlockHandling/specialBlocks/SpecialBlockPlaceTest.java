@@ -8,8 +8,11 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Door;
 import org.bukkit.block.data.type.Wall;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -111,10 +114,9 @@ class SpecialBlockPlaceTest {
         assertEquals(List.of(target), branch.placeBlock(target, BlockFace.UP, ground, null, player), "facing north");
     }
 
-    // BRANCH_CONNECT has block data for the top face only, as this block has.
-    @Test
-    void aVariantBlockClickedOnAFaceItHasNoDataForPlacesNothing() {
-        SpecialBlockOrientableVariants topOnly = new SpecialBlockOrientableVariants("test/top",
+    // A variant block of stone, with block data for the top face only.
+    private static SpecialBlockOrientableVariants topOnly() {
+        return new SpecialBlockOrientableVariants("test/top",
                 new BlockData[][]{{Material.STONE.createBlockData()}}, new String[]{"base"},
                 new SpecialBlockOrientable.Orientation[]{new SpecialBlockOrientable.Orientation(BlockFace.UP, "")},
                 SpecialBlockType.BRANCH_CONNECT) {
@@ -124,6 +126,12 @@ class SpecialBlockPlaceTest {
                 return 0;
             }
         };
+    }
+
+    // BRANCH_CONNECT has block data for the top face only, as this block has.
+    @Test
+    void aVariantBlockClickedOnAFaceItHasNoDataForPlacesNothing() {
+        SpecialBlockOrientableVariants topOnly = topOnly();
         Block ground = ground(4);
         Block target = ground.getRelative(BlockFace.UP);
 
@@ -242,5 +250,36 @@ class SpecialBlockPlaceTest {
 
         assertEquals(Material.AIR, piece.getType(), "the water is taken away");
         assertFalse(((Wall) wall.getBlockData()).isUp(), "the post of the wall under it is lowered");
+    }
+
+    // A special block is set some ticks after the click, and its placement logs the data of what it sets, as text. On
+    // Paper, the first read of a legacy data value builds the whole legacy material table on the main thread, which
+    // holds the server up for seconds. MockBukkit's block states have no legacy data value either: asked for one, they
+    // throw an exception that would only skip the test.
+    @Test
+    void aSpecialDoorIsSetWithoutReadingLegacyData() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("blockMaterial", "OAK_DOOR");
+        SpecialBlockDoor door = SpecialBlockDoor.loadFromConfig(config, "test/door");
+        Block ground = ground(30);
+        Block lower = ground.getRelative(BlockFace.UP);
+        Block upper = lower.getRelative(BlockFace.UP);
+
+        assertEquals(List.of(lower, upper), door.placeBlock(lower, BlockFace.UP, ground, null, player));
+        assertDoesNotThrow(() -> server.getScheduler().performTicks(2), "nothing legacy is read");
+
+        assertEquals(Bisected.Half.BOTTOM, ((Door) lower.getBlockData()).getHalf(), "the lower half");
+        assertEquals(Bisected.Half.TOP, ((Door) upper.getBlockData()).getHalf(), "the upper half");
+    }
+
+    @Test
+    void aVariantBlockIsSetWithoutReadingLegacyData() {
+        Block ground = ground(34);
+        Block target = ground.getRelative(BlockFace.UP);
+
+        assertEquals(List.of(target), topOnly().placeBlock(target, BlockFace.UP, ground, null, player));
+        assertDoesNotThrow(() -> server.getScheduler().performTicks(6), "nothing legacy is read");
+
+        assertEquals(Material.STONE, target.getType(), "set");
     }
 }

@@ -141,8 +141,7 @@ class SpecialBlockGafferTest {
 
     @AfterEach
     void dropDelayedPlacements() {
-        // doors and some other special blocks are set a tick later, and log BlockState.getRawData, which MockBukkit
-        // does not implement
+        // doors and some other special blocks are set a tick later, when the test is over
         server.getScheduler().cancelTasks(ArchitectPlugin.getPluginInstance());
     }
 

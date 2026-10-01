@@ -94,7 +94,8 @@ public class SpecialBlockDoorThreeBlocks extends SpecialBlockDoor {
                     data.setPowered(lowerData.isPowered());
                     data.setHinge(lowerData.getHinge());
                     state.setBlockData(data);
-                    DevUtil.log("4 half door block place: ID "+state.getType()+" - DV "+state.getRawData());
+                    DevUtil.log("4 half door block place: ID "+state.getType()
+                            +" - data "+state.getBlockData().getAsString());
                     state.getBlock().setBlockData(state.getBlockData(),false);//.update(true, false);
                 } else {
                     DevUtil.log("invalid door material: ID "+state.getType());

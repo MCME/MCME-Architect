@@ -60,7 +60,7 @@ class DoorListenerGafferTest {
 
     @AfterEach
     void dropTheDelayedDoor() {
-        // the door is set a tick later through BlockState.getRawData, which MockBukkit does not implement
+        // the door is set a tick later, when the test is over
         server.getScheduler().cancelTasks(ArchitectPlugin.getPluginInstance());
     }
 

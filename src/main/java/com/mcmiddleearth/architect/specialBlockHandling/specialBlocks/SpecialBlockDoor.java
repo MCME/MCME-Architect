@@ -104,8 +104,10 @@ public class SpecialBlockDoor extends SpecialBlock {
             public void run() {
                 lowerState.getBlock().setBlockData(lowerState.getBlockData(),false);//update(true, false);
                 upperState.getBlock().setBlockData(upperState.getBlockData(),false);//.update(true, false);
-                DevUtil.log("4 door block place: ID "+lowerState.getType()+" - DV "+lowerState.getRawData());
-                DevUtil.log("4 door block place: ID "+upperState.getType()+" - DV "+upperState.getRawData());
+                DevUtil.log("4 door block place: ID "+lowerState.getType()
+                        +" - data "+lowerState.getBlockData().getAsString());
+                DevUtil.log("4 door block place: ID "+upperState.getType()
+                        +" - data "+upperState.getBlockData().getAsString());
                 final BlockState tempLowerState = lowerState.getBlock().getState();
                 final BlockState tempUpperState = upperState.getBlock().getState();
                 if(tempLowerState.getBlockData() instanceof Door && tempUpperState.getBlockData() instanceof Door) {
@@ -150,8 +152,10 @@ public class SpecialBlockDoor extends SpecialBlock {
                     new BukkitRunnable() {
                         @Override
                         public void run() {
-                            DevUtil.log("4 door block place x2: ID "+tempLowerState.getType()+" - DV "+tempLowerState.getRawData());
-                            DevUtil.log("4 door block place x2: ID "+tempUpperState.getType()+" - DV "+tempUpperState.getRawData());
+                            DevUtil.log("4 door block place x2: ID "+tempLowerState.getType()
+                                    +" - data "+tempLowerState.getBlockData().getAsString());
+                            DevUtil.log("4 door block place x2: ID "+tempUpperState.getType()
+                                    +" - data "+tempUpperState.getBlockData().getAsString());
                             tempLowerState.getBlock().setBlockData(tempLowerState.getBlockData(),false);//.update(true, false);
                             tempUpperState.getBlock().setBlockData(tempUpperState.getBlockData(),false);//.update(true, false);
                         }
