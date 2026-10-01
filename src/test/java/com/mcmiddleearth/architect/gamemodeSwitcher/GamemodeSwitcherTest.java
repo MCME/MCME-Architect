@@ -511,8 +511,9 @@ class GamemodeSwitcherTest {
         assertEquals(List.of(), sent);
     }
 
+    // Nor is it kept: a request left over would hold the place of the builder's next one, after they came back.
     @Test
-    void aRequestFromAPlayerWhoLeftBeforeTheTickIsNotAnswered() {
+    void aRequestFromAPlayerWhoLeftBeforeTheTickIsDroppedNotKept() {
         PlayerMock builder = builder(CREATIVE);
         builder.setGameMode(GameMode.SURVIVAL);
         readMessages(builder);
@@ -524,6 +525,14 @@ class GamemodeSwitcherTest {
 
         assertEquals(GameMode.SURVIVAL, builder.getGameMode());
         assertNull(builder.nextComponentMessage());
+
+        builder.reconnect();
+        builder.addAttachment(plugin, CREATIVE, true);
+        tick(); // the switcher again
+        assertTrue(switcher.onSwitchRequest(builder, GameMode.CREATIVE));
+        tick();
+
+        assertEquals(GameMode.CREATIVE, builder.getGameMode(), "answered once they are back");
     }
 
     // On a server, Paper tells the client its level, with the entity event vanilla sends for it and no command tree.
