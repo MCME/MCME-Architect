@@ -136,6 +136,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                                 "/nophy exception list", page);
                 } else {
                     PluginData.getMessageUtil().sendInvalidSubcommandError(p);
+                    sendHelpMessage(p,1);
                 }
                 return true;
             }

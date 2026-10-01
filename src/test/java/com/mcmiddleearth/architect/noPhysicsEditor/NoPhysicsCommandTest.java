@@ -70,6 +70,17 @@ class NoPhysicsCommandTest {
         assertTrue(answers.stream().noneMatch(answer -> answer.contains("valid world name")), answers.toString());
     }
 
+    // As at the top level, a mistyped word after "exception" is answered with the help.
+    @Test
+    void aMistypedExceptionSubcommandGetsTheHelp() {
+        List<String> answers = answersTo("nophy exception redstnoe Mill");
+
+        assertFalse(answers.isEmpty(), "an answer");
+        assertTrue(answers.get(0).contains("Invalid subcommand."), answers.toString());
+        assertTrue(answers.stream().anyMatch(answer -> answer.contains("/noPhy exception redstone")),
+                answers.toString());
+    }
+
     // The check for a known subcommand must not catch one: any case, and the world is still checked after it.
     @Test
     void aKnownSubcommandStillWorks() {
