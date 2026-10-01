@@ -575,8 +575,11 @@ public class SpecialBlockListener extends WatchedListener{
                             Material.DEAD_BUSH, false, (byte) 0);
                     default -> bs;
                 };
-                // TheGaffer is asked about the block that changes: the new plant, or the clicked one of its kind.
-                if(!(PluginData.checkBuildPermissions(p, bs.getLocation(), Permission.PLACE_PLANT))) {
+                // TheGaffer is asked about the block that changes: the new plant, or the clicked one of its kind. A
+                // click that changes neither asks nothing.
+                boolean ownKind = bs.getLocation().equals(event.getClickedBlock().getLocation());
+                if((wasAir || ownKind)
+                        && !(PluginData.checkBuildPermissions(p, bs.getLocation(), Permission.PLACE_PLANT))) {
                     event.setCancelled(true);
                     return;
                 }
@@ -644,11 +647,11 @@ public class SpecialBlockListener extends WatchedListener{
                 }
                 event.setCancelled(true);
                 Block b = event.getClickedBlock().getRelative(event.getBlockFace());
-                if(!(PluginData.checkBuildPermissions(p, b.getLocation(), Permission.PLACE_TORCH))) {
-                    return;
-                }
                 final BlockState bs = b.getState();
                 if(bs.getType().equals(Material.AIR)) {
+                    if(!(PluginData.checkBuildPermissions(p, b.getLocation(), Permission.PLACE_TORCH))) {
+                        return;
+                    }
                     bs.setType(Material.REDSTONE_TORCH);
                     bs.setRawData(getTorchDat(event.getBlockFace()));
                     new BukkitRunnable() {

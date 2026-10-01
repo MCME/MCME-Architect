@@ -57,6 +57,9 @@ class LegacyPlaceGafferTest {
         FakeGaffer.asked.clear();
         FakeGaffer.builds.clear();
         FakeGaffer.allowed = location -> true;
+        while (player.nextMessage() != null) {
+            // what an earlier test was told
+        }
     }
 
     @AfterEach
@@ -234,5 +237,34 @@ class LegacyPlaceGafferTest {
 
         assertEquals(Material.STONE, above.getType(), "left as it was");
         assertEquals(List.of(), FakeGaffer.builds);
+    }
+
+    // A click that changes nothing asks TheGaffer nothing, so at a job's edge it is not refused either.
+    @Test
+    void aPlaceablePlantThatChangesNothingAsksNothing() {
+        Block ground = ground(20);
+        Block above = ground.getRelative(BlockFace.UP);
+        above.setType(Material.STONE);
+        FakeGaffer.allowed = location -> !location.equals(above.getLocation());
+
+        rightClick(Material.RED_MUSHROOM, "Placeable Mushroom", ground, BlockFace.UP);
+
+        assertEquals(List.of(), FakeGaffer.asked, "nothing asked");
+        assertNull(player.nextMessage(), "nothing refused");
+    }
+
+    @Test
+    void anUnlitTorchThatChangesNothingAsksNothing() {
+        Block wall = ground(22);
+        Block beside = wall.getRelative(BlockFace.EAST);
+        beside.setType(Material.STONE);
+        FakeGaffer.allowed = location -> !location.equals(beside.getLocation());
+
+        rightClick(Material.REDSTONE_TORCH, "Unlit Torch", wall, BlockFace.EAST);
+        server.getScheduler().performTicks(1);
+
+        assertEquals(Material.STONE, beside.getType(), "left as it was");
+        assertEquals(List.of(), FakeGaffer.asked, "nothing asked");
+        assertNull(player.nextMessage(), "nothing refused");
     }
 }
