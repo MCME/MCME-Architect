@@ -212,7 +212,8 @@ class LegacyPlaceGafferTest {
         assertEquals(placed(plant), FakeGaffer.builds);
     }
 
-    // A click on a plant of the kind in hand changes that plant, and adds none.
+    // A click on a plant of the kind in hand changes that plant, and adds none. So it is that plant TheGaffer is asked
+    // about.
     @Test
     void aPlaceablePlantClickedOnItsOwnKindIsNotReported() {
         Block mushroom = world.getBlockAt(10, 65, 0);
@@ -223,6 +224,7 @@ class LegacyPlaceGafferTest {
         rightClick(Material.RED_MUSHROOM, "Placeable Mushroom", mushroom, BlockFace.UP);
 
         assertEquals(Material.AIR, above.getType(), "nothing new");
+        assertEquals(List.of(mushroom.getLocation()), FakeGaffer.asked, "asked about the clicked plant");
         assertEquals(List.of(), FakeGaffer.builds);
     }
 
