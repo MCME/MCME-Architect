@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.gamemodeSwitcher;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.LogFileManager;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.WorldConfig;
@@ -8,7 +9,12 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.GameMode;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandSendEvent;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionAttachment;
 import org.junit.jupiter.api.AfterAll;
@@ -23,6 +29,8 @@ import org.mockbukkit.mockbukkit.entity.PlayerMock;
 import org.mockbukkit.mockbukkit.world.WorldMock;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -88,6 +96,32 @@ class GamemodeSwitcherTest {
             player.addAttachment(plugin, permission, true);
         }
         return player;
+    }
+
+    /** A builder with these permissions, who joined and was given the switcher a tick later. */
+    private static PlayerMock builder(String... permissions) {
+        PlayerMock builder = join(permissions);
+        tick();
+        sent.clear();
+        return builder;
+    }
+
+    /** The switcher's lines about this player in Architect's log, without each line's time and level. */
+    private static List<String> switcherLog(PlayerMock player) throws IOException {
+        LogFileManager.flush();
+        File[] logs = new File(plugin.getDataFolder(), "logs")
+                .listFiles((dir, name) -> name.startsWith("architect_") && name.endsWith(".log"));
+        assertNotNull(logs, "Architect's log folder");
+        List<String> about = new ArrayList<>();
+        for (File log : logs) {
+            for (String line : Files.readAllLines(log.toPath())) {
+                String message = line.replaceFirst("^\\[[^]]*] \\[[A-Z]+] ", "");
+                if (message.startsWith(player.getName() + " ") && message.contains("game mode switcher")) {
+                    about.add(message);
+                }
+            }
+        }
+        return about;
     }
 
     /** The server sends the command tree after every level it sends, and when permissions change. */
@@ -309,6 +343,104 @@ class GamemodeSwitcherTest {
         for (PlayerMock player : List.of(op, commandHolder)) {
             assertEquals(GameMode.SURVIVAL, player.getGameMode(), player.getName());
             assertNull(player.nextComponentMessage(), player.getName());
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(GameMode.class)
+    void eachModePermissionGivesThatModeAndNoOther(GameMode allowed) {
+        PlayerMock builder = builder("architect.gamemodeSwitcher." + allowed.name().toLowerCase(Locale.ROOT));
+
+        for (GameMode mode : GameMode.values()) {
+            GameMode before = mode == GameMode.SURVIVAL ? GameMode.ADVENTURE : GameMode.SURVIVAL;
+            builder.setGameMode(before);
+            readMessages(builder);
+
+            assertTrue(switcher.onSwitchRequest(builder, mode), mode.name());
+            tick();
+
+            String name = mode.name().toLowerCase(Locale.ROOT);
+            if (mode == allowed) {
+                assertEquals(mode, builder.getGameMode(), name + " is given");
+            } else {
+                assertEquals(before, builder.getGameMode(), name + " is refused");
+                assertEquals("You can't switch to " + name + " mode here.", plain(builder.nextComponentMessage()));
+            }
+        }
+    }
+
+    // Another plugin may stop the change; then the switcher says nothing either, as vanilla's handler does.
+    @Test
+    void aChangeAnotherPluginCancelsIsNotAnnounced() throws IOException {
+        PlayerMock builder = builder(CREATIVE);
+        builder.setGameMode(GameMode.SURVIVAL);
+        readMessages(builder);
+        Veto veto = new Veto(builder);
+        server.getPluginManager().registerEvents(veto, plugin);
+        try {
+            assertTrue(switcher.onSwitchRequest(builder, GameMode.CREATIVE));
+            tick();
+        } finally {
+            HandlerList.unregisterAll(veto);
+        }
+
+        assertEquals(GameMode.SURVIVAL, builder.getGameMode());
+        assertNull(builder.nextComponentMessage());
+        assertEquals(List.of(), switcherLog(builder));
+    }
+
+    @Test
+    void aSwitchIsLogged() throws IOException {
+        PlayerMock builder = builder(CREATIVE);
+        builder.setGameMode(GameMode.SURVIVAL);
+
+        switcher.onSwitchRequest(builder, GameMode.CREATIVE);
+        tick();
+
+        assertEquals(List.of(builder.getName() + " switched to creative mode with the game mode switcher."),
+                switcherLog(builder));
+    }
+
+    // A permission plugin may still answer for a player who left, so the switcher checks they are online.
+    @Test
+    void aPlayerWhoLeftBeforeTheTickIsToldNothing() {
+        PlayerMock player = join();
+        player.disconnect();
+        player.addAttachment(plugin, CREATIVE, true);
+        tick();
+
+        assertEquals(List.of(), sent);
+    }
+
+    @Test
+    void aRequestFromAPlayerWhoLeftBeforeTheTickIsNotAnswered() {
+        PlayerMock builder = builder(CREATIVE);
+        builder.setGameMode(GameMode.SURVIVAL);
+        readMessages(builder);
+
+        assertTrue(switcher.onSwitchRequest(builder, GameMode.CREATIVE));
+        builder.disconnect();
+        builder.addAttachment(plugin, CREATIVE, true);
+        tick();
+
+        assertEquals(GameMode.SURVIVAL, builder.getGameMode());
+        assertNull(builder.nextComponentMessage());
+    }
+
+    /** Stops one player's game mode changes, as another plugin may. */
+    public static final class Veto implements Listener {
+
+        private final Player player;
+
+        Veto(Player player) {
+            this.player = player;
+        }
+
+        @EventHandler
+        public void onGameModeChange(PlayerGameModeChangeEvent event) {
+            if (event.getPlayer() == player) {
+                event.setCancelled(true);
+            }
         }
     }
 
