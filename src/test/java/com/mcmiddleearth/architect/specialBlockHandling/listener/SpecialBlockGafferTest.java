@@ -147,15 +147,38 @@ class SpecialBlockGafferTest {
     }
 
     // The item as the block inventory makes it: the tag, then the special block's id.
-    private void rightClick(String specialBlock, Block clicked, BlockFace face) {
+    private static ItemStack specialItem(String specialBlock) {
         ItemStack item = new ItemStack(Material.STONE);
         ItemMeta meta = item.getItemMeta();
         meta.setLore(List.of(SpecialBlockInventoryData.SPECIAL_BLOCK_TAG, "testrp/" + specialBlock));
         item.setItemMeta(meta);
         assertNotNull(SpecialBlockInventoryData.getSpecialBlockDataFromItem(item), "a special block item");
+        return item;
+    }
+
+    private void rightClick(String specialBlock, Block clicked, BlockFace face) {
+        ItemStack item = specialItem(specialBlock);
         player.getInventory().setItemInMainHand(item);
         new SpecialBlockListener().placeSpecialBlock(
                 new PlayerInteractEvent(player, Action.RIGHT_CLICK_BLOCK, item, clicked, face, EquipmentSlot.HAND));
+    }
+
+    // Through the server, where every listener hears the click.
+    private void rightClickThroughTheServer(String specialBlock, Block clicked, BlockFace face) {
+        ItemStack item = specialItem(specialBlock);
+        player.getInventory().setItemInMainHand(item);
+        server.getPluginManager().callEvent(
+                new PlayerInteractEvent(player, Action.RIGHT_CLICK_BLOCK, item, clicked, face, EquipmentSlot.HAND));
+    }
+
+    private static long refusals() {
+        long refusals = 0;
+        for (String message = player.nextMessage(); message != null; message = player.nextMessage()) {
+            if (message.contains("You are not in the job's area.")) {
+                refusals++;
+            }
+        }
+        return refusals;
     }
 
     private static List<FakeGaffer.Build> placed(Block... blocks) {
@@ -200,6 +223,30 @@ class SpecialBlockGafferTest {
         assertEquals(List.of(), FakeGaffer.builds);
         String message = player.nextMessage();
         assertTrue(message != null && message.contains("You are not in the job's area."), "told why: " + message);
+    }
+
+    // The click a special block uses is its own: the protection of signs and redstone wire, which asks TheGaffer about
+    // the clicked block, keeps out of it, so a refused placement is answered once.
+    @Test
+    void aRefusedPlacementOnASignIsAnsweredOnce() {
+        Block sign = world.getBlockAt(50, 64, 0);
+        sign.setType(Material.OAK_SIGN);
+        FakeGaffer.allowed = location -> false;
+
+        rightClickThroughTheServer("stone", sign, BlockFace.EAST);
+
+        assertEquals(1, refusals());
+    }
+
+    @Test
+    void aRefusedPlacementOnRedstoneWireIsAnsweredOnce() {
+        Block wire = world.getBlockAt(54, 64, 0);
+        wire.setType(Material.REDSTONE_WIRE);
+        FakeGaffer.allowed = location -> false;
+
+        rightClickThroughTheServer("stone", wire, BlockFace.UP);
+
+        assertEquals(1, refusals());
     }
 
     @Test
