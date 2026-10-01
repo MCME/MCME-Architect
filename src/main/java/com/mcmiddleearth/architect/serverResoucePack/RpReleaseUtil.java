@@ -83,7 +83,9 @@ public class RpReleaseUtil {
     /**
      * Waits up to timeout for a release script to end, while its output goes to output line by line. A script still
      * running then is stopped, with the processes it started; whatever still runs after the grace time is killed. The
-     * thread that reads the output is shut down in every case.
+     * thread that reads the output is shut down in every case, and ends then, unless a process the script started
+     * still holds the output open: an interrupt does not end a read of a pipe, so that thread, a daemon, stays until
+     * the output closes.
      */
     static ScriptResult awaitScript(Process process, Duration timeout, Duration grace, Consumer<String> output)
             throws InterruptedException {

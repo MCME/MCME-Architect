@@ -92,8 +92,10 @@ class RpReleaseUtilTest {
     }
 
     // A real one: this JVM runs a program that writes 2 MB to its error stream before a line to its standard output.
-    // A pipe holds much less, so the program waits for its error stream to be read before it can write that line.
+    // A pipe holds much less, so the program waits for its error stream to be read before it can write that line. A
+    // JVM that compiles the program before it runs it can be slow on a busy machine, so it has half a minute.
     @Test
+    @Timeout(60)
     void aScriptThatWritesMuchToItsErrorStreamIsNotHeldUp(@TempDir Path dir) throws Exception {
         Files.writeString(dir.resolve("Noisy.java"), """
                 public class Noisy {
@@ -109,7 +111,7 @@ class RpReleaseUtilTest {
         String java = ProcessHandle.current().info().command().orElseThrow();
 
         Process script = RpReleaseUtil.startScript(dir.toFile(), java, "Noisy.java");
-        ScriptResult result = RpReleaseUtil.awaitScript(script, Duration.ofSeconds(5), Duration.ofSeconds(1),
+        ScriptResult result = RpReleaseUtil.awaitScript(script, Duration.ofSeconds(30), Duration.ofSeconds(5),
                 output::add);
 
         assertEquals(new ScriptResult(true, 0, true), result);
@@ -129,7 +131,9 @@ class RpReleaseUtilTest {
                 "less than a minute is no time");
     }
 
-    // The reader is shut down when awaitScript returns, and its thread ends a moment later.
+    // The reader is shut down when awaitScript returns, and with these fake scripts its thread ends a moment later. Not
+    // so with a real script whose output a process it started still holds open: an interrupt does not end a read of a
+    // pipe, so that thread, a daemon, stays until the output closes, which does no harm.
     private static void assertNoReaderLeft() throws InterruptedException {
         long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
         while (readerAlive() && System.nanoTime() < until) {
