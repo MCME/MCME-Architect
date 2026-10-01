@@ -16,7 +16,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.Plugin;
 
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -25,8 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Lets builders who are not op switch game mode with the vanilla switcher (F3+F4, and F3+N for spectator), with a
- * permission per mode, in worlds where the gamemodeSwitcher module is on. Players the server lets switch anyway, ops
- * and holders of minecraft.command.gamemode, are left to vanilla.
+ * permission per mode, in worlds where the gamemodeSwitcher module is on. Ops are left to vanilla. Holders of
+ * minecraft.command.gamemode, whom the server lets switch anyway, get the switcher there too, and the server answers
+ * their requests itself.
  * <p>
  * The client opens the switcher only at permission level 2 or more. The server sends each player their real level
  * when they join, respawn or change worlds, and when their op status changes, each time followed by the command tree.
@@ -41,6 +41,8 @@ public final class GamemodeSwitcher implements Listener {
     private static final int SWITCHER_LEVEL = 2;
     /** The level of every player who is not op. */
     private static final int PLAYER_LEVEL = 0;
+    /** Paper lets holders of this permission use the switcher, as it does ops. */
+    private static final String GAMEMODE_COMMAND = "minecraft.command.gamemode";
 
     /** Tells a player's client its permission level, 0 to 4. */
     @FunctionalInterface
@@ -50,10 +52,8 @@ public final class GamemodeSwitcher implements Listener {
 
     private final Plugin plugin;
     private final LevelSender levelSender;
-    /** Players whose client was told the switcher's level. Main thread only. */
-    private final Set<UUID> withSwitcher = new HashSet<>();
-    /** The builders among them, whose requests Architect takes. Also read on the network thread. */
-    private final Set<UUID> answered = ConcurrentHashMap.newKeySet();
+    /** Players whose client was told the switcher's level. Written on the main thread, read on the network thread. */
+    private final Set<UUID> withSwitcher = ConcurrentHashMap.newKeySet();
     /** Each builder's latest request not yet answered, so that a tick answers a builder once. */
     private final Map<UUID, GameMode> pending = new ConcurrentHashMap<>();
 
@@ -85,7 +85,6 @@ public final class GamemodeSwitcher implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         withSwitcher.remove(event.getPlayer().getUniqueId());
-        answered.remove(event.getPlayer().getUniqueId());
     }
 
     /** A tick later, after the level the server sends in the tick of the event. */
@@ -98,33 +97,29 @@ public final class GamemodeSwitcher implements Listener {
             return;
         }
         UUID id = player.getUniqueId();
-        if (qualifies(player)) {
+        if (getsSwitcher(player)) {
             withSwitcher.add(id);
-            answered.add(id);
             levelSender.send(player, SWITCHER_LEVEL);
-        } else {
-            answered.remove(id);
-            if (withSwitcher.remove(id) && !player.isOp()) {
-                // an op's level came with the op change, and Bukkit does not tell what it is
-                levelSender.send(player, PLAYER_LEVEL);
-            }
+        } else if (withSwitcher.remove(id) && !player.isOp()) {
+            // an op's level came with the op change, and Bukkit does not tell what it is
+            levelSender.send(player, PLAYER_LEVEL);
         }
     }
 
     /**
      * A request from the switcher, passed on by the packet listener on the network thread. Returns true when
      * Architect takes the request, and the packet must go no further. It takes only the requests of builders it gave
-     * the switcher to, whom the server would refuse: every other packet goes on to the server, which counts it
-     * against its packet limit and answers it itself. A builder's requests within a tick get one answer, on the main
-     * thread, for the latest: the mode is set if they may use it in their world, or else they are told they can't
-     * switch to it there.
+     * the switcher to, whom the server would refuse: every other packet, holders of minecraft.command.gamemode
+     * included, goes on to the server, which counts it against its packet limit and answers it itself. A builder's
+     * requests within a tick get one answer, on the main thread, for the latest: the mode is set if they may use it
+     * in their world, or else they are told they can't switch to it there.
      * <p>
      * isOp and hasPermission are only read here, off the main thread, and either outcome is checked again on the main
      * thread: by Architect's answer, or by the server's own handler.
      */
     public boolean onSwitchRequest(Player player, GameMode mode) {
         UUID id = player.getUniqueId();
-        if (!answered.contains(id) || vanillaLetsSwitch(player)) {
+        if (!withSwitcher.contains(id) || vanillaLetsSwitch(player)) {
             return false;
         }
         if (pending.put(id, mode) == null) {
@@ -156,12 +151,19 @@ public final class GamemodeSwitcher implements Listener {
 
     /** The server's own check: vanilla's (op), or Paper's permission. */
     private static boolean vanillaLetsSwitch(Player player) {
-        return player.isOp() || player.hasPermission("minecraft.command.gamemode");
+        return player.isOp() || player.hasPermission(GAMEMODE_COMMAND);
     }
 
-    private static boolean qualifies(Player player) {
-        if (vanillaLetsSwitch(player) || !moduleOn(player)) {
+    /**
+     * Whether the switcher opens for the player here: for builders with a mode's permission, and for holders of
+     * minecraft.command.gamemode, whom the server lets switch itself. Ops have their own level.
+     */
+    private static boolean getsSwitcher(Player player) {
+        if (player.isOp() || !moduleOn(player)) {
             return false;
+        }
+        if (player.hasPermission(GAMEMODE_COMMAND)) {
+            return true;
         }
         for (GameMode mode : GameMode.values()) {
             if (PluginData.hasPermission(player, permission(mode))) {

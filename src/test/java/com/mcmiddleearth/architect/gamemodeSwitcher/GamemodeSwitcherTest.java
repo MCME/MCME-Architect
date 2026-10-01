@@ -162,13 +162,27 @@ class GamemodeSwitcherTest {
     }
 
     @Test
-    void opsAndGamemodeCommandHoldersAreLeftToVanilla() {
+    void opsAreLeftToVanilla() {
         PlayerMock op = join(CREATIVE);
         op.setOp(true);
-        join(CREATIVE, "minecraft.command.gamemode");
         tick();
 
-        assertEquals(List.of(), sent, "the server gives them its own level");
+        assertEquals(List.of(), sent, "the server gives them their own level");
+    }
+
+    // The server lets them switch by its own rules, so the switcher only has to open for them.
+    @Test
+    void holdersOfTheGamemodeCommandGetTheSwitcherAndTheServerAnswersThem() {
+        PlayerMock holder = join("minecraft.command.gamemode");
+        tick();
+
+        assertEquals(List.of(holder.getName() + " 2"), sent, "so that F3+F4 opens for them");
+        assertFalse(switcher.onSwitchRequest(holder, GameMode.CREATIVE), "their requests go on to the server");
+
+        sent.clear();
+        holder.teleport(worldWithoutSwitcher.getSpawnLocation());
+        tick();
+        assertEquals(List.of(holder.getName() + " 0"), sent, "but not where the module is off");
     }
 
     @Test
