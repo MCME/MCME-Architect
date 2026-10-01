@@ -3,6 +3,7 @@ package com.mcmiddleearth.architect.gamemodeSwitcher;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -21,6 +22,9 @@ import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 import org.mockbukkit.mockbukkit.world.WorldMock;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,7 +44,7 @@ class InvisibleBlockListenerTest {
     private static int nextX;
 
     @BeforeAll
-    static void setUp() {
+    static void setUp() throws IOException {
         server = MockBukkit.mock();
         plugin = MockBukkit.load(ArchitectPlugin.class);
         // MockBukkit does not register plugin.yml's permissions, as a server does; "default: op" needs them
@@ -52,6 +56,19 @@ class InvisibleBlockListenerTest {
         world = server.addSimpleWorld("world");
         worldWithoutSwitcher = server.addSimpleWorld("noSwitcher");
         PluginData.setModuleEnabled(worldWithoutSwitcher, Modules.GAMEMODE_SWITCHER, false);
+        // the entry the RP packs' /inv has in inventories/misc.yml
+        Path rp = SpecialBlockInventoryData.configFolder.toPath().resolve("testrp");
+        Files.createDirectories(rp);
+        Files.writeString(rp.resolve("misc.yml"), """
+                Items:
+                  light:
+                    itemMaterial: LIGHT
+                    display: Light Block
+                    type: VANILLA
+                    blockData: minecraft:light
+                    category: Misc
+                """);
+        SpecialBlockInventoryData.loadInventories();
     }
 
     @AfterAll
@@ -69,12 +86,15 @@ class InvisibleBlockListenerTest {
         return player;
     }
 
-    /** Places the block as the server does: the event fires with the block already in the world. */
     private static BlockPlaceEvent place(PlayerMock player, WorldMock in, Material material, boolean cancelled) {
+        return place(player, in, new ItemStack(material), cancelled);
+    }
+
+    /** Places the item's block as the server does: the event fires with the block already in the world. */
+    private static BlockPlaceEvent place(PlayerMock player, WorldMock in, ItemStack item, boolean cancelled) {
         Block block = in.getBlockAt(nextX++, 64, 0);
         BlockState replaced = block.getState();
-        block.setType(material);
-        ItemStack item = new ItemStack(material);
+        block.setType(item.getType());
         player.getInventory().setItemInMainHand(item);
         BlockPlaceEvent event = new BlockPlaceEvent(block, replaced, block.getRelative(BlockFace.DOWN), item, player,
                 true, EquipmentSlot.HAND);
@@ -111,6 +131,23 @@ class InvisibleBlockListenerTest {
             assertFalse(event.isCancelled(), player.getName() + " places " + invisible);
             assertNull(player.nextMessage(), player.getName());
         }
+    }
+
+    // The RP packs' /inv has a Light Block of type VANILLA, which Architect leaves to vanilla to place, so its place
+    // event comes here. Builders keep it; the plain item, from the Operator Items tab, pick-block or /give, they don't.
+    @Test
+    void theLightBlockFromArchitectsInventoryIsLetThrough() {
+        ItemStack fromInventory = SpecialBlockInventoryData.getItem(SpecialBlockInventoryData.getSpecialBlock(
+                "testrp/light"));
+        assertNotNull(fromInventory, "the /inv item");
+        assertEquals(Material.LIGHT, fromInventory.getType());
+        PlayerMock builder = join();
+
+        BlockPlaceEvent event = place(builder, world, fromInventory, false);
+
+        assertFalse(event.isCancelled(), "placed");
+        assertNull(builder.nextMessage(), "and nothing said");
+        assertTrue(place(builder, world, new ItemStack(Material.LIGHT), false).isCancelled(), "the plain item");
     }
 
     @Test
