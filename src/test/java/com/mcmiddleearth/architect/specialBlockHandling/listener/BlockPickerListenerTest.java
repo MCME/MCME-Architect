@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.listener;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -12,9 +13,11 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
+import org.mockbukkit.mockbukkit.block.BlockMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 import org.mockbukkit.mockbukkit.world.WorldMock;
 
@@ -64,9 +67,51 @@ class BlockPickerListenerTest {
         }
     }
 
+    @BeforeEach
+    void reset() {
+        tellraw.clear();
+        player.setSneaking(false);
+    }
+
     private static void leftClick(Action action, Block block) {
         server.getPluginManager().callEvent(new PlayerInteractEvent(player, action,
                 player.getInventory().getItemInMainHand(), block, BlockFace.UP, EquipmentSlot.HAND));
+    }
+
+    // On Paper, the first read of a block's legacy data value builds the whole table of legacy materials, on the main
+    // thread, which once held a server up for more than ten seconds. This block's legacy data value cannot be read.
+    private static Block withoutLegacyData(Material material, int x) {
+        return new BlockMock(material, new Location(world, x, 64, 0)) {
+            @Override
+            public byte getData() {
+                throw new UnsupportedOperationException("the legacy data value was read");
+            }
+        };
+    }
+
+    // One part of a clickable line, as PluginUtils writes it for /tellraw.
+    private static String part(String text, String color, String suggestion) {
+        return "{\"text\":\"" + text + "\",\"color\":\"" + color
+                + "\",\"clickEvent\":{\"action\":\"suggest_command\",\"value\":\"" + suggestion + "\"}}";
+    }
+
+    // Without sneaking, a left-click on a block shows its material, then each of its attributes, the values in green.
+    // Each line suggests the block's data when clicked; with no WorldEdit preset, the data alone. MockBukkit has no
+    // legacy data values either: asked for one, it throws an exception that would only skip the test.
+    @Test
+    void theDataOfABlockIsShownWithoutItsLegacyDataValue() {
+        Block stairs = withoutLegacyData(Material.OAK_STAIRS, 4);
+        player.getInventory().setItemInMainHand(new ItemStack(Material.FLINT));
+
+        assertDoesNotThrow(() -> leftClick(Action.LEFT_CLICK_BLOCK, stairs), "nothing legacy is read");
+
+        String suggestion = " " + stairs.getBlockData().getAsString();
+        String lines = String.join("\n", tellraw);
+        assertTrue(tellraw.stream().anyMatch(line -> line.endsWith(part("Material: ", "aqua", suggestion) + ","
+                + part("OAK_STAIRS", "green", suggestion) + "]")), lines);
+        assertTrue(tellraw.stream().anyMatch(line -> line.endsWith(part("Waterlogged: ", "aqua", suggestion) + ","
+                + part("false", "green", suggestion) + "]")), lines);
+        assertTrue(tellraw.stream().noneMatch(line -> line.contains("old(")), lines);
     }
 
     @Test

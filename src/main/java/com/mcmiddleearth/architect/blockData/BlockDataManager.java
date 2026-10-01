@@ -8,7 +8,6 @@ package com.mcmiddleearth.architect.blockData;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.blockData.attributes.*;
-import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import com.mcmiddleearth.util.DevUtil;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -190,15 +189,14 @@ public class BlockDataManager {
         }
     }
     
-    public List<String> getBlockInfo(BlockData data, byte rawData) {
+    // The material of a block and each of its attributes, a line each: for chat, labelled and with the values in green,
+    // else plain, as in blockList.txt. Nothing legacy is read: on Paper, the first read of a legacy data value or
+    // material builds the whole legacy material table on the main thread, which holds the server up for seconds.
+    public List<String> getBlockInfo(BlockData data, boolean chat) {
         List<String> results = new ArrayList<>();
         //results.add(data.getMaterial().getKey().toString());
-        if(rawData>-1) {
-            Material legacy = LegacyMaterialUtil.getLegacyMaterial(data.getMaterial());
-            String legacyInfo = (legacy!=null?
-                                 " "+ChatColor.RED+"old("+legacy.getId()+":"+rawData+")":"");
-            results.add("Material: "+ChatColor.GREEN+data.getMaterial().name()
-                                    +/*1.14 removed " ("+data.getMaterial().getId()+":"+rawData+")"+*/legacyInfo);
+        if(chat) {
+            results.add("Material: "+ChatColor.GREEN+data.getMaterial().name());
         } else {
             results.add(data.getMaterial().name());
         }
@@ -207,7 +205,7 @@ public class BlockDataManager {
                 search.setBlockData(data);
                 for(int i=0; i<search.countSubAttributes();i++) {
                     search.setCurrentSubAttribute(i);
-                    if(rawData>-1) {
+                    if(chat) {
                         results.add(search.getName()+": "+ChatColor.GREEN+search.getState());
                     } else {
                         results.add(search.getName()+":"+search.getState());
@@ -402,7 +400,7 @@ public class BlockDataManager {
                                 x+=2;
                                 rowStarted = true;
                             } else {
-                                List<String> lines = attributeManager.getBlockInfo((BlockData)entry, (byte) -1);
+                                List<String> lines = attributeManager.getBlockInfo((BlockData)entry, false);
                                 try {
                                     writer.write(lines.get(0)+",");
                                     for(int i = 1; i<lines.size();i++) {
