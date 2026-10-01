@@ -185,7 +185,7 @@ public class SpecialBlockBranch extends SpecialBlock {
     }*/
 
     @Override
-    public void handleBlockBreak(BlockState state) {
+    public void handleBlockBreak(BlockState state, Player player) {
         Block block = state.getBlock();
         if(!state.getBlockData().equals(block.getBlockData())) {
             // find out if we break a block with vertical part

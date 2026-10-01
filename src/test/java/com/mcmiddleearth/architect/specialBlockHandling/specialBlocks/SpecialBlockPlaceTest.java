@@ -7,6 +7,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Wall;
 import org.bukkit.entity.Player;
@@ -173,5 +174,45 @@ class SpecialBlockPlaceTest {
 
         assertEquals(List.of(target), branch.placeBlock(target, BlockFace.UP, wall, null, player), "placed");
         assertEquals(List.of(), FakeGaffer.asked, "nothing asked about the wall");
+    }
+
+    // An upright piece of branch is an andesite wall with a post. This is its state from before it was broken.
+    private static BlockState brokenUprightPiece(Block block) {
+        block.setType(Material.ANDESITE_WALL);
+        block.getState().setBlockData(server.createBlockData("minecraft:andesite_wall[up=true]"));
+        BlockState state = block.getState();
+        block.setType(Material.AIR);
+        return state;
+    }
+
+    private static Block wallWithPost(int x) {
+        Block wall = world.getBlockAt(x, 64, 0);
+        wall.setBlockData(server.createBlockData("minecraft:andesite_wall[up=true]"));
+        return wall;
+    }
+
+    // Six ticks after an upright piece is broken, the post of the wall under it is lowered: that changes the wall.
+    @Test
+    void aBrokenBranchLeavesAWallOutsideTheJobAsItIs() {
+        SpecialBlockBranch2 branch = thickBranchOnAndesiteWalls();
+        Block wall = wallWithPost(14);
+        BlockState broken = brokenUprightPiece(wall.getRelative(BlockFace.UP));
+        FakeGaffer.allowed = location -> !location.equals(wall.getLocation());
+
+        branch.handleBlockBreak(broken, player);
+
+        assertEquals(List.of(wall.getLocation()), FakeGaffer.asked, "asked about the wall");
+        assertTrue(((Wall) wall.getBlockData()).isUp(), "its post is kept");
+    }
+
+    @Test
+    void aBrokenBranchLowersThePostOfAWallInsideTheJob() {
+        SpecialBlockBranch2 branch = thickBranchOnAndesiteWalls();
+        Block wall = wallWithPost(16);
+        BlockState broken = brokenUprightPiece(wall.getRelative(BlockFace.UP));
+
+        branch.handleBlockBreak(broken, player);
+
+        assertFalse(((Wall) wall.getBlockData()).isUp(), "its post is lowered");
     }
 }

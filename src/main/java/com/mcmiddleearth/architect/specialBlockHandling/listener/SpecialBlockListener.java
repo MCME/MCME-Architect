@@ -252,7 +252,7 @@ public class SpecialBlockListener extends WatchedListener{
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    data.handleBlockBreak(state);
+                    data.handleBlockBreak(state, player);
                 }
             }.runTaskLater(ArchitectPlugin.getPluginInstance(), 6);
         }
@@ -540,11 +540,6 @@ public class SpecialBlockListener extends WatchedListener{
                 if(event.isCancelled()) {
                     return;
                 }
-                if(!(PluginData.checkBuildPermissions(p, event.getClickedBlock().getLocation(),
-                                                Permission.PLACE_PLANT))) {
-                    event.setCancelled(true);
-                    return;
-                }
                 Block b = event.getClickedBlock().getRelative(event.getBlockFace());
                 boolean wasAir = b.getType().equals(Material.AIR);
                 BlockState bs = b.getState();
@@ -580,6 +575,11 @@ public class SpecialBlockListener extends WatchedListener{
                             Material.DEAD_BUSH, false, (byte) 0);
                     default -> bs;
                 };
+                // TheGaffer is asked about the block that changes: the new plant, or the clicked one of its kind.
+                if(!(PluginData.checkBuildPermissions(p, bs.getLocation(), Permission.PLACE_PLANT))) {
+                    event.setCancelled(true);
+                    return;
+                }
                 bs.update(true,false);
                 // A plant where there was air is a new block, set without a BlockPlaceEvent, so TheGaffer is told of
                 // it here. A click on a plant of the same kind changes that plant instead.
@@ -643,11 +643,10 @@ public class SpecialBlockListener extends WatchedListener{
                     return;
                 }
                 event.setCancelled(true);
-                if(!(PluginData.checkBuildPermissions(p,event.getClickedBlock().getLocation(),
-                                                 Permission.PLACE_TORCH))) {
+                Block b = event.getClickedBlock().getRelative(event.getBlockFace());
+                if(!(PluginData.checkBuildPermissions(p, b.getLocation(), Permission.PLACE_TORCH))) {
                     return;
                 }
-                Block b = event.getClickedBlock().getRelative(event.getBlockFace());
                 final BlockState bs = b.getState();
                 if(bs.getType().equals(Material.AIR)) {
                     bs.setType(Material.REDSTONE_TORCH);
@@ -701,8 +700,7 @@ public class SpecialBlockListener extends WatchedListener{
                 Block block = event.getClickedBlock().getRelative(event.getBlockFace());
                 final BlockState blockState = block.getState();
                 //final BlockState upperBlockState = block.getRelative(0, 1, 0).getState();
-                if((PluginData.checkBuildPermissions(p, event.getClickedBlock().getLocation(),
-                                                 Permission.PLACE_HALF_BED))) {
+                if((PluginData.checkBuildPermissions(p, block.getLocation(), Permission.PLACE_HALF_BED))) {
                     float yaw = p.getLocation().getYaw();
                     byte data = (byte)(getDoorDat(yaw)-1);
                     if(data<0) {
@@ -751,8 +749,7 @@ public class SpecialBlockListener extends WatchedListener{
                 Block block = event.getClickedBlock().getRelative(event.getBlockFace());
                 final BlockState blockState = block.getState();
                 final BlockState upperBlockState = block.getRelative(0, 1, 0).getState();
-                if((PluginData.checkBuildPermissions(p, event.getClickedBlock().getLocation(),
-                                                Permission.PLACE_HALF_DOOR))) {
+                if((PluginData.checkBuildPermissions(p, block.getLocation(), Permission.PLACE_HALF_DOOR))) {
                     float yaw = p.getLocation().getYaw();
                     byte data = getDoorDat(yaw);
 

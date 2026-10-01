@@ -245,7 +245,8 @@ public class SpecialBlock {
         return state == null || state.getBlockData().equals(block.getBlockData());
     }
 
-    public void handleBlockBreak(BlockState state) {
+    // Called six ticks after the player broke this special block, whose state was state.
+    public void handleBlockBreak(BlockState state, Player player) {
         //Logger.getGlobal().info("BlockBreak: "+state.getBlockData());
         //Logger.getGlobal().info("BlockBreak: "+(state instanceof Waterlogged waterlogged));
         //Logger.getGlobal().info("BlockBreak: "+(((Waterlogged)state.getBlockData()).isWaterlogged()));

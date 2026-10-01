@@ -118,17 +118,60 @@ class LegacyPlaceGafferTest {
         assertEquals(placed(door), FakeGaffer.builds);
     }
 
+    // At a job's edge, the clicked block may lie inside the job's area and the new one outside: TheGaffer is asked
+    // about the new one. So in the tests below.
     @Test
-    void aHalfDoorTheGafferRefusesIsNotReported() {
+    void aHalfDoorOutsideTheJobIsNotPlaced() {
         Block ground = ground(2);
         Block door = withLegacyData(ground.getRelative(BlockFace.UP));
-        FakeGaffer.allowed = location -> false;
+        FakeGaffer.allowed = location -> !location.equals(door.getLocation());
 
         rightClick(Material.OAK_DOOR, "Half Door", ground, BlockFace.UP);
         server.getScheduler().performTicks(1);
 
-        assertEquals(List.of(ground.getLocation()), FakeGaffer.asked, "asked");
+        assertEquals(List.of(door.getLocation()), FakeGaffer.asked, "asked about the new block");
         assertEquals(Material.AIR, door.getType(), "not placed");
+        assertEquals(List.of(), FakeGaffer.builds);
+    }
+
+    @Test
+    void aHalfBedOutsideTheJobIsNotPlaced() {
+        Block ground = ground(14);
+        Block bed = withLegacyData(ground.getRelative(BlockFace.UP));
+        FakeGaffer.allowed = location -> !location.equals(bed.getLocation());
+
+        rightClick(Material.RED_BED, "Half Bed", ground, BlockFace.UP);
+        server.getScheduler().performTicks(1);
+
+        assertEquals(List.of(bed.getLocation()), FakeGaffer.asked, "asked about the new block");
+        assertEquals(Material.AIR, bed.getType(), "not placed");
+        assertEquals(List.of(), FakeGaffer.builds);
+    }
+
+    @Test
+    void anUnlitTorchOutsideTheJobIsNotPlaced() {
+        Block wall = ground(16);
+        Block torch = withLegacyData(wall.getRelative(BlockFace.EAST));
+        FakeGaffer.allowed = location -> !location.equals(torch.getLocation());
+
+        rightClick(Material.REDSTONE_TORCH, "Unlit Torch", wall, BlockFace.EAST);
+        server.getScheduler().performTicks(1);
+
+        assertEquals(List.of(torch.getLocation()), FakeGaffer.asked, "asked about the new block");
+        assertEquals(Material.AIR, torch.getType(), "not placed");
+        assertEquals(List.of(), FakeGaffer.builds);
+    }
+
+    @Test
+    void aPlaceablePlantOutsideTheJobIsNotPlaced() {
+        Block ground = ground(18);
+        Block plant = withLegacyData(ground.getRelative(BlockFace.UP));
+        FakeGaffer.allowed = location -> !location.equals(plant.getLocation());
+
+        rightClick(Material.RED_MUSHROOM, "Placeable Mushroom", ground, BlockFace.UP);
+
+        assertEquals(List.of(plant.getLocation()), FakeGaffer.asked, "asked about the new block");
+        assertEquals(Material.AIR, plant.getType(), "not placed");
         assertEquals(List.of(), FakeGaffer.builds);
     }
 

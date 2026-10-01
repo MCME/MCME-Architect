@@ -299,18 +299,16 @@ public class SpecialBlockBranch2 extends SpecialBlock {
     }*/
 
     @Override
-    public void handleBlockBreak(BlockState state) {
+    public void handleBlockBreak(BlockState state, Player player) {
         Block block = state.getBlock();
         if(!state.getBlockData().equals(block.getBlockData())) {
             // find out if we break a block with vertical part
             if(isVertical(state.getBlockData())) {
                 Block connection = block.getRelative(BlockFace.DOWN, 1);
                 if (connection.getBlockData().matches(blockDataWall)) {
-                    Wall wall = (Wall) connection.getBlockData();
+                    Wall wall = (Wall) connection.getBlockData().clone();
                     wall.setUp(false);
-                    if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
-                        connection.setBlockData(wall, false);
-                    }
+                    setBrokenFrom(connection, wall, player);
                 }
             } else {
                 //find out if we break a block with diagonal slope and main orientation (north, east, south or west)
@@ -318,24 +316,29 @@ public class SpecialBlockBranch2 extends SpecialBlock {
                 if (direction != null) {
                     Block connection = block.getRelative(direction.getOppositeFace(), 1).getRelative(BlockFace.DOWN, 1);
                     if (connection.getBlockData().matches(blockDataWall)) {
-                        Wall wall = (Wall) connection.getBlockData();
+                        Wall wall = (Wall) connection.getBlockData().clone();
                         wall.setHeight(direction, Wall.Height.NONE);
-                        if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
-                            connection.setBlockData(wall, false);
-                        }
+                        setBrokenFrom(connection, wall, player);
                     }
                 }
                 if(!isHorizontal(state.getBlockData())) {
                     Block base = state.getBlock().getRelative(BlockFace.DOWN);
                     if (base.getBlockData().matches(blockDataWall)) {
-                        Wall wall = (Wall) base.getBlockData();
+                        Wall wall = (Wall) base.getBlockData().clone();
                         wall.setUp(false);
-                        if(PluginData.getOrCreateWorldConfig(base.getWorld().getName()).isAllowedBlock(wall)) {
-                            base.setBlockData(wall, false);
-                        }
+                        setBrokenFrom(base, wall, player);
                     }
                 }
             }
+        }
+    }
+
+    // Sets a wall that a broken branch joined, as the branch's going leaves it, unless the world does not allow that
+    // wall, or the wall lies outside the player's job.
+    private static void setBrokenFrom(Block wall, Wall data, Player player) {
+        if(PluginData.getOrCreateWorldConfig(wall.getWorld().getName()).isAllowedBlock(data)
+                && TheGafferUtil.hasGafferPermission(player, wall.getLocation())) {
+            wall.setBlockData(data, false);
         }
     }
 
