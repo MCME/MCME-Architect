@@ -4,6 +4,7 @@ import com.mcmiddleearth.architect.serverResoucePack.RpReleaseUtil.ScriptResult;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -11,6 +12,8 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.SequenceInputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,13 +21,14 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 // A release script runs for minutes: a Human release of 2026-09-30 took 5m12s and ended with exit code 0, yet was
 // reported as an error, since Architect gave it 5 minutes. The scripts here are fakes whose time passes only while
-// they are waited for, so no test waits for real. No Bukkit server is needed.
+// they are waited for, so no test waits for real, but for one real script. No Bukkit server is needed.
 @Timeout(10)
 class RpReleaseUtilTest {
 
@@ -39,7 +43,7 @@ class RpReleaseUtilTest {
         ScriptResult result = RpReleaseUtil.awaitScript(script, RpReleaseUtil.DEFAULT_TIMEOUT, RpReleaseUtil.GRACE,
                 output::add);
 
-        assertEquals(new ScriptResult(true, 0), result);
+        assertEquals(new ScriptResult(true, 0, true), result);
         assertEquals(0, script.destroyCalls(), "a script that has ended is left alone");
         assertEquals(List.of("Release run v4.1.3: OK"), output, "its output is logged");
         assertTrue(script.readByDaemon(), "read by a daemon thread, which cannot keep the server from stopping");
@@ -55,7 +59,7 @@ class RpReleaseUtilTest {
         ScriptResult result = RpReleaseUtil.awaitScript(script, Duration.ofMillis(100), RpReleaseUtil.GRACE,
                 output::add);
 
-        assertEquals(new ScriptResult(false, FakeScript.STOPPED), result);
+        assertEquals(new ScriptResult(false, FakeScript.STOPPED, true), result);
         assertTrue(script.destroyCalls() > 0, "stopped");
         assertTrue(child.destroyed, "what it started is stopped too");
         assertFalse(child.killed, "and not killed, as it ended when asked to");
@@ -72,6 +76,45 @@ class RpReleaseUtilTest {
 
         assertTrue(child.destroyed, "asked to end");
         assertTrue(child.killed, "killed when it did not");
+    }
+
+    // A process the script started may hold its output open after the script has ended.
+    @Test
+    void outputStillOpenAfterTheScriptEndedIsNotAwaitedButReported() throws Exception {
+        FakeScript script = new FakeScript(Duration.ofSeconds(10), 0, "Release run v4.1.3: OK").withOutputHeldOpen();
+
+        ScriptResult result = RpReleaseUtil.awaitScript(script, RpReleaseUtil.DEFAULT_TIMEOUT, Duration.ofMillis(100),
+                output::add);
+
+        assertEquals(new ScriptResult(true, 0, false), result);
+        assertEquals(List.of("Release run v4.1.3: OK"), output, "what came is logged");
+        assertNoReaderLeft();
+    }
+
+    // A real one: this JVM runs a program that writes 2 MB to its error stream before a line to its standard output.
+    // A pipe holds much less, so the program waits for its error stream to be read before it can write that line.
+    @Test
+    void aScriptThatWritesMuchToItsErrorStreamIsNotHeldUp(@TempDir Path dir) throws Exception {
+        Files.writeString(dir.resolve("Noisy.java"), """
+                public class Noisy {
+                    public static void main(String[] args) {
+                        String line = "x".repeat(99);
+                        for (int i = 0; i < 20_000; i++) {
+                            System.err.println(line);
+                        }
+                        System.out.println("done");
+                    }
+                }
+                """);
+        String java = ProcessHandle.current().info().command().orElseThrow();
+
+        Process script = RpReleaseUtil.startScript(dir.toFile(), java, "Noisy.java");
+        ScriptResult result = RpReleaseUtil.awaitScript(script, Duration.ofSeconds(5), Duration.ofSeconds(1),
+                output::add);
+
+        assertEquals(new ScriptResult(true, 0, true), result);
+        assertTrue(output.contains("done"), "its standard output is logged");
+        assertEquals(20_000, output.stream().filter(line -> line.startsWith("xxx")).count(), "and its error stream");
     }
 
     @Test
@@ -103,7 +146,7 @@ class RpReleaseUtilTest {
     /**
      * A release script that ends with an exit code once it has run for runTime. Its time passes only while it is
      * waited for: waitFor(timeout) returns at once, as if that much time had passed. Its output is all there at once
-     * and then ends, unless it is to stay open until the script ends or is stopped.
+     * and then ends, unless it is to stay open until the script ends or is stopped, or to be held open for good.
      */
     private static final class FakeScript extends Process {
 
@@ -115,6 +158,7 @@ class RpReleaseUtilTest {
         private final CountDownLatch end = new CountDownLatch(1);
         private final CompletableFuture<Process> exit = new CompletableFuture<>();
         private boolean outputOpenUntilItEnds;
+        private boolean outputHeldOpen;
         private FakeChild child;
         private Duration ranFor = Duration.ZERO;
         private boolean stopped;
@@ -124,11 +168,17 @@ class RpReleaseUtilTest {
         FakeScript(Duration runTime, int exitCode, String... lines) {
             this.runTime = runTime;
             this.exitCode = exitCode;
-            this.lines = String.join("\n", lines).getBytes(StandardCharsets.UTF_8);
+            this.lines = Stream.of(lines).map(line -> line + "\n").collect(Collectors.joining())
+                    .getBytes(StandardCharsets.UTF_8);
         }
 
         FakeScript withOutputOpenUntilItEnds() {
             outputOpenUntilItEnds = true;
+            return this;
+        }
+
+        FakeScript withOutputHeldOpen() {
+            outputHeldOpen = true;
             return this;
         }
 
@@ -203,12 +253,14 @@ class RpReleaseUtilTest {
                 @Override
                 public int read() throws InterruptedIOException {
                     readByDaemon = Thread.currentThread().isDaemon();
-                    if (outputOpenUntilItEnds) {
-                        try {
+                    try {
+                        if (outputHeldOpen) {
+                            new CountDownLatch(1).await();
+                        } else if (outputOpenUntilItEnds) {
                             end.await();
-                        } catch (InterruptedException ex) {
-                            throw new InterruptedIOException();
                         }
+                    } catch (InterruptedException ex) {
+                        throw new InterruptedIOException();
                     }
                     return -1;
                 }

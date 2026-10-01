@@ -26,8 +26,11 @@ public class RpReleaseUtil {
     // output may take once it has ended.
     static final Duration GRACE = Duration.ofSeconds(10);
 
-    /** How a release script ended: whether by itself, in the time it had, and its exit code (-1 if it has none). */
-    record ScriptResult(boolean terminated, int exitCode) {}
+    /**
+     * How a release script ended: whether by itself, in the time it had, its exit code (-1 if it has none), and
+     * whether its output was read to the end.
+     */
+    record ScriptResult(boolean terminated, int exitCode, boolean outputComplete) {}
 
     public static void releaseResourcePack(String rpName, String version, String title, BiConsumer<Boolean,Integer> callback ) {
         String finalRpName = RpManager.matchRpName(rpName);//.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase();
@@ -43,9 +46,8 @@ public class RpReleaseUtil {
                     runOnMain(callback, true, -1);
                     return;
                 }
-                Process process = Runtime.getRuntime()
-                        .exec(new String[]{"sh", releaseScript, finalRpName, gitHubOwner, gitHubRepo, version, title}, null,
-                                new File(scriptPath));
+                Process process = startScript(new File(scriptPath), "sh", releaseScript, finalRpName, gitHubOwner,
+                        gitHubRepo, version, title);
                 Duration timeout = getTimeout(ArchitectPlugin.getPluginInstance().getConfig(), finalRpName);
                 ScriptResult result = awaitScript(process, timeout, GRACE,
                         line -> Log.info("[RP release " + finalRpName + "] " + line));
@@ -53,12 +55,22 @@ public class RpReleaseUtil {
                     Log.warn("The RP release script for '" + finalRpName + "' version " + version + " still ran after "
                             + timeout.toMinutes() + " minutes, so it was stopped.");
                 }
+                if (!result.outputComplete()) {
+                    Log.warn("Some of the output of the RP release script for '" + finalRpName + "' version "
+                            + version + " may be missing from the log: it could not be read to its end.");
+                }
                 runOnMain(callback, result.terminated(), result.exitCode());
             } catch (InterruptedException | IOException e) {
                 Log.error("Failed to run RP release script for '" + finalRpName + "' version " + version, e);
                 runOnMain(callback, false, -1);
             }
         });
+    }
+
+    // Its error stream goes into its standard output, so there is one stream to read: a script that writes more to
+    // one stream than a pipe holds, while the other is being read, would wait for a reader forever.
+    static Process startScript(File directory, String... command) throws IOException {
+        return new ProcessBuilder(command).directory(directory).redirectErrorStream(true).start();
     }
 
     // The time a release script of this resource pack may run: gitHubRpReleases.<rp>.timeoutMinutes, if it is at
@@ -87,12 +99,15 @@ public class RpReleaseUtil {
             if (!terminated) {
                 stop(process, grace);
             }
+            // A process the script started may hold its output open after it ended: then what came is all there is.
+            boolean outputComplete;
             try {
                 lines.get(grace.toMillis(), TimeUnit.MILLISECONDS);
+                outputComplete = true;
             } catch (ExecutionException | TimeoutException ex) {
-                // Some output is lost, not the result: the exit code tells how the script ended.
+                outputComplete = false;
             }
-            return new ScriptResult(terminated, process.isAlive() ? -1 : process.exitValue());
+            return new ScriptResult(terminated, process.isAlive() ? -1 : process.exitValue(), outputComplete);
         } finally {
             reader.shutdownNow();
         }
