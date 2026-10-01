@@ -112,6 +112,11 @@
         <repository>
             <id>dynmap-repo</id>
             <url>https://repo.mikeprimm.com/</url>
+            <!-- Releases only: it refused the requests for SNAPSHOT metadata, which cost a build with a cold
+                 cache about two minutes. -->
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
         <!-- MCME's own Reposilite, matching MCME-Connect. Serves com.mcmiddleearth artifacts
              (PluginUtils, mcme-base, tbnbt) under MCME's groupId. -->
@@ -154,15 +159,15 @@
             </exclusions>
         </dependency>
         <dependency>
-            <!-- 2.0.2 is the first PluginUtils built against the 26.2 dev bundle, and is what
-                 the servers actually run. Resolved from repo.mcmiddleearth.com under MCME's own
+            <!-- 2.0.4, a PluginUtils built against the 26.2 dev bundle that declares json-simple, which
+                 its MessageUtil needs. Resolved from repo.mcmiddleearth.com under MCME's own
                  groupId rather than JitPack's com.github.MCME, so there is exactly one
                  coordinate for this library and Maven's normal version conflict resolution
                  applies to it (MCME-Connect still pulls an older com.mcmiddleearth:PluginUtils
                  transitively; as a direct dependency this one wins on nearest-first). -->
             <groupId>com.mcmiddleearth</groupId>
             <artifactId>PluginUtils</artifactId>
-            <version>2.0.2</version>
+            <version>2.0.4</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -180,6 +185,19 @@
             <artifactId>worldedit-core</artifactId>
             <version>7.3.0</version>
             <scope>provided</scope>
+            <exclusions>
+                <!-- lin-bus, WorldEdit's NBT library, in WorldEdit 7.3.0 a 0.1.0-SNAPSHOT. Architect uses none
+                     of it, and the server's WorldEdit brings its own. Maven still reads lin-bus's SNAPSHOT BOM,
+                     which this WorldEdit's POM imports; WorldEdit 7.4 takes lin-bus 0.2.0. -->
+                <exclusion>
+                    <groupId>org.enginehub.lin-bus</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.enginehub.lin-bus.format</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.sk89q.worldedit</groupId>
@@ -199,12 +217,22 @@
                     <groupId>org.bstats</groupId>
                     <artifactId>bstats-bukkit</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.enginehub.lin-bus</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.enginehub.lin-bus.format</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
+            <!-- A release: the range [5.0.0,6.0.0) took the newest 5.x there was, which was a SNAPSHOT, so a
+                 build depended on the day it ran. Only RpManager.getClientProtocolVersion uses it. -->
             <groupId>com.viaversion</groupId>
             <artifactId>viaversion-api</artifactId>
-            <version>[5.0.0,6.0.0)</version>
+            <version>5.11.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -219,21 +247,6 @@
                 <exclusion>
                     <groupId>org.bukkit</groupId>
                     <artifactId>bukkit</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <!-- PluginUtils 2.0.2's MessageUtil needs json-simple but its POM does not declare it (2.0.4's does); the
-                 server provides it. It used to reach the classpath only inside dynmap-api's old Bukkit (see
-                 ClasspathTest). -->
-            <groupId>com.googlecode.json-simple</groupId>
-            <artifactId>json-simple</artifactId>
-            <version>1.1.1</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>junit</groupId>
-                    <artifactId>junit</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
