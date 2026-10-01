@@ -70,8 +70,9 @@ public class SpecialBlockDoorFourBlocks extends SpecialBlockDoor {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, lowerMaterial, lowerPowered, false, false, false);
         placeDoor(blockPlace.getRelative(BlockFace.UP,2), playerLoc, upperMaterial, upperPowered, false, false, false);
-        // two doors, each broken on its own
-        return List.of(blockPlace, blockPlace.getRelative(BlockFace.UP, 2));
+        // the two halves of each door
+        return List.of(blockPlace, blockPlace.getRelative(BlockFace.UP), blockPlace.getRelative(BlockFace.UP, 2),
+                       blockPlace.getRelative(BlockFace.UP, 3));
     }
     
 }

@@ -102,6 +102,14 @@ class SpecialBlockGafferTest {
                     type: DOOR_FOUR_BLOCKS
                     blockMaterial: SPRUCE_DOOR
                     itemMaterial: SPRUCE_DOOR
+                  door:
+                    type: DOOR
+                    blockMaterial: BIRCH_DOOR
+                    itemMaterial: BIRCH_DOOR
+                  thinwall:
+                    type: THIN_WALL
+                    blockMaterial: JUNGLE_DOOR
+                    itemMaterial: JUNGLE_DOOR
                 """);
         SpecialBlockInventoryData.loadInventories();
     }
@@ -302,8 +310,10 @@ class SpecialBlockGafferTest {
         assertNothingPlacedOrReported(ground.getRelative(BlockFace.UP));
     }
 
-    // TheGaffer counts a break for each block a player breaks. The two blocks of a DOUBLE_Y block are broken one by
-    // one, so they count as two places as well.
+    // TheGaffer counts a break for each block a player breaks, and in a no-physics world, which a new world config
+    // makes, every block is broken on its own: even the two halves of a door, as neither takes the other along. So
+    // each block a placement sets counts as a place. The doors below are set a tick later, so only their report is
+    // checked.
     @Test
     void aDoubleYBlockCountsAsTwoPlaces() {
         Block ground = world.getBlockAt(28, 64, 0);
@@ -318,28 +328,52 @@ class SpecialBlockGafferTest {
         assertEquals(placed(lower, upper), FakeGaffer.builds);
     }
 
-    // The two halves of a door break together: one break. DOOR_THREE_BLOCKS is a door with a half door on top, which
-    // are broken one by one: two places. The door is set a tick later, so only the report is checked.
     @Test
-    void aThreeBlockDoorCountsAsTwoPlaces() {
+    void aDoorCountsAsTwoPlaces() {
+        Block ground = world.getBlockAt(34, 64, 0);
+        ground.setType(Material.DIRT);
+
+        rightClick("door", ground, BlockFace.UP);
+
+        Block door = ground.getRelative(BlockFace.UP);
+        assertEquals(placed(door, door.getRelative(BlockFace.UP)), FakeGaffer.builds);
+    }
+
+    // A THIN_WALL is a door too.
+    @Test
+    void aThinWallCountsAsTwoPlaces() {
+        Block ground = world.getBlockAt(36, 64, 0);
+        ground.setType(Material.DIRT);
+
+        rightClick("thinwall", ground, BlockFace.UP);
+
+        Block door = ground.getRelative(BlockFace.UP);
+        assertEquals(placed(door, door.getRelative(BlockFace.UP)), FakeGaffer.builds);
+    }
+
+    // A door with a half door on top.
+    @Test
+    void aThreeBlockDoorCountsAsThreePlaces() {
         Block ground = world.getBlockAt(30, 64, 0);
         ground.setType(Material.DIRT);
 
         rightClick("door3", ground, BlockFace.UP);
 
         Block door = ground.getRelative(BlockFace.UP);
-        assertEquals(placed(door, door.getRelative(BlockFace.UP, 2)), FakeGaffer.builds);
+        assertEquals(placed(door, door.getRelative(BlockFace.UP), door.getRelative(BlockFace.UP, 2)),
+                FakeGaffer.builds);
     }
 
-    // DOOR_FOUR_BLOCKS is a door on a door: two places.
+    // A door on a door.
     @Test
-    void aFourBlockDoorCountsAsTwoPlaces() {
+    void aFourBlockDoorCountsAsFourPlaces() {
         Block ground = world.getBlockAt(32, 64, 0);
         ground.setType(Material.DIRT);
 
         rightClick("door4", ground, BlockFace.UP);
 
         Block door = ground.getRelative(BlockFace.UP);
-        assertEquals(placed(door, door.getRelative(BlockFace.UP, 2)), FakeGaffer.builds);
+        assertEquals(placed(door, door.getRelative(BlockFace.UP), door.getRelative(BlockFace.UP, 2),
+                door.getRelative(BlockFace.UP, 3)), FakeGaffer.builds);
     }
 }

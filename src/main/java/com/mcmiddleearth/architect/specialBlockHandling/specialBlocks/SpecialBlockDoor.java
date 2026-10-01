@@ -82,7 +82,7 @@ public class SpecialBlockDoor extends SpecialBlock {
                            final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, getBlockData().getMaterial(), powered, false, hingeRight, false);
-        return List.of(blockPlace);
+        return List.of(blockPlace, blockPlace.getRelative(BlockFace.UP));
     }
     
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, 

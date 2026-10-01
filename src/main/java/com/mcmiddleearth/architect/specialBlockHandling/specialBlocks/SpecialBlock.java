@@ -203,8 +203,9 @@ public class SpecialBlock {
     /**
      * Places this special block at blockPlace, or, on a sneak-click where isEditOnSneaking allows it, edits the clicked
      * block.
-     * @return the new blocks placed, one for each that a player breaks on its own (the two halves of a door break
-     *         together, so they are one), so that places and breaks count alike; empty if nothing new was placed
+     * @return every new block placed, both halves of a door too: TheGaffer counts a break for each block a player
+     *         breaks, and in a no-physics world no block takes another along, so places and breaks count alike.
+     *         Empty if nothing new was placed.
      */
     public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {

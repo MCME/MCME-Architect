@@ -199,10 +199,11 @@ public class DoorListener extends WatchedListener{
                              .getBlockData()).getHinge().equals(Door.Hinge.RIGHT);
         ((SpecialBlockVanillaDoor)data).placeBlock(blockPlace, BlockFace.SELF, 
                                                    player, hingeRight);
-        // The vanilla place was cancelled above, so TheGaffer never counts it: report the door (one place). Both
-        // listen at NORMAL, and Architect (load: STARTUP) runs first; were TheGaffer to run first, it would count the
-        // door too.
+        // The vanilla place was cancelled above, so TheGaffer never counts it: report the door, both halves, as in a
+        // no-physics world each half is broken on its own and TheGaffer counts each break. Both listen at NORMAL, and
+        // Architect (load: STARTUP) runs first; were TheGaffer to run first, it would count the door too.
         TheGafferUtil.recordPlace(player, blockPlace.getLocation());
+        TheGafferUtil.recordPlace(player, blockPlace.getRelative(BlockFace.UP).getLocation());
     }
     
 }
