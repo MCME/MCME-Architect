@@ -37,6 +37,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * after it. The server refuses a builder's request from the switcher, so {@link #onSwitchRequest} takes it first,
  * and the mode is set here with the Bukkit API. {@link GamemodeSwitcherProtocol} hands each request over, with
  * ProtocolLib.
+ * <p>
+ * Player#setPlayerProfile sends the real level with no command tree after it, and where spigot.yml sets
+ * commands.tab-complete to -1, no command tree fires PlayerCommandSendEvent. Then the switcher comes back, or comes
+ * at all, only at the player's next join, respawn or world change.
  */
 public final class GamemodeSwitcher implements Listener {
 

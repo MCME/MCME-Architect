@@ -426,7 +426,9 @@ permissions:
         description: Allows to switch to adventure mode with the F3+F4 switcher, without op
         default: false
     architect.gamemodeSwitcher.spectator:
-        description: Allows to switch to spectator mode with the F3+F4 switcher (or F3+N), without op
+        description: >-
+            Allows to switch to spectator mode with the F3+F4 switcher (or F3+N), without op. Always give another
+            mode's permission with it: without one, a spectator cannot switch out of spectator mode.
         default: false
     architect.inventory.ignoreProtection:
       descriptions: Allows to edit inventory content without build permission
