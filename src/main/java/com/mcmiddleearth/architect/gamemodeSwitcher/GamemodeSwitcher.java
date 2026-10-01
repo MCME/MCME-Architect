@@ -6,6 +6,7 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import net.kyori.adventure.text.Component;
 import org.bukkit.GameMode;
+import org.bukkit.GameRules;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -136,17 +137,23 @@ public final class GamemodeSwitcher implements Listener {
         String name = mode.name().toLowerCase(Locale.ROOT);
         if (!moduleOn(player) || !PluginData.hasPermission(player, permission(mode))) {
             player.sendMessage(Component.text("You can't switch to " + name + " mode here."));
+            Log.info(player.getName() + " was refused " + name + " mode by the game mode switcher in world "
+                    + player.getWorld().getName() + ".");
             return;
         }
         if (player.getGameMode() == mode) {
             return;
         }
         player.setGameMode(mode);
-        if (player.getGameMode() == mode) { // another plugin may cancel the change
+        if (player.getGameMode() != mode) {
+            return; // another plugin cancelled the change
+        }
+        // as vanilla, which tells the player only where the world's sendCommandFeedback is on
+        if (!Boolean.FALSE.equals(player.getWorld().getGameRuleValue(GameRules.SEND_COMMAND_FEEDBACK))) {
             player.sendMessage(Component.translatable("commands.gamemode.success.self",
                     Component.translatable("gameMode." + name)));
-            Log.info(player.getName() + " switched to " + name + " mode with the game mode switcher.");
         }
+        Log.info(player.getName() + " switched to " + name + " mode with the game mode switcher.");
     }
 
     /** The server's own check: vanilla's (op), or Paper's permission. */

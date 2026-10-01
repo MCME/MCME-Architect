@@ -8,6 +8,7 @@ import com.mcmiddleearth.architect.WorldConfig;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.GameMode;
+import org.bukkit.GameRules;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -451,6 +452,39 @@ class GamemodeSwitcherTest {
         assertEquals(GameMode.SURVIVAL, builder.getGameMode());
         assertNull(builder.nextComponentMessage());
         assertEquals(List.of(), switcherLog(builder));
+    }
+
+    // As vanilla, which tells a player their new mode only where the world's sendCommandFeedback is on.
+    @Test
+    void aSwitchIsAnnouncedOnlyWhereCommandFeedbackIsOn() throws IOException {
+        PlayerMock builder = builder(CREATIVE);
+        builder.setGameMode(GameMode.SURVIVAL);
+        readMessages(builder);
+        world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK, false);
+        try {
+            switcher.onSwitchRequest(builder, GameMode.CREATIVE);
+            tick();
+        } finally {
+            world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK, true);
+        }
+
+        assertEquals(GameMode.CREATIVE, builder.getGameMode());
+        assertNull(builder.nextComponentMessage(), "the world's sendCommandFeedback is off");
+        assertEquals(List.of(builder.getName() + " switched to creative mode with the game mode switcher."),
+                switcherLog(builder), "the log still says so");
+    }
+
+    @Test
+    void aRefusalIsLoggedOnceATick() throws IOException {
+        PlayerMock builder = builder(CREATIVE);
+
+        for (int i = 0; i < 50; i++) {
+            switcher.onSwitchRequest(builder, GameMode.SPECTATOR);
+        }
+        tick();
+
+        assertEquals(List.of(builder.getName()
+                + " was refused spectator mode by the game mode switcher in world world."), switcherLog(builder));
     }
 
     @Test
