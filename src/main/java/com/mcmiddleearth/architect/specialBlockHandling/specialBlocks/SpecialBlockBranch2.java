@@ -300,6 +300,7 @@ public class SpecialBlockBranch2 extends SpecialBlock {
 
     @Override
     public void handleBlockBreak(BlockState state, Player player) {
+        super.handleBlockBreak(state, player); // the water a waterlogged piece leaves
         Block block = state.getBlock();
         if(!state.getBlockData().equals(block.getBlockData())) {
             // find out if we break a block with vertical part

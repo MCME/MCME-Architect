@@ -251,11 +251,11 @@ public class SpecialBlock {
         //Logger.getGlobal().info("BlockBreak: "+(state instanceof Waterlogged waterlogged));
         //Logger.getGlobal().info("BlockBreak: "+(((Waterlogged)state.getBlockData()).isWaterlogged()));
         // A waterlogged block broken turns to water, which is taken away here. Not whatever is there instead: the
-        // block itself, if another plugin cancelled the break, or a block placed there since.
+        // block itself, if another plugin cancelled the break, or a block placed there since. The block is set, and
+        // state is left as it was, so an override can still compare it with the block.
         if(state.getBlockData() instanceof Waterlogged waterlogged && waterlogged.isWaterlogged()
                 && state.getBlock().getType().equals(Material.WATER)) {
-            state.setType(Material.AIR);
-            state.update(true, false);
+            state.getBlock().setType(Material.AIR, false);
         }
     }
 

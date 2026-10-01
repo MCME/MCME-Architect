@@ -220,4 +220,27 @@ class SpecialBlockPlaceTest {
 
         assertFalse(((Wall) wall.getBlockData()).isUp(), "its post is lowered");
     }
+
+    // The same piece, waterlogged: broken, it leaves water.
+    private static BlockState brokenWaterloggedUprightPiece(Block block) {
+        block.setType(Material.ANDESITE_WALL);
+        block.getState().setBlockData(server.createBlockData("minecraft:andesite_wall[up=true,waterlogged=true]"));
+        BlockState state = block.getState();
+        block.setType(Material.WATER);
+        return state;
+    }
+
+    // As for every special block, the water a waterlogged piece leaves is taken away; the wall under it changes too.
+    @Test
+    void aBrokenWaterloggedBranchLeavesNoWater() {
+        SpecialBlockBranch2 branch = thickBranchOnAndesiteWalls();
+        Block wall = wallWithPost(18);
+        Block piece = wall.getRelative(BlockFace.UP);
+        BlockState broken = brokenWaterloggedUprightPiece(piece);
+
+        branch.handleBlockBreak(broken, player);
+
+        assertEquals(Material.AIR, piece.getType(), "the water is taken away");
+        assertFalse(((Wall) wall.getBlockData()).isUp(), "the post of the wall under it is lowered");
+    }
 }
