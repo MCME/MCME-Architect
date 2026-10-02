@@ -5,7 +5,7 @@ author: Eriol_Eandur
 load: STARTUP
 softdepend: [ProtocolLib,Essentials,dynmap,ViaVersion,MCME-Connect]
 depend: [PluginUtils]
-api-version: 26.1.2
+api-version: 26.2
 
 commands:
    parrot:
@@ -99,6 +99,11 @@ commands:
       description: disables the stick for block interaction
       usage: /switchstick
       aliases: [swst,ss]
+   biometune:
+      description: Tune biome colours and atmosphere live.
+      usage: >-
+        /biometune [edit] [biome] | info|set|unset|copy|undo|revert|save|status|preview|publish|spares|claim|label
+        ... (tab completes)
 permissions:
     architect.*:
         description: Allows to use all features of Architect plugin
@@ -441,6 +446,18 @@ permissions:
       default: op
     architect.viewdistance:
         descriptions: Allows to change client view distance
+        default: op
+    architect.biomeTune:
+        description: Use the biome editor and the tuning commands, and refresh your own view.
+        default: op
+    architect.biomeTune.admin:
+        description: Add spare biomes with /biometune spares add, and the biome tuning self-test and debug commands.
+        default: op
+    architect.biomeTune.save:
+        description: Write tuned biomes to the datapack.
+        default: op
+    architect.biomeTune.publish:
+        description: Refresh other players after tuning (publish, and preview for someone else).
         default: op
     architect.weselect:
         description: Allows to use command /weselect

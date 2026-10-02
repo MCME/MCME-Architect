@@ -19,6 +19,7 @@ package com.mcmiddleearth.architect.serverResoucePack;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.biomeTuning.BiomeTuning;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import com.mcmiddleearth.pluginutil.developer.DevUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
@@ -136,6 +137,9 @@ public class RpListener implements Listener {
     
     @EventHandler
     public void playerQuit(PlayerQuitEvent event) {
+        if (BiomeTuning.isRefreshing(event.getPlayer().getUniqueId())) {
+            return; // a biome refresh: the player comes straight back, and no pre-login event would reload this data
+        }
         RpManager.removeSodiumClient(event.getPlayer());
         RpManager.removePlayerData(event.getPlayer());
     }

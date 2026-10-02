@@ -64,3 +64,25 @@ logging:
         maxSizeMB: 10
         maxFiles: 5
         retentionDays: 14
+biomeTuning:
+    # Live biome tuning (/biometune): undo steps kept per biome, and backups kept per biome file.
+    undoDepth: 20
+    backupsPerBiome: 20
+    # Spare biomes, which builders claim with /biometune claim or the editor's New biome button: ids such as
+    # mcme:custom_001. sparePattern is the namespace, a colon, the prefix, then one # per digit (1 to 9 of them),
+    # in lower-case letters, digits, _, - and . (and / in the prefix).
+    # /biometune spares add writes new spares into targetPack, a pack folder in the world's datapacks folder (its
+    # name: letters, digits, _, - and ., not dots alone), which must already exist with a pack.mcmeta (Paper 26.2 no
+    # longer makes the bukkit pack; older worlds have one). The labels of all biomes are kept in that pack too, in
+    # mcme-biometune.json, which also records which spares are claimed. Only the one in targetPack is read, so a new
+    # targetPack frees every claimed spare: when you move to another pack, move mcme-biometune.json with the biomes.
+    sparePattern: 'mcme:custom_###'
+    targetPack: bukkit
+    refresh:
+        # Seconds between two previews by the same builder.
+        cooldownSeconds: 5
+        # A refresh that has not finished after this many seconds ends with a "please rejoin" disconnect.
+        timeoutSeconds: 15
+        # Publish refreshes this many players per second, and can run again after publishCooldownSeconds.
+        publishPlayersPerSecond: 5
+        publishCooldownSeconds: 30
