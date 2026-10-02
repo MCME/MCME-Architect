@@ -17,6 +17,7 @@ commands:
    fbt:
       description: Toggle full brightness on/off.
       usage: /fbt
+      aliases: [fullbright, nightvision]
    vv:
       description: List content in the VoxelSniper plugin directory.
       usage: /vv stenicl|list|delete [subdir] [#pagennumber]

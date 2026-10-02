@@ -33,10 +33,11 @@ public class RpPlayerData implements Serializable {
     private int resolution = 16;
     private transient RpRegion currentRegion = null;
     private String currentRpUrl = null;
-    // Both stay transient: a resource pack status is runtime state, not something worth
-    // restoring from disk. NOT_SENT is the honest value after a restart - DECLINED would claim
-    // the player refused a pack that was never offered.
-    private transient RpPlayerStatus currentRpStatus = RpPlayerStatus.NOT_SENT;
+    // The current status is also stored in the RP database (column status), so that the server a player
+    // switches to knows whether their client has the pack; RpListener sets it back to NOT_SENT when a
+    // player joins the proxy. The status before the last send is runtime state only. NOT_SENT is the
+    // honest initial value - DECLINED would claim the player refused a pack that was never offered.
+    private RpPlayerStatus currentRpStatus = RpPlayerStatus.NOT_SENT;
     private transient RpPlayerStatus lastRpStatus = RpPlayerStatus.NOT_SENT;
 
     private transient int protocolVersion;

@@ -56,6 +56,8 @@ public class RpListener implements Listener {
         }
         RpManager.getPlayerData(player)
                  .setCurrentRpStatus(RpPlayerStatus.forPlayerResourcePackStatusEvent(event.getStatus()));
+        // Stored at once, so that the server the player switches to knows whether their client has the pack.
+        RpManager.savePlayerData(player);
     }
     
     @EventHandler
@@ -81,11 +83,15 @@ public class RpListener implements Listener {
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
             new BukkitRunnable() {
-                int counter = 11;
+                int counter = 30;
                 @Override
                 public void run() {
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
                         RpPlayerData data = RpManager.getPlayerData(player);
+                        // A player who has just joined the proxy has no server resource pack yet, whatever
+                        // status the database holds from their last visit.
+                        data.setCurrentRpStatus(RpPlayerStatus.NOT_SENT);
+                        RpManager.savePlayerData(player);
                         data.setProtocolVersion(RpManager.getClientProtocolVersion(player));
                         if(RpManager.isSodiumClient(player)) {
                             data.setClient("sodium");
@@ -131,7 +137,7 @@ public class RpListener implements Listener {
                         Log.warn("Timed out waiting for RP settings to load from the database for player " + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
                     }
                 }
-            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),30,20);
+            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),0,10);
         }
     }
     

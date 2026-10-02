@@ -116,11 +116,11 @@ public class RpDatabaseConnector {
 
             checkTables();
 
-            insertPlayerRpSettings = dbConnection.prepareStatement("INSERT INTO architect_rp (uuid, auto, variant, resolution, client, currentURL) "
-                                                                  +"VALUES (?,?,?,?,?,?)");
-            updatePlayerRpSettings = dbConnection.prepareStatement("UPDATE architect_rp SET auto=?, variant=?, resolution=?, client=?, currentURL=? "
+            insertPlayerRpSettings = dbConnection.prepareStatement("INSERT INTO architect_rp (uuid, auto, variant, resolution, client, currentURL, status) "
+                                                                  +"VALUES (?,?,?,?,?,?,?)");
+            updatePlayerRpSettings = dbConnection.prepareStatement("UPDATE architect_rp SET auto=?, variant=?, resolution=?, client=?, currentURL=?, status=? "
                                                                   +"WHERE uuid = ?");
-            selectPlayerRpSettings = dbConnection.prepareStatement("SELECT auto, variant, resolution, client, currentURL FROM architect_rp "
+            selectPlayerRpSettings = dbConnection.prepareStatement("SELECT auto, variant, resolution, client, currentURL, status FROM architect_rp "
                                                                  + "WHERE uuid = ?");
             insertPlayerRpSettings.setQueryTimeout(10);
             updatePlayerRpSettings.setQueryTimeout(10);
@@ -165,6 +165,15 @@ public class RpDatabaseConnector {
                 // Expected when the column already exists (duplicate column) — nothing to do.
                 Log.debug("architect_rp already has the 'client' column on " + dbName);
             }
+            // The status column holds each player's resource pack status, for the next server the player joins
+            // to read. Tables created before it existed get it here.
+            try {
+                dbConnection.createStatement().execute("ALTER TABLE architect_rp ADD COLUMN status VARCHAR(30)");
+                Log.info("Added missing 'status' column to architect_rp on RP database " + dbName);
+            } catch (SQLException alterEx) {
+                // Expected when the column already exists (duplicate column) — nothing to do.
+                Log.debug("architect_rp already has the 'status' column on " + dbName);
+            }
         } catch (SQLException ex) {
             Log.error("Failed to create/verify architect_rp table on RP database " + dbName, ex);
         }
@@ -186,7 +195,7 @@ public class RpDatabaseConnector {
     private synchronized void loadRpSettingsSync(UUID uuid, Map<UUID, RpPlayerData> dataMap) {
         if(!connected || selectPlayerRpSettings==null) {
             // No reachable DB: seed a default so hasPlayerDataLoaded() is true and the join flow
-            // proceeds immediately with defaults instead of polling ~11s for a load that won't come.
+            // proceeds immediately with defaults instead of polling ~15s for a load that won't come.
             dataMap.put(uuid, new RpPlayerData());
             return;
         }
@@ -201,6 +210,9 @@ public class RpDatabaseConnector {
                     data.setResolution(result.getInt("resolution"));
                     data.setClient(result.getString("client"));
                     if(data.getClient()==null) data.setClient("vanilla");
+                    if(result.getString("status")!=null) {
+                        data.setCurrentRpStatus(RpPlayerStatus.valueOf(result.getString("status")));
+                    }
                     dataMap.put(uuid,data);
                 }
             }
@@ -242,14 +254,14 @@ public class RpDatabaseConnector {
         }
     }
 
-
     private synchronized void updateRpSettings(Player player, RpPlayerData data) throws SQLException {
         updatePlayerRpSettings.setBoolean(1, data.isAutoRp());
         updatePlayerRpSettings.setString(2, data.getVariant());
         updatePlayerRpSettings.setInt(3, data.getResolution());
         updatePlayerRpSettings.setString(4, data.getClient());
         updatePlayerRpSettings.setString(5, data.getCurrentRpUrl());
-        updatePlayerRpSettings.setString(6, player.getUniqueId().toString());
+        updatePlayerRpSettings.setString(6, data.getCurrentRpStatus().name());
+        updatePlayerRpSettings.setString(7, player.getUniqueId().toString());
         updatePlayerRpSettings.executeUpdate();
     }
 
@@ -260,7 +272,28 @@ public class RpDatabaseConnector {
         insertPlayerRpSettings.setInt(4, data.getResolution());
         insertPlayerRpSettings.setString(5, data.getClient());
         insertPlayerRpSettings.setString(6, data.getCurrentRpUrl());
+        insertPlayerRpSettings.setString(7, data.getCurrentRpStatus().name());
         insertPlayerRpSettings.executeUpdate();
+    }
+
+    public synchronized boolean dropTable() {
+        try {
+            checkConnection();
+            if (!connected || dbConnection == null) {
+                Log.error("No database connection");
+                return false;
+            }
+            String statement = "DROP TABLE IF EXISTS architect_rp";
+            dbConnection.createStatement().execute(statement);
+            Log.info("architect_rp successfully deleted");
+            checkTables();
+            return true;
+
+        } catch (SQLException ex) {
+            Log.error("Error while deleting architect_rp table.", ex);
+            connected = false;
+            return false;
+        }
     }
 
 }
