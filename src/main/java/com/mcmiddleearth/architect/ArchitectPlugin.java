@@ -19,6 +19,8 @@ import com.mcmiddleearth.architect.customHeadManager.CustomHeadListener;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import com.mcmiddleearth.architect.customHeadManager.HeadCommand;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger;
+import com.mcmiddleearth.architect.gamemodeSwitcher.GamemodeSwitcher;
+import com.mcmiddleearth.architect.gamemodeSwitcher.InvisibleBlockListener;
 import com.mcmiddleearth.architect.mapLayers.ArchitectLayers;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsCommand;
@@ -111,10 +113,13 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
+        pluginManager.registerEvents(new InvisibleBlockListener(), this);
         if(getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
             com.mcmiddleearth.architect.viewDistance.ViewDistanceProtocol.register(this);
+            com.mcmiddleearth.architect.gamemodeSwitcher.GamemodeSwitcherProtocol.register(this);
         } else {
             Log.warn("ProtocolLib not found - /viewdistance chunk-retention features are disabled.");
+            Log.warn("ProtocolLib not found - the game mode switcher for builders is off.");
         }
 //        pluginManager.registerEvents(new AfkListener(), this);
 
@@ -167,6 +172,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     
     @Override
     public void onDisable() {
+        GamemodeSwitcher.stopRunning(); // before teardown that may fail, and it cannot fail itself
         MapLayers.stop(); // first, so the budget saves its counts even if other teardown fails
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
@@ -195,6 +201,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         ItemBlockManager.init();
         ViewDistanceManager.loadViewDistances();
         MapLayers.start(this, ArchitectLayers.fromConfig(getConfig(), getDataFolder()));
+        GamemodeSwitcher.updateRunning(); // the reload may have turned the switcher's module on or off in a world
     }
 
     public static ArchitectPlugin getPluginInstance() {
