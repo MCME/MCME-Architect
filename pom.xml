@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mcmiddleearth</groupId>
     <artifactId>MCME-Architect</artifactId>
-    <version>3.0.0</version>
+    <version>3.1.0</version>
     <packaging>jar</packaging>
     <properties>
         <!-- Build kind for the jar name: RELEASE | SNAPSHOT | DEV. Override with -Dbuild.type=DEV. -->
@@ -132,8 +132,23 @@
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>26.1.2.build.72-stable</version>
+            <version>26.2.build.126-stable</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <!-- Mojang's DataFixerUpper (Codec, DataResult, JsonOps): biome tuning decodes biomes with
+                 vanilla's own codec. The 26.2 server ships exactly this version, so it is compile-only.
+                 Transitives are excluded because paper-api already supplies gson and guava. -->
+            <groupId>com.mojang</groupId>
+            <artifactId>datafixerupper</artifactId>
+            <version>10.0.21</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Compiled against the stable 5.x API; scope=provided (server supplies the jar).
              The SERVER must run a ProtocolLib dev build (5.5.0+) for Minecraft 26.x support:
@@ -239,8 +254,8 @@
         </dependency>
         <dependency>
             <groupId>org.mockbukkit.mockbukkit</groupId>
-            <artifactId>mockbukkit-v26.1.2</artifactId>
-            <version>4.114.0</version>
+            <artifactId>mockbukkit-v26.2</artifactId>
+            <version>4.116.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>

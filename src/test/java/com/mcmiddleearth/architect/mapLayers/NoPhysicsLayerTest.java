@@ -42,8 +42,9 @@ class NoPhysicsLayerTest {
         assertArrayEquals(new double[]{0, 10, 10, 0}, mill.x());
         assertArrayEquals(new double[]{0, 0, 20, 20}, mill.z());
         assertEquals("world", mill.world());
-        assertEquals(new MapShape.Style(0xff8c00, 0.3, 2, 0xff8c00, 0.2), mill.style(), "orange, as spec §6");
-        assertEquals(new MapShape.Style(0x1e64ff, 0.3, 2, 0x1e64ff, 0.2), shapes.get(0).style(), "blue");
+        assertEquals(new MapShape.Style(0xff8c00, 0.3, 2, 0xff8c00, 0.2), mill.style(), "a redstone area is orange");
+        assertEquals(new MapShape.Style(0x1e64ff, 0.3, 2, 0x1e64ff, 0.2), shapes.get(0).style(),
+                "a water-flow area is blue");
     }
 
     @Test
