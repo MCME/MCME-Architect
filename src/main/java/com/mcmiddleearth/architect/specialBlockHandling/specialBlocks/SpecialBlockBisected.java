@@ -27,6 +27,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
+import java.util.List;
+
 /**
  *
  * @author Eriol_Eandur
@@ -45,7 +47,7 @@ public class SpecialBlockBisected extends SpecialBlockOrientable {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         BlockFace tempFace = blockFace;
         switch(blockFace) {
@@ -61,7 +63,7 @@ public class SpecialBlockBisected extends SpecialBlockOrientable {
                     tempFace = BlockFace.DOWN;
                 }
         }
-        super.placeBlock(blockPlace, tempFace, clicked, interactionPoint, player);
+        return super.placeBlock(blockPlace, tempFace, clicked, interactionPoint, player);
     }
 
     public static SpecialBlockBisected loadFromConfig(ConfigurationSection config, String id) {

@@ -66,7 +66,7 @@ public class SpecialBlockMobSpawnerBlock extends SpecialBlock {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         //1.21.4 no update as unused
 
@@ -143,6 +143,7 @@ public class SpecialBlockMobSpawnerBlock extends SpecialBlock {
         /*} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | InstantiationException | ClassNotFoundException ex) {
             Logger.getLogger(SpecialBlockMobSpawnerBlock.class.getName()).log(Level.SEVERE, null, ex);
         }*/
+        return List.of();
     }
     
     

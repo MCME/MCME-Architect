@@ -102,8 +102,12 @@ public class SpecialBlockSign extends SpecialBlock {
     }
 
     @Override
-    public void placeBlock(Block blockPlace, BlockFace blockFace, Block clicked, Location interactionPoint, Player player) {
-        super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
+    public List<Block> placeBlock(Block blockPlace, BlockFace blockFace, Block clicked, Location interactionPoint,
+                                  Player player) {
+        List<Block> placed = super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
+        if(placed.isEmpty()) {
+            return placed; // no sign for this face, so none to edit
+        }
         SpecialBlock instance = this;
         Bukkit.getScheduler().runTaskLater(ArchitectPlugin.getPluginInstance(), new Runnable() {
             @Override
@@ -119,6 +123,7 @@ public class SpecialBlockSign extends SpecialBlock {
                                                         ArchitectPlugin.getPluginInstance());
             }
         },3);
+        return placed;
     }
 
     public void sendSignEditorOpen(Block blockPlace, Player player, Side side) {

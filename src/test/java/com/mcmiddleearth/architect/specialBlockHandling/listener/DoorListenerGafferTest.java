@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 // DoorListener cancels a vanilla door's place and sets a powered door itself. Architect loads at STARTUP, so its
 // listeners run before TheGaffer's at the same priority: TheGaffer sees the place already cancelled and never
-// counts it, so DoorListener reports the door. One mock/load per class, as in SpecialBlockGafferTest.
+// counts it, so DoorListener reports the door: both halves, as in a no-physics world each is broken on its own, and
+// TheGaffer counts each break. One mock/load per class, as in SpecialBlockGafferTest.
 class DoorListenerGafferTest {
 
     private static ServerMock server;
@@ -59,7 +60,7 @@ class DoorListenerGafferTest {
 
     @AfterEach
     void dropTheDelayedDoor() {
-        // the door is set a tick later through BlockState.getRawData, which MockBukkit does not implement
+        // the door is set a tick later, when the test is over
         server.getScheduler().cancelTasks(ArchitectPlugin.getPluginInstance());
     }
 
@@ -84,14 +85,16 @@ class DoorListenerGafferTest {
     }
 
     @Test
-    void aVanillaDoorIsReportedOnceAtItsLowerHalf() {
+    void aVanillaDoorIsReportedAsTwoPlaces() {
         Block ground = world.getBlockAt(0, 64, 0);
 
         BlockMultiPlaceEvent event = placeOakDoor(ground);
 
         assertTrue(event.isCancelled(), "Architect places the door itself");
-        assertEquals(List.of(new FakeGaffer.Build(player.getName(), ground.getRelative(BlockFace.UP).getLocation(),
-                true)), FakeGaffer.builds);
+        Block lower = ground.getRelative(BlockFace.UP);
+        assertEquals(List.of(new FakeGaffer.Build(player.getName(), lower.getLocation(), true),
+                new FakeGaffer.Build(player.getName(), lower.getRelative(BlockFace.UP).getLocation(), true)),
+                FakeGaffer.builds);
     }
 
     @Test

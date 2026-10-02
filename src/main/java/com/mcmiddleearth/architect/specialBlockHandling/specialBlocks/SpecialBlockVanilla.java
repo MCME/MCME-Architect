@@ -29,6 +29,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.util.List;
+
 /**
  *
  * @author Eriol_Eandur
@@ -79,8 +81,9 @@ public class SpecialBlockVanilla extends SpecialBlock {
     }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
+        return List.of();
     }
     
     @Override

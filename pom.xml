@@ -88,36 +88,61 @@
             </resource>
         </resources>
     </build>
+    <!-- Only mcme-snapshots is asked for SNAPSHOTs: the build uses none, and the others are asked for releases
+         only, so no build looks for SNAPSHOT metadata. repo.mikeprimm.com refused those requests, which cost a build
+         with a cold cache about two minutes. -->
     <repositories>
         <repository>
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
         <repository>
             <id>mojang</id>
             <url>https://libraries.minecraft.net/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
+        <!-- EngineHub's repository, for WorldEdit. -->
         <repository>
-            <id>sk89q-repo</id>
+            <id>enginehub-maven</id>
             <url>https://maven.enginehub.org/repo/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
         <repository>
             <id>dmulloy2-repo</id>
             <url>https://repo.dmulloy2.net/repository/public/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
         <repository>
             <id>viaversion-repo</id>
             <url>https://repo.viaversion.com</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
         <repository>
             <id>dynmap-repo</id>
             <url>https://repo.mikeprimm.com/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
         <!-- MCME's own Reposilite, matching MCME-Connect. Serves com.mcmiddleearth artifacts
              (PluginUtils, mcme-base, tbnbt) under MCME's groupId. -->
         <repository>
             <id>mcme-releases</id>
             <url>https://repo.mcmiddleearth.com/releases</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
         <repository>
             <id>mcme-snapshots</id>
@@ -126,6 +151,9 @@
         <repository>
             <id>mcme-mirror</id>
             <url>https://repo.mcmiddleearth.com/mirror</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
     <dependencies>
@@ -154,15 +182,15 @@
             </exclusions>
         </dependency>
         <dependency>
-            <!-- 2.0.2 is the first PluginUtils built against the 26.2 dev bundle, and is what
-                 the servers actually run. Resolved from repo.mcmiddleearth.com under MCME's own
+            <!-- 2.0.4, a PluginUtils built against the 26.2 dev bundle that declares json-simple, which
+                 its MessageUtil needs. Resolved from repo.mcmiddleearth.com under MCME's own
                  groupId rather than JitPack's com.github.MCME, so there is exactly one
                  coordinate for this library and Maven's normal version conflict resolution
                  applies to it (MCME-Connect still pulls an older com.mcmiddleearth:PluginUtils
                  transitively; as a direct dependency this one wins on nearest-first). -->
             <groupId>com.mcmiddleearth</groupId>
             <artifactId>PluginUtils</artifactId>
-            <version>2.0.2</version>
+            <version>2.0.4</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -175,16 +203,18 @@
             <version>3.0.1</version>
             <scope>provided</scope>
         </dependency>
+        <!-- 7.4.5, the WorldEdit the test server and the production servers run. 7.3.0 took lin-bus, its NBT
+             library, as a 0.1.0-SNAPSHOT. -->
         <dependency>
             <groupId>com.sk89q.worldedit</groupId>
             <artifactId>worldedit-core</artifactId>
-            <version>7.3.0</version>
+            <version>7.4.5</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.sk89q.worldedit</groupId>
             <artifactId>worldedit-bukkit</artifactId>
-            <version>7.3.0</version>
+            <version>7.4.5</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
@@ -202,9 +232,11 @@
             </exclusions>
         </dependency>
         <dependency>
+            <!-- A release: the range [5.0.0,6.0.0) took the newest 5.x there was, which was a SNAPSHOT, so a
+                 build depended on the day it ran. Only RpManager.getClientProtocolVersion uses it. -->
             <groupId>com.viaversion</groupId>
             <artifactId>viaversion-api</artifactId>
-            <version>[5.0.0,6.0.0)</version>
+            <version>5.11.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -219,21 +251,6 @@
                 <exclusion>
                     <groupId>org.bukkit</groupId>
                     <artifactId>bukkit</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <!-- PluginUtils 2.0.2's MessageUtil needs json-simple but its POM does not declare it (2.0.4's does); the
-                 server provides it. It used to reach the classpath only inside dynmap-api's old Bukkit (see
-                 ClasspathTest). -->
-            <groupId>com.googlecode.json-simple</groupId>
-            <artifactId>json-simple</artifactId>
-            <version>1.1.1</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>junit</groupId>
-                    <artifactId>junit</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

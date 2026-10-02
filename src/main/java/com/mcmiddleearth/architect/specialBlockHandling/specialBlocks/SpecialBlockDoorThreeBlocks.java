@@ -30,6 +30,8 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.List;
+
 /**
  *
  * @author Eriol_Eandur
@@ -67,11 +69,13 @@ public class SpecialBlockDoorThreeBlocks extends SpecialBlockDoor {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, lowerMaterial, powered, false, false, false);
         placeHalfDoor(blockPlace.getRelative(BlockFace.UP,2), playerLoc, upperMaterial);
+        // the door's two halves and the half door on top
+        return List.of(blockPlace, blockPlace.getRelative(BlockFace.UP), blockPlace.getRelative(BlockFace.UP, 2));
     }
     
     private void placeHalfDoor(final Block block, final Location playerLoc, final Material material) {
@@ -90,7 +94,8 @@ public class SpecialBlockDoorThreeBlocks extends SpecialBlockDoor {
                     data.setPowered(lowerData.isPowered());
                     data.setHinge(lowerData.getHinge());
                     state.setBlockData(data);
-                    DevUtil.log("4 half door block place: ID "+state.getType()+" - DV "+state.getRawData());
+                    DevUtil.log("4 half door block place: ID "+state.getType()
+                            +" - data "+state.getBlockData().getAsString());
                     state.getBlock().setBlockData(state.getBlockData(),false);//.update(true, false);
                 } else {
                     DevUtil.log("invalid door material: ID "+state.getType());

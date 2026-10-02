@@ -5,6 +5,7 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.util.DevUtil;
+import com.mcmiddleearth.util.TheGafferUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -20,6 +21,8 @@ import org.bukkit.block.data.type.Wall;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.List;
 
 public class SpecialBlockBranch2 extends SpecialBlock {
 
@@ -296,18 +299,17 @@ public class SpecialBlockBranch2 extends SpecialBlock {
     }*/
 
     @Override
-    public void handleBlockBreak(BlockState state) {
+    public void handleBlockBreak(BlockState state, Player player) {
+        super.handleBlockBreak(state, player); // the water a waterlogged piece leaves
         Block block = state.getBlock();
         if(!state.getBlockData().equals(block.getBlockData())) {
             // find out if we break a block with vertical part
             if(isVertical(state.getBlockData())) {
                 Block connection = block.getRelative(BlockFace.DOWN, 1);
                 if (connection.getBlockData().matches(blockDataWall)) {
-                    Wall wall = (Wall) connection.getBlockData();
+                    Wall wall = (Wall) connection.getBlockData().clone();
                     wall.setUp(false);
-                    if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
-                        connection.setBlockData(wall, false);
-                    }
+                    setBrokenFrom(connection, wall, player);
                 }
             } else {
                 //find out if we break a block with diagonal slope and main orientation (north, east, south or west)
@@ -315,24 +317,29 @@ public class SpecialBlockBranch2 extends SpecialBlock {
                 if (direction != null) {
                     Block connection = block.getRelative(direction.getOppositeFace(), 1).getRelative(BlockFace.DOWN, 1);
                     if (connection.getBlockData().matches(blockDataWall)) {
-                        Wall wall = (Wall) connection.getBlockData();
+                        Wall wall = (Wall) connection.getBlockData().clone();
                         wall.setHeight(direction, Wall.Height.NONE);
-                        if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
-                            connection.setBlockData(wall, false);
-                        }
+                        setBrokenFrom(connection, wall, player);
                     }
                 }
                 if(!isHorizontal(state.getBlockData())) {
                     Block base = state.getBlock().getRelative(BlockFace.DOWN);
                     if (base.getBlockData().matches(blockDataWall)) {
-                        Wall wall = (Wall) base.getBlockData();
+                        Wall wall = (Wall) base.getBlockData().clone();
                         wall.setUp(false);
-                        if(PluginData.getOrCreateWorldConfig(base.getWorld().getName()).isAllowedBlock(wall)) {
-                            base.setBlockData(wall, false);
-                        }
+                        setBrokenFrom(base, wall, player);
                     }
                 }
             }
+        }
+    }
+
+    // Sets a wall that a broken branch joined, as the branch's going leaves it, unless the world does not allow that
+    // wall, or the wall lies outside the player's job.
+    private static void setBrokenFrom(Block wall, Wall data, Player player) {
+        if(PluginData.getOrCreateWorldConfig(wall.getWorld().getName()).isAllowedBlock(data)
+                && TheGafferUtil.hasGafferPermission(player, wall.getLocation())) {
+            wall.setBlockData(data, false);
         }
     }
 
@@ -409,13 +416,14 @@ public class SpecialBlockBranch2 extends SpecialBlock {
     public boolean isEditOnSneaking() { return width>=0; }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         //Block clicked = getClicked(blockPlace, interactionPoint, player);
         if(width >= 0 && player.isSneaking()) {
             if(clicked.getBlockData().matches(blockDataWall)) {
                 SpecialBlockDiagonalConnect.editDiagonal(blockPlace, clicked, player, this);
             }
+            return List.of();
         } else {
             Location playerLoc = player.getLocation();
             boolean negativeSlope = playerLoc.getPitch()<-22.5;
@@ -431,6 +439,15 @@ public class SpecialBlockBranch2 extends SpecialBlock {
             int slope = getSlope(playerLoc);
 
             final BlockState state = getBlockState(blockPlace, playerFace, width, slope, negativeSlope);
+            if(placesNothing(state, blockPlace)) {
+                return List.of(); // laid level facing a diagonal
+            }
+            // The branch may change the clicked wall as well, which may lie outside the job's area.
+            final Wall wall = changedWall(clicked, blockPlace, blockFace, interactionPoint, playerFace, width, slope,
+                                          negativeSlope);
+            if(wall != null && !TheGafferUtil.checkGafferPermission(player, clicked.getLocation())) {
+                return List.of();
+            }
             final int finalWidth = width;
             final int finalSlope = slope;
             new BukkitRunnable() {
@@ -448,34 +465,41 @@ public class SpecialBlockBranch2 extends SpecialBlock {
                 }
             }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
 
-            if(!negativeSlope && clicked.getBlockData().matches(blockDataWall)) {
-                Wall wall = (Wall) clicked.getBlockData();
-                if (isUpperPlace(interactionPoint, blockFace)) {
-                    if(clicked.getLocation().equals(blockPlace.getRelative(BlockFace.DOWN).getLocation())){
-                        wall.setUp(true);
-                        clicked.setBlockData(wall, false);
-                    }
-                } else {
-                    Wall.Height height = (width == thin ? Wall.Height.TALL : Wall.Height.LOW);
-                    if (slope == diagonal && isMainDirection(playerFace)) {
-                        wall.setHeight(playerFace, height);
-                        if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                            clicked.setBlockData(wall, false);
-                        }
-                    } else if (slope == steep && isMainDirection(playerFace)) {
-                        wall.setHeight(playerFace, Wall.Height.NONE);
-                        if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                            clicked.setBlockData(wall, false);
-                        }
-                    } else if (slope == vertical) {
-                        wall.setUp(true);
-                        if (PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
-                            clicked.setBlockData(wall, false);
-                        }
-                    }
-                }
+            if(wall != null) {
+                clicked.setBlockData(wall, false);
+            }
+            return List.of(blockPlace);
+        }
+    }
+
+    // What a branch placed from the clicked wall makes of that wall, or null where it leaves the wall as it is.
+    private Wall changedWall(Block clicked, Block blockPlace, BlockFace blockFace, Location interactionPoint,
+                             BlockFace playerFace, int width, int slope, boolean negativeSlope) {
+        if(negativeSlope || !clicked.getBlockData().matches(blockDataWall)) {
+            return null;
+        }
+        Wall wall = (Wall) clicked.getBlockData().clone();
+        if (isUpperPlace(interactionPoint, blockFace)) {
+            if(!clicked.getLocation().equals(blockPlace.getRelative(BlockFace.DOWN).getLocation())){
+                return null;
+            }
+            wall.setUp(true);
+        } else {
+            Wall.Height height = (width == thin ? Wall.Height.TALL : Wall.Height.LOW);
+            if (slope == diagonal && isMainDirection(playerFace)) {
+                wall.setHeight(playerFace, height);
+            } else if (slope == steep && isMainDirection(playerFace)) {
+                wall.setHeight(playerFace, Wall.Height.NONE);
+            } else if (slope == vertical) {
+                wall.setUp(true);
+            } else {
+                return null;
+            }
+            if (!PluginData.getOrCreateWorldConfig(clicked.getWorld().getName()).isAllowedBlock(wall)) {
+                return null;
             }
         }
+        return wall.equals(clicked.getBlockData()) ? null : wall;
     }
 
     private int getSlope(Location playerLoc) {

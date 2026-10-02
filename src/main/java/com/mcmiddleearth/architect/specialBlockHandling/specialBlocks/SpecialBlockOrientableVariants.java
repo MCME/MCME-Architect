@@ -33,6 +33,8 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.List;
+
 /**
  *
  * @author Eriol_Eandur
@@ -84,7 +86,7 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
     public boolean isEditOnSneaking() { return true; }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
 //Logger.getGlobal().info("Place variant oriented");
         if(player.isSneaking()) {
@@ -101,20 +103,27 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
 //Logger.getGlobal().info("Block VARIANT: "+((SpecialBlockOrientableVariants) specialBlockData).getVariantName(clicked));
                 ((SpecialBlockOrientableVariants)specialBlockData).cycleVariant(blockPlace, clicked, player, interactionPoint);
             }
+            return List.of();
         } else {
             // place block
             final BlockState state = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
+            if(placesNothing(state, blockPlace)) {
+                return List.of();
+            }
             new BukkitRunnable() {
                 @Override
                 public void run() {
                     //state.update(true, false);
                     blockPlace.setBlockData(state.getBlockData(), false);
-                    DevUtil.log("Special block place: ID " + state.getType() + " - DV " + state.getRawData());
+                    DevUtil.log("Special block place: ID " + state.getType()
+                            + " - data " + state.getBlockData().getAsString());
                     final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
                     new BukkitRunnable() {
                         @Override
                         public void run() {
-                            DevUtil.log("Special block place x2: loc: " + tempState.getX() + " " + tempState.getY() + " " + tempState.getZ() + " - ID " + state.getType() + " - DV " + state.getRawData());
+                            DevUtil.log("Special block place x2: loc: " + tempState.getX() + " " + tempState.getY()
+                                    + " " + tempState.getZ() + " - ID " + state.getType()
+                                    + " - data " + state.getBlockData().getAsString());
                             //tempState.update(true, false);
                             blockPlace.setBlockData(tempState.getBlockData(), false);
                             // We just want VANILLA block type to connect.
@@ -125,6 +134,7 @@ public abstract class SpecialBlockOrientableVariants extends SpecialBlock {
                     }.runTaskLater(ArchitectPlugin.getPluginInstance(), 5);
                 }
             }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+            return List.of(blockPlace);
         }
     }
 

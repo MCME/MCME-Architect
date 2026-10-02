@@ -11,6 +11,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.util.List;
+
 public class SpecialBlockNone extends SpecialBlock {
 
     protected SpecialBlockNone(String id, BlockData data, SpecialBlockType type) {
@@ -22,8 +24,10 @@ public class SpecialBlockNone extends SpecialBlock {
     }
 
     @Override
-    public void placeBlock(Block blockPlace, BlockFace blockFace, Block clicked, Location interactionPoint, Player player) {
+    public List<Block> placeBlock(Block blockPlace, BlockFace blockFace, Block clicked, Location interactionPoint,
+                                  Player player) {
         //nothing here
+        return List.of();
     }
 
     @Override

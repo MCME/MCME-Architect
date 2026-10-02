@@ -35,6 +35,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  *
@@ -135,10 +136,10 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
     public boolean isEditOnSneaking() { return true; }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         if(!player.isSneaking()) {
-            super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
+            return super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
         } else {
             //Block clicked = blockPlace.getRelative(blockFace.getOppositeFace());
             /*Location loc = player.getLocation().clone();
@@ -187,7 +188,7 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
                                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
                             }
                         }
-                        return;
+                        return List.of();
                     }
                     //data = rotateData(data);
                     //editFace = rotateFace(editFace);
@@ -213,6 +214,7 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
                     }
                 }*/
             }
+            return List.of();
         }
     }
 
