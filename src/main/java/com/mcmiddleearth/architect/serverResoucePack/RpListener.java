@@ -86,6 +86,12 @@ public class RpListener implements Listener {
                 int counter = 30;
                 @Override
                 public void run() {
+                    if(!player.isOnline()) {
+                        // The player left before this check went on: there is no one to send a pack to,
+                        // and a save now would put defaults over the row the server they went to writes.
+                        cancel();
+                        return;
+                    }
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
                         RpPlayerData data = RpManager.getPlayerData(player);
                         // A player who has just joined the proxy has no server resource pack yet, whatever

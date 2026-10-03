@@ -14,6 +14,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,7 +22,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
@@ -103,6 +106,9 @@ final class FakeMysql implements Driver {
         // uuid -> how often its row was looked up, and written by an INSERT or UPDATE
         private final Map<String, Integer> lookUps = new HashMap<>();
         private final Map<String, Integer> writes = new HashMap<>();
+        // uuid -> the latch that look-ups of its row wait for, as on a slow database; and the uuids that wait now
+        private final Map<String, CountDownLatch> holds = new HashMap<>();
+        private final Set<String> waiting = new HashSet<>();
 
         /** The columns of the table as declared, in their order; empty when there is no table. */
         synchronized List<String> columns() {
@@ -138,6 +144,42 @@ final class FakeMysql implements Driver {
             return (int) statements.stream()
                     .filter(statement -> statement.toUpperCase(Locale.ROOT).startsWith(wanted))
                     .count();
+        }
+
+        /** Look-ups of this uuid's row wait, as on a slow database, until the latch this returns is opened. */
+        synchronized CountDownLatch hold(String uuid) {
+            return holds.computeIfAbsent(uuid, key -> new CountDownLatch(1));
+        }
+
+        /** Whether a look-up of this uuid's row is waiting for its latch now. */
+        synchronized boolean waiting(String uuid) {
+            return waiting.contains(uuid);
+        }
+
+        // A look-up waits outside this database's lock, so that a test can read the table meanwhile. It holds the
+        // connector's lock, as a slow database does.
+        void waitIfHeld(Object uuid) throws SQLException {
+            String key = String.valueOf(uuid);
+            CountDownLatch latch;
+            synchronized (this) {
+                latch = holds.get(key);
+                if (latch == null || latch.getCount() == 0) {
+                    return;
+                }
+                waiting.add(key);
+            }
+            try {
+                if (!latch.await(30, TimeUnit.SECONDS)) {
+                    throw new SQLException("a held look-up was never let go");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new SQLException("interrupted while held", e);
+            } finally {
+                synchronized (this) {
+                    waiting.remove(key);
+                }
+            }
         }
 
         /** How many SELECTs looked up the row of this uuid, so a test can wait for a player's own load. */
@@ -421,6 +463,7 @@ final class FakeMysql implements Driver {
             }
             case "executeQuery" -> {
                 requireBound(parameters, marks);
+                database.waitIfHeld(parameters.get(1));
                 yield resultSet(database.select(sql, parameters));
             }
             case "executeUpdate" -> {

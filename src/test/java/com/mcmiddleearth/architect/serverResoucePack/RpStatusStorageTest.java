@@ -30,12 +30,15 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -313,6 +316,41 @@ class RpStatusStorageTest {
         } finally {
             connector.disconnect();
         }
+    }
+
+    // A player who leaves while their row is still being read. The join check must stop then: going on, it would
+    // make data for someone who is not there and save it over the row that the server they went to has written.
+    @Test
+    void theJoinCheckStopsForAPlayerWhoLeft() throws Exception {
+        Client client = new Client(UUID.randomUUID());
+        String id = client.getUniqueId().toString();
+        shared.insertRow(Map.of("uuid", id, "auto", true, "variant", "dark", "resolution", 32, "client", "vanilla",
+                "currentURL", PACK_URL, "status", "SUCCESSFULLY_LOADED"));
+        Map<String, Object> row = shared.row(id);
+        CountDownLatch slow = shared.hold(id);
+        boolean dataMade;
+        try {
+            server.addPlayer(client);
+            FakeMysql.await(() -> shared.waiting(id), "the player's look-up to start");
+            server.getPluginManager().callEvent(new PlayerConnectEvent(client,
+                    PlayerConnectEvent.ConnectReason.JOIN_PROXY));
+            server.getScheduler().performOneTick(); // the first join check, while the row is still being read
+            client.disconnect();
+            server.getScheduler().performTicks(400); // longer than the join check waits
+            dataMade = RpManager.hasPlayerDataLoaded(client); // before the slow look-up ends and stores the row
+        } finally {
+            slow.countDown();
+        }
+        FakeMysql.await(() -> shared.lookUps(id) > 0, "the slow look-up to end");
+        Thread.sleep(200); // time for a save that waited for the look-up
+        synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
+            // no save is running now
+        }
+        assertAll(
+                () -> assertFalse(dataMade, "data made for the player who left"),
+                () -> assertEquals(List.of(), client.packs, "the packs sent"),
+                () -> assertEquals(0, shared.writes(id), "the saves for the player who left"),
+                () -> assertEquals(row, shared.row(id), "the row the other server wrote"));
     }
 
     // A row as 2.10.9 writes it, with this status, read by a connector to a database of its own.
