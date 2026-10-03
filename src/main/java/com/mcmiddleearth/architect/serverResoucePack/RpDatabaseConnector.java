@@ -25,6 +25,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.sql.*;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -154,10 +156,33 @@ public class RpDatabaseConnector {
         }
     }
 
-    // jdbc:mysql://ip:port/dbName with the timeouts; options that dbName already carries are kept.
+    // jdbc:mysql://ip:port/dbName with the timeouts. Options that dbName already carries are kept, and a timeout
+    // it sets itself is the operator's: ours is added only for a timeout it leaves out.
     private String url() {
-        return "jdbc:mysql://" + dbIp + ":" + port + "/" + dbName + (dbName.contains("?") ? "&" : "?")
-                + "connectTimeout=" + CONNECT_TIMEOUT_MILLIS + "&socketTimeout=" + SOCKET_TIMEOUT_MILLIS;
+        Set<String> given = optionNames(dbName);
+        StringBuilder url = new StringBuilder("jdbc:mysql://" + dbIp + ":" + port + "/" + dbName);
+        char separator = dbName.contains("?") ? '&' : '?';
+        if(!given.contains("connecttimeout")) {
+            url.append(separator).append("connectTimeout=").append(CONNECT_TIMEOUT_MILLIS);
+            separator = '&';
+        }
+        if(!given.contains("sockettimeout")) {
+            url.append(separator).append("socketTimeout=").append(SOCKET_TIMEOUT_MILLIS);
+        }
+        return url.toString();
+    }
+
+    // The names, in lower case, of the options in "name?a=1&b=2".
+    private static Set<String> optionNames(String dbName) {
+        Set<String> names = new HashSet<>();
+        int query = dbName.indexOf('?');
+        if(query >= 0) {
+            for(String option : dbName.substring(query + 1).split("&")) {
+                int equals = option.indexOf('=');
+                names.add((equals < 0 ? option : option.substring(0, equals)).trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        return names;
     }
 
     public synchronized void disconnect() {

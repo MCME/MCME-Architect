@@ -73,6 +73,19 @@ class RpDatabaseConnectionTest {
                 connect("localhost", 3306, "options?useSSL=false"));
     }
 
+    // A timeout that the operator set in dbName is theirs: only the other one is added.
+    @Test
+    void aConnectTimeoutInTheDatabaseNameIsKept() {
+        assertEquals("jdbc:mysql://localhost:3306/own-connect?connectTimeout=3000&socketTimeout=60000",
+                connect("localhost", 3306, "own-connect?connectTimeout=3000"));
+    }
+
+    @Test
+    void aSocketTimeoutInTheDatabaseNameIsKept() {
+        assertEquals("jdbc:mysql://localhost:3306/own-socket?socketTimeout=120000&useSSL=false&connectTimeout=10000",
+                connect("localhost", 3306, "own-socket?socketTimeout=120000&useSSL=false"));
+    }
+
     // The URL a connector with these settings asks for. It connects as before: it makes its table.
     private static String connect(String ip, int port, String dbName) {
         MemoryConfiguration config = new MemoryConfiguration();
