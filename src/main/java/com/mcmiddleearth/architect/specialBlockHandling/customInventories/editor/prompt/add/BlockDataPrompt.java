@@ -20,7 +20,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Logger;
 
 public class BlockDataPrompt extends ValidatingPrompt implements Listener {
     private boolean listenerRegistered = false;

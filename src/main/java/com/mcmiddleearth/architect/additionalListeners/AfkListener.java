@@ -17,9 +17,9 @@
 package com.mcmiddleearth.architect.additionalListeners;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import java.util.UUID;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -59,7 +59,7 @@ public class AfkListener implements Listener{
                 } else {
                     player.setPlayerListName(player.getName()+" (AFK)");
                 }
-                Logger.getGlobal().info("afk join run "+afk);
+                Log.debug("AFK list-name refresh for " + player.getName() + " (afk=" + afk + ")");
             }
         }
     }

@@ -16,14 +16,13 @@
  */
 package com.mcmiddleearth.architect.customHeadManager;
 
+import com.mcmiddleearth.architect.Log;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -53,12 +52,17 @@ public class CustomHeadData {
         try {
             config.load(file);
         } catch (IOException | InvalidConfigurationException ex) {
-            Logger.getLogger(CustomHeadData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to load custom head data file " + file.getAbsolutePath() + "; skipping it.", ex);
+            return null;
         }
-        return new CustomHeadData(UUID.fromString(config.getString("headId")), 
-                                  UUID.fromString(config.getString("owner")), 
-                                  config.getString("texture"));
-        
+        String headId = config.getString("headId");
+        String owner = config.getString("owner");
+        if (headId == null || owner == null) {
+            Log.warn("Custom head data file " + file.getAbsolutePath()
+                    + " is missing required 'headId'/'owner'; skipping it.");
+            return null;
+        }
+        return new CustomHeadData(UUID.fromString(headId), UUID.fromString(owner), config.getString("texture"));
     }
     
     public boolean saveToFile(File file) {
@@ -70,7 +74,7 @@ public class CustomHeadData {
             config.save(file);
             return true;
         } catch (IOException ex) {
-            Logger.getLogger(CustomHeadData.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save custom head data file " + file.getAbsolutePath() + " for head " + headId, ex);
             return false;
         }
     }

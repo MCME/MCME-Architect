@@ -49,6 +49,10 @@ public class SignCommand extends AbstractArchitectCommand {
             sendNotEnabledErrorMessage(sender);
             return true;
         }
+        if(!SignEditorData.isEditor(player)) {
+            sendNoSignSelected(player);
+            return true;
+        }
         if(args.length<2) {
             PluginData.getMessageUtil().sendNotEnoughArgumentsError(sender);
             return true;
@@ -64,6 +68,7 @@ public class SignCommand extends AbstractArchitectCommand {
         int lineNumber = NumericUtil.getInt(args[0]);
         if(lineNumber<1||lineNumber>4) {
             sendWrongLineNumberMessage(player);
+            return true;
         }
         String line = args[1];
         for(int i=2;i<args.length;i++) {
@@ -86,7 +91,7 @@ public class SignCommand extends AbstractArchitectCommand {
     }
 
     private void sendNoSignSelected(Player player) {
-
+        PluginData.getMessageUtil().sendErrorMessage(player, "Right-click a sign with a stick to select it first.");
     }
 
     private void sendInvalidGlowArgument(Player player) {

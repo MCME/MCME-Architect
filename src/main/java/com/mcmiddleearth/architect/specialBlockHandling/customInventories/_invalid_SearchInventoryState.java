@@ -19,7 +19,6 @@ package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
 import com.mcmiddleearth.pluginutil.ReflectionUtil;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.AnvilInventory;
@@ -92,21 +91,18 @@ public class _invalid_SearchInventoryState {
     
     public void search() {
         ItemStack searchItem = inventory.getItem(2);
-Logger.getGlobal().info("search: "+searchItem);
         String search = "";
         if(searchItem.getItemMeta().hasDisplayName()) {
             search = searchItem.getItemMeta().getDisplayName();
-        } 
-Logger.getGlobal().info("search: "+search);
+        }
         foundItems.clear();
         upperLeftItem=0;
         for(ItemStack item:items) {
-            if(item.getItemMeta().hasDisplayName() 
+            if(item.getItemMeta().hasDisplayName()
                     && item.getItemMeta().getDisplayName().contains(search)) {
                 foundItems.add(item.clone());
            }
         }
-Logger.getGlobal().info("found items: "+foundItems.size());
     }
     
     public void update()  {
@@ -201,14 +197,7 @@ Logger.getGlobal().info("found items: "+foundItems.size());
         //player.getInventory().setStorageContents(playerItems);
         for(int i=9;i<playerItems.length;i++) {
             player.getInventory().setItem(i, playerItems[i]);
-//    Logger.getGlobal().info("### "+i+" "+playerItems[i]);
         }
-        /*new BukkitRunnable() {
-            @Override
-            public void run() {
-Logger.getGlobal().info("RESTET "+player.getName());
-            }
-        }.runTaskLater(ArchitectPlugin.getPluginInstance(), 2);*/
     }
 /*    @Override
     public Inventory getTopInventory() {

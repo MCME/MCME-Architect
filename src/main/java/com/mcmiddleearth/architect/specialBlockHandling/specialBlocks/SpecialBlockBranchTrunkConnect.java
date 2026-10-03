@@ -9,6 +9,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.util.List;
+
 public class SpecialBlockBranchTrunkConnect extends SpecialBlockFiveFaces implements IBranch {
 
     private final boolean thinBranches;
@@ -31,7 +33,7 @@ public class SpecialBlockBranchTrunkConnect extends SpecialBlockFiveFaces implem
     public boolean isEditOnSneaking() { return true; }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
         if(player.isSneaking()) {
             //edit side branches
@@ -58,9 +60,10 @@ public class SpecialBlockBranchTrunkConnect extends SpecialBlockFiveFaces implem
                     }
                 }
             }
+            return List.of();
         } else {
             // place block
-            super.placeBlock(blockPlace,BlockFace.UP,clicked,interactionPoint,player);
+            return super.placeBlock(blockPlace,BlockFace.UP,clicked,interactionPoint,player);
         }
     }
 

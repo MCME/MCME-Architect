@@ -6,6 +6,7 @@
 package com.mcmiddleearth.architect.randomiser;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -21,8 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -256,16 +255,16 @@ public class RandomiserCommand extends AbstractArchitectCommand {
         try {
             config.save(configFile);
         } catch (IOException ex) {
-            Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save randomiser allowed-materials config " + configFile.getAbsolutePath(), ex);
         }
     }
-    
+
     public final void loadAllowedMaterials() {
         FileConfiguration config = new YamlConfiguration();
         try {
             config.load(configFile);
         } catch (IOException | InvalidConfigurationException ex) {
-            Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to load randomiser allowed-materials config " + configFile.getAbsolutePath(), ex);
             return;
         }
         List<String> materialNames = config.getStringList(configPathAllowedMaterials);

@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.architect.voxelStencilEditor;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -24,6 +25,7 @@ import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import com.mcmiddleearth.util.PathSafety;
 import java.io.File;
 import java.util.Arrays;
 import org.bukkit.ChatColor;
@@ -88,10 +90,16 @@ public class VvCommand extends AbstractArchitectCommand {
                 return true;
             }
             File file;
-            if(args[1].endsWith(VoxelConstants.STENCIL_EXT)) {
-                file = new File(VoxelConstants.STENCILS_DIR+"/"+args[1]);
-            } else {
-                file = new File(VoxelConstants.STENCIL_LISTS_DIR+"/"+args[1]);
+            try {
+                if(args[1].endsWith(VoxelConstants.STENCIL_EXT)) {
+                    file = PathSafety.resolveInside(VoxelConstants.STENCILS_DIR, args[1]);
+                } else {
+                    file = PathSafety.resolveInside(VoxelConstants.STENCIL_LISTS_DIR, args[1]);
+                }
+            } catch (SecurityException ex) {
+                Log.warn("Rejected unsafe stencil name '" + args[1] + "' for /vv delete: " + ex.getMessage());
+                PluginData.getMessageUtil().sendErrorMessage(player, "Invalid file name.");
+                return true;
             }
             if(!file.exists()) {
                 PluginData.getMessageUtil().sendErrorMessage(player, "File not found.");

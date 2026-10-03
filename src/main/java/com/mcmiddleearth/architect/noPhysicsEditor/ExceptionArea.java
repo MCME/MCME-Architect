@@ -70,6 +70,9 @@ public abstract class ExceptionArea {
     
     public abstract boolean isAffected(Material material);
     
+    /** The kind of area, as NoPhyExceptionAreas.txt and /nophy exception name it: redstone or water. */
+    public abstract String typeName();
+    
     private Vector convertWePoint(BlockVector3 weVector) {
         int x = weVector.getBlockX();
         int y = weVector.getBlockY();

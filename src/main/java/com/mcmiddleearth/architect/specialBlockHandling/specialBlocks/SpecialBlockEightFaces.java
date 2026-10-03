@@ -25,8 +25,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import java.util.logging.Logger;
-
 /**
  *
  * @author Eriol_Eandur
@@ -96,9 +94,7 @@ public class SpecialBlockEightFaces extends SpecialBlockOrientable {
                                        Player player, Location interactionPoint) {
         //BlockState state = blockPlace.getState();
         BlockFace blockFaceFromYaw = getBlockFaceFine(player.getLocation().getYaw());
-Logger.getGlobal().info("EightFace: "+blockFaceFromYaw.name());
         BlockState state = super.getBlockState(blockPlace, clicked, blockFaceFromYaw, player, interactionPoint);
-Logger.getGlobal().info("state: "+state);
         return state;
         /* 1.13 removed
         switch(blockFaceFromYaw) {

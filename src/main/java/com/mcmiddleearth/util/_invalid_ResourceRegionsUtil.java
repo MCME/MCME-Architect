@@ -16,11 +16,9 @@
  */
 package com.mcmiddleearth.util;
 
-import com.mcmiddleearth.architect.specialBlockHandling.command.InvCommand;
+import com.mcmiddleearth.architect.Log;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
@@ -51,7 +49,7 @@ public class _invalid_ResourceRegionsUtil {
             packUrl = (String) regionObject.getClass().getMethod("getPackUrl").invoke(regionObject);
 //Logger.getGlobal().info("pack url "+packUrl);
         } catch (NullPointerException | NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | ClassNotFoundException ex) {
-            Logger.getLogger(InvCommand.class.getName()).log(Level.WARNING, "No resource region found.");
+            Log.warn("No resource region found for player " + p.getName() + " in world " + p.getWorld().getName() + ": " + ex.getMessage());
             return "";
         }
         return packUrl;

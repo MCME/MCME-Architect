@@ -16,20 +16,17 @@
  */
 package com.mcmiddleearth.architect.serverResoucePack;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketEvent;
 import com.google.gson.Gson;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
+import com.mcmiddleearth.architect.mapLayers.RpRegionLayer;
 import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.RegionEditConversationFactory;
-import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.util.DevUtil;
 import com.mcmiddleearth.util.ResourceUtil;
 import com.viaversion.viaversion.api.Via;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -47,8 +44,6 @@ import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -67,9 +62,14 @@ public class RpManager {
 
     private static final Map<String, RpRegion> regions = new HashMap<>();
 
-    private static final Map<UUID,RpPlayerData> playerRpData = new HashMap<>();
+    private static final Map<UUID,RpPlayerData> playerRpData = new java.util.concurrent.ConcurrentHashMap<>();
 
-    private static final Map<UUID, String> sodiumClients = new HashMap<>();
+    // The players whose settings are being read from the RP database, each with the load that reads them.
+    // Nothing makes data for them meanwhile: defaults made now would choose their pack, and be saved over
+    // their row.
+    private static final Map<UUID, Object> pendingLoads = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static final Map<UUID, String> sodiumClients = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final RpDatabaseConnector dbConnector = new RpDatabaseConnector(ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(rpDatabaseConfig));
     
@@ -87,7 +87,7 @@ public class RpManager {
                 protocolVersions.put(version, versionConfig.getInt(version));
             }
         } catch (IOException | InvalidConfigurationException e) {
-            e.printStackTrace();
+            Log.error("Failed to load protocol versions file " + versionFile.getName(), e);
         }
         if(!regionFolder.exists()) {
             regionFolder.mkdir();
@@ -117,7 +117,7 @@ public class RpManager {
                     }
                 }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 200, 20);
             } catch (IOException | InvalidConfigurationException ex) {
-                Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to load RP region file " + file.getName(), ex);
             }
         }
         importResourceRegions();
@@ -138,10 +138,9 @@ public class RpManager {
         return regions.get(name);
     }
     
+    /** The regions changed: the web map's RP-region layer is drawn again. */
     public static void updateDynmapRegions() {
-        RpDynmapUtil.clearMarkers();
-        regions.values().stream().sorted(Comparator.comparingInt(RpRegion::getWeight))
-               .forEach(RpDynmapUtil::createMarker);
+        MapLayers.changed(RpRegionLayer.ID);
     }
     
     public static boolean removeRegion(String name) {
@@ -165,13 +164,39 @@ public class RpManager {
         if(data == null) {
             data = new RpPlayerData();
             data.setProtocolVersion(player.getProtocolVersion());
-            playerRpData.put(player.getUniqueId(), data);
+            if(isLoadPending(player)) {
+                // The player's settings are still being read: these defaults are not kept, so nothing sends,
+                // changes or saves them in place of the player's own.
+                return data;
+            }
+            RpPlayerData stored = playerRpData.putIfAbsent(player.getUniqueId(), data);
+            if(stored != null) {
+                data = stored; // the load has stored the player's settings meanwhile
+            }
         }
         return data;
     }
     
     public static boolean hasPlayerDataLoaded(Player player) {
         return playerRpData.containsKey(player.getUniqueId());
+    }
+
+    public static void removePlayerData(Player player) {
+        pendingLoads.remove(player.getUniqueId());
+        playerRpData.remove(player.getUniqueId());
+    }
+
+    /** Whether the player's settings are still being read from the RP database. */
+    public static boolean isLoadPending(Player player) {
+        return pendingLoads.containsKey(player.getUniqueId());
+    }
+
+    /**
+     * Stops waiting for the player's settings, as the join check does when its time is up: from then on the
+     * defaults are made for the player when needed. A load that ends later still stores the player's settings.
+     */
+    public static void stopWaitingForLoad(Player player) {
+        pendingLoads.remove(player.getUniqueId());
     }
     
     /**
@@ -206,19 +231,35 @@ public class RpManager {
         result = new BigInteger(sha.trim(),16).toByteArray();
         if(result.length>20) {
             result = Arrays.copyOfRange(result,1,21);
+        } else if(result.length<20) {
+            byte[] padded = new byte[20];
+            System.arraycopy(result, 0, padded, 20 - result.length, result.length);
+            result = padded;
         }
         return result;
     }
     
+    /**
+     * Returns the client's real protocol version. Uses ViaVersion when it is installed
+     * (accurate for version-translated clients) and falls back to the Bukkit/Paper protocol
+     * version otherwise. Guarded so the plugin does not hard-depend on ViaVersion (which is
+     * only a softdepend); the {@code Via} reference is resolved lazily and never reached when
+     * ViaVersion is absent.
+     */
+    public static int getClientProtocolVersion(Player player) {
+        if(ArchitectPlugin.getPluginInstance().getServer().getPluginManager().getPlugin("ViaVersion") != null) {
+            return Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion();
+        }
+        return player.getProtocolVersion();
+    }
+
     private static ConfigurationSection getConfigSection(String rp, Player player) {
         RpPlayerData data;
         if (player != null) {
             data = getPlayerData(player);
             if(data.getProtocolVersion()==0) {
-                data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+                data.setProtocolVersion(getClientProtocolVersion(player));
             }
-            Logger.getGlobal().info("Player: "+player.getName()+" Detected protocol: "+data.getProtocolVersion()
-                    +" ("+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getName()+")");
         } else {
             data = new RpPlayerData();
         }
@@ -292,7 +333,6 @@ public class RpManager {
                 String versionMin = "unknown";
                 int protocolMin = Integer.MAX_VALUE;
                 for(String version: variantSection.getKeys(false)) {
-//Logger.getGlobal().info("Version: "+version);
                     Integer protocolVersion = protocolVersions.get(version);
                     if(protocolVersion==null) {
                         return null;
@@ -331,6 +371,9 @@ public class RpManager {
     }
     
     public static boolean setRpRegion(Player player){
+        if(isLoadPending(player)) {
+            return false; // a later run picks the player up, with their own settings
+        }
         RpPlayerData data = RpManager.getPlayerData(player);
         if(data.isAutoRp()) {
             RpRegion newRegion = RpManager.getRegion(player.getLocation());
@@ -346,12 +389,19 @@ public class RpManager {
     }
     
     public static boolean setRp(String rpName, Player player, boolean force) {
+        if(isLoadPending(player)) {
+            return false; // no pack is chosen from defaults while the player's own settings are on their way
+        }
         String url = getRpUrl(rpName, player);
         RpPlayerData data = getPlayerData(player);
         if(url!=null && data!=null && !url.equals("") && (force || !url.equals(data.getCurrentRpUrl()))) {
             data.setCurrentRpUrl(url);
-//Logger.getGlobal().info("Sending to "+player.getName()+"("+getPlayerData(player).getProtocolVersion()+") RP: "+url);
             player.setResourcePack(url, getSHA(rpName, player));
+            // Remember what the player's pack state was before this send, then mark the pack as
+            // offered. Bukkit reports nothing until the client replies, so without this the
+            // window between sending and the reply is indistinguishable from a refusal.
+            data.setLastRpStatus(data.getCurrentRpStatus());
+            data.setCurrentRpStatus(RpPlayerStatus.SENT);
             savePlayerData(player);
             return true;
         }
@@ -379,16 +429,12 @@ public class RpManager {
     
     public static String getRpForUrl(String url) {
         for(String rpName: getRpConfig().getKeys(false)) {
-//Logger.getGlobal().info("RP: "+rpName);
             ConfigurationSection clientSection = getRpConfig().getConfigurationSection(rpName);
             for (String clientName : clientSection.getKeys(false)) {
-//Logger.getGlobal().info("Client: "+clientName);
                 ConfigurationSection resolutionSection = clientSection.getConfigurationSection(clientName);
                 for (String key : resolutionSection.getKeys(false)) {
-//Logger.getGlobal().info("Resolution: "+key);
                     ConfigurationSection pxSection = resolutionSection.getConfigurationSection(key);
                     for (String varKey : pxSection.getKeys(false)) {
-//Logger.getGlobal().info("Variant: "+varKey);
                         ConfigurationSection varSection = pxSection.getConfigurationSection(varKey);
                         if (varSection.contains("url")) {
                             if(varSection.getString("url").equals(url)) {
@@ -421,44 +467,38 @@ public class RpManager {
         ConfigurationSection config = getRpConfig().getConfigurationSection(rp);
         if(config!=null) {
             for(String clientKey: config.getKeys(false)) {
-//Logger.getGlobal().info("ClientKey: "+clientKey);
                 ConfigurationSection clientSection = config.getConfigurationSection(clientKey);
                 for(String resolutionKey: clientSection.getKeys(false)) {
-//Logger.getGlobal().info("ResolutionKey: "+resolutionKey);
                     ConfigurationSection resolutionSection = clientSection.getConfigurationSection(resolutionKey);
                     for (String variantKey : resolutionSection.getKeys(false)) {
-//Logger.getGlobal().info("VariantKey: "+variantKey);
                         try {
                             ConfigurationSection variantSection = resolutionSection.getConfigurationSection(variantKey);
                             List<ConfigurationSection> sections = new LinkedList<>();
                             if (variantSection.contains("url")) {
-//Logger.getGlobal().info("DirectURL: "+variantSection.getString("url"));
                                 sections.add(variantSection);
                             } else {
                                 if (allVersions) {
-//Logger.getGlobal().info("All versions");
                                     sections.addAll(variantSection.getKeys(false).stream()
                                             .map(variantSection::getConfigurationSection).collect(Collectors.toSet()));
                                 } else {
-//Logger.getGlobal().info("Latest versions");
                                     sections.add(variantSection
                                             .getConfigurationSection(getLatestVersion(variantSection.getKeys(false))));
                                 }
                             }
-//for(ConfigurationSection section: sections) Logger.getGlobal().info("URL: "+section.getString("url"));
                             for (ConfigurationSection section : sections) {
                                 URL url = new URL(section.getString("url"));
-                                InputStream fis = url.openStream();
                                 MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-
-                                byte[] data = new byte[1024];
-                                int read = 0;
-                                long time = System.currentTimeMillis();
-                                while ((read = fis.read(data)) != -1) {
-                                    sha1.update(data, 0, read);
-                                    if (System.currentTimeMillis() - time > 5000) {
-                                        time = System.currentTimeMillis();
-                                        PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ...");
+                                try (InputStream fis = url.openStream()) {
+                                    byte[] data = new byte[1024];
+                                    int read;
+                                    long time = System.currentTimeMillis();
+                                    while ((read = fis.read(data)) != -1) {
+                                        sha1.update(data, 0, read);
+                                        if (System.currentTimeMillis() - time > 5000) {
+                                            time = System.currentTimeMillis();
+                                            Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(),
+                                                    () -> PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ..."));
+                                        }
                                     }
                                 }
                                 byte[] hashBytes = sha1.digest();
@@ -466,12 +506,16 @@ public class RpManager {
                                 for (byte b : hashBytes) {
                                     sb.append(String.format("%02x", b));
                                 }
-                                String hashString = sb.toString();
-                                section.set("sha", hashString);
-                                ArchitectPlugin.getPluginInstance().saveConfig();
+                                final String hashString = sb.toString();
+                                final ConfigurationSection shaSection = section;
+                                Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
+                                    shaSection.set("sha", hashString);
+                                    ArchitectPlugin.getPluginInstance().saveConfig();
+                                });
                             }
                         } catch(IOException | NoSuchAlgorithmException ex){
-                            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                            Log.error("Failed to calculate SHA for RP '" + rp + "' client=" + clientKey
+                                    + " resolution=" + resolutionKey + " variant=" + variantKey, ex);
                             return false;
                         }
                     }
@@ -486,15 +530,14 @@ public class RpManager {
         int latestProtocol = 0;
         String latestVersion = "";
         for(String version : versions) {
-//protocolVersions.forEach((key, protocol) -> Logger.getGlobal().info(key+" "+protocol));
-//Logger.getGlobal().info("getLatestVersion: version "+ version+ " protcolVersions: "+protocolVersions.size());
-            int protocolVersion = protocolVersions.get(version);
+            Integer boxed = protocolVersions.get(version);
+            if(boxed == null) continue;
+            int protocolVersion = boxed;
             if(protocolVersion > latestProtocol) {
                 latestProtocol = protocolVersion;
                 latestVersion = version;
             }
         }
-//Logger.getGlobal().info("LatestVersion: "+latestVersion);
         return latestVersion;
     }
     
@@ -503,11 +546,27 @@ public class RpManager {
     }
 
     public static void savePlayerData(Player player) {
-        dbConnector.saveRpSettings(player, playerRpData.get(player.getUniqueId()));
+        RpPlayerData data = playerRpData.get(player.getUniqueId());
+        if(data != null) { // data that was never kept, such as defaults during a load, is not saved
+            dbConnector.saveRpSettings(player, data);
+        }
     }
     
     public static void loadPlayerData(UUID uuid) {
-        dbConnector.loadRpSettings(uuid,playerRpData);
+        if(!dbConnector.isConfigured()) {
+            playerRpData.putIfAbsent(uuid, new RpPlayerData()); // no database: the defaults, at once
+            return;
+        }
+        // The player is waiting for this load until it has ended, whatever it stored: the connector runs the
+        // callback even when the load failed. A newer load of the same player is not ended by this one.
+        Object load = new Object();
+        pendingLoads.put(uuid, load);
+        try {
+            dbConnector.loadRpSettings(uuid, playerRpData, () -> pendingLoads.remove(uuid, load));
+        } catch (RuntimeException ex) {
+            pendingLoads.remove(uuid, load);
+            throw ex;
+        }
     }
     
     public static void saveRpRegion(RpRegion region) {
@@ -516,10 +575,10 @@ public class RpManager {
             config.set("rpRegion", region.saveToMap());
             config.save(new File(regionFolder,region.getName()+".reg"));
         } catch (IOException ex) {
-            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save RP region '" + region.getName() + "' to " + regionFolder, ex);
         }
     }
-    
+
     private static void importResourceRegions() {
         for(File file: regionFolder.listFiles((File dir, String name) -> name.endsWith(".json"))) {
             Gson gson = new Gson();
@@ -548,27 +607,9 @@ public class RpManager {
                     }
                 }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 200, 20);
             } catch (IOException ex) {
-                Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to import RP region from resource file " + file.getName(), ex);
             }
         }
-    }
-
-    private static void addPacketListener() {
-        Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Adding RP packet listener");
-        ProtocolManager protocolManager = protocolManager = ProtocolLibrary.getProtocolManager();
-        protocolManager.addPacketListener(
-                new PacketAdapter(ArchitectPlugin.getPluginInstance(), ListenerPriority.NORMAL,
-                        PacketType.Play.Server.RESOURCE_PACK_SEND) {
-                    @Override
-                    public void onPacketSending(PacketEvent event) {
-                        // Item packets (id: 0x29)
-                        if (event.getPacketType() ==
-                                PacketType.Play.Server.RESOURCE_PACK_SEND) {
-                            Logger.getLogger(ArchitectPlugin.class.getName())
-                                    .log(Level.WARNING, "Sending RP to player " + event.getPlayer());
-                        }
-                    }
-                });
     }
 
     public static Map<String, RpRegion> getRegions() {

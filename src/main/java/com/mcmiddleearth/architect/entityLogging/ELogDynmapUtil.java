@@ -17,19 +17,20 @@
 package com.mcmiddleearth.architect.entityLogging;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger.Coordinates;
-import com.mcmiddleearth.util.DevUtil;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
-import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.Plugin;
 
 import org.dynmap.DynmapAPI;
 import org.dynmap.markers.AreaMarker;
 import org.dynmap.markers.MarkerSet;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -38,6 +39,7 @@ import org.dynmap.markers.MarkerSet;
 public class ELogDynmapUtil {
     
     private static boolean init = false;
+    private static boolean initAttempted = false;
     private static final boolean enabled = getDynmapConfig().getBoolean("enabled",false);
     
     private static DynmapAPI dynmapPlugin;
@@ -50,17 +52,31 @@ public class ELogDynmapUtil {
     private static double areaOpacity;
 
     private static void init() {
-        if(!enabled) {
+        if(!enabled || initAttempted) {
             return;
         }
-        Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
-        if(dynmap==null) {
-            Logger.getGlobal().info("Dynmap not found");
+        // One attempt per server start. Without this every showCounts()/clearMarkers()
+        // call re-enters init(), because `init` stays false when setup fails - re-running
+        // the lookup and re-logging the same failure for the life of the server.
+        initAttempted = true;
+        // isPluginEnabled(), not getPlugin()!=null. Dynmap has no 26.x build, so it is
+        // present on disk, gets loaded, fails to enable, and is left with a null internal
+        // core. Its class still implements DynmapAPI, so the cast below succeeds and the
+        // first marker call NPEs inside Dynmap.
+        if(!Bukkit.getServer().getPluginManager().isPluginEnabled("dynmap")) {
+            Log.info("Dynmap plugin not enabled; entity-log markers on the map are disabled.");
         }
         else {
+            Plugin dynmap = Bukkit.getServer().getPluginManager().getPlugin("dynmap");
             try{
                 dynmapPlugin = (DynmapAPI) dynmap;
-                markerSet = dynmapPlugin.getMarkerAPI().createMarkerSet("entities.markerset", "Entities", null, false);
+                // dynmap outlives an Architect reload, and so does this set with the old
+                // instance's markers (cleared below). createMarkerSet returns null for an id
+                // that is taken, so take the existing set over.
+                markerSet = dynmapPlugin.getMarkerAPI().getMarkerSet("entities.markerset");
+                if(markerSet == null) {
+                    markerSet = dynmapPlugin.getMarkerAPI().createMarkerSet("entities.markerset", "Entities", null, false);
+                }
                 markerSet.setHideByDefault(getDynmapConfig().getBoolean("hide",true));
                 //borderColor = getDynmapConfig().getColor("borderColor",Color.PURPLE).asRGB();
                 //areaColor = getDynmapConfig().getColor("areaColor",Color.PURPLE).asRGB();
@@ -70,8 +86,8 @@ public class ELogDynmapUtil {
                 ArchitectPlugin.getPluginInstance().saveConfig();
                 init = true;
                 clearMarkers();
-            } catch(Exception e) {
-                Logger.getLogger(ELogDynmapUtil.class.getName()).log(Level.WARNING, "Dynmap plugin not compatible",e);
+            } catch(Throwable e) {  // Throwable: an incompatible Dynmap surfaces as Error, not Exception
+                Log.warn("Dynmap plugin is not compatible with the entity-log marker API", e);
             }
         }
     }
@@ -100,41 +116,51 @@ public class ELogDynmapUtil {
         }
     }
     
-    public static void createMarker(Coordinates coord, Class[] entityTypes, Integer[] values, int maxValue, World world) {
+    /**
+     * Makes the layer show exactly these counts: each chunk's marker is drawn or updated, coloured
+     * against the largest count, and the markers of chunks no longer counted are deleted.
+     */
+    public static void showCounts(Map<Coordinates,Integer[]> counts) {
         if(!enabled) {
             return;
         }
         if(!init) {
             init();
         }
-        AreaMarker areaMarker=null;
         if(init) {
-            String newMarkerId = "e_"+coord.x+"_"+coord.z+".marker";
-            for (AreaMarker marker : markerSet.getAreaMarkers())
-            {
-                if (marker.getMarkerID().equals(newMarkerId)) {
-    DevUtil.log("Updating Dynmap Entity Log for: " + coord.x+" "+coord.z);
-                    marker.setCornerLocations(getXPoints(coord),getZPoints(coord));
-                    areaMarker = marker;
-                    break;
-
+            int maxValue = 0;
+            for(Integer[] values: counts.values()) {
+                maxValue = Math.max(maxValue, values[values.length-1]);
+            }
+            Set<String> shown = new HashSet<>();
+            for(Map.Entry<Coordinates,Integer[]> entry: counts.entrySet()) {
+                shown.add(drawMarker(entry.getKey(), entry.getValue(), maxValue));
+            }
+            for(AreaMarker marker: markerSet.getAreaMarkers()) {
+                if(!shown.contains(marker.getMarkerID())) {
+                    marker.deleteMarker();
                 }
             }
-            if(areaMarker == null) {
-//Logger.getGlobal().info("Create new Marker: "+coord.x+" "+coord.z);
-                areaMarker = markerSet.createAreaMarker(newMarkerId, coord.x+" "+coord.z, 
-                                                                   false, world.getName(), 
-                                                                   getXPoints(coord),
-                                                                   getZPoints(coord), false);
-                //markerSet.createMarker("t"+newMarkerId, "t"+newMarkerId, true, world.getName(), coord.x, 100, coord.z, markerSet.getDefaultMarkerIcon(), false);
-            }
-    DevUtil.log("Adding Dynmap Entity Log for: " + coord.x+" "+coord.z);
-            areaMarker.setFillStyle(areaOpacity, colorOf((1.0*values[values.length-1])/maxValue));
-            areaMarker.setLineStyle(borderWidth, borderOpacity, colorOf((1.0*values[values.length-1])/maxValue));
-            areaMarker.setDescription(getDescription(entityTypes,values));
         }
     }
-    
+
+    private static String drawMarker(Coordinates coord, Integer[] values, int maxValue) {
+        // Marker ids are unique per marker set, across worlds: the world must be in the id.
+        String markerId = "e_"+coord.world()+"_"+coord.x()+"_"+coord.z()+".marker";
+        AreaMarker areaMarker = markerSet.findAreaMarker(markerId);
+        if(areaMarker == null) {
+            areaMarker = markerSet.createAreaMarker(markerId, coord.x()+" "+coord.z(),
+                                                    false, coord.world(),
+                                                    getXPoints(coord),
+                                                    getZPoints(coord), false);
+        }
+        int color = colorOf((1.0*values[values.length-1])/maxValue);
+        areaMarker.setFillStyle(areaOpacity, color);
+        areaMarker.setLineStyle(borderWidth, borderOpacity, color);
+        areaMarker.setDescription(getDescription(EntityLogger.entityTypes,values));
+        return markerId;
+    }
+
     private static String getDescription(Class[] entityTypes, Integer[]values) {
         String result = "";
         for(int i=0; i< entityTypes.length;i++) {
@@ -154,17 +180,17 @@ public class ELogDynmapUtil {
     }
     
     private static double[] getXPoints(Coordinates coord) {
-        return   new double[]{coord.x+16,
-                              coord.x+16,
-                              coord.x,
-                              coord.x};
+        return   new double[]{coord.x()+16,
+                              coord.x()+16,
+                              coord.x(),
+                              coord.x()};
     }
 
     private static double[] getZPoints(Coordinates coord) {
-        return   new double[]{coord.z+16,
-                              coord.z,
-                              coord.z,
-                              coord.z+16};
+        return   new double[]{coord.z()+16,
+                              coord.z(),
+                              coord.z(),
+                              coord.z()+16};
     }
 
 

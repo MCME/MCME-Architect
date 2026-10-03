@@ -3,9 +3,9 @@ main: com.mcmiddleearth.architect.ArchitectPlugin
 version: ${project.version}
 author: Eriol_Eandur
 load: STARTUP
-softdepend: [ProtocolLib,Essentials,dynmap]
+softdepend: [ProtocolLib,Essentials,dynmap,ViaVersion,MCME-Connect]
 depend: [PluginUtils]
-api-version: 1.19
+api-version: 26.2
 
 commands:
    parrot:
@@ -17,6 +17,7 @@ commands:
    fbt:
       description: Toggle full brightness on/off.
       usage: /fbt
+      aliases: [fullbright, nightvision]
    vv:
       description: List content in the VoxelSniper plugin directory.
       usage: /vv stenicl|list|delete [subdir] [#pagennumber]
@@ -49,7 +50,7 @@ commands:
       usage: /nophy list | add | remove
    architect:
       description: Manage architect plugin
-      usage: /architect version | world | weather | reload | dev
+      usage: /architect version | world | weather | reload | dev | maplayers refresh
    chunkupdate:
       description: Updates chunks around a player
       usage: /chunkupdate <radius>
@@ -99,6 +100,11 @@ commands:
       description: disables the stick for block interaction
       usage: /switchstick
       aliases: [swst,ss]
+   biometune:
+      description: Tune biome colours and atmosphere live.
+      usage: >-
+        /biometune [edit] [biome] | info|set|unset|copy|undo|revert|save|status|preview|publish|spares|claim|label
+        ... (tab completes)
 permissions:
     architect.*:
         description: Allows to use all features of Architect plugin
@@ -124,7 +130,8 @@ permissions:
             architect.inventory.edit: true
             architect.get.other: true
             architect.weather: true
-            archtiect.resourcePackAdmin: true
+            architect.resourcePackAdmin: true
+            architect.maplayers: true
             architect.itemBlock: true
             architect.itemBlock.remove: true
             architect.itemBlock.region.limit: true
@@ -404,6 +411,34 @@ permissions:
     architect.checknbt:
         descriptions: Allows to check item NBTs
         default: op
+    architect.maplayers:
+        description: Allows to redraw Architect's web-map layers with /architect maplayers refresh
+        default: op
+    architect.gamemodeSwitcher:
+        description: Allows to switch to every game mode with the F3+F4 switcher, without op
+        default: false
+        children:
+            architect.gamemodeSwitcher.creative: true
+            architect.gamemodeSwitcher.survival: true
+            architect.gamemodeSwitcher.adventure: true
+            architect.gamemodeSwitcher.spectator: true
+    architect.gamemodeSwitcher.creative:
+        description: Allows to switch to creative mode with the F3+F4 switcher, without op
+        default: false
+    architect.gamemodeSwitcher.survival:
+        description: Allows to switch to survival mode with the F3+F4 switcher, without op
+        default: false
+    architect.gamemodeSwitcher.adventure:
+        description: Allows to switch to adventure mode with the F3+F4 switcher, without op
+        default: false
+    architect.gamemodeSwitcher.spectator:
+        description: >-
+            Allows to switch to spectator mode with the F3+F4 switcher (or F3+N), without op. Always give another
+            mode's permission with it: without one, a spectator cannot switch out of spectator mode.
+        default: false
+    architect.invisibleBlocks:
+        description: Allows placing barrier, light and structure void blocks, which are invisible
+        default: op
     architect.inventory.ignoreProtection:
       descriptions: Allows to edit inventory content without build permission
       default: op
@@ -412,4 +447,22 @@ permissions:
       default: op
     architect.viewdistance:
         descriptions: Allows to change client view distance
+        default: op
+    architect.biomeTune:
+        description: Use the biome editor and the tuning commands, and refresh your own view.
+        default: op
+    architect.biomeTune.admin:
+        description: Add spare biomes with /biometune spares add, and the biome tuning self-test and debug commands.
+        default: op
+    architect.biomeTune.save:
+        description: Write tuned biomes to the datapack.
+        default: op
+    architect.biomeTune.publish:
+        description: Refresh other players after tuning (publish, and preview for someone else).
+        default: op
+    architect.weselect:
+        description: Allows to use command /weselect
+        default: op
+    architect.switchstick:
+        description: Allows to use command /switchstick
         default: op

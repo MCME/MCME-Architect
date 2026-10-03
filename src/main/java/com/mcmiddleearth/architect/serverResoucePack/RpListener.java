@@ -17,12 +17,13 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.biomeTuning.BiomeTuning;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import com.mcmiddleearth.pluginutil.developer.DevUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
-import com.viaversion.viaversion.api.Via;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -33,8 +34,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.UUID;
 
 /**
  *
@@ -56,7 +56,10 @@ public class RpListener implements Listener {
                 PluginData.getMessageUtil().sendInfoMessage(player, "Resource pack loading failed. Did you enable server resource packs (edit server in multiplayer list)?");
                 break;
         }
-        RpManager.getPlayerData(player).setCurrentRpStatus(event.getStatus());
+        RpManager.getPlayerData(player)
+                 .setCurrentRpStatus(RpPlayerStatus.forPlayerResourcePackStatusEvent(event.getStatus()));
+        // Stored at once, so that the server the player switches to knows whether their client has the pack.
+        RpManager.savePlayerData(player);
     }
     
     @EventHandler
@@ -69,7 +72,6 @@ public class RpListener implements Listener {
         Player player = event.getPlayer();
         DevUtil devUtil = ArchitectPlugin.getPluginInstance().getDevUtil();
         devUtil.log(2,"PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
-//Logger.getGlobal().info("PlayerConnectEvent: "+player.getName()+" "+ event.getReason().name());
         int version = player.getProtocolVersion();
         String snapshot = "";
         if(version > 0x40000000) {
@@ -77,18 +79,47 @@ public class RpListener implements Listener {
             version = version - 0x40000000;
         }
         devUtil.log(2,"Bukkit Protocol Version: "+snapshot + version);
-        devUtil.log(2,"ViaVersion Protocol Version: "+Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+        devUtil.log(2,"Client Protocol Version: "+RpManager.getClientProtocolVersion(player));
         devUtil.log(2,"Sodium client: "+RpManager.isSodiumClient(player));
         devUtil.log(2,"Incomming plugin channels:");
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
+            UUID uuid = player.getUniqueId();
             new BukkitRunnable() {
-                int counter = 11;
+                int counter = 30;
                 @Override
                 public void run() {
-                    if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
+                    // The player as they are now: a biome refresh takes them off the server for a moment and
+                    // brings them back as a new Player, so the check holds their UUID and looks them up each time.
+                    Player player = Bukkit.getPlayer(uuid);
+                    if(player == null) {
+                        if(!BiomeTuning.isRefreshing(uuid)) {
+                            // The player left: there is no one to send a pack to, and a save now would put
+                            // defaults over the row the server they went to writes.
+                            cancel();
+                        } else if(counter > 0) {
+                            counter--; // a run during a refresh counts towards the limit, and sends and saves nothing
+                        }
+                        return;
+                    }
+                    // Settings an older load stored, after a quit and a quick login again, are not this login's:
+                    // the sends below are refused while its own load is pending, so the check waits for that.
+                    boolean loaded = RpManager.hasPlayerDataLoaded(player) && !RpManager.isLoadPending(player);
+                    if(loaded || counter==0) {
+                        // This run is the check's last, whatever happens in it. Cancelled first, the task is not
+                        // run again even when the send below throws: a repeat would send and save every half second.
+                        cancel();
+                        if(!loaded) {
+                            Log.warn("Timed out waiting for RP settings to load from the database for player "
+                                    + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
+                            RpManager.stopWaitingForLoad(player); // so the defaults can be made, as always
+                        }
                         RpPlayerData data = RpManager.getPlayerData(player);
-                        data.setProtocolVersion(Via.getAPI().getPlayerProtocolVersion(player.getUniqueId()).getVersion());
+                        // A player who has just joined the proxy has no server resource pack yet, whatever
+                        // status the database holds from their last visit.
+                        data.setCurrentRpStatus(RpPlayerStatus.NOT_SENT);
+                        RpManager.savePlayerData(player);
+                        data.setProtocolVersion(RpManager.getClientProtocolVersion(player));
                         if(RpManager.isSodiumClient(player)) {
                             data.setClient("sodium");
                         } else if(!"fabric".equalsIgnoreCase(player.getClientBrandName())) {
@@ -127,18 +158,18 @@ public class RpListener implements Listener {
                                         .send(player);
                             }
                         }
-                        cancel();
                     } else counter --;
-                    if(counter==0) {
-                        Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING,"Could not get player rp settings from the database");        
-                    }
                 }
-            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),30,20);
+            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),0,10);
         }
     }
     
     @EventHandler
     public void playerQuit(PlayerQuitEvent event) {
+        if (BiomeTuning.isRefreshing(event.getPlayer().getUniqueId())) {
+            return; // a biome refresh: the player comes straight back, and no pre-login event would reload this data
+        }
         RpManager.removeSodiumClient(event.getPlayer());
+        RpManager.removePlayerData(event.getPlayer());
     }
 }

@@ -16,10 +16,12 @@
  */
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
+import com.mcmiddleearth.architect.util.WorldEditGuard;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
@@ -29,8 +31,6 @@ import com.sk89q.worldedit.regions.Region;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.block.data.BlockData;
@@ -80,6 +80,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                 }
                 if(args[1].equalsIgnoreCase("redstone")
                         || args[1].equalsIgnoreCase("water")) {
+                    if (!WorldEditGuard.require(cs)) return true;
                     Region region= null;
                     //try {
                         //1.13 removed region = WorldEdit.getInstance().getSession(p.getName()).getRegion();
@@ -95,7 +96,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                             try {
                                 NoPhysicsData.save();
                             } catch (IOException ex) {
-                                Logger.getLogger(NoPhysicsCommand.class.getName()).log(Level.SEVERE, null, ex);
+                                Log.error("Failed to save no-physics exception area '" + args[2] + "' set by " + p.getName(), ex);
                                 PluginData.getMessageUtil().sendIOError(p);
                                 return true;
                             }
@@ -116,7 +117,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                         try {
                             NoPhysicsData.save();
                         } catch (IOException ex) {
-                            Logger.getLogger(NoPhysicsCommand.class.getName()).log(Level.SEVERE, null, ex);
+                            Log.error("Failed to save after deleting no-physics exception area '" + args[2] + "' by " + p.getName(), ex);
                             PluginData.getMessageUtil().sendIOError(p);
                             return true;
                         }
@@ -135,7 +136,14 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                                 "/nophy exception list", page);
                 } else {
                     PluginData.getMessageUtil().sendInvalidSubcommandError(p);
+                    sendHelpMessage(p,1);
                 }
+                return true;
+            }
+            if(!(args[0].equalsIgnoreCase("list") || args[0].equalsIgnoreCase("add")
+                    || args[0].equalsIgnoreCase("remove"))) {
+                PluginData.getMessageUtil().sendInvalidSubcommandError(p);
+                sendHelpMessage(p,1);
                 return true;
             }
             if(!args[1].equals(PluginData.getDefaultKey()) && (Bukkit.getWorld(args[1]) == null)) {
@@ -182,9 +190,6 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                         sendMaterialNotNpMessage(p);
                     }
                 }
-            } else {
-                PluginData.getMessageUtil().sendInvalidSubcommandError(p);
-                sendHelpMessage(p,1);
             }
         }
         return true;
@@ -277,9 +282,10 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
         help = new String[][]{{"/noPhy list ","<world>|-default",": Shows no physics list.","You may use '-default' instead of a worldname to show the default no physics lists of all worlds without specific settings."},
                                        {"/noPhy add ","<world>|-default <material>",": Adds a material"," to "+inverted+" physics list. Argument <material> must be a block state descriptor."},
                                        {"/noPhy remove ","<world>|-default <material>",": Removes a material"," from "+inverted+" physics list. Argument <material> must be a block state descriptor."},
-                                       {"/noPhy exception set ","<name>",": Creates ", "a new exception area."},
-                                       {"/noPhy exception delete "," <name>",": Deletes ", "an exception area."},
-                                       {"/noPhy exception list "," [#page]",": Displays a list", " of all exception areas."}};
+                                       {"/noPhy exception redstone ","<name>",": Creates ", "a redstone exception area from your cuboid WorldEdit selection."},
+                                       {"/noPhy exception water ","<name>",": Creates ", "a water exception area from your cuboid WorldEdit selection."},
+                                       {"/noPhy exception delete ","<name>",": Deletes ", "an exception area."},
+                                       {"/noPhy exception list ","[page]",": Displays a list", " of all exception areas."}};
         super.sendHelpMessage(player, page);
     }
 

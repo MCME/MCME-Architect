@@ -30,7 +30,6 @@ public class RPSwitchTask extends BukkitRunnable {
     @Override
     public void run() {
         for(Player player: Bukkit.getOnlinePlayers()) {
-//Logger.getGlobal().info("SwitchTask");
             RpManager.setRpRegion(player);
         }
     }

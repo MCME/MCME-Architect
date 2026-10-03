@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.command;
 
 import com.google.common.base.Joiner;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialItemInventoryData;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialHeadInventoryData;
@@ -33,7 +34,6 @@ import com.mcmiddleearth.pluginutil.NumericUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
@@ -63,6 +63,7 @@ public class InvCommand extends AbstractArchitectCommand {
                 String rpName = RpManager.matchRpName(args[1]);
                 if(rpName.equals("")) {
                     PluginData.getMessageUtil().sendErrorMessage(cs, "No RP found for: "+args[1]);
+                    return true;
                 }
                 String description = Joiner.on(" ").join(Arrays.copyOfRange(args,2, args.length));
                 InventoryUtil.uploadInventory(rpName, description, (exit, exitCode) -> {
@@ -88,6 +89,7 @@ public class InvCommand extends AbstractArchitectCommand {
                 String rpName = RpManager.matchRpName(args[1]);
                 if(rpName.equals("")) {
                     PluginData.getMessageUtil().sendErrorMessage(cs, "No RP found for: "+args[1]);
+                    return true;
                 }
                 InventoryUtil.downloadInventory(rpName, (exit, exitCode) -> {
                     SpecialBlockInventoryData.loadInventories();
@@ -204,9 +206,10 @@ public class InvCommand extends AbstractArchitectCommand {
             }
             CustomInventoryCategory category = SpecialSavedInventoryData
                                                  .getCategory(args[adaptIndex(1,rpIndex)], rpName);
-            if(!category.getOwner().equals(p.getUniqueId()) 
+            if(!category.getOwner().equals(p.getUniqueId())
                         && !PluginData.hasPermission(p, Permission.INV_OTHER)) {
                 PluginData.getMessageUtil().sendNoPermissionError(cs);
+                return true;
             }
             SpecialSavedInventoryData.deleteInventory(args[adaptIndex(1,rpIndex)], rpName);
             sendInventoryDeletedMessage(p);
@@ -273,7 +276,7 @@ public class InvCommand extends AbstractArchitectCommand {
             return true;*/
         }
         if(cs instanceof Player && cs.isOp() && args[0].equals("testItemBlock")) {
-            Logger.getGlobal().info("place item block test area");
+            Log.debug("testItemBlock dev command: placing item block " + args[1] + " in a test grid for " + cs.getName());
             SpecialBlock data = SpecialBlockInventoryData.getSpecialBlock(args[1]);
             Block start = ((Player) cs).getLocation().getBlock();
             start = start.getRelative(BlockFace.SOUTH);

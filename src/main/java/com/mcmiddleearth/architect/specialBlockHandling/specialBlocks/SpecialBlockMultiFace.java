@@ -12,6 +12,8 @@ import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.util.List;
+
 public class SpecialBlockMultiFace extends SpecialBlock {
 
     protected SpecialBlockMultiFace(String id, BlockData data) {
@@ -41,7 +43,7 @@ public class SpecialBlockMultiFace extends SpecialBlock {
     @Override
     protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,
                                        Player player, Location interactionPoint) {
-        BlockData data = blockPlace.getBlockData();
+        BlockData data = blockPlace.getBlockData().clone(); // a copy, so the block changes only when it is set
         boolean newBlock = false;
 //Logger.getGlobal().info("BlockData1: "+data);
         if(!data.getMaterial().equals(getBlockData().getMaterial())) {
@@ -69,7 +71,7 @@ public class SpecialBlockMultiFace extends SpecialBlock {
     }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
         if(player.isSneaking()) {
 //Logger.getGlobal().info("Sneak!");
@@ -85,8 +87,14 @@ public class SpecialBlockMultiFace extends SpecialBlock {
                     clicked.setBlockData(multiData,true);
                 }
             }
+            return List.of();
         } else {
-            super.placeBlock(blockPlace,blockFace,clicked,interactionPoint,player);
+            // A new block only where there is none of its kind, on a face it can join. Where there is one, it joins
+            // that one on the clicked face instead.
+            boolean newBlock = !blockPlace.getType().equals(getBlockData().getMaterial())
+                    && ((MultipleFacing) getBlockData()).getAllowedFaces().contains(blockFace.getOppositeFace());
+            List<Block> placed = super.placeBlock(blockPlace,blockFace,clicked,interactionPoint,player);
+            return newBlock ? placed : List.of();
         }
     }
 

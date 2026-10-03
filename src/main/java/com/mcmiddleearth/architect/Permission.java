@@ -99,10 +99,21 @@ public enum Permission {
     COPY_PASTE_UNLIMITED  ("architect.copypaste.unlimited"),
     WE_SELECT             ("architect.weselect"),
     SWITCH_STICK          ("architect.switchstick"),
+    GAMEMODE_SWITCHER_CREATIVE  ("architect.gamemodeSwitcher.creative"),
+    GAMEMODE_SWITCHER_SURVIVAL  ("architect.gamemodeSwitcher.survival"),
+    GAMEMODE_SWITCHER_ADVENTURE ("architect.gamemodeSwitcher.adventure"),
+    GAMEMODE_SWITCHER_SPECTATOR ("architect.gamemodeSwitcher.spectator"),
+    INVISIBLE_BLOCKS      ("architect.invisibleBlocks"),
 
     VIEW_DISTANCE         ("architect.viewdistance"),
     
-    CHECK_NBT  ("architect.checknbt");
+    CHECK_NBT  ("architect.checknbt"),
+    BIOME_TUNE            ("architect.biomeTune"),
+    BIOME_TUNE_ADMIN      ("architect.biomeTune.admin"),
+    BIOME_TUNE_SAVE       ("architect.biomeTune.save"),
+    BIOME_TUNE_PUBLISH    ("architect.biomeTune.publish"),
+
+    MAP_LAYERS            ("architect.maplayers");
 
     private final String permissionNode;
 

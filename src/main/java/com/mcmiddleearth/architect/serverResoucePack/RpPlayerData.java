@@ -16,7 +16,6 @@
  */
 package com.mcmiddleearth.architect.serverResoucePack;
 
-import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 
 import java.io.Serializable;
 
@@ -34,8 +33,12 @@ public class RpPlayerData implements Serializable {
     private int resolution = 16;
     private transient RpRegion currentRegion = null;
     private String currentRpUrl = null;
-    private transient PlayerResourcePackStatusEvent.Status currentRpStatus
-            = PlayerResourcePackStatusEvent.Status.DECLINED;
+    // The current status is also stored in the RP database (column status), so that the server a player
+    // switches to knows whether their client has the pack; RpListener sets it back to NOT_SENT when a
+    // player joins the proxy. The status before the last send is runtime state only. NOT_SENT is the
+    // honest initial value - DECLINED would claim the player refused a pack that was never offered.
+    private RpPlayerStatus currentRpStatus = RpPlayerStatus.NOT_SENT;
+    private transient RpPlayerStatus lastRpStatus = RpPlayerStatus.NOT_SENT;
 
     private transient int protocolVersion;
 
@@ -87,11 +90,23 @@ public class RpPlayerData implements Serializable {
         this.currentRpUrl = currentRpUrl;
     }
 
-    public PlayerResourcePackStatusEvent.Status getCurrentRpStatus() {
+    public RpPlayerStatus getCurrentRpStatus() {
         return currentRpStatus;
     }
 
-    public void setCurrentRpStatus(PlayerResourcePackStatusEvent.Status currentRpStatus) {
+    /**
+     * The status this player had immediately before the current pack was sent. Lets callers tell
+     * a freshly sent pack that was already loaded from one that is still downloading.
+     */
+    public RpPlayerStatus getLastRpStatus() {
+        return lastRpStatus;
+    }
+
+    public void setLastRpStatus(RpPlayerStatus lastRpStatus) {
+        this.lastRpStatus = lastRpStatus;
+    }
+
+    public void setCurrentRpStatus(RpPlayerStatus currentRpStatus) {
         this.currentRpStatus = currentRpStatus;
     }
 

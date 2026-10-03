@@ -33,7 +33,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.logging.Logger;
+import java.util.List;
 
 /**
  *
@@ -104,10 +104,10 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
     public boolean isEditOnSneaking() { return true; }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         if(!player.isSneaking()) {
-            super.placeBlock(blockPlace,blockFace,clicked,interactionPoint,player);
+            return super.placeBlock(blockPlace,blockFace,clicked,interactionPoint,player);
         } else {
             Location loc = player.getLocation().clone();
             loc.setPitch(-loc.getPitch());
@@ -121,6 +121,7 @@ public class SpecialBlockDiagonalConnect extends SpecialBlockOrientable {
             if(getBlockDatas()[0].getMaterial().equals(clicked.getType())) {
                 editDiagonal(blockPlace, clicked, player, this);
             }
+            return List.of();
         }
     }
 

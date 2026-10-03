@@ -49,7 +49,8 @@ public class DevUtil {
         if(level<msglevel) {
             return;
         }
-        
+        com.mcmiddleearth.architect.Log.debug(message);
+
         for(UUID uuid:developer) {
             Player player = Bukkit.getPlayer(uuid);
             if(player!=null) {

@@ -56,6 +56,7 @@ public enum Modules {
     NO_PHYSICS_CONNECT_GLASS("modules.environment.noPhysicsConnectGlass"),
     NO_PHYSICS_CONNECT_REDSTONE_WIRE("modules.environment.noPhysicsConnectRedstoneWire"),
     DRAIN_WATERLOGGED_DOUBLE_SLABS ("modules.environment.drainWaterloggedDoubleSlabs"),
+    GAMEMODE_SWITCHER      ("modules.environment.gamemodeSwitcher"),
     
     SIGN_EDITOR            ("modules.command.signEditor"),
     CUSTOM_HEAD_MANAGER    ("modules.command.customHeadManager"),

@@ -17,7 +17,6 @@
 package com.mcmiddleearth.architect.specialBlockHandling.customInventories;
 
 import java.util.Map;
-import java.util.logging.Logger;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;

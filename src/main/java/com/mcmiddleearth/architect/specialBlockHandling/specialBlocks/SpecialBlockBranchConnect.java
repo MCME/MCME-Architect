@@ -13,8 +13,6 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.logging.Logger;
-
 public class SpecialBlockBranchConnect extends SpecialBlockOrientableVariants implements IBranch {
 
     private final Material material;

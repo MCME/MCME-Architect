@@ -5,8 +5,6 @@
  */
 package com.mcmiddleearth.architect;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
 import com.mcmiddleearth.architect.WorldGeneration.WorldGenerationManager;
 import com.mcmiddleearth.architect.additionalCommands.*;
 import com.mcmiddleearth.architect.additionalListeners.*;
@@ -14,12 +12,19 @@ import com.mcmiddleearth.architect.armorStand.ArmorStandEditorCommand;
 import com.mcmiddleearth.architect.armorStand.ArmorStandListener;
 import com.mcmiddleearth.architect.bannerEditor.BannerEditorCommand;
 import com.mcmiddleearth.architect.bannerEditor.BannerListener;
+import com.mcmiddleearth.architect.biomeTuning.BiomeTuneCommand;
+import com.mcmiddleearth.architect.biomeTuning.BiomeTuning;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateCommand;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateListener;
 import com.mcmiddleearth.architect.copyPaste.*;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadListener;
 import com.mcmiddleearth.architect.customHeadManager.CustomHeadManagerData;
 import com.mcmiddleearth.architect.customHeadManager.HeadCommand;
+import com.mcmiddleearth.architect.entityLogging.EntityLogger;
+import com.mcmiddleearth.architect.gamemodeSwitcher.GamemodeSwitcher;
+import com.mcmiddleearth.architect.gamemodeSwitcher.InvisibleBlockListener;
+import com.mcmiddleearth.architect.mapLayers.ArchitectLayers;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsCommand;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsData;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
@@ -38,7 +43,6 @@ import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockListe
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
 import com.mcmiddleearth.architect.specialBlockHandling.listener.*;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceCommand;
-import com.mcmiddleearth.architect.viewDistance.ViewDistanceListener;
 import com.mcmiddleearth.architect.viewDistance.ViewDistanceManager;
 import com.mcmiddleearth.architect.voxelStencilEditor.SlCommand;
 import com.mcmiddleearth.architect.voxelStencilEditor.VvCommand;
@@ -75,6 +79,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         getConfig().options().copyDefaults(true);
         saveDefaultConfig();
         pluginInstance = this;
+        LogFileManager.install(this);
         //ProtocolLibUtil.init(this);
         //DoorListener.addOpenHalfDoorListener();
         PluginData.getMessageUtil().setPluginName("Architect");
@@ -110,15 +115,20 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
         pluginManager.registerEvents(new ItemBlockListener(), this);
         pluginManager.registerEvents(new InventoryProtectionListener(), this);
+        pluginManager.registerEvents(new InvisibleBlockListener(), this);
+        if(getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            com.mcmiddleearth.architect.viewDistance.ViewDistanceProtocol.register(this);
+            com.mcmiddleearth.architect.gamemodeSwitcher.GamemodeSwitcherProtocol.register(this);
+        } else {
+            Log.warn("ProtocolLib not found - /viewdistance chunk-retention features are disabled.");
+            Log.warn("ProtocolLib not found - the game mode switcher for builders is off.");
+        }
 //        pluginManager.registerEvents(new AfkListener(), this);
 
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "mcme-modpack-marker:hello", new RpPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "minecraft:brand", new TestPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "l:fmlhs", new TestPluginMessageListener());
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "wdl:init", new TestPluginMessageListener());
-
-        ProtocolManager manager = ProtocolLibrary.getProtocolManager();
-        manager.addPacketListener(new ViewDistanceListener(this));
 
         // all CommandExecutors should be subclasses of AbstractArchitectCommand
         // AbstractArchitectCommand methods are used by command /architect help
@@ -150,6 +160,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         setCommandExecutor("viewdistance", new ViewDistanceCommand());
         setCommandExecutor("weselect", new WeSelectCommand());
         setCommandExecutor("switchstick", new SwitchStickCommand());
+        setCommandExecutor("biometune", new BiomeTuneCommand());
         //setCommandExecutor("speed", new SpeedCommand());
 //        setCommandExecutor("newafkk", new NewAfkCommand());
 
@@ -157,16 +168,22 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
 
         rpSwitchTask = new RPSwitchTask().runTaskTimer(this, 500, 20);
         ItemBlockManager.startEntityGlowTask();
+        BiomeTuning.enable(this);
         
         
-        getLogger().info("MCME-Architect Enabled!");
+        Log.info("MCME-Architect Enabled!");
     }
     
     @Override
     public void onDisable() {
+        GamemodeSwitcher.stopRunning(); // before teardown that may fail, and it cannot fail itself
+        MapLayers.stop(); // first, so the budget saves its counts even if other teardown fails
+        BiomeTuning.disable();
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
+        EntityLogger.stop();
+        LogFileManager.uninstall(this);
     }
     
     public void setCommandExecutor(String command, AbstractArchitectCommand executor) {
@@ -175,6 +192,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     }
     
     public void loadData() {
+        MapLayers.stop(); // first: the old layers save while Architect's data is still loaded
         reloadConfig();
         PluginData.load();
         NoPhysicsData.loadExceptionAreas();
@@ -187,6 +205,8 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         RpManager.init();
         ItemBlockManager.init();
         ViewDistanceManager.loadViewDistances();
+        MapLayers.start(this, ArchitectLayers.fromConfig(getConfig(), getDataFolder()));
+        GamemodeSwitcher.updateRunning(); // the reload may have turned the switcher's module on or off in a world
     }
 
     public static ArchitectPlugin getPluginInstance() {

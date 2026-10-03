@@ -28,6 +28,8 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.List;
+
 /**
  *
  * @author Eriol_Eandur
@@ -69,7 +71,7 @@ public class SpecialBlockOpenHalfDoor extends SpecialBlockFourDirections {
     
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         final BlockState state = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
@@ -77,17 +79,21 @@ public class SpecialBlockOpenHalfDoor extends SpecialBlockFourDirections {
             @Override
             public void run() {
                 state.getBlock().setBlockData(state.getBlockData(),false);//.update(true, false);
-                DevUtil.log("Special block place: ID "+state.getType()+" - DV "+state.getRawData());
+                DevUtil.log("Special block place: ID "+state.getType()+" - data "+state.getBlockData().getAsString());
                 final BlockState tempState = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        DevUtil.log("Special block place x2: loc: "+tempState.getX()+" "+tempState.getY()+" "+tempState.getZ()+" - ID "+state.getType()+" - DV "+state.getRawData());
+                        DevUtil.log("Special block place x2: loc: "+tempState.getX()+" "+tempState.getY()+" "
+                                +tempState.getZ()+" - ID "+state.getType()
+                                +" - data "+state.getBlockData().getAsString());
                         tempState.getBlock().setBlockData(tempState.getBlockData(),false);//.update(true, false);
                         new BukkitRunnable() {
                             @Override
                             public void run() {
-                                DevUtil.log("open half door place loc: "+tempState.getX()+" "+tempState.getY()+" "+tempState.getZ()+" - ID "+state.getType()+" - DV "+state.getRawData());
+                                DevUtil.log("open half door place loc: "+tempState.getX()+" "+tempState.getY()+" "
+                                        +tempState.getZ()+" - ID "+state.getType()
+                                        +" - data "+state.getBlockData().getAsString());
                                 state.getWorld().unloadChunkRequest(tempState.getChunk().getX(),
                                                                     tempState.getChunk().getZ());
                             }
@@ -96,6 +102,7 @@ public class SpecialBlockOpenHalfDoor extends SpecialBlockFourDirections {
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 5);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+        return List.of(blockPlace);
     }
     
 }

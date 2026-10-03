@@ -21,7 +21,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.logging.Logger;
+import java.util.List;
 
 public class SpecialBlockBranch extends SpecialBlock {
 
@@ -151,7 +151,6 @@ public class SpecialBlockBranch extends SpecialBlock {
         if(slope != vertical) {
             block = block.getRelative(playerFace);
         }
-Logger.getGlobal().info("Interaction Point: "+interactionPoint);
         if(slope != horizontal || interactionPoint.getY()-interactionPoint.getBlockY()>0.5) {
             block = block.getRelative(BlockFace.UP);
         }
@@ -186,16 +185,13 @@ Logger.getGlobal().info("Interaction Point: "+interactionPoint);
     }*/
 
     @Override
-    public void handleBlockBreak(BlockState state) {
-        Logger.getGlobal().info("Handle block break!");
+    public void handleBlockBreak(BlockState state, Player player) {
         Block block = state.getBlock();
         if(!state.getBlockData().equals(block.getBlockData())) {
-Logger.getGlobal().info("Found Branch block break!");
             // find out if we break a block with vertical part
             if(isVertical(state.getBlockData())) {
                 Block connection = block.getRelative(BlockFace.DOWN, 1);
                 if (connection.getBlockData().matches(blockDataWall)) {
-Logger.getGlobal().info("Found vertical connection: " + connection.getLocation());
                     Wall wall = (Wall) connection.getBlockData();
                     wall.setUp(false);
                     if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
@@ -206,10 +202,8 @@ Logger.getGlobal().info("Found vertical connection: " + connection.getLocation()
                 //find out if we break a block with diagonal slope and main orientation (north, east, south or west)
                 BlockFace direction = getDiagonalSlopedMainOrientation(state.getBlockData());
                 if (direction != null) {
-Logger.getGlobal().info("Direction: " + direction.name());
                     Block connection = block.getRelative(direction.getOppositeFace(), 1).getRelative(BlockFace.DOWN, 1);
                     if (connection.getBlockData().matches(blockDataWall)) {
-Logger.getGlobal().info("Found connection: " + connection.getLocation());
                         Wall wall = (Wall) connection.getBlockData();
                         wall.setHeight(direction, Wall.Height.NONE);
                         if(PluginData.getOrCreateWorldConfig(connection.getWorld().getName()).isAllowedBlock(wall)) {
@@ -255,20 +249,17 @@ Logger.getGlobal().info("Found connection: " + connection.getLocation());
     public boolean isEditOnSneaking() { return width>=0; }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         //Block clicked = getClicked(blockPlace, interactionPoint, player);
         if(width >= 0 && player.isSneaking()) {
             if(clicked.getBlockData().matches(blockDataWall)) {
                 SpecialBlockDiagonalConnect.editDiagonal(blockPlace, clicked, player, this);
             }
+            return List.of();
         } else {
             Location playerLoc = player.getLocation();
             BlockFace playerFace = getPlayerFace(playerLoc);
-            Logger.getGlobal().info("blockFace: " + blockFace.name() + " playerFace: " + playerFace.name());
-            Logger.getGlobal().info("player loc: " + player.getLocation());
-            Logger.getGlobal().info("BlockPlace: " + blockPlace.getLocation());
-            Logger.getGlobal().info("Clicked: " + clicked.getLocation());
             int width = this.width;
             if (width < 0) {
                 if (isThin(clicked, playerFace) || player.isSneaking()) {
@@ -280,10 +271,11 @@ Logger.getGlobal().info("Found connection: " + connection.getLocation());
             int slope = getSlope(playerLoc);
 
             final BlockState state = getBlockState(blockPlace, playerFace, width, slope);
+            if(placesNothing(state, blockPlace)) {
+                return List.of(); // laid level facing a diagonal
+            }
             final int finalWidth = width;
             final int finalSlope = slope;
-            Logger.getGlobal().info("config Width: " + this.width + " ConfigSlope: " + this.slope);
-            Logger.getGlobal().info("Width: " + width + " Slope: " + slope);
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -300,7 +292,6 @@ Logger.getGlobal().info("Found connection: " + connection.getLocation());
             }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
 
             if (clicked.getBlockData().matches(blockDataWall)) {
-                Logger.getGlobal().info("Detected fork!");
                 Wall wall = (Wall) clicked.getBlockData();
                 Wall.Height height = (width == thin ? Wall.Height.TALL : Wall.Height.LOW);
                 if (slope == diagonal && isMainDirection(playerFace)) {
@@ -320,6 +311,7 @@ Logger.getGlobal().info("Found connection: " + connection.getLocation());
                     }
                 }
             }
+            return List.of(blockPlace);
         }
     }
 

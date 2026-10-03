@@ -7,10 +7,13 @@ package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.google.common.base.Joiner;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
+import com.mcmiddleearth.architect.LogFileManager;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
+import com.mcmiddleearth.architect.util.WorldEditGuard;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
@@ -74,6 +77,37 @@ public class RpCommand extends AbstractArchitectCommand {
             }
             return true;
         }
+        if(args.length>0 && args[0].equalsIgnoreCase("dropdb")
+                && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            if(args.length<2 || !args[1].equalsIgnoreCase("confirm")) {
+                PluginData.getMessageUtil().sendErrorMessage(cs,
+                        "Deletes RP database table. Confirm with: /rp dropdb confirm");
+                return true;
+            }
+            PluginData.getMessageUtil().sendInfoMessage(cs, "Deleting RP table...");
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    boolean success = false;
+                    try {
+                        success = RpManager.getDbConnector().dropTable();
+                    } catch (Exception ex) {
+                        Log.error("Failed to drop the RP database table", ex);
+                    }
+                    final boolean result = success;
+                    Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
+                        if (result) {
+                            PluginData.getMessageUtil().sendInfoMessage(cs, "RP database table successfully deleted.");
+                        } else {
+                            PluginData.getMessageUtil().sendErrorMessage(cs,
+                                    "Error while deleting RP database table. See "
+                                    + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+                        }
+                    });
+                }
+            }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
+            return true;
+        }
         if(args.length>0 && args[0].equalsIgnoreCase("calcsha")
                          && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) { 
             if(args.length<2) {
@@ -121,6 +155,9 @@ public class RpCommand extends AbstractArchitectCommand {
                           || args[0].equalsIgnoreCase("reset")
                           || args[0].equalsIgnoreCase("client")
                           || args[0].equalsIgnoreCase("variant"))) {
+            if(refusedWhileLoading(cs)) {
+                return true;
+            }
             RpPlayerData data = RpManager.getPlayerData((Player)cs);
             switch (args[0].toLowerCase()) {
                 case "auto" -> {
@@ -256,6 +293,7 @@ public class RpCommand extends AbstractArchitectCommand {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "A rp region with that name already exists.");
                         return true;
                     }
+                    if (!WorldEditGuard.require(cs)) return true;
                     Region weRegion = WEUtil.getSelection((Player)cs);
                     if(weRegion==null) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "Please make a WE selection first.");
@@ -299,6 +337,9 @@ public class RpCommand extends AbstractArchitectCommand {
             sendRPNotFoundMessage(cs);
             return true;
         }
+        if(refusedWhileLoading(cs)) {
+            return true;
+        }
         if(RpManager.getRpUrl(rpName, (Player)cs).equals("")) {
             PluginData.getMessageUtil().sendErrorMessage(cs, "Missing url configuration for rp: "
                                                             +ccStressed+rpName);
@@ -323,6 +364,17 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         new RPSwitcher(urlStr, (Player) cs).start();*/
         return true;
+    }
+
+    // While the player's settings are still being read from the RP database, a change would start from defaults
+    // that are not kept, and be lost, and a pack would not be sent: the player is asked to wait a moment.
+    private static boolean refusedWhileLoading(CommandSender cs) {
+        if(cs instanceof Player player && RpManager.isLoadPending(player)) {
+            PluginData.getMessageUtil().sendErrorMessage(cs,
+                    "Your resource pack settings are still loading, try again in a moment.");
+            return true;
+        }
+        return false;
     }
 
     private void sendRPNotFoundMessage(CommandSender cs) {
