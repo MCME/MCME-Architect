@@ -110,6 +110,7 @@ public class RpListener implements Listener {
                         if(!loaded) {
                             Log.warn("Timed out waiting for RP settings to load from the database for player "
                                     + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
+                            RpManager.stopWaitingForLoad(player); // so the defaults can be made, as always
                         }
                         RpPlayerData data = RpManager.getPlayerData(player);
                         // A player who has just joined the proxy has no server resource pack yet, whatever

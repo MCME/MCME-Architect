@@ -109,6 +109,8 @@ final class FakeMysql implements Driver {
         // uuid -> the latch that look-ups of its row wait for, as on a slow database; and the uuids that wait now
         private final Map<String, CountDownLatch> holds = new HashMap<>();
         private final Set<String> waiting = new HashSet<>();
+        // uuid -> the error that the next look-up of its row fails with
+        private final Map<String, SQLException> refusedLookUps = new HashMap<>();
 
         /** The columns of the table as declared, in their order; empty when there is no table. */
         synchronized List<String> columns() {
@@ -149,6 +151,11 @@ final class FakeMysql implements Driver {
         /** Look-ups of this uuid's row wait, as on a slow database, until the latch this returns is opened. */
         synchronized CountDownLatch hold(String uuid) {
             return holds.computeIfAbsent(uuid, key -> new CountDownLatch(1));
+        }
+
+        /** The next look-up of this uuid's row fails with this error, as from MySQL. */
+        synchronized void refuseLookUp(String uuid, SQLException failure) {
+            refusedLookUps.put(uuid, failure);
         }
 
         /** Whether a look-up of this uuid's row is waiting for its latch now. */
@@ -337,7 +344,12 @@ final class FakeMysql implements Driver {
             used.add(key);
             requireColumns(used);
             if (key.equalsIgnoreCase("uuid")) {
-                lookUps.merge(String.valueOf(parameters.get(1)), 1, Integer::sum);
+                String uuid = String.valueOf(parameters.get(1));
+                lookUps.merge(uuid, 1, Integer::sum);
+                SQLException refused = refusedLookUps.remove(uuid);
+                if (refused != null) {
+                    throw refused;
+                }
             }
             List<Map<String, Object>> result = new ArrayList<>();
             for (Map<String, Object> row : rows) {
