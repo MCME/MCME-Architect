@@ -14,6 +14,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -98,6 +99,7 @@ final class FakeMysql implements Driver {
         private final List<String> keys = new ArrayList<>();
         private final List<Map<String, Object>> rows = new ArrayList<>();
         private final List<String> statements = new ArrayList<>();
+        private final List<Map.Entry<String, Exception>> refusals = new ArrayList<>();
 
         /** The columns of the table as declared, in their order; empty when there is no table. */
         synchronized List<String> columns() {
@@ -135,6 +137,14 @@ final class FakeMysql implements Driver {
                     .count();
         }
 
+        /**
+         * The next CREATE, ALTER or DROP statement that starts with this text (in any case) fails with this
+         * exception: an SQLException, as MySQL would throw, or a RuntimeException, as no driver should.
+         */
+        synchronized void refuse(String start, Exception failure) {
+            refusals.add(Map.entry(start.toUpperCase(Locale.ROOT), failure));
+        }
+
         /** Puts a row in as it is, as another server would have; each column must exist. */
         synchronized void insertRow(Map<String, Object> values) throws SQLException {
             requireColumns(List.copyOf(values.keySet()));
@@ -148,6 +158,16 @@ final class FakeMysql implements Driver {
             String statement = squeeze(sql);
             statements.add(statement);
             String upper = statement.toUpperCase(Locale.ROOT);
+            for (Iterator<Map.Entry<String, Exception>> it = refusals.iterator(); it.hasNext(); ) {
+                Map.Entry<String, Exception> refusal = it.next();
+                if (upper.startsWith(refusal.getKey())) {
+                    it.remove();
+                    if (refusal.getValue() instanceof SQLException failure) {
+                        throw failure;
+                    }
+                    throw (RuntimeException) refusal.getValue();
+                }
+            }
             if (upper.startsWith("CREATE TABLE IF NOT EXISTS ")) {
                 int open = statement.indexOf('(');
                 requireTableName(statement.substring("CREATE TABLE IF NOT EXISTS ".length(), open));

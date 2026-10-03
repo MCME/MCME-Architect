@@ -59,6 +59,17 @@ public final class LogFileManager {
         }
     }
 
+    /**
+     * Where Architect's log can be read, for a message that sends someone there: its own files, or the server
+     * log when file logging is off or could not start.
+     */
+    public static String location(JavaPlugin plugin) {
+        if (handler == null) {
+            return "the server log";
+        }
+        return "Architect's log, " + new File(new File(plugin.getDataFolder(), "logs"), "architect_*.log").getPath();
+    }
+
     /** Flush pending records to disk (used by tests and before reads). */
     public static void flush() { if (handler != null) handler.flush(); }
 

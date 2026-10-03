@@ -16,7 +16,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -107,6 +111,54 @@ class RpDropDbCommandTest {
         assertEquals(rows, database.rows(), "the rows stay");
     }
 
+    // On 3.x the RP code logs to Architect's own files, so that is where a failure must send the admin.
+    @Test
+    void aDropThatFailsSendsTheAdminToArchitectsLog() {
+        PlayerMock admin = player(ADMIN);
+        database.refuse("DROP TABLE", new SQLException("refused by the test"));
+
+        admin.performCommand("rp dropdb confirm");
+
+        String failure = awaitMessage(admin, "Error while deleting RP database table.");
+        String log = "Architect's log, "
+                + new File(new File(plugin.getDataFolder(), "logs"), "architect_*.log").getPath();
+        assertTrue(failure.contains(log), "the admin is sent to " + log + ", but was told: " + failure);
+    }
+
+    @Test
+    void anErrorTheDropDidNotExpectGoesToArchitectsLog() {
+        PlayerMock admin = player(ADMIN);
+        IllegalStateException error = new IllegalStateException("refused by the test");
+        database.refuse("DROP TABLE", error);
+        List<LogRecord> severe = new CopyOnWriteArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getLevel() == Level.SEVERE) {
+                    severe.add(record);
+                }
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        plugin.getLogger().addHandler(handler);
+        try {
+            admin.performCommand("rp dropdb confirm");
+            awaitMessage(admin, "Error while deleting RP database table.");
+        } finally {
+            plugin.getLogger().removeHandler(handler);
+        }
+        assertTrue(severe.stream().anyMatch(record -> record.getThrown() == error),
+                "the error is in Architect's log, with its stack trace; its errors were "
+                        + severe.stream().map(LogRecord::getMessage).toList());
+    }
+
     // A player who is not op, with this permission, or with none.
     private static PlayerMock player(String permission) {
         PlayerMock player = server.addPlayer();
@@ -128,7 +180,7 @@ class RpDropDbCommandTest {
     }
 
     // The drop runs on another thread, and its answer comes on a later tick.
-    private static void awaitMessage(PlayerMock player, String text) {
+    private static String awaitMessage(PlayerMock player, String text) {
         List<String> told = new ArrayList<>();
         long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
         while (System.nanoTime() < end) {
@@ -136,7 +188,7 @@ class RpDropDbCommandTest {
             for (String message : messages(player)) {
                 told.add(message);
                 if (message.contains(text)) {
-                    return;
+                    return message;
                 }
             }
             try {
@@ -146,7 +198,7 @@ class RpDropDbCommandTest {
                 break;
             }
         }
-        fail("the player was not told '" + text + "', only " + told);
+        return fail("the player was not told '" + text + "', only " + told);
     }
 
     // Architect's connector makes its table on another thread, holding its own lock from the CREATE TABLE to the
