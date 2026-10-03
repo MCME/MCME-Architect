@@ -1,18 +1,24 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.biomeTuning.BiomeTuning;
+import com.mcmiddleearth.architect.biomeTuning.BiomeTuningOnAFakeServer;
+import com.mcmiddleearth.architect.biomeTuning.RefreshCoordinator;
 import com.mcmiddleearth.architect.testsupport.TestConfig;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.world.NullWorld;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockbukkit.mockbukkit.MockBukkit;
@@ -20,6 +26,7 @@ import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -353,6 +360,54 @@ class RpStatusStorageTest {
                 () -> assertEquals(row, shared.row(id), "the row the other server wrote"));
     }
 
+    // A biome refresh, such as a publish, which refreshes every player, is a quit and a rejoin as a new Player. When
+    // it comes while the join check still waits for the player's row, the check waits through it, and then carries
+    // on with the Player who came back.
+    @Test
+    void theJoinCheckCarriesOnThroughABiomeRefresh(@TempDir Path datapacks) throws Exception {
+        BiomeTuningOnAFakeServer.enable(plugin, datapacks);
+        Client client = new Client(UUID.randomUUID());
+        String id = client.getUniqueId().toString();
+        shared.insertRow(Map.of("uuid", id, "auto", true, "variant", "light", "resolution", 16, "client", "vanilla",
+                "currentURL", PACK_URL, "status", "SUCCESSFULLY_LOADED"));
+        CountDownLatch slow = shared.hold(id);
+        try {
+            server.addPlayer(client);
+            FakeMysql.await(() -> shared.waiting(id), "the player's look-up to start");
+            server.getPluginManager().callEvent(new PlayerConnectEvent(client,
+                    PlayerConnectEvent.ConnectReason.JOIN_PROXY));
+            server.getScheduler().performOneTick(); // the first join check, while the row is still being read
+
+            // the refresh: the player leaves the server, for as long as two join checks take
+            assertEquals(RefreshCoordinator.Outcome.STARTED, BiomeTuning.refresher().refresh(client, false, player -> {
+                ((PlayerMock) player).disconnect();
+                return null;
+            }));
+            slow.countDown();
+            FakeMysql.await(() -> shared.lookUps(id) > 0, "the look-up to end");
+            synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
+                // the row is read
+            }
+            server.getScheduler().performTicks(20);
+            assertEquals(0, shared.writes(id), "the saves while the player was away");
+
+            // and comes back as a new Player, as after a reconfiguration
+            Client back = new Client(client.getName(), client.getUniqueId());
+            server.getPlayerList().addPlayer(back);
+            server.getPluginManager().callEvent(new PlayerJoinEvent(back, Component.text("back")));
+            server.getScheduler().performTicks(10); // the next join check
+
+            assertEquals(List.of(), client.packs, "the packs sent to the Player who left");
+            assertEquals(List.of(PACK_URL), back.packs, "the packs sent to the Player who came back");
+            FakeMysql.await(() -> shared.writes(id) >= 2, "the join's two saves, of the reset and of the pack sent");
+            assertEquals(Map.of("uuid", id, "auto", true, "variant", "light", "resolution", 16, "client", "vanilla",
+                    "currenturl", PACK_URL, "status", "SENT"), shared.row(id), "the player's row");
+        } finally {
+            slow.countDown();
+            BiomeTuning.disable();
+        }
+    }
+
     // A row as 2.10.9 writes it, with this status, read by a connector to a database of its own.
     private static RpPlayerData read(String status) throws SQLException {
         String name = "read-" + (++reads);
@@ -450,7 +505,11 @@ class RpStatusStorageTest {
         private final List<String> packs = new CopyOnWriteArrayList<>();
 
         Client(UUID id) {
-            super(RpStatusStorageTest.server, "Client" + (++clients), id);
+            this("Client" + (++clients), id);
+        }
+
+        Client(String name, UUID id) {
+            super(RpStatusStorageTest.server, name, id);
         }
 
         @Override

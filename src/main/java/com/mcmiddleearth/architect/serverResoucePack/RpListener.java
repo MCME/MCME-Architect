@@ -34,6 +34,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.UUID;
+
 /**
  *
  * @author Eriol_Eandur
@@ -82,14 +84,22 @@ public class RpListener implements Listener {
         devUtil.log(2,"Incomming plugin channels:");
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
+            UUID uuid = player.getUniqueId();
             new BukkitRunnable() {
                 int counter = 30;
                 @Override
                 public void run() {
-                    if(!player.isOnline()) {
-                        // The player left before this check went on: there is no one to send a pack to,
-                        // and a save now would put defaults over the row the server they went to writes.
-                        cancel();
+                    // The player as they are now: a biome refresh takes them off the server for a moment and
+                    // brings them back as a new Player, so the check holds their UUID and looks them up each time.
+                    Player player = Bukkit.getPlayer(uuid);
+                    if(player == null) {
+                        if(!BiomeTuning.isRefreshing(uuid)) {
+                            // The player left: there is no one to send a pack to, and a save now would put
+                            // defaults over the row the server they went to writes.
+                            cancel();
+                        } else if(counter > 0) {
+                            counter--; // a run during a refresh counts towards the limit, and sends and saves nothing
+                        }
                         return;
                     }
                     if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
