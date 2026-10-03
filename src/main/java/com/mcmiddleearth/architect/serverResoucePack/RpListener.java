@@ -34,6 +34,8 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.UUID;
+
 /**
  *
  * @author Eriol_Eandur
@@ -56,6 +58,8 @@ public class RpListener implements Listener {
         }
         RpManager.getPlayerData(player)
                  .setCurrentRpStatus(RpPlayerStatus.forPlayerResourcePackStatusEvent(event.getStatus()));
+        // Stored at once, so that the server the player switches to knows whether their client has the pack.
+        RpManager.savePlayerData(player);
     }
     
     @EventHandler
@@ -80,12 +84,38 @@ public class RpListener implements Listener {
         devUtil.log(2,"Incomming plugin channels:");
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
+            UUID uuid = player.getUniqueId();
             new BukkitRunnable() {
-                int counter = 11;
+                int counter = 30;
                 @Override
                 public void run() {
-                    if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
+                    // The player as they are now: a biome refresh takes them off the server for a moment and
+                    // brings them back as a new Player, so the check holds their UUID and looks them up each time.
+                    Player player = Bukkit.getPlayer(uuid);
+                    if(player == null) {
+                        if(!BiomeTuning.isRefreshing(uuid)) {
+                            // The player left: there is no one to send a pack to, and a save now would put
+                            // defaults over the row the server they went to writes.
+                            cancel();
+                        } else if(counter > 0) {
+                            counter--; // a run during a refresh counts towards the limit, and sends and saves nothing
+                        }
+                        return;
+                    }
+                    boolean loaded = RpManager.hasPlayerDataLoaded(player);
+                    if(loaded || counter==0) {
+                        // This run is the check's last, whatever happens in it. Cancelled first, the task is not
+                        // run again even when the send below throws: a repeat would send and save every half second.
+                        cancel();
+                        if(!loaded) {
+                            Log.warn("Timed out waiting for RP settings to load from the database for player "
+                                    + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
+                        }
                         RpPlayerData data = RpManager.getPlayerData(player);
+                        // A player who has just joined the proxy has no server resource pack yet, whatever
+                        // status the database holds from their last visit.
+                        data.setCurrentRpStatus(RpPlayerStatus.NOT_SENT);
+                        RpManager.savePlayerData(player);
                         data.setProtocolVersion(RpManager.getClientProtocolVersion(player));
                         if(RpManager.isSodiumClient(player)) {
                             data.setClient("sodium");
@@ -125,13 +155,9 @@ public class RpListener implements Listener {
                                         .send(player);
                             }
                         }
-                        cancel();
                     } else counter --;
-                    if(counter==0) {
-                        Log.warn("Timed out waiting for RP settings to load from the database for player " + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
-                    }
                 }
-            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),30,20);
+            }.runTaskTimer(ArchitectPlugin.getPluginInstance(),0,10);
         }
     }
     

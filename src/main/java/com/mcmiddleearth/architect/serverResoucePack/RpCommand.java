@@ -7,6 +7,8 @@ package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.google.common.base.Joiner;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
+import com.mcmiddleearth.architect.LogFileManager;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -73,6 +75,37 @@ public class RpCommand extends AbstractArchitectCommand {
             } else {
                 PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <rpVersion> <requiredMcVersion>");
             }
+            return true;
+        }
+        if(args.length>0 && args[0].equalsIgnoreCase("dropdb")
+                && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            if(args.length<2 || !args[1].equalsIgnoreCase("confirm")) {
+                PluginData.getMessageUtil().sendErrorMessage(cs,
+                        "Deletes RP database table. Confirm with: /rp dropdb confirm");
+                return true;
+            }
+            PluginData.getMessageUtil().sendInfoMessage(cs, "Deleting RP table...");
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    boolean success = false;
+                    try {
+                        success = RpManager.getDbConnector().dropTable();
+                    } catch (Exception ex) {
+                        Log.error("Failed to drop the RP database table", ex);
+                    }
+                    final boolean result = success;
+                    Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
+                        if (result) {
+                            PluginData.getMessageUtil().sendInfoMessage(cs, "RP database table successfully deleted.");
+                        } else {
+                            PluginData.getMessageUtil().sendErrorMessage(cs,
+                                    "Error while deleting RP database table. See "
+                                    + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+                        }
+                    });
+                }
+            }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
             return true;
         }
         if(args.length>0 && args[0].equalsIgnoreCase("calcsha")

@@ -32,6 +32,10 @@ import org.bukkit.event.player.PlayerResourcePackStatusEvent;
  * relies on exactly that distinction: its intro rooms pair {@code SENT} with
  * {@link RpPlayerData#getLastRpStatus()} to tell "already loaded, just re-sent" from
  * "still loading".
+ * <p>
+ * The names are stored in the {@code status} column of the {@code architect_rp} table, which all
+ * servers share, and are read back with {@link #valueOf(String)}: renaming a constant breaks the rows
+ * that hold the old name.
  *
  * @author Eriol_Eandur
  */
