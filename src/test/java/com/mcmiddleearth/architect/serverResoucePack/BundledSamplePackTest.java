@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // The bundled config.yml has a sample pack, whose version must be named the way /rp server writes one: as a quoted
 // string. Unquoted, YAML reads 1_18_1 as the number 1181, which protocolVersions.yml does not know, and the search
-// for a player's pack gives up at a version it does not know. The bundled config is the defaults of every server's
-// config, so a server without a pack of its own at the same place finds the sample there.
+// for a player's pack gives up at a version it does not know. Only a config.yml that saveDefaultConfig() wrote, on a
+// fresh install, holds the sample: Architect reloads its config without copying the bundled defaults in.
 class BundledSamplePackTest {
 
     @Test
