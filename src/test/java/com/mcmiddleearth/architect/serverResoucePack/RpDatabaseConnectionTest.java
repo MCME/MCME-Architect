@@ -5,6 +5,8 @@ import org.bukkit.configuration.MemoryConfiguration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockbukkit.mockbukkit.MockBukkit;
 
 import java.sql.SQLException;
@@ -40,6 +42,23 @@ class RpDatabaseConnectionTest {
     @Test
     void theBundledPlaceholdersMeanNoDatabase() {
         assertEquals(List.of(), urlsWhileLoading, "the connections Architect asked for with the bundled config");
+    }
+
+    // Either placeholder alone is enough: a server that filled in only one of them has no database to reach either.
+    @ParameterizedTest(name = "user {0}, database {1}")
+    @CsvSource({"xxx, architect", "architect, xxx"})
+    void aPlaceholderUserOrDatabaseAloneMeansNoDatabase(String user, String dbName) {
+        MemoryConfiguration config = new MemoryConfiguration();
+        config.set("user", user);
+        config.set("password", "secret");
+        config.set("dbName", dbName);
+        config.set("ip", "db.example");
+        config.set("port", 3306);
+        int before = mysql.urls().size();
+
+        new RpDatabaseConnector(config).disconnect();
+
+        assertEquals(List.of(), mysql.urls().subList(before, mysql.urls().size()), "the connections asked for");
     }
 
     @Test
