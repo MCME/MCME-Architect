@@ -233,6 +233,11 @@ final class FakeMysql implements Driver {
             int open = statement.indexOf('(');
             requireTableName(statement.substring("INSERT INTO ".length(), open));
             List<String> names = names(statement.substring(open + 1, statement.indexOf(')')));
+            String values = statement.substring(statement.indexOf('(', statement.indexOf(" VALUES ")) + 1,
+                    statement.lastIndexOf(')'));
+            if (names(values).size() != names.size()) {
+                throw new SQLException("Column count doesn't match value count at row 1", "21S01", 1136);
+            }
             requireColumns(names);
             Map<String, Object> row = emptyRow();
             for (int index = 0; index < names.size(); index++) {
@@ -399,24 +404,46 @@ final class FakeMysql implements Driver {
         });
     }
 
+    // Binds parameters as Connector/J does: an index must be one of the statement's ? marks, a null is bound as SQL
+    // NULL, and each mark must be bound when the statement runs.
     private static PreparedStatement preparedStatement(Database database, String sql) {
-        Map<Integer, Object> parameters = new ConcurrentHashMap<>();
+        int marks = (int) sql.chars().filter(c -> c == '?').count();
+        Map<Integer, Object> parameters = Collections.synchronizedMap(new HashMap<>());
         return proxy(PreparedStatement.class, (method, args) -> switch (method) {
             case "setString", "setBoolean", "setInt" -> {
-                if (args[1] == null) {
-                    parameters.remove((Integer) args[0]);
-                } else {
-                    parameters.put((Integer) args[0], args[1]);
+                int index = (Integer) args[0];
+                if (index < 1 || index > marks) {
+                    throw new SQLException("Parameter index out of range (" + index
+                            + " > number of parameters, which is " + marks + ").", "S1009");
                 }
+                parameters.put(index, args[1]);
                 yield null;
             }
-            case "executeQuery" -> resultSet(database.select(sql, parameters));
-            case "executeUpdate" -> sql.trim().toUpperCase(Locale.ROOT).startsWith("INSERT")
-                    ? database.insert(sql, parameters)
-                    : database.update(sql, parameters);
-            case "setQueryTimeout", "clearParameters", "close" -> null;
+            case "executeQuery" -> {
+                requireBound(parameters, marks);
+                yield resultSet(database.select(sql, parameters));
+            }
+            case "executeUpdate" -> {
+                requireBound(parameters, marks);
+                yield sql.trim().toUpperCase(Locale.ROOT).startsWith("INSERT")
+                        ? database.insert(sql, parameters)
+                        : database.update(sql, parameters);
+            }
+            case "clearParameters" -> {
+                parameters.clear();
+                yield null;
+            }
+            case "setQueryTimeout", "close" -> null;
             default -> throw unsupported("PreparedStatement", method);
         });
+    }
+
+    private static void requireBound(Map<Integer, Object> parameters, int marks) throws SQLException {
+        for (int index = 1; index <= marks; index++) {
+            if (!parameters.containsKey(index)) {
+                throw new SQLException("No value specified for parameter " + index, "07001");
+            }
+        }
     }
 
     private static ResultSet resultSet(List<Map<String, Object>> rows) {
