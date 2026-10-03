@@ -26,7 +26,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.sql.*;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -157,29 +156,30 @@ public class RpDatabaseConnector {
     }
 
     // jdbc:mysql://ip:port/dbName with the timeouts. Options that dbName already carries are kept, and a timeout
-    // it sets itself is the operator's: ours is added only for a timeout it leaves out.
+    // it sets itself is the operator's: ours is added only for a timeout it leaves out. Connector/J reads option
+    // names as they are written, so a name in another case, such as connecttimeout, sets nothing, and ours is added.
     private String url() {
         Set<String> given = optionNames(dbName);
         StringBuilder url = new StringBuilder("jdbc:mysql://" + dbIp + ":" + port + "/" + dbName);
         char separator = dbName.contains("?") ? '&' : '?';
-        if(!given.contains("connecttimeout")) {
+        if(!given.contains("connectTimeout")) {
             url.append(separator).append("connectTimeout=").append(CONNECT_TIMEOUT_MILLIS);
             separator = '&';
         }
-        if(!given.contains("sockettimeout")) {
+        if(!given.contains("socketTimeout")) {
             url.append(separator).append("socketTimeout=").append(SOCKET_TIMEOUT_MILLIS);
         }
         return url.toString();
     }
 
-    // The names, in lower case, of the options in "name?a=1&b=2".
+    // The names of the options in "name?a=1&b=2", as they are written.
     private static Set<String> optionNames(String dbName) {
         Set<String> names = new HashSet<>();
         int query = dbName.indexOf('?');
         if(query >= 0) {
             for(String option : dbName.substring(query + 1).split("&")) {
                 int equals = option.indexOf('=');
-                names.add((equals < 0 ? option : option.substring(0, equals)).trim().toLowerCase(Locale.ROOT));
+                names.add(equals < 0 ? option : option.substring(0, equals));
             }
         }
         return names;

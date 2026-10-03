@@ -86,6 +86,15 @@ class RpDatabaseConnectionTest {
                 connect("localhost", 3306, "own-socket?socketTimeout=120000&useSSL=false"));
     }
 
+    // Connector/J reads option names as they are written, so connecttimeout is not its connectTimeout: the driver
+    // ignores it, and ours is still needed.
+    @Test
+    void aTimeoutNamedInAnotherCaseIsNotTheOperators() {
+        assertEquals("jdbc:mysql://localhost:3306/other-case?connecttimeout=3000"
+                        + "&connectTimeout=10000&socketTimeout=60000",
+                connect("localhost", 3306, "other-case?connecttimeout=3000"));
+    }
+
     // The URL a connector with these settings asks for. It connects as before: it makes its table.
     private static String connect(String ip, int port, String dbName) {
         MemoryConfiguration config = new MemoryConfiguration();
