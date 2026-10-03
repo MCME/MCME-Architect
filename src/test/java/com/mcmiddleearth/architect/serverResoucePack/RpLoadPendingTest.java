@@ -316,6 +316,47 @@ class RpLoadPendingTest {
         assertFalse(RpManager.isLoadPending(client), "the player who left waits for their settings, after the load");
     }
 
+    // A player quits while their load is slow and logs in again at once. The first load ends after the quit and stores
+    // the player's settings, while the second is still on its way. The join check waits for the second load instead of
+    // taking the stored settings for it, as the sends it would make now are refused, and then sends the pack of the
+    // player's last visit; there is no RP region to send another.
+    @Test
+    void aQuickRejoinWaitsForItsOwnLoad() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        String id = uuid.toString();
+        Map<String, Object> stored = row(id, "light");
+        stored.put("currentURL", LIGHT);
+        shared.insertRow(stored);
+        Client first = new Client(uuid);
+        CountDownLatch slow = shared.hold(id);
+        server.addPlayer(first);
+        FakeMysql.await(() -> shared.waiting(id), "the first look-up to start");
+        first.disconnect();
+        slow.countDown();
+        FakeMysql.await(() -> shared.lookUps(id) > 0, "the first look-up to end");
+        synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
+            // the first load has stored the settings of the player who left
+        }
+
+        Client second = new Client(first.getName(), uuid);
+        synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
+            // the second load waits for the connector, which the test holds, as on a slow database
+            server.addPlayer(second);
+            assertTrue(RpManager.isLoadPending(second), "the second login waits for its load");
+            assertTrue(RpManager.hasPlayerDataLoaded(second), "the first load's settings are stored");
+            server.getPluginManager().callEvent(new PlayerConnectEvent(second,
+                    PlayerConnectEvent.ConnectReason.JOIN_PROXY));
+            server.getScheduler().performTicks(2); // the join check's first run
+        }
+        FakeMysql.await(() -> shared.lookUps(id) > 1, "the second look-up to end");
+        synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
+            // the second load has ended
+        }
+        server.getScheduler().performTicks(20); // the join check's next run
+
+        assertEquals(List.of(LIGHT), second.packs, "the packs sent to the player who came back");
+    }
+
     private static Map<String, Object> row(String id, String variant) {
         Map<String, Object> row = new HashMap<>(Map.of("uuid", id, "auto", true, "variant", variant,
                 "resolution", 16, "client", "vanilla", "status", "SUCCESSFULLY_LOADED"));
@@ -353,7 +394,11 @@ class RpLoadPendingTest {
         private final List<String> packs = new CopyOnWriteArrayList<>();
 
         Client(UUID id) {
-            super(RpLoadPendingTest.server, "Pending" + (++clients), id);
+            this("Pending" + (++clients), id);
+        }
+
+        Client(String name, UUID id) {
+            super(RpLoadPendingTest.server, name, id);
         }
 
         @Override
