@@ -155,6 +155,9 @@ public class RpCommand extends AbstractArchitectCommand {
                           || args[0].equalsIgnoreCase("reset")
                           || args[0].equalsIgnoreCase("client")
                           || args[0].equalsIgnoreCase("variant"))) {
+            if(refusedWhileLoading(cs)) {
+                return true;
+            }
             RpPlayerData data = RpManager.getPlayerData((Player)cs);
             switch (args[0].toLowerCase()) {
                 case "auto" -> {
@@ -334,6 +337,9 @@ public class RpCommand extends AbstractArchitectCommand {
             sendRPNotFoundMessage(cs);
             return true;
         }
+        if(refusedWhileLoading(cs)) {
+            return true;
+        }
         if(RpManager.getRpUrl(rpName, (Player)cs).equals("")) {
             PluginData.getMessageUtil().sendErrorMessage(cs, "Missing url configuration for rp: "
                                                             +ccStressed+rpName);
@@ -358,6 +364,17 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         new RPSwitcher(urlStr, (Player) cs).start();*/
         return true;
+    }
+
+    // While the player's settings are still being read from the RP database, a change would start from defaults
+    // that are not kept, and be lost, and a pack would not be sent: the player is asked to wait a moment.
+    private static boolean refusedWhileLoading(CommandSender cs) {
+        if(cs instanceof Player player && RpManager.isLoadPending(player)) {
+            PluginData.getMessageUtil().sendErrorMessage(cs,
+                    "Your resource pack settings are still loading, try again in a moment.");
+            return true;
+        }
+        return false;
     }
 
     private void sendRPNotFoundMessage(CommandSender cs) {

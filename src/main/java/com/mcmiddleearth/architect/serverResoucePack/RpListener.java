@@ -102,7 +102,9 @@ public class RpListener implements Listener {
                         }
                         return;
                     }
-                    boolean loaded = RpManager.hasPlayerDataLoaded(player);
+                    // Settings an older load stored, after a quit and a quick login again, are not this login's:
+                    // the sends below are refused while its own load is pending, so the check waits for that.
+                    boolean loaded = RpManager.hasPlayerDataLoaded(player) && !RpManager.isLoadPending(player);
                     if(loaded || counter==0) {
                         // This run is the check's last, whatever happens in it. Cancelled first, the task is not
                         // run again even when the send below throws: a repeat would send and save every half second.
@@ -110,6 +112,7 @@ public class RpListener implements Listener {
                         if(!loaded) {
                             Log.warn("Timed out waiting for RP settings to load from the database for player "
                                     + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
+                            RpManager.stopWaitingForLoad(player); // so the defaults can be made, as always
                         }
                         RpPlayerData data = RpManager.getPlayerData(player);
                         // A player who has just joined the proxy has no server resource pack yet, whatever

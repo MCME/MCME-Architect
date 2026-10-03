@@ -235,11 +235,25 @@ public class RpDatabaseConnector {
         executeAsync(player -> checkTablesSync(),null);
     }
 
+    /** Whether an RP database is configured. Without one nothing is read or saved, and players have defaults. */
+    public boolean isConfigured() {
+        return dbConfigured;
+    }
+
     public void loadRpSettings(UUID uuid, Map<UUID,RpPlayerData> dataMap) {
+        loadRpSettings(uuid, dataMap, () -> {});
+    }
+
+    // As above; ended runs once the load has ended, whatever it stored, and also when it failed.
+    public void loadRpSettings(UUID uuid, Map<UUID,RpPlayerData> dataMap, Runnable ended) {
         new BukkitRunnable() {
             @Override
             public void run() {
-                loadRpSettingsSync(uuid, dataMap);
+                try {
+                    loadRpSettingsSync(uuid, dataMap);
+                } finally {
+                    ended.run();
+                }
             }
         }.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
     }

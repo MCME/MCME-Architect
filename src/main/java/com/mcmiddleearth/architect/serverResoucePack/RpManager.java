@@ -64,6 +64,11 @@ public class RpManager {
 
     private static final Map<UUID,RpPlayerData> playerRpData = new java.util.concurrent.ConcurrentHashMap<>();
 
+    // The players whose settings are being read from the RP database, each with the load that reads them.
+    // Nothing makes data for them meanwhile: defaults made now would choose their pack, and be saved over
+    // their row.
+    private static final Map<UUID, Object> pendingLoads = new java.util.concurrent.ConcurrentHashMap<>();
+
     private static final Map<UUID, String> sodiumClients = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final RpDatabaseConnector dbConnector = new RpDatabaseConnector(ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(rpDatabaseConfig));
@@ -159,7 +164,15 @@ public class RpManager {
         if(data == null) {
             data = new RpPlayerData();
             data.setProtocolVersion(player.getProtocolVersion());
-            playerRpData.put(player.getUniqueId(), data);
+            if(isLoadPending(player)) {
+                // The player's settings are still being read: these defaults are not kept, so nothing sends,
+                // changes or saves them in place of the player's own.
+                return data;
+            }
+            RpPlayerData stored = playerRpData.putIfAbsent(player.getUniqueId(), data);
+            if(stored != null) {
+                data = stored; // the load has stored the player's settings meanwhile
+            }
         }
         return data;
     }
@@ -169,7 +182,21 @@ public class RpManager {
     }
 
     public static void removePlayerData(Player player) {
+        pendingLoads.remove(player.getUniqueId());
         playerRpData.remove(player.getUniqueId());
+    }
+
+    /** Whether the player's settings are still being read from the RP database. */
+    public static boolean isLoadPending(Player player) {
+        return pendingLoads.containsKey(player.getUniqueId());
+    }
+
+    /**
+     * Stops waiting for the player's settings, as the join check does when its time is up: from then on the
+     * defaults are made for the player when needed. A load that ends later still stores the player's settings.
+     */
+    public static void stopWaitingForLoad(Player player) {
+        pendingLoads.remove(player.getUniqueId());
     }
     
     /**
@@ -344,6 +371,9 @@ public class RpManager {
     }
     
     public static boolean setRpRegion(Player player){
+        if(isLoadPending(player)) {
+            return false; // a later run picks the player up, with their own settings
+        }
         RpPlayerData data = RpManager.getPlayerData(player);
         if(data.isAutoRp()) {
             RpRegion newRegion = RpManager.getRegion(player.getLocation());
@@ -359,6 +389,9 @@ public class RpManager {
     }
     
     public static boolean setRp(String rpName, Player player, boolean force) {
+        if(isLoadPending(player)) {
+            return false; // no pack is chosen from defaults while the player's own settings are on their way
+        }
         String url = getRpUrl(rpName, player);
         RpPlayerData data = getPlayerData(player);
         if(url!=null && data!=null && !url.equals("") && (force || !url.equals(data.getCurrentRpUrl()))) {
@@ -513,11 +546,27 @@ public class RpManager {
     }
 
     public static void savePlayerData(Player player) {
-        dbConnector.saveRpSettings(player, playerRpData.get(player.getUniqueId()));
+        RpPlayerData data = playerRpData.get(player.getUniqueId());
+        if(data != null) { // data that was never kept, such as defaults during a load, is not saved
+            dbConnector.saveRpSettings(player, data);
+        }
     }
     
     public static void loadPlayerData(UUID uuid) {
-        dbConnector.loadRpSettings(uuid,playerRpData);
+        if(!dbConnector.isConfigured()) {
+            playerRpData.putIfAbsent(uuid, new RpPlayerData()); // no database: the defaults, at once
+            return;
+        }
+        // The player is waiting for this load until it has ended, whatever it stored: the connector runs the
+        // callback even when the load failed. A newer load of the same player is not ended by this one.
+        Object load = new Object();
+        pendingLoads.put(uuid, load);
+        try {
+            dbConnector.loadRpSettings(uuid, playerRpData, () -> pendingLoads.remove(uuid, load));
+        } catch (RuntimeException ex) {
+            pendingLoads.remove(uuid, load);
+            throw ex;
+        }
     }
     
     public static void saveRpRegion(RpRegion region) {
