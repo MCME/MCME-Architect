@@ -18,6 +18,7 @@ import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
 import java.io.File;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -163,6 +164,47 @@ class RpLoadPendingTest {
                 () -> assertEquals(0, shared.writes(id), "the saves"),
                 () -> assertEquals(stored, shared.row(id), "the player's row"),
                 () -> assertEquals("dark", RpManager.getPlayerData(client).getVariant(), "the variant after the load"));
+    }
+
+    // A player who changes their settings, or picks a pack, while their settings are still being read is asked to
+    // wait: the change would start from defaults that are not kept, and be lost.
+    @Test
+    void rpAsksThePlayerToWaitWhileTheSettingsLoad() throws Exception {
+        Client client = new Client(UUID.randomUUID());
+        String id = client.getUniqueId().toString();
+        shared.insertRow(row(id, "dark"));
+        Map<String, Object> stored = shared.row(id);
+        CountDownLatch slow = shared.hold(id);
+        List<String> told = new ArrayList<>();
+        try {
+            server.addPlayer(client);
+            client.setOp(false);
+            client.addAttachment(plugin, "architect.resourcePackSwitcher", true);
+            FakeMysql.await(() -> shared.waiting(id), "the player's look-up to start");
+            while (client.nextMessage() != null) {
+                // what joining said
+            }
+
+            client.performCommand("rp variant dark");
+            client.performCommand("rp " + PACK);
+            for (String message = client.nextMessage(); message != null; message = client.nextMessage()) {
+                told.add(message);
+            }
+        } finally {
+            slow.countDown();
+        }
+        FakeMysql.await(() -> shared.lookUps(id) > 0, "the look-up to end");
+        synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
+            // the row is read
+        }
+        settle();
+        assertAll(
+                () -> assertEquals(2, told.stream().filter(message -> message.contains(
+                        "Your resource pack settings are still loading, try again in a moment.")).count(),
+                        "the answers that ask to wait, of " + told),
+                () -> assertEquals(List.of(), client.packs, "the packs sent"),
+                () -> assertEquals(0, shared.writes(id), "the saves"),
+                () -> assertEquals(stored, shared.row(id), "the player's row"));
     }
 
     // A look-up that finds no row ends the wait with the defaults, so the player is served with them.
