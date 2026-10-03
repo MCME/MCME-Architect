@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.logging.Logger;
@@ -38,6 +39,7 @@ final class FakeMysql implements Driver {
 
     private final Map<String, Database> databases = new ConcurrentHashMap<>();
     private final List<Driver> displaced = new ArrayList<>();
+    private final List<String> urls = new CopyOnWriteArrayList<>();
 
     /**
      * Registers a fake that answers every jdbc:mysql: URL. The real MySQL driver is on the test class path, and is
@@ -64,6 +66,11 @@ final class FakeMysql implements Driver {
 
     Database database(String name) {
         return databases.computeIfAbsent(name, key -> new Database());
+    }
+
+    /** Every URL a connection was asked for, in order. */
+    List<String> urls() {
+        return List.copyOf(urls);
     }
 
     /** Waits up to ten seconds for something the connector does on another thread. */
@@ -325,7 +332,10 @@ final class FakeMysql implements Driver {
         if (!acceptsURL(url)) {
             return null;
         }
-        Database database = database(url.substring(url.lastIndexOf('/') + 1));
+        urls.add(url);
+        // jdbc:mysql://host:port/name?options
+        String path = url.substring(url.indexOf('/', "jdbc:mysql://".length()) + 1);
+        Database database = database(path.contains("?") ? path.substring(0, path.indexOf('?')) : path);
         return proxy(Connection.class, (method, args) -> switch (method) {
             case "prepareStatement" -> preparedStatement(database, (String) args[0]);
             case "createStatement" -> statement(database);

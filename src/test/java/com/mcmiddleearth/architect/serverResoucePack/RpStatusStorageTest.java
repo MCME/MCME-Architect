@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.testsupport.TestConfig;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
@@ -13,6 +14,7 @@ import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
+import java.io.File;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -46,14 +48,16 @@ class RpStatusStorageTest {
     private static FakeMysql mysql;
     private static ServerMock server;
     private static ArchitectPlugin plugin;
-    private static FakeMysql.Database shared; // the database of Architect's own connector, under its default config
+    private static FakeMysql.Database shared; // the database of Architect's own connector, from the test's config
     private static int clients;
 
     @BeforeAll
-    static void setUp() throws SQLException {
+    static void setUp() throws Exception {
         mysql = FakeMysql.install();
         server = MockBukkit.mock();
+        File folder = TestConfig.withRpDatabase(server, "architect");
         plugin = MockBukkit.load(ArchitectPlugin.class);
+        assertEquals(folder, plugin.getDataFolder(), "Architect reads the test's config.yml");
         plugin.getConfig().set("ServerResourcePacks." + PACK + ".vanilla.16px.light.1_18_1.url", PACK_URL);
         plugin.getConfig().set("ServerResourcePacks." + PACK + ".vanilla.16px.light.1_18_1.sha",
                 "33bece3b361f804e0966271ceaf85a691fe6a11d");

@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.testsupport.TestConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -8,6 +9,7 @@ import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
+import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +24,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 // /rp dropdb drops the RP table, which the connector then makes again. It is for resource pack admins, who have
 // architect.resourcePackAdmin, and only for them: anyone else gets nothing of it. FakeMysql stands in for the RP
-// database, which Architect reaches under the name its default config gives. One mock/load per class, as in
-// LogFileTest.
+// database that the test's config.yml gives Architect. One mock/load per class, as in LogFileTest.
 class RpDropDbCommandTest {
 
     private static final String ADMIN = "architect.resourcePackAdmin";
@@ -37,10 +38,12 @@ class RpDropDbCommandTest {
     private static FakeMysql.Database database;
 
     @BeforeAll
-    static void setUp() throws SQLException {
+    static void setUp() throws Exception {
         mysql = FakeMysql.install();
         server = MockBukkit.mock();
+        File folder = TestConfig.withRpDatabase(server, "architect");
         plugin = MockBukkit.load(ArchitectPlugin.class);
+        assertEquals(folder, plugin.getDataFolder(), "Architect reads the test's config.yml");
         database = mysql.database(plugin.getConfig().getString("rpSettingsDatabase.dbName"));
         awaitTable();
     }

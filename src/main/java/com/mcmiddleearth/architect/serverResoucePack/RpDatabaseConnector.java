@@ -52,8 +52,20 @@ public class RpDatabaseConnector {
 
     private final boolean dbConfigured;
 
+    // The bundled config.yml ships rpSettingsDatabase with this as database and user. A server that still has it
+    // has no RP database: trying to connect would only fail, and say so, at every start and every minute.
+    private static final String PLACEHOLDER = "xxx";
+
+    // A database that does not answer must not hold a thread for ever, nor this connector's lock, which the main
+    // thread needs at start-up, when it connects, and in onDisable, when disconnect() waits for it. A reachable
+    // database takes milliseconds to accept a connection, so 10 seconds only ends a wait that cannot succeed.
+    // A read gets 60 seconds, well above the 10-second query timeout of the statements, so a slow query still
+    // ends as before and only a connection that has gone silent is cut.
+    private static final int CONNECT_TIMEOUT_MILLIS = 10_000;
+    private static final int SOCKET_TIMEOUT_MILLIS = 60_000;
+
     public RpDatabaseConnector(ConfigurationSection config) {
-        dbConfigured = (config != null);
+        boolean present = (config != null);
         if(config==null) {
             config = new MemoryConfiguration();
         }
@@ -62,6 +74,8 @@ public class RpDatabaseConnector {
         dbName = config.getString("dbName","development");
         dbIp = config.getString("ip", "localhost");
         port = config.getInt("port",3306);
+        boolean placeholder = PLACEHOLDER.equals(dbName) || PLACEHOLDER.equals(dbUser);
+        dbConfigured = present && !placeholder;
         if(dbConfigured) {
             connect();
             keepAliveTask = new BukkitRunnable() {
@@ -70,6 +84,10 @@ public class RpDatabaseConnector {
                     checkConnection();
                 }
             }.runTaskTimerAsynchronously(ArchitectPlugin.getPluginInstance(),0,1200);
+        } else if(placeholder) {
+            Log.info("The RP database settings (rpSettingsDatabase) are the placeholders config.yml ships with; "
+                    + "RP settings will not be persisted.");
+            keepAliveTask = null;
         } else {
             Log.info("No RP database configured; RP settings will not be persisted.");
             keepAliveTask = null;
@@ -110,9 +128,7 @@ public class RpDatabaseConnector {
 
     private synchronized void connect() {
         try {
-            dbConnection = DriverManager.getConnection(
-                    "jdbc:mysql://"+dbIp+":"+port+"/"+dbName,
-                    dbUser, dbPassword);
+            dbConnection = DriverManager.getConnection(url(), dbUser, dbPassword);
 
             checkTables();
 
@@ -131,6 +147,12 @@ public class RpDatabaseConnector {
             Log.error("Failed to connect to RP database " + dbName + " at " + dbIp + ":" + port + " as user " + dbUser, ex);
             connected = false;
         }
+    }
+
+    // jdbc:mysql://ip:port/dbName with the timeouts; options that dbName already carries are kept.
+    private String url() {
+        return "jdbc:mysql://" + dbIp + ":" + port + "/" + dbName + (dbName.contains("?") ? "&" : "?")
+                + "connectTimeout=" + CONNECT_TIMEOUT_MILLIS + "&socketTimeout=" + SOCKET_TIMEOUT_MILLIS;
     }
 
     public synchronized void disconnect() {

@@ -1,0 +1,75 @@
+package com.mcmiddleearth.architect.serverResoucePack;
+
+import com.mcmiddleearth.architect.ArchitectPlugin;
+import org.bukkit.configuration.MemoryConfiguration;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.mockbukkit.mockbukkit.MockBukkit;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+// The bundled config.yml ships rpSettingsDatabase with the placeholders xxx. A server, or a test, that still has them
+// has no RP database, and Architect must not try to reach one. A configured database is connected as before, with a
+// connect and a socket timeout in the URL, so that a database that does not answer cannot hold a thread, and the
+// connector's lock, for ever. FakeMysql records the URLs it is asked for. One mock/load per class, as in LogFileTest.
+class RpDatabaseConnectionTest {
+
+    private static FakeMysql mysql;
+    private static List<String> urlsWhileLoading;
+
+    @BeforeAll
+    static void setUp() throws SQLException {
+        mysql = FakeMysql.install();
+        MockBukkit.mock();
+        MockBukkit.load(ArchitectPlugin.class); // with the bundled config
+        urlsWhileLoading = mysql.urls();
+    }
+
+    @AfterAll
+    static void tearDown() throws SQLException {
+        if (MockBukkit.isMocked()) {
+            MockBukkit.unmock();
+        }
+        mysql.uninstall();
+    }
+
+    @Test
+    void theBundledPlaceholdersMeanNoDatabase() {
+        assertEquals(List.of(), urlsWhileLoading, "the connections Architect asked for with the bundled config");
+    }
+
+    @Test
+    void aConfiguredDatabaseIsConnectedWithTimeouts() {
+        assertEquals("jdbc:mysql://db.example:3307/architect?connectTimeout=10000&socketTimeout=60000",
+                connect("db.example", 3307, "architect"));
+    }
+
+    @Test
+    void optionsInTheDatabaseNameAreKept() {
+        assertEquals("jdbc:mysql://localhost:3306/options?useSSL=false&connectTimeout=10000&socketTimeout=60000",
+                connect("localhost", 3306, "options?useSSL=false"));
+    }
+
+    // The URL a connector with these settings asks for. It connects as before: it makes its table.
+    private static String connect(String ip, int port, String dbName) {
+        MemoryConfiguration config = new MemoryConfiguration();
+        config.set("user", "architect");
+        config.set("password", "secret");
+        config.set("dbName", dbName);
+        config.set("ip", ip);
+        config.set("port", port);
+        int before = mysql.urls().size();
+        RpDatabaseConnector connector = new RpDatabaseConnector(config);
+        try {
+            FakeMysql.Database database = mysql.database(dbName.split("[?]")[0]);
+            FakeMysql.await(() -> !database.columns().isEmpty(), "the connector to make its table");
+            return mysql.urls().get(before);
+        } finally {
+            connector.disconnect();
+        }
+    }
+}
