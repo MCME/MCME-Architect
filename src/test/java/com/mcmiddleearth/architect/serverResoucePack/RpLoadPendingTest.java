@@ -357,6 +357,56 @@ class RpLoadPendingTest {
         assertEquals(List.of(LIGHT), second.packs, "the packs sent to the player who came back");
     }
 
+    // Three logins in quick succession, the first two quitting before their loads end. The first load ends while the
+    // third login waits for its own: an older load does not end a newer login's wait, so the third goes on waiting,
+    // and its join check sends the pack of the last visit only once its own load has ended.
+    @Test
+    void anOlderLoadDoesNotEndTheWaitOfANewerLogin() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        String id = uuid.toString();
+        Map<String, Object> stored = row(id, "light");
+        stored.put("currentURL", LIGHT);
+        shared.insertRow(stored);
+        CountDownLatch firstLoad = shared.hold(id);
+        CountDownLatch laterLoads = null;
+        Client third;
+        try {
+            Client first = new Client(uuid);
+            server.addPlayer(first);
+            FakeMysql.await(() -> shared.waiting(id), "the first look-up to start");
+            first.disconnect();
+            Client second = new Client(first.getName(), uuid);
+            server.addPlayer(second); // its load waits for the connector, which the first load holds
+            second.disconnect();
+            third = new Client(first.getName(), uuid);
+            server.addPlayer(third);
+            server.getPluginManager().callEvent(new PlayerConnectEvent(third,
+                    PlayerConnectEvent.ConnectReason.JOIN_PROXY));
+
+            laterLoads = shared.holdAgain(id);
+            firstLoad.countDown();
+            FakeMysql.await(() -> shared.lookUps(id) > 0, "the first look-up to end");
+            FakeMysql.await(() -> shared.waiting(id), "the second look-up to start");
+
+            assertTrue(RpManager.isLoadPending(third), "the third login waits for its own load");
+            server.getScheduler().performTicks(20); // two join check runs
+            assertEquals(List.of(), third.packs, "the packs sent before the third login's load ended");
+        } finally {
+            firstLoad.countDown();
+            if (laterLoads != null) {
+                laterLoads.countDown();
+            }
+        }
+        FakeMysql.await(() -> shared.lookUps(id) > 2, "the third look-up to end");
+        synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
+            // the third load has ended
+        }
+        FakeMysql.await(() -> !RpManager.isLoadPending(third), "the third login's wait to end");
+        server.getScheduler().performTicks(20); // the join check's next run
+
+        assertEquals(List.of(LIGHT), third.packs, "the packs sent to the third login");
+    }
+
     private static Map<String, Object> row(String id, String variant) {
         Map<String, Object> row = new HashMap<>(Map.of("uuid", id, "auto", true, "variant", variant,
                 "resolution", 16, "client", "vanilla", "status", "SUCCESSFULLY_LOADED"));

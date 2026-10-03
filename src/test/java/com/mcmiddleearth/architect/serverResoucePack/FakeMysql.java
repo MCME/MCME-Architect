@@ -153,6 +153,16 @@ final class FakeMysql implements Driver {
             return holds.computeIfAbsent(uuid, key -> new CountDownLatch(1));
         }
 
+        /**
+         * From now on, look-ups of this uuid's row wait for a new latch, which this returns. A look-up that already
+         * waits keeps waiting for the latch it had.
+         */
+        synchronized CountDownLatch holdAgain(String uuid) {
+            CountDownLatch latch = new CountDownLatch(1);
+            holds.put(uuid, latch);
+            return latch;
+        }
+
         /** The next look-up of this uuid's row fails with this error, as from MySQL. */
         synchronized void refuseLookUp(String uuid, SQLException failure) {
             refusedLookUps.put(uuid, failure);
