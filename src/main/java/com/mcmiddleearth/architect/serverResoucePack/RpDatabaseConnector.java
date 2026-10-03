@@ -239,6 +239,11 @@ public class RpDatabaseConnector {
                     if(data.getClient()==null) data.setClient("vanilla");
                     data.setCurrentRpStatus(storedStatus(result.getString("status")));
                     dataMap.put(uuid,data);
+                } else {
+                    // No row yet, as for a new player: the defaults, which the first save writes as the
+                    // player's row. Without them the join check would wait its whole time for a load that
+                    // cannot come. Data that something made for the player meanwhile is kept.
+                    dataMap.putIfAbsent(uuid, new RpPlayerData());
                 }
             }
         } catch (SQLException ex) {

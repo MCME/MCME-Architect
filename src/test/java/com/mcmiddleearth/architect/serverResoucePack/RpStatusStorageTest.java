@@ -3,7 +3,12 @@ package com.mcmiddleearth.architect.serverResoucePack;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.testsupport.TestConfig;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.world.NullWorld;
+import org.bukkit.Location;
 import org.bukkit.configuration.MemoryConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -227,6 +232,43 @@ class RpStatusStorageTest {
         FakeMysql.await(() -> "SENT".equals(shared.row(id).get("status")), "the status SENT in the table");
     }
 
+    // The join check runs on the tick after the join. A player without a row, as a new one, gets the defaults at
+    // once, so the check need not wait for a row that does not come.
+    @Test
+    void aPlayerWithoutARowGetsTheirPackAtTheFirstJoinCheck() throws Exception {
+        Client client = join(null);
+        String id = client.getUniqueId().toString();
+        RpRegion region = regionAround(client);
+        RpManager.addRegion(region);
+        try {
+            server.getPluginManager().callEvent(new PlayerConnectEvent(client,
+                    PlayerConnectEvent.ConnectReason.JOIN_PROXY));
+            server.getScheduler().performOneTick();
+
+            assertEquals(List.of(PACK_URL), client.packs, "the packs sent at the first join check");
+            FakeMysql.await(() -> shared.row(id) != null && "SENT".equals(shared.row(id).get("status")),
+                    "the player's new row");
+        } finally {
+            RpManager.removeRegion(region.getName());
+        }
+    }
+
+    // Saving decides between INSERT and UPDATE by looking for the row, not by whether the player's data was loaded.
+    @Test
+    void theFirstStatusReportOfAPlayerWithoutARowMakesTheirRow() throws Exception {
+        Client client = join(null);
+        String id = client.getUniqueId().toString();
+        assertTrue(RpManager.hasPlayerDataLoaded(client), "the look-up that found no row has loaded the defaults");
+
+        server.getPluginManager().callEvent(new PlayerResourcePackStatusEvent(client, UUID.randomUUID(),
+                PlayerResourcePackStatusEvent.Status.DECLINED));
+
+        FakeMysql.await(() -> shared.row(id) != null, "the player's new row");
+        assertEquals("DECLINED", shared.row(id).get("status"), "the status in the new row");
+        assertEquals(1, shared.rows().stream().filter(row -> id.equals(row.get("uuid"))).count(),
+                "the player's rows");
+    }
+
     // A row as 2.10.9 writes it, with this status, read by a connector to a database of its own.
     private static RpPlayerData read(String status) throws SQLException {
         String name = "read-" + (++reads);
@@ -293,6 +335,23 @@ class RpStatusStorageTest {
             assertTrue(RpManager.hasPlayerDataLoaded(client), "the player's row is read");
         }
         return client;
+    }
+
+    // An RP region with the test pack around the player.
+    private static RpRegion regionAround(Player player) {
+        String world = player.getWorld().getName();
+        NullWorld named = new NullWorld() {
+            @Override
+            public String getName() {
+                return world;
+            }
+        };
+        Location at = player.getLocation();
+        RpRegion region = new RpRegion("Around" + player.getName(), new CuboidRegion(named,
+                BlockVector3.at(at.getBlockX() - 8, at.getBlockY() - 8, at.getBlockZ() - 8),
+                BlockVector3.at(at.getBlockX() + 8, at.getBlockY() + 8, at.getBlockZ() + 8)));
+        region.setRp(PACK);
+        return region;
     }
 
     // MockBukkit leaves the client's protocol, its brand and the packs sent to it to the test.
