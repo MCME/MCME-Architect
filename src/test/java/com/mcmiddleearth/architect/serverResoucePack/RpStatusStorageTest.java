@@ -36,6 +36,7 @@ import java.util.logging.LogRecord;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // A player's resource pack status as 2.10.9 keeps it, across servers. Each status the client reports goes into the
@@ -287,6 +288,31 @@ class RpStatusStorageTest {
         assertEquals("DECLINED", shared.row(id).get("status"), "the status in the new row");
         assertEquals(1, shared.rows().stream().filter(row -> id.equals(row.get("uuid"))).count(),
                 "the player's rows");
+    }
+
+    // A look-up that finds no row may end after something has made the player's data, such as the pack of the RP
+    // region they joined in. It must keep that data rather than put the defaults over it.
+    @Test
+    void aLookUpThatFindsNoRowKeepsDataMadeMeanwhile() throws SQLException {
+        FakeMysql.Database database = tableOf2109("kept");
+        RpDatabaseConnector connector = connect("kept");
+        try {
+            UUID id = UUID.randomUUID();
+            RpPlayerData meanwhile = new RpPlayerData();
+            meanwhile.setCurrentRpUrl(PACK_URL);
+            meanwhile.setCurrentRpStatus(RpPlayerStatus.SENT);
+            Map<UUID, RpPlayerData> loaded = new ConcurrentHashMap<>(Map.of(id, meanwhile));
+
+            connector.loadRpSettings(id, loaded);
+            FakeMysql.await(() -> database.lookUps(id.toString()) > 0, "the look-up");
+            synchronized (connector) {
+                // the load has ended
+            }
+
+            assertSame(meanwhile, loaded.get(id), "the player's data made meanwhile");
+        } finally {
+            connector.disconnect();
+        }
     }
 
     // A row as 2.10.9 writes it, with this status, read by a connector to a database of its own.
