@@ -100,6 +100,9 @@ final class FakeMysql implements Driver {
         private final List<Map<String, Object>> rows = new ArrayList<>();
         private final List<String> statements = new ArrayList<>();
         private final List<Map.Entry<String, Exception>> refusals = new ArrayList<>();
+        // uuid -> how often its row was looked up, and written by an INSERT or UPDATE
+        private final Map<String, Integer> lookUps = new HashMap<>();
+        private final Map<String, Integer> writes = new HashMap<>();
 
         /** The columns of the table as declared, in their order; empty when there is no table. */
         synchronized List<String> columns() {
@@ -135,6 +138,16 @@ final class FakeMysql implements Driver {
             return (int) statements.stream()
                     .filter(statement -> statement.toUpperCase(Locale.ROOT).startsWith(wanted))
                     .count();
+        }
+
+        /** How many SELECTs looked up the row of this uuid, so a test can wait for a player's own load. */
+        synchronized int lookUps(String uuid) {
+            return lookUps.getOrDefault(uuid, 0);
+        }
+
+        /** How many INSERTs and UPDATEs were sent for the row of this uuid, so a test can wait for its last save. */
+        synchronized int writes(String uuid) {
+            return writes.getOrDefault(uuid, 0);
         }
 
         /**
@@ -226,6 +239,9 @@ final class FakeMysql implements Driver {
                 row.put(lower(names.get(index)), parameters.get(index + 1));
             }
             rows.add(row);
+            if (row.get("uuid") != null) {
+                writes.merge(String.valueOf(row.get("uuid")), 1, Integer::sum);
+            }
             return 1;
         }
 
@@ -245,6 +261,9 @@ final class FakeMysql implements Driver {
             used.add(key);
             requireColumns(used);
             Object value = parameters.get(names.size() + 1);
+            if (key.equalsIgnoreCase("uuid")) {
+                writes.merge(String.valueOf(value), 1, Integer::sum);
+            }
             int changed = 0;
             for (Map<String, Object> row : rows) {
                 if (Objects.equals(row.get(lower(key)), value)) {
@@ -270,6 +289,9 @@ final class FakeMysql implements Driver {
             List<String> used = new ArrayList<>(names);
             used.add(key);
             requireColumns(used);
+            if (key.equalsIgnoreCase("uuid")) {
+                lookUps.merge(String.valueOf(parameters.get(1)), 1, Integer::sum);
+            }
             List<Map<String, Object>> result = new ArrayList<>();
             for (Map<String, Object> row : rows) {
                 if (Objects.equals(row.get(lower(key)), parameters.get(1))) {

@@ -214,6 +214,9 @@ class RpStatusStorageTest {
         assertEquals(List.of(PACK_URL), client.packs, "the packs sent");
         assertEquals(RpPlayerStatus.SENT, data.getCurrentRpStatus(), "the status after sending");
         assertEquals(RpPlayerStatus.SUCCESSFULLY_LOADED, data.getLastRpStatus(), "the status before sending");
+        String id = client.getUniqueId().toString();
+        FakeMysql.await(() -> shared.writes(id) >= 1, "the save of the pack sent");
+        assertEquals("SENT", shared.row(id).get("status"), "the status in the table");
     }
 
     @Test
@@ -229,7 +232,24 @@ class RpStatusStorageTest {
         assertEquals(List.of(PACK_URL), client.packs, "the pack of the last visit is sent again");
         assertEquals(RpPlayerStatus.SENT, data.getCurrentRpStatus(), "the status after sending");
         assertEquals(RpPlayerStatus.NOT_SENT, data.getLastRpStatus(), "the status before sending");
-        FakeMysql.await(() -> "SENT".equals(shared.row(id).get("status")), "the status SENT in the table");
+        FakeMysql.await(() -> shared.writes(id) >= 2, "the join's two saves, of the reset and of the pack sent");
+        assertEquals("SENT", shared.row(id).get("status"), "the status in the table");
+    }
+
+    // The reset to NOT_SENT at a proxy join is saved at once. With no pack to send, it is the join's only save.
+    @Test
+    void aProxyJoinThatSendsNoPackStoresNotSent() throws Exception {
+        Client client = join("SUCCESSFULLY_LOADED", null);
+        String id = client.getUniqueId().toString();
+
+        server.getPluginManager().callEvent(new PlayerConnectEvent(client,
+                PlayerConnectEvent.ConnectReason.JOIN_PROXY));
+        server.getScheduler().performOneTick();
+
+        assertEquals(List.of(), client.packs, "the packs sent");
+        assertEquals(RpPlayerStatus.NOT_SENT, RpManager.getPlayerData(client).getCurrentRpStatus(), "the status");
+        FakeMysql.await(() -> shared.writes(id) >= 1, "the join's save");
+        assertEquals("NOT_SENT", shared.row(id).get("status"), "the status in the table");
     }
 
     // The join check runs on the tick after the join. A player without a row, as a new one, gets the defaults at
@@ -246,8 +266,8 @@ class RpStatusStorageTest {
             server.getScheduler().performOneTick();
 
             assertEquals(List.of(PACK_URL), client.packs, "the packs sent at the first join check");
-            FakeMysql.await(() -> shared.row(id) != null && "SENT".equals(shared.row(id).get("status")),
-                    "the player's new row");
+            FakeMysql.await(() -> shared.writes(id) >= 2, "the join's two saves, of the reset and of the pack sent");
+            assertEquals("SENT", shared.row(id).get("status"), "the status in the player's new row");
         } finally {
             RpManager.removeRegion(region.getName());
         }
@@ -318,22 +338,29 @@ class RpStatusStorageTest {
     }
 
     // A player joins this server. With a status, another server has stored that status for them first, after it
-    // sent them the test pack. Joining reads the player's row on another thread, under the connector's lock.
+    // sent them the test pack.
     private static Client join(String status) throws SQLException {
+        return join(status, PACK_URL);
+    }
+
+    // As join(status), with lastPack as the pack the other server sent, or none. Joining looks up the player's row
+    // on another thread, under the connector's lock; this waits for that look-up of this player, not for any
+    // SELECT, which a save another test left running could send.
+    private static Client join(String status, String lastPack) throws SQLException {
         Client client = new Client(UUID.randomUUID());
+        String id = client.getUniqueId().toString();
         if (status != null) {
-            shared.insertRow(Map.of("uuid", client.getUniqueId().toString(), "auto", true, "variant", "light",
-                    "resolution", 16, "client", "vanilla", "currentURL", PACK_URL, "status", status));
+            Map<String, Object> row = new HashMap<>(Map.of("uuid", id, "auto", true, "variant", "light",
+                    "resolution", 16, "client", "vanilla", "status", status));
+            row.put("currentURL", lastPack);
+            shared.insertRow(row);
         }
-        int selects = shared.sent("SELECT");
         server.addPlayer(client);
-        FakeMysql.await(() -> shared.sent("SELECT") > selects, "the player's row to be looked up");
+        FakeMysql.await(() -> shared.lookUps(id) > 0, "the player's row to be looked up");
         synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
             // the look-up has ended
         }
-        if (status != null) {
-            assertTrue(RpManager.hasPlayerDataLoaded(client), "the player's row is read");
-        }
+        assertTrue(RpManager.hasPlayerDataLoaded(client), "the player's data is loaded");
         return client;
     }
 
