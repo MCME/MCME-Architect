@@ -26,7 +26,9 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.sql.*;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
@@ -51,6 +53,9 @@ public class RpDatabaseConnector {
     private boolean connected;
 
     private final boolean dbConfigured;
+
+    // The stored statuses this Architect does not know, each logged once rather than once for every player.
+    private final Set<String> unknownStatuses = ConcurrentHashMap.newKeySet();
 
     // The bundled config.yml ships rpSettingsDatabase with this as database and user. A server that still has it
     // has no RP database: trying to connect would only fail, and say so, at every start and every minute.
@@ -232,9 +237,7 @@ public class RpDatabaseConnector {
                     data.setResolution(result.getInt("resolution"));
                     data.setClient(result.getString("client"));
                     if(data.getClient()==null) data.setClient("vanilla");
-                    if(result.getString("status")!=null) {
-                        data.setCurrentRpStatus(RpPlayerStatus.valueOf(result.getString("status")));
-                    }
+                    data.setCurrentRpStatus(storedStatus(result.getString("status")));
                     dataMap.put(uuid,data);
                 }
             }
@@ -245,6 +248,24 @@ public class RpDatabaseConnector {
         }
     }
 
+
+    // The status stored for a player. None, as in rows from before the status column, is NOT_SENT, and so is a
+    // name this Architect does not know, which a newer one sharing the table may have written: the player's
+    // other settings still load.
+    private RpPlayerStatus storedStatus(String name) {
+        if(name == null || name.isBlank()) {
+            return RpPlayerStatus.NOT_SENT;
+        }
+        try {
+            return RpPlayerStatus.valueOf(name);
+        } catch (IllegalArgumentException ex) {
+            if(unknownStatuses.add(name)) {
+                Log.warn("Unknown RP status '" + name + "' in architect_rp on RP database " + dbName
+                        + "; players with it are read as " + RpPlayerStatus.NOT_SENT + ".");
+            }
+            return RpPlayerStatus.NOT_SENT;
+        }
+    }
 
     public void saveRpSettings(Player player, RpPlayerData data) {
         new BukkitRunnable() {

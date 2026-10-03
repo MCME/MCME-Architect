@@ -18,13 +18,17 @@ import java.io.File;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -50,6 +54,7 @@ class RpStatusStorageTest {
     private static ArchitectPlugin plugin;
     private static FakeMysql.Database shared; // the database of Architect's own connector, from the test's config
     private static int clients;
+    private static int reads;
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -120,6 +125,61 @@ class RpStatusStorageTest {
         assertEquals(RpPlayerStatus.NOT_SENT, read(null).getCurrentRpStatus());
     }
 
+    // A newer Architect sharing the table may store a status that this one does not know, and so may a hand edit.
+    // The player's other settings still load.
+    @ParameterizedTest(name = "\"{0}\"")
+    @ValueSource(strings = {"SOMETHING_NEW", "", "   "})
+    void aStatusThisArchitectDoesNotKnowIsReadAsNotSent(String status) throws SQLException {
+        assertEquals(RpPlayerStatus.NOT_SENT, read(status).getCurrentRpStatus());
+    }
+
+    @Test
+    void eachUnknownStatusIsLoggedOnce() throws Exception {
+        FakeMysql.Database database = tableOf2109("unknown");
+        Map<UUID, String> statuses = new LinkedHashMap<>();
+        statuses.put(UUID.randomUUID(), "SOMETHING_NEW");
+        statuses.put(UUID.randomUUID(), "SOMETHING_NEW");
+        statuses.put(UUID.randomUUID(), "SOMETHING_ELSE");
+        for (Map.Entry<UUID, String> entry : statuses.entrySet()) {
+            database.insertRow(Map.of("uuid", entry.getKey().toString(), "auto", true, "variant", "light",
+                    "resolution", 16, "client", "vanilla", "status", entry.getValue()));
+        }
+        List<String> warnings = new CopyOnWriteArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getLevel() == Level.WARNING) {
+                    warnings.add(record.getMessage());
+                }
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        plugin.getLogger().addHandler(handler);
+        RpDatabaseConnector connector = connect("unknown");
+        try {
+            Map<UUID, RpPlayerData> loaded = new ConcurrentHashMap<>();
+            for (UUID id : statuses.keySet()) {
+                connector.loadRpSettings(id, loaded);
+            }
+            FakeMysql.await(() -> loaded.keySet().containsAll(statuses.keySet()), "the rows to be read");
+            List<Long> counts = Stream.of("'SOMETHING_NEW'", "'SOMETHING_ELSE'")
+                    .map(status -> warnings.stream().filter(warning -> warning.contains(status)).count())
+                    .toList();
+            assertEquals(List.of(1L, 1L), counts,
+                    "the warnings about SOMETHING_NEW and SOMETHING_ELSE, of " + warnings);
+        } finally {
+            plugin.getLogger().removeHandler(handler);
+            connector.disconnect();
+        }
+    }
+
     @Test
     void eachStatusTheClientReportsIsStoredAtOnce() throws SQLException {
         Client client = join(null);
@@ -169,7 +229,7 @@ class RpStatusStorageTest {
 
     // A row as 2.10.9 writes it, with this status, read by a connector to a database of its own.
     private static RpPlayerData read(String status) throws SQLException {
-        String name = "read-" + Objects.requireNonNullElse(status, "null").toLowerCase(Locale.ROOT);
+        String name = "read-" + (++reads);
         FakeMysql.Database database = tableOf2109(name);
         UUID id = UUID.randomUUID();
         Map<String, Object> row = new HashMap<>(Map.of("uuid", id.toString(), "auto", false, "variant", "dark",
