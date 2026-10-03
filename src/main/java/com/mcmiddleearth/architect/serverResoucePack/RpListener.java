@@ -102,10 +102,15 @@ public class RpListener implements Listener {
                         }
                         return;
                     }
-                    if(RpManager.hasPlayerDataLoaded(player) || counter==0) {
+                    boolean loaded = RpManager.hasPlayerDataLoaded(player);
+                    if(loaded || counter==0) {
                         // This run is the check's last, whatever happens in it. Cancelled first, the task is not
                         // run again even when the send below throws: a repeat would send and save every half second.
                         cancel();
+                        if(!loaded) {
+                            Log.warn("Timed out waiting for RP settings to load from the database for player "
+                                    + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
+                        }
                         RpPlayerData data = RpManager.getPlayerData(player);
                         // A player who has just joined the proxy has no server resource pack yet, whatever
                         // status the database holds from their last visit.
@@ -151,9 +156,6 @@ public class RpListener implements Listener {
                             }
                         }
                     } else counter --;
-                    if(counter==0) {
-                        Log.warn("Timed out waiting for RP settings to load from the database for player " + player.getName() + " (" + player.getUniqueId() + "); RP will use defaults.");
-                    }
                 }
             }.runTaskTimer(ArchitectPlugin.getPluginInstance(),0,10);
         }

@@ -1,17 +1,25 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.biomeTuning.BiomeTuning;
+import com.mcmiddleearth.architect.biomeTuning.BiomeTuningOnAFakeServer;
+import com.mcmiddleearth.architect.biomeTuning.RefreshCoordinator;
 import com.mcmiddleearth.architect.testsupport.TestConfig;
 import com.mcmiddleearth.connect.events.PlayerConnectEvent;
+import net.kyori.adventure.text.Component;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
+import org.mockbukkit.mockbukkit.scheduler.ScheduledTask;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +28,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,6 +69,12 @@ class RpJoinCheckTest {
         synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
             // the table check has ended
         }
+        // RPSwitchTask makes default settings for every online player once a second, and the join check would take
+        // them for the settings it waits for. These tests need no pack switching while players walk.
+        server.getScheduler().getPendingTasks().stream()
+                .filter(task -> task instanceof ScheduledTask scheduled
+                        && scheduled.getRunnable() instanceof RPSwitchTask)
+                .forEach(BukkitTask::cancel);
     }
 
     @AfterAll
@@ -90,6 +108,69 @@ class RpJoinCheckTest {
         }
     }
 
+    // The check logs that it timed out, and goes on with defaults, when the player's settings did not load in its
+    // runs. It says so once.
+    @Test
+    void aTimeoutIsLoggedOnceWhenTheSettingsDidNotLoad() throws Exception {
+        Client client = new Client(UUID.randomUUID());
+        String id = client.getUniqueId().toString();
+        CountDownLatch slow = shared.hold(id); // the look-up does not end while the check runs
+        List<String> timeouts = timeoutWarnings(id);
+        try {
+            server.addPlayer(client);
+            FakeMysql.await(() -> shared.waiting(id), "the player's look-up to start");
+            server.getPluginManager().callEvent(new PlayerConnectEvent(client,
+                    PlayerConnectEvent.ConnectReason.JOIN_PROXY));
+            server.getScheduler().performTicks(400); // the whole check
+
+            assertEquals(1, timeouts.size(), "the timeout warnings, " + timeouts);
+        } finally {
+            slow.countDown();
+        }
+    }
+
+    // When the check's 30 runs are used up during a biome refresh, it waits for the player, and goes on when they
+    // are back. If the settings loaded meanwhile, it goes on with them, and there is no timeout to log.
+    @Test
+    void noTimeoutIsLoggedWhenTheSettingsLoadedDuringARefresh(@TempDir Path datapacks) throws Exception {
+        BiomeTuningOnAFakeServer.enable(plugin, datapacks);
+        Client client = new Client(UUID.randomUUID());
+        String id = client.getUniqueId().toString();
+        Map<String, Object> row = new HashMap<>(Map.of("uuid", id, "auto", true, "variant", "light",
+                "resolution", 16, "client", "vanilla", "currentURL", PACK_URL, "status", "SUCCESSFULLY_LOADED"));
+        shared.insertRow(row);
+        CountDownLatch slow = shared.hold(id);
+        List<String> timeouts = timeoutWarnings(id);
+        try {
+            server.addPlayer(client);
+            FakeMysql.await(() -> shared.waiting(id), "the player's look-up to start");
+            server.getPluginManager().callEvent(new PlayerConnectEvent(client,
+                    PlayerConnectEvent.ConnectReason.JOIN_PROXY));
+            server.getScheduler().performOneTick(); // the first run, while the row is still being read
+            assertEquals(RefreshCoordinator.Outcome.STARTED, BiomeTuning.refresher().refresh(client, false, player -> {
+                ((PlayerMock) player).disconnect();
+                return null;
+            }));
+            slow.countDown(); // the settings load during the refresh
+            FakeMysql.await(() -> shared.lookUps(id) > 0, "the look-up to end");
+            synchronized (Objects.requireNonNull(RpManager.getDbConnector())) {
+                // the row is read
+            }
+            server.getScheduler().performTicks(400); // the refresh outlasts the check's 30 runs
+
+            Client back = new Client(client.getName(), client.getUniqueId());
+            server.getPlayerList().addPlayer(back);
+            server.getPluginManager().callEvent(new PlayerJoinEvent(back, Component.text("back")));
+            server.getScheduler().performTicks(10); // the run on return
+
+            assertEquals(List.of(PACK_URL), back.packs, "the pack of the loaded settings");
+            assertEquals(List.of(), timeouts, "the timeout warnings");
+        } finally {
+            slow.countDown();
+            BiomeTuning.disable();
+        }
+    }
+
     // A player joins this server, after another server stored their settings, with lastPack as the pack it sent
     // them, or none. Joining looks up the player's row on another thread, under the connector's lock.
     private static Client join(String lastPack) throws SQLException {
@@ -106,6 +187,29 @@ class RpJoinCheckTest {
         }
         assertTrue(RpManager.hasPlayerDataLoaded(client), "the player's data is loaded");
         return client;
+    }
+
+    // The warnings, from now on, that the join check timed out waiting for the settings of the player with this id.
+    private static List<String> timeoutWarnings(String id) {
+        List<String> timeouts = new CopyOnWriteArrayList<>();
+        plugin.getLogger().addHandler(new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getLevel() == Level.WARNING && record.getMessage().contains("Timed out waiting")
+                        && record.getMessage().contains(id)) {
+                    timeouts.add(record.getMessage());
+                }
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        });
+        return timeouts;
     }
 
     // MockBukkit leaves the client's protocol, its brand and the packs sent to it to the test.
