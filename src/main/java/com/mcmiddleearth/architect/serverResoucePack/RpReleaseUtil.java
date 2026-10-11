@@ -147,31 +147,20 @@ public class RpReleaseUtil {
     }
 
     /**
-     * What /rp server did. Each variant in set has its slot for the Minecraft version pointed at the release, url and
-     * sha together. Each variant in failed kept its url and sha, for the reason given, which names the url. A result
-     * with error set comes from work that failed: the error is in the log.
-     */
-    record ServerPackResult(List<String> set, Map<String, String> failed, boolean error) {
-        static ServerPackResult ofError() {
-            return new ServerPackResult(List.of(), Map.of(), true);
-        }
-    }
-
-    /**
      * Points the slots of a pack for one Minecraft version at the files of a release. Each file is downloaded and
      * hashed off the main thread first. Then, on the main thread, each slot whose file was hashed gets its url and
      * sha together, and config.yml is saved once; a slot whose file could not be hashed keeps its url and sha. The
-     * result reaches callback on the main thread. /rp server has checked that rpName matches a pack in config.yml,
-     * and that mcVersion (26.2 or 26_2) is a key of protocolVersions.yml.
+     * result, whose slots are the variants, reaches callback on the main thread. /rp server has checked that rpName
+     * matches a pack in config.yml, and that mcVersion (26.2 or 26_2) is a key of protocolVersions.yml.
      */
     public static void setServerResourcePack(CommandSender cs, String rpName, String version, String mcVersion,
-                                             Consumer<ServerPackResult> callback) {
+                                             Consumer<RpManager.SlotResult> callback) {
         String finalRpName = RpManager.matchRpName(rpName);
         String versionKey = mcVersion.replace('.','_');
         ConfigurationSection rpConfig = RpManager.getRpConfig().getConfigurationSection(finalRpName);
         if(finalRpName.isEmpty() || rpConfig == null) {
             Log.warn("No server resource pack in config.yml matches '" + rpName + "'.");
-            callback.accept(ServerPackResult.ofError());
+            callback.accept(RpManager.SlotResult.ofError());
             return;
         }
         // the file of the release for each variant
@@ -209,7 +198,7 @@ public class RpReleaseUtil {
                 // Nothing in the background may fail silently: the error is logged, and the admin told.
                 Log.error("Failed to set the server resource pack " + finalRpName + " to " + version
                         + " for MC " + versionKey, ex);
-                Bukkit.getScheduler().runTask(plugin, () -> callback.accept(ServerPackResult.ofError()));
+                Bukkit.getScheduler().runTask(plugin, () -> callback.accept(RpManager.SlotResult.ofError()));
                 return;
             }
             Bukkit.getScheduler().runTask(plugin,
@@ -219,25 +208,26 @@ public class RpReleaseUtil {
 
     // On the main thread: each variant whose file was hashed gets url and sha together in its slot for the version,
     // and config.yml is saved once.
-    private static ServerPackResult setSlots(String rpName, String version, String versionKey, Map<String, String> urls,
-                                             Map<String, String> shas, Map<String, String> failed) {
+    private static RpManager.SlotResult setSlots(String rpName, String version, String versionKey,
+                                                 Map<String, String> urls, Map<String, String> shas,
+                                                 Map<String, String> failed) {
         try {
             if (!shas.isEmpty()) {
                 ConfigurationSection rpConfig = RpManager.getRpConfig().getConfigurationSection(rpName);
                 if (rpConfig == null) {
                     Log.warn("Server resource pack " + rpName + " is no longer in config.yml, so it was not set to "
                             + version + ".");
-                    return ServerPackResult.ofError();
+                    return RpManager.SlotResult.ofError();
                 }
                 for (Map.Entry<String, String> sha : shas.entrySet()) {
                     setSlot(rpConfig, sha.getKey(), versionKey, urls.get(sha.getKey()), sha.getValue());
                 }
                 ArchitectPlugin.getPluginInstance().saveConfig();
             }
-            return new ServerPackResult(List.copyOf(shas.keySet()), failed, false);
+            return new RpManager.SlotResult(List.copyOf(shas.keySet()), failed, false);
         } catch (RuntimeException ex) {
             Log.error("Failed to set the server resource pack " + rpName + " to " + version + " for MC " + versionKey, ex);
-            return ServerPackResult.ofError();
+            return RpManager.SlotResult.ofError();
         }
     }
 

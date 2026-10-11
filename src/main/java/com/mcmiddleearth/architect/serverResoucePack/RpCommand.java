@@ -64,10 +64,8 @@ public class RpCommand extends AbstractArchitectCommand {
         if(args.length>0 && args[0].equalsIgnoreCase("server")
                 && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
             if(args.length>3) {
-                String rpName = RpManager.matchRpName(args[1]);
+                String rpName = matchPack(cs, args[1]);
                 if(rpName.isEmpty()) {
-                    PluginData.getMessageUtil().sendErrorMessage(cs, "Unknown resource pack: " + args[1]
-                            + ". Use one of: " + String.join(", ", RpManager.getRpConfig().getKeys(false)) + ".");
                     return true;
                 }
                 // A release name in place of the version once made a slot that matches no client's version.
@@ -88,13 +86,13 @@ public class RpCommand extends AbstractArchitectCommand {
                     if (result.failed().isEmpty()) {
                         PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
                                 + " set to version: " + args[2] + " for MC: "+ args[3]);
-                    } else if (result.set().isEmpty()) {
+                    } else if (result.done().isEmpty()) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "Server resource pack " + rpName
                                 + " was not changed.");
                     } else {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "Server resource pack " + rpName
                                 + " set to version " + args[2] + " for MC " + args[3] + " in "
-                                + String.join(", ", result.set()) + " only.");
+                                + String.join(", ", result.done()) + " only.");
                     }
                 });
             } else {
@@ -139,17 +137,29 @@ public class RpCommand extends AbstractArchitectCommand {
                 PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
                 return true;
             }
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    String rpName = RpManager.matchRpName(args[1]);
-                    boolean allVersions = args.length > 2 && args[2].equals("all");
-                    if(RpManager.refreshSHA(cs, rpName, allVersions)) {
-                        PluginData.getMessageUtil().sendInfoMessage(cs, "SHA recalculated for rp: "+rpName);
-                    } else {
-                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while recalculating SHA for rp: "+args[1]);
-                    }
-                }}.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
+            String rpName = matchPack(cs, args[1]);
+            if(rpName.isEmpty()) {
+                return true;
+            }
+            boolean allVersions = args.length > 2 && args[2].equals("all");
+            RpManager.refreshSHA(cs, rpName, allVersions, result -> {
+                if(result.error()) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "Error while recalculating SHA for rp: " + rpName
+                            + "! See " + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+                    return;
+                }
+                result.failed().forEach((slot, reason) -> PluginData.getMessageUtil().sendErrorMessage(cs,
+                        "Slot " + slot + " of " + rpName + " keeps its sha: " + reason));
+                if(result.failed().isEmpty()) {
+                    PluginData.getMessageUtil().sendInfoMessage(cs, "SHA recalculated for rp: "+rpName);
+                } else if(result.done().isEmpty()) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "SHA not recalculated for rp: " + rpName + ".");
+                } else {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "SHA recalculated for rp: " + rpName + ", but not for "
+                            + (result.failed().size() == 1 ? "the slot" : "the " + result.failed().size() + " slots")
+                            + " above.");
+                }
+            });
             return true;
         }
         if (!(cs instanceof Player)) {
@@ -389,6 +399,16 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         new RPSwitcher(urlStr, (Player) cs).start();*/
         return true;
+    }
+
+    // The pack a name matches; or "", once the admin is told the packs there are.
+    private static String matchPack(CommandSender cs, String name) {
+        String rpName = RpManager.matchRpName(name);
+        if(rpName.isEmpty()) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Unknown resource pack: " + name
+                    + ". Use one of: " + String.join(", ", RpManager.getRpConfig().getKeys(false)) + ".");
+        }
+        return rpName;
     }
 
     static String releaseFinishedHint(String rpName, String version) {
