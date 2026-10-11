@@ -362,7 +362,9 @@ public class RpManager {
                 for(String version: variantSection.getKeys(false)) {
                     Integer protocolVersion = protocolVersions.get(version);
                     if(protocolVersion==null) {
-                        return null;
+                        // A slot under a key protocolVersions.yml lacks, such as 26_2release, matches no client: it is
+                        // passed over, as in getLatestVersion, so the variant's other slots still serve.
+                        continue;
                     }
                     ArchitectPlugin.getPluginInstance().getDevUtil().log(2,"Protocol: "+protocolVersion);
                     if(protocolResult < protocolVersion && protocolVersion <= data.getProtocolVersion()) {
