@@ -42,21 +42,23 @@ public class RpReleaseUtil {
 
     public static void releaseResourcePack(String rpName, String version, String title, BiConsumer<Boolean,Integer> callback ) {
         String finalRpName = RpManager.matchRpName(rpName);//.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase();
+        // Read on the main thread: an update of config.yml reads it again there, in place, and a read from the
+        // release's own thread meanwhile could find it empty.
+        String gitHubOwner = getGitHubOwner(finalRpName);
+        String gitHubRepo = getGitHubRepo(finalRpName);
+        String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
+        String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
+        Duration timeout = getTimeout(ArchitectPlugin.getPluginInstance().getConfig(), finalRpName);
         Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
             try {
                 boolean isWindows = System.getProperty("os.name")
                         .toLowerCase().startsWith("windows");
-                String gitHubOwner = getGitHubOwner(finalRpName);
-                String gitHubRepo = getGitHubRepo(finalRpName);
-                String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
-                String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
                 if (isWindows || gitHubOwner==null || gitHubRepo==null || releaseScript==null || scriptPath==null) {
                     runOnMain(callback, true, -1);
                     return;
                 }
                 Process process = startScript(new File(scriptPath), "sh", releaseScript, finalRpName, gitHubOwner,
                         gitHubRepo, version, title);
-                Duration timeout = getTimeout(ArchitectPlugin.getPluginInstance().getConfig(), finalRpName);
                 ScriptResult result = awaitScript(process, timeout, GRACE,
                         line -> Log.info("[RP release " + finalRpName + "] " + line));
                 if (!result.terminated()) {
