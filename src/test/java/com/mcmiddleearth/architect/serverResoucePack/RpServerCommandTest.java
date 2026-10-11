@@ -2,8 +2,10 @@ package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.testsupport.TestConfig;
+import com.sun.net.httpserver.HttpServer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -17,16 +19,22 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
@@ -41,13 +49,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 // /rp server, which points a pack's version slot at the files of a release, as an admin uses it. Its downloads never
-// reach the internet: the packs it hashes are local files. One mock/load per class, as in LogFileTest.
+// reach the internet: the releases are on a server of the test's own, and the packs already in the slots are local
+// files. One mock/load per class, as in LogFileTest.
 class RpServerCommandTest {
 
-    private static final String SHA = "33bece3b361f804e0966271ceaf85a691fe6a11d";
+    // the variants of a pack for vanilla clients only, and the file of a release each one gets
+    private static final Map<String, String> PATHS = Map.of(
+            "vanilla.16px.light", "Paths.zip",
+            "vanilla.16px.footprints", "Paths-Footprints.zip");
+
+    // the variants of a pack for Sodium and Lite clients too, and the file of a release each one gets
+    private static final Map<String, String> MORDOR = Map.of(
+            "vanilla.16px.light", "Mordor-Vanilla.zip",
+            "vanilla.16px.footprints", "Mordor-Vanilla-Footprints.zip",
+            "sodium.16px.light", "Mordor-Sodium.zip",
+            "sodium.16px.footprints", "Mordor-Sodium-Footprints.zip",
+            "lite.16px.light", "Mordor-Lite.zip",
+            "lite.16px.footprints", "Mordor-Lite-Footprints.zip");
 
     @TempDir
     static Path files;
+
+    // the files of the releases, by their path on the release site
+    private static final Map<String, byte[]> released = new ConcurrentHashMap<>();
+    private static HttpServer releaseSite;
 
     private static ServerMock server;
     private static ArchitectPlugin plugin;
@@ -55,43 +80,34 @@ class RpServerCommandTest {
 
     @BeforeAll
     static void setUp() throws Exception {
+        releaseSite = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        releaseSite.createContext("/", exchange -> {
+            byte[] body = released.get(exchange.getRequestURI().getPath());
+            if (body == null) {
+                exchange.sendResponseHeaders(404, -1);
+            } else {
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+            }
+            exchange.close();
+        });
+        releaseSite.start();
+        RpReleaseUtil.releaseSite = "http://127.0.0.1:" + releaseSite.getAddress().getPort() + "/";
+
         server = MockBukkit.mock();
-        File folder = TestConfig.write(server,
-                "ServerResourcePacks:",
-                // a pack whose first entry is no section: the background work of /rp server fails on it
-                "    Crash:",
-                "        broken: not a section",
-                "        vanilla:",
-                "            16px:",
-                "                light:",
-                "                    '26_2':",
-                "                        url: https://example.invalid/Crash-old.zip",
-                "                        sha: " + SHA,
-                "                footprints:",
-                "                    '26_2':",
-                "                        url: https://example.invalid/Crash-Footprints-old.zip",
-                "                        sha: " + SHA,
-                "    Paths:",
-                "        vanilla:",
-                "            16px:",
-                "                light:",
-                "                    '26_2':",
-                "                        url: '" + pack("Paths-old.zip") + "'",
-                "                        sha: " + sha1(pack("Paths-old.zip")),
-                "                footprints:",
-                "                    '26_2':",
-                "                        url: '" + pack("Paths-Footprints-old.zip") + "'",
-                "                        sha: " + sha1(pack("Paths-Footprints-old.zip")),
-                "gitHubRpReleases:",
-                "    Crash:",
-                "        owner: mcme",
-                "        repo: crash",
-                "    Paths:",
-                "        owner: mcme",
-                "        repo: paths",
-                "");
+        YamlConfiguration config = new YamlConfiguration();
+        addSlots(config, "Crash", PATHS, "26_2"); // /rp server fails for it
+        addSlots(config, "Mordor", MORDOR, "26_2", "1_21_4");
+        addSlots(config, "Paths", PATHS, "26_2");
+        for (String pack : List.of("Crash", "Mordor", "Paths")) {
+            config.set("gitHubRpReleases." + pack + ".owner", "mcme");
+            config.set("gitHubRpReleases." + pack + ".repo", pack.toLowerCase(Locale.ROOT));
+        }
+        File folder = TestConfig.write(server, config.saveToString());
         plugin = MockBukkit.load(ArchitectPlugin.class);
         assertEquals(folder, plugin.getDataFolder(), "Architect reads the test's config.yml");
+        assertEquals(slots(config, "Mordor", MORDOR.keySet(), "1_21_4"),
+                slots(plugin.getConfig(), "Mordor", MORDOR.keySet(), "1_21_4"), "the slots Architect reads");
     }
 
     @AfterAll
@@ -99,22 +115,98 @@ class RpServerCommandTest {
         if (MockBukkit.isMocked()) {
             MockBukkit.unmock();
         }
+        releaseSite.stop(0);
+        RpReleaseUtil.releaseSite = "https://github.com/";
     }
 
-    // An error in the background work of /rp server is logged, and the admin is told, on the main thread.
+    // An error in the background work of /rp server is logged, and the admin is told, on the main thread. A release
+    // tag with a ^, which no URL may hold, makes one; nothing is written then.
     @Test
-    void anErrorInTheBackgroundIsLoggedAndReported() {
+    void anErrorInTheBackgroundIsLoggedAndReported() throws Exception {
         Admin admin = admin();
         List<LogRecord> errors = errors();
+        String before = Files.readString(configFile());
 
-        admin.performCommand("rp server Crash v2 26.2");
+        admin.performCommand("rp server Crash v^2 26.2");
 
         String reply = awaitMessage(admin, "Error while setting server resource pack");
         assertAll(
                 () -> assertTrue(reply.contains("Error while setting server resource pack"), reply),
                 () -> assertEquals(List.of(), admin.offMainThread, "messages sent off the main thread"),
                 () -> assertTrue(errors.stream().anyMatch(record -> record.getThrown() != null),
-                        "the error in Architect's log, with its stack trace"));
+                        "the error in Architect's log, with its stack trace"),
+                () -> assertEquals(before, Files.readString(configFile()), "config.yml"));
+    }
+
+    // Setting an older slot, 1_21_4 while there is a 26_2 one, paired its new url with its old sha: only the newest
+    // slot was hashed. Each slot /rp server sets now gets the sha of its own file, and the other slots stay as they
+    // were.
+    @Test
+    void settingAnOlderSlotGivesItTheShaOfItsOwnFile() throws Exception {
+        Admin admin = admin();
+        Map<String, String> expected = new TreeMap<>();
+        for (Map.Entry<String, String> variant : MORDOR.entrySet()) {
+            byte[] file = release("mordor", "v2", variant.getValue());
+            expected.put(variant.getKey() + " url", releaseUrl("mordor", "v2", variant.getValue()));
+            expected.put(variant.getKey() + " sha", sha1(file));
+        }
+        Map<String, String> newest = slots(plugin.getConfig(), "Mordor", MORDOR.keySet(), "26_2");
+
+        admin.performCommand("rp server Mordor v2 1.21.4");
+
+        String reply = awaitMessage(admin, "Mordor");
+        YamlConfiguration saved = YamlConfiguration.loadConfiguration(configFile().toFile());
+        assertAll(
+                () -> assertTrue(reply.contains("set to version: v2"), reply),
+                () -> assertEquals(expected, slots(plugin.getConfig(), "Mordor", MORDOR.keySet(), "1_21_4"),
+                        "the 1_21_4 slots"),
+                () -> assertEquals(expected, slots(saved, "Mordor", MORDOR.keySet(), "1_21_4"),
+                        "the 1_21_4 slots in config.yml"),
+                () -> assertEquals(newest, slots(plugin.getConfig(), "Mordor", MORDOR.keySet(), "26_2"),
+                        "the 26_2 slots"));
+    }
+
+    // A file of the release that cannot be downloaded leaves its slot as it was, url and sha, and the admin is told
+    // which slot, and why; the slot whose file could be downloaded is set.
+    @Test
+    void aSlotWhoseFileCannotBeDownloadedKeepsItsUrlAndSha() throws Exception {
+        Admin admin = admin();
+        byte[] light = release("paths", "v3", "Paths.zip"); // and no Paths-Footprints.zip
+        String missing = releaseUrl("paths", "v3", "Paths-Footprints.zip");
+        String slot = "ServerResourcePacks.Paths.vanilla.16px.";
+        String footprintsUrl = plugin.getConfig().getString(slot + "footprints.26_2.url");
+        String footprintsSha = plugin.getConfig().getString(slot + "footprints.26_2.sha");
+
+        admin.performCommand("rp server Paths v3 26.2");
+
+        List<String> told = told(admin, "404");
+        assertAll(
+                () -> assertTrue(told.stream().anyMatch(message -> message.contains("vanilla.16px.footprints")
+                        && message.contains(missing) && message.contains("404")),
+                        "the admin is told which slot kept its pack, and why: " + told),
+                () -> assertEquals(releaseUrl("paths", "v3", "Paths.zip"),
+                        plugin.getConfig().getString(slot + "light.26_2.url"), "the url of the light slot"),
+                () -> assertEquals(sha1(light), plugin.getConfig().getString(slot + "light.26_2.sha"),
+                        "the sha of the light slot"),
+                () -> assertEquals(footprintsUrl, plugin.getConfig().getString(slot + "footprints.26_2.url"),
+                        "the url of the footprints slot"),
+                () -> assertEquals(footprintsSha, plugin.getConfig().getString(slot + "footprints.26_2.sha"),
+                        "the sha of the footprints slot"));
+    }
+
+    // A pack name that matches no pack is refused, and nothing is written.
+    @Test
+    void anUnknownPackIsRefusedAndWritesNothing() throws Exception {
+        Admin admin = admin();
+        String before = Files.readString(configFile());
+
+        admin.performCommand("rp server Nopack v2 26.2");
+
+        String reply = awaitReply(admin);
+        assertAll(
+                () -> assertTrue(reply.contains("Nopack") && reply.contains("Crash") && reply.contains("Mordor")
+                        && reply.contains("Paths"), "the reply names the packs there are: " + reply),
+                () -> assertEquals(before, Files.readString(configFile()), "config.yml"));
     }
 
     // A release name in place of the Minecraft version, as in "/rp server p v1.8.9 26.2release", made a slot that no
@@ -175,6 +267,31 @@ class RpServerCommandTest {
         return admin;
     }
 
+    // Gives each variant of a pack a slot for each version, at a local file of its own.
+    private static void addSlots(YamlConfiguration config, String pack, Map<String, String> variants, String... versions)
+            throws Exception {
+        for (String variant : variants.keySet()) {
+            for (String version : versions) {
+                String slot = "ServerResourcePacks." + pack + "." + variant + "." + version;
+                String url = pack(pack + "-" + variant + "-" + version + "-old.zip");
+                config.set(slot + ".url", url);
+                config.set(slot + ".sha", sha1(Files.readAllBytes(Path.of(java.net.URI.create(url)))));
+            }
+        }
+    }
+
+    // The url and sha of a pack's slots for a version, by variant: "vanilla.16px.light url" and so on.
+    private static Map<String, String> slots(ConfigurationSection config, String pack, Collection<String> variants,
+                                             String version) {
+        Map<String, String> slots = new TreeMap<>();
+        for (String variant : variants) {
+            String slot = "ServerResourcePacks." + pack + "." + variant + "." + version;
+            slots.put(variant + " url", config.getString(slot + ".url"));
+            slots.put(variant + " sha", config.getString(slot + ".sha"));
+        }
+        return slots;
+    }
+
     // A local pack file of this name, made on first use: its file: URL.
     private static String pack(String name) throws IOException {
         Path file = files.resolve(name);
@@ -184,8 +301,18 @@ class RpServerCommandTest {
         return file.toUri().toString();
     }
 
-    private static String sha1(String url) throws Exception {
-        byte[] bytes = Files.readAllBytes(Path.of(java.net.URI.create(url)));
+    // Puts a file of a release of the repository mcme/<repo> on the release site: its bytes.
+    private static byte[] release(String repo, String tag, String file) {
+        byte[] bytes = ("the file " + file + " of " + repo + " " + tag).getBytes(StandardCharsets.UTF_8);
+        released.put("/mcme/" + repo + "/releases/download/" + tag + "/" + file, bytes);
+        return bytes;
+    }
+
+    private static String releaseUrl(String repo, String tag, String file) {
+        return RpReleaseUtil.releaseSite + "mcme/" + repo + "/releases/download/" + tag + "/" + file;
+    }
+
+    private static String sha1(byte[] bytes) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(bytes));
     }
 
@@ -229,8 +356,15 @@ class RpServerCommandTest {
         return awaitMessage(player, "");
     }
 
-    // The reply comes from work on another thread, and on a later tick.
     private static String awaitMessage(PlayerMock player, String text) {
+        List<String> told = told(player, text);
+        return told.stream().filter(message -> message.contains(text)).findFirst()
+                .orElseGet(() -> fail("the admin was not told '" + text + "', only " + told));
+    }
+
+    // Everything the admin is told until a message with this text, or for 10 seconds: the replies come from work on
+    // another thread, and on a later tick.
+    private static List<String> told(PlayerMock player, String text) {
         List<String> told = new ArrayList<>();
         long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
         while (System.nanoTime() < end) {
@@ -238,7 +372,7 @@ class RpServerCommandTest {
             for (String message = player.nextMessage(); message != null; message = player.nextMessage()) {
                 told.add(message);
                 if (message.contains(text)) {
-                    return message;
+                    return told;
                 }
             }
             try {
@@ -248,7 +382,7 @@ class RpServerCommandTest {
                 break;
             }
         }
-        return fail("the admin was not told '" + text + "', only " + told);
+        return told;
     }
 
     // An admin who notes every message that reaches them off the main thread.

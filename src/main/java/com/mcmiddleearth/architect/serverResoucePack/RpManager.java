@@ -40,7 +40,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -563,6 +566,60 @@ public class RpManager {
             return true;
         }
         return false;
+    }
+
+    // How long a download of a pack may wait to connect, and then for its next bytes: a server that stops answering
+    // ends the download with an error, instead of holding it, and the admin waiting for its answer, forever.
+    private static final int CONNECT_TIMEOUT_MILLIS = 30_000;
+    private static final int READ_TIMEOUT_MILLIS = 60_000;
+
+    /**
+     * Downloads the pack at url, and returns its SHA-1 as 40 hex digits; progress runs every 5 seconds meanwhile. Call
+     * it off the main thread. A download that does not get the whole file throws; an HTTP answer other than 200,
+     * such as 404 for a release that is gone, as an HttpStatusException.
+     */
+    static String sha1(String url, Runnable progress) throws IOException {
+        URLConnection connection = URI.create(url).toURL().openConnection();
+        connection.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
+        connection.setReadTimeout(READ_TIMEOUT_MILLIS);
+        if (connection instanceof HttpURLConnection http && http.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            HttpStatusException status = new HttpStatusException(http.getResponseCode(), http.getResponseMessage());
+            http.disconnect();
+            throw status;
+        }
+        MessageDigest sha1;
+        try {
+            sha1 = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("This Java has no SHA-1", ex); // every Java has it
+        }
+        try (InputStream in = connection.getInputStream()) {
+            byte[] data = new byte[8192];
+            long time = System.currentTimeMillis();
+            for (int read = in.read(data); read != -1; read = in.read(data)) {
+                sha1.update(data, 0, read);
+                if (System.currentTimeMillis() - time > 5000) {
+                    time = System.currentTimeMillis();
+                    progress.run();
+                }
+            }
+        }
+        return HexFormat.of().formatHex(sha1.digest());
+    }
+
+    // A download that got an HTTP answer other than 200, such as 404 for a release that is gone.
+    static final class HttpStatusException extends IOException {
+        HttpStatusException(int code, String message) {
+            super("HTTP " + code + (message == null ? "" : " " + message));
+        }
+    }
+
+    // What went wrong with a download, for an admin: "HTTP 404 Not Found", or the kind of error and its message.
+    static String describe(IOException ex) {
+        if (ex instanceof HttpStatusException) {
+            return ex.getMessage();
+        }
+        return ex.getClass().getSimpleName() + (ex.getMessage() == null ? "" : ": " + ex.getMessage());
     }
 
     private static String getLatestVersion(Collection<String> versions) {

@@ -64,19 +64,37 @@ public class RpCommand extends AbstractArchitectCommand {
         if(args.length>0 && args[0].equalsIgnoreCase("server")
                 && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
             if(args.length>3) {
+                String rpName = RpManager.matchRpName(args[1]);
+                if(rpName.isEmpty()) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "Unknown resource pack: " + args[1]
+                            + ". Use one of: " + String.join(", ", RpManager.getRpConfig().getKeys(false)) + ".");
+                    return true;
+                }
                 // A release name in place of the version once made a slot that matches no client's version.
                 if(!RpManager.isMcVersion(args[3].replace('.','_'))) {
                     PluginData.getMessageUtil().sendErrorMessage(cs, "Unknown Minecraft version: " + args[3]
                             + ". Use one of: " + String.join(", ", mcVersionNames()) + ".");
                     return true;
                 }
-                RpReleaseUtil.setServerResourcePack(cs, args[1], args[2], args[3], success -> {
-                    if (success) {
-                        PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
-                                + " set to version: " + args[2] + " for MC: "+ args[3]);
-                    } else {
+                RpReleaseUtil.setServerResourcePack(cs, rpName, args[2], args[3], result -> {
+                    if (result.error()) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack! See "
                                 + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+                        return;
+                    }
+                    result.failed().forEach((variant, reason) -> PluginData.getMessageUtil().sendErrorMessage(cs,
+                            "Variant " + variant + " of " + rpName + " was not set for MC " + args[3]
+                            + " and keeps its url and sha: " + reason));
+                    if (result.failed().isEmpty()) {
+                        PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
+                                + " set to version: " + args[2] + " for MC: "+ args[3]);
+                    } else if (result.set().isEmpty()) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Server resource pack " + rpName
+                                + " was not changed.");
+                    } else {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Server resource pack " + rpName
+                                + " set to version " + args[2] + " for MC " + args[3] + " in "
+                                + String.join(", ", result.set()) + " only.");
                     }
                 });
             } else {
