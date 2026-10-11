@@ -99,6 +99,9 @@ class RpServerCommandTest {
         addSlots(config, "Crash", PATHS, "26_2"); // /rp server fails for it
         addSlots(config, "Mordor", MORDOR, "26_2", "1_21_4");
         addSlots(config, "Paths", PATHS, "26_2");
+        // packs with a slot made under a release name, as by "/rp server p v1.8.9 26.2release"
+        addSlots(config, "Dead", PATHS, "26_2", "1_21_4", "26_2release");
+        addSlots(config, "Erech", PATHS, "26_2", "26_2release");
         for (String pack : List.of("Crash", "Mordor", "Paths")) {
             config.set("gitHubRpReleases." + pack + ".owner", "mcme");
             config.set("gitHubRpReleases." + pack + ".repo", pack.toLowerCase(Locale.ROOT));
@@ -254,6 +257,89 @@ class RpServerCommandTest {
     void theReleaseHintNamesTheMinecraftVersionToo() {
         assertEquals("RP release finished. You might want to do /rp server Paths v1.9 <mcVersion>",
                 RpCommand.releaseFinishedHint("Paths", "v1.9"));
+    }
+
+    // /rp server remove <pack> <mc> takes the slot for a version out of every variant of the pack: the way to remove
+    // a slot made under a release name, which no client's version matches.
+    @Test
+    void removeTakesTheSlotOutOfEveryVariant() throws Exception {
+        Admin admin = admin();
+        Map<String, String> kept = slots(plugin.getConfig(), "Dead", PATHS.keySet(), "26_2");
+        kept.putAll(slots(plugin.getConfig(), "Dead", PATHS.keySet(), "1_21_4"));
+        Map<String, String> none = new TreeMap<>();
+        PATHS.keySet().forEach(variant -> {
+            none.put(variant + " url", null);
+            none.put(variant + " sha", null);
+        });
+
+        admin.performCommand("rp server remove Dead 26.2release");
+
+        String reply = awaitReply(admin);
+        YamlConfiguration saved = YamlConfiguration.loadConfiguration(configFile().toFile());
+        Map<String, String> savedKept = slots(saved, "Dead", PATHS.keySet(), "26_2");
+        savedKept.putAll(slots(saved, "Dead", PATHS.keySet(), "1_21_4"));
+        assertAll(
+                () -> assertTrue(reply.contains("26.2release") && reply.contains("vanilla.16px.light")
+                        && reply.contains("vanilla.16px.footprints"), "the reply names the slots removed: " + reply),
+                () -> assertEquals(none, slots(plugin.getConfig(), "Dead", PATHS.keySet(), "26_2release"),
+                        "the 26_2release slots"),
+                () -> assertEquals(none, slots(saved, "Dead", PATHS.keySet(), "26_2release"),
+                        "the 26_2release slots in config.yml"),
+                () -> assertEquals(kept, savedKept, "the other slots in config.yml"));
+    }
+
+    // A slot that is not there is refused, naming the slots the pack has; so is a pack that is not there, naming the
+    // packs.
+    @Test
+    void removeRefusesASlotOrPackThatIsNotThere() throws Exception {
+        Admin admin = admin();
+        String before = Files.readString(configFile());
+
+        admin.performCommand("rp server remove Erech 1.20");
+        String noSlot = awaitReply(admin);
+        admin.performCommand("rp server remove Nopack 26.2");
+        String noPack = awaitReply(admin);
+
+        assertAll(
+                () -> assertTrue(noSlot.contains("1.20") && noSlot.contains("26.2") && noSlot.contains("26.2release"),
+                        "the reply names the slots Erech has: " + noSlot),
+                () -> assertTrue(noPack.contains("Nopack") && noPack.contains("Erech") && noPack.contains("Mordor"),
+                        "the reply names the packs there are: " + noPack),
+                () -> assertEquals(before, Files.readString(configFile()), "config.yml"));
+    }
+
+    // Only a resource pack admin may remove a slot, as only one may set it.
+    @Test
+    void removeIsForResourcePackAdminsOnly() throws Exception {
+        PlayerMock builder = server.addPlayer();
+        builder.setOp(false);
+        String before = Files.readString(configFile());
+
+        builder.performCommand("rp server remove Erech 26_2release");
+
+        assertAll(
+                () -> assertTrue(plugin.getConfig().contains("ServerResourcePacks.Erech.vanilla.16px.light.26_2release"),
+                        "the slot, in Architect's config"),
+                () -> assertEquals(before, Files.readString(configFile()), "config.yml"));
+    }
+
+    // remove completes, and then the packs, and then the slots of the pack, as an admin types them.
+    @Test
+    void removeCompletesThePacksAndTheirSlots() {
+        Admin admin = admin();
+        PlayerMock builder = server.addPlayer();
+        builder.setOp(false);
+        Command rp = server.getCommandMap().getCommand("rp");
+
+        assertAll(
+                () -> assertEquals(List.of("remove"), rp.tabComplete(admin, "rp", new String[] {"server", "rem"})),
+                () -> assertEquals(List.of("Erech"), rp.tabComplete(admin, "rp", new String[] {"server", "remove", "E"})),
+                () -> assertEquals(List.of("26.2", "26.2release"),
+                        rp.tabComplete(admin, "rp", new String[] {"server", "remove", "Erech", ""})),
+                () -> assertEquals(List.of("26.2release"),
+                        rp.tabComplete(admin, "rp", new String[] {"server", "remove", "Erech", "26.2r"})),
+                () -> assertEquals(List.of(), rp.tabComplete(builder, "rp", new String[] {"server", "remove", "Erech", ""}),
+                        "offered to a player who may not use /rp server"));
     }
 
     private static Admin admin() {

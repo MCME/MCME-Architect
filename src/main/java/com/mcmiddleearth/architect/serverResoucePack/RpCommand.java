@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Stream;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -63,6 +64,10 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         if(args.length>0 && args[0].equalsIgnoreCase("server")
                 && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            if(args.length>1 && args[1].equalsIgnoreCase("remove")) {
+                removeSlot(cs, args);
+                return true;
+            }
             if(args.length>3) {
                 String rpName = matchPack(cs, args[1]);
                 if(rpName.isEmpty()) {
@@ -96,7 +101,8 @@ public class RpCommand extends AbstractArchitectCommand {
                     }
                 });
             } else {
-                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <rpVersion> <requiredMcVersion>");
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <rpVersion> <requiredMcVersion>"
+                        + " or /rp server remove <rpName> <mcVersion>");
             }
             return true;
         }
@@ -401,6 +407,40 @@ public class RpCommand extends AbstractArchitectCommand {
         return true;
     }
 
+    // /rp server remove <rpName> <mcVersion> removes the slot for a version from every variant of a pack: the
+    // counterpart of /rp server for a slot that is there, such as one made under a release name.
+    private static void removeSlot(CommandSender cs, String[] args) {
+        if(args.length<4) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server remove <rpName> <mcVersion>");
+            return;
+        }
+        String rpName = matchPack(cs, args[2]);
+        if(rpName.isEmpty()) {
+            return;
+        }
+        if(!RpManager.getSlotVersions(rpName).contains(args[3].replace('.','_'))) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Resource pack " + rpName + " has no slot for " + args[3]
+                    + ". Its slots: " + String.join(", ", slotNames(rpName)) + ".");
+            return;
+        }
+        RpManager.SlotResult result = RpManager.removeSlots(rpName, args[3].replace('.','_'));
+        if(result.error()) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Error while removing a slot of resource pack " + rpName
+                    + "! See " + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+        } else if(result.done().isEmpty()) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Resource pack " + rpName + " has no slot for " + args[3]
+                    + " any more.");
+        } else {
+            PluginData.getMessageUtil().sendInfoMessage(cs, "Slot " + args[3] + " removed from resource pack " + rpName
+                    + ": " + String.join(", ", result.done()) + ".");
+        }
+    }
+
+    // The versions a pack has slots for, as an admin types them: 26.2, 26.2release and so on.
+    private static List<String> slotNames(String rpName) {
+        return RpManager.getSlotVersions(rpName).stream().map(version -> version.replace('_','.')).toList();
+    }
+
     // The pack a name matches; or "", once the admin is told the packs there are.
     private static String matchPack(CommandSender cs, String name) {
         String rpName = RpManager.matchRpName(name);
@@ -420,14 +460,25 @@ public class RpCommand extends AbstractArchitectCommand {
         return RpManager.getMcVersions().stream().map(version -> version.replace('_','.')).toList();
     }
 
+    // /rp server completes its words for resource pack admins: remove or the pack, and then the Minecraft version,
+    // or, to remove a slot, the pack and then its slots.
     @Override
     public List<String> onTabComplete(CommandSender cs, Command command, String alias, String[] args) {
-        if(args.length == 4 && args[0].equalsIgnoreCase("server")
-                && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
-            String typed = args[3].toLowerCase(Locale.ROOT);
-            return new ArrayList<>(mcVersionNames().stream().filter(version -> version.startsWith(typed)).toList());
+        if(args.length < 2 || !args[0].equalsIgnoreCase("server")
+                || !PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            return new ArrayList<>();
         }
-        return new ArrayList<>();
+        boolean remove = args[1].equalsIgnoreCase("remove");
+        List<String> packs = List.copyOf(RpManager.getRpConfig().getKeys(false));
+        List<String> options = switch(args.length) {
+            case 2 -> Stream.concat(Stream.of("remove"), packs.stream()).toList();
+            case 3 -> remove ? packs : List.of();
+            case 4 -> remove ? slotNames(RpManager.matchRpName(args[2])) : mcVersionNames();
+            default -> List.of();
+        };
+        String typed = args[args.length - 1].toLowerCase(Locale.ROOT);
+        return new ArrayList<>(options.stream().filter(option -> option.toLowerCase(Locale.ROOT).startsWith(typed))
+                .toList());
     }
 
     // While the player's settings are still being read from the RP database, a change would start from defaults

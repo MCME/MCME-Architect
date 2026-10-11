@@ -588,6 +588,46 @@ public class RpManager {
         });
     }
 
+    /** The versions a pack has slots for, in any of its variants, as keys of config.yml (26_2), sorted. */
+    public static List<String> getSlotVersions(String rp) {
+        ConfigurationSection pack = rp.isEmpty() ? null : getRpConfig().getConfigurationSection(rp);
+        Set<String> versions = new TreeSet<>();
+        for(String variant : pack == null ? List.<String>of() : variantPaths(pack)) {
+            ConfigurationSection variantSection = pack.getConfigurationSection(variant);
+            for(String version : variantSection.getKeys(false)) {
+                if(variantSection.isConfigurationSection(version)) {
+                    versions.add(version);
+                }
+            }
+        }
+        return List.copyOf(versions);
+    }
+
+    /**
+     * Removes the slot for a version from every variant of a pack, as /rp server remove does, in config.yml as it is
+     * on disk now. The result's done is the slots removed, by their path in the pack; none when no variant has a slot
+     * for that version any more.
+     */
+    public static SlotResult removeSlots(String rp, String versionKey) {
+        List<String> removed = new ArrayList<>();
+        boolean saved = ConfigFile.update(config -> {
+            ConfigurationSection packs = getRpConfig(config);
+            ConfigurationSection pack = packs == null ? null : packs.getConfigurationSection(rp);
+            for(String variant : pack == null ? List.<String>of() : variantPaths(pack)) {
+                ConfigurationSection variantSection = pack.getConfigurationSection(variant);
+                if(variantSection.isSet(versionKey)) {
+                    variantSection.set(versionKey, null);
+                    removed.add(variant + "." + versionKey);
+                }
+            }
+        });
+        if(!saved) {
+            return SlotResult.ofError(); // ConfigFile logged why
+        }
+        removed.forEach(slot -> Log.info("Server resource pack " + rp + ", slot " + slot + ", was removed."));
+        return new SlotResult(removed, Map.of(), false);
+    }
+
     // The paths of a pack's variants: vanilla.16px.light and so on.
     private static List<String> variantPaths(ConfigurationSection pack) {
         List<String> paths = new ArrayList<>();
