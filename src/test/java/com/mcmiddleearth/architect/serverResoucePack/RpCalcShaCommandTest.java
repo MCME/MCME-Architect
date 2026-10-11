@@ -175,8 +175,9 @@ class RpCalcShaCommandTest {
                         "the admin is told the slot that failed, with its url: " + told));
     }
 
-    // A slot whose url changes while its pack is hashed, as when /rp server sets it meanwhile, keeps the sha that came
-    // with its new url: the hash of the old pack is not written over it.
+    // A slot whose url changes while its pack is hashed, as when /rp server sets it meanwhile, on this server or on
+    // another one that shares config.yml, keeps the sha that came with its new url: the hash of the old pack is not
+    // written over it.
     @Test
     void aSlotThatChangesWhileItsPackIsHashedKeepsItsNewSha() throws Exception {
         Admin admin = admin();
@@ -186,14 +187,19 @@ class RpCalcShaCommandTest {
         try {
             admin.performCommand("rp calcsha Rohan all");
             assertTrue(await(arrived), "the pack is being downloaded");
-            plugin.getConfig().set(slot + ".url", base + "/rohan/light/new.zip");
-            plugin.getConfig().set(slot + ".sha", newSha);
+            // what /rp server writes to config.yml
+            YamlConfiguration changed = YamlConfiguration.loadConfiguration(configFile().toFile());
+            changed.set(slot + ".url", base + "/rohan/light/new.zip");
+            changed.set(slot + ".sha", newSha);
+            changed.save(configFile().toFile());
         } finally {
             release.countDown();
         }
 
         List<String> answer = told(admin, "vanilla.16px.light.26_2");
         assertAll(
+                () -> assertEquals(newSha, YamlConfiguration.loadConfiguration(configFile().toFile())
+                        .getString(slot + ".sha"), "the sha of the slot, in config.yml"),
                 () -> assertEquals(newSha, plugin.getConfig().getString(slot + ".sha"), "the sha of the slot"),
                 () -> assertTrue(answer.stream().anyMatch(message -> message.contains("vanilla.16px.light.26_2")),
                         "the admin is told the slot was not hashed: " + answer));

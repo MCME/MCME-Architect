@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.ConfigFile;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.util.StreamGobbler;
@@ -11,6 +12,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -148,10 +150,11 @@ public class RpReleaseUtil {
 
     /**
      * Points the slots of a pack for one Minecraft version at the files of a release. Each file is downloaded and
-     * hashed off the main thread first. Then, on the main thread, each slot whose file was hashed gets its url and
-     * sha together, and config.yml is saved once; a slot whose file could not be hashed keeps its url and sha. The
-     * result, whose slots are the variants, reaches callback on the main thread. /rp server has checked that rpName
-     * matches a pack in config.yml, and that mcVersion (26.2 or 26_2) is a key of protocolVersions.yml.
+     * hashed off the main thread first. Then, on the main thread, config.yml is read again, each slot whose file was
+     * hashed gets its url and sha together, and config.yml is saved once; a slot whose file could not be hashed keeps
+     * its url and sha. The result, whose slots are the variants, reaches callback on the main thread. /rp server has
+     * checked that rpName matches a pack in config.yml, and that mcVersion (26.2 or 26_2) is a key of
+     * protocolVersions.yml.
      */
     public static void setServerResourcePack(CommandSender cs, String rpName, String version, String mcVersion,
                                              Consumer<RpManager.SlotResult> callback) {
@@ -206,25 +209,35 @@ public class RpReleaseUtil {
         });
     }
 
-    // On the main thread: each variant whose file was hashed gets url and sha together in its slot for the version,
-    // and config.yml is saved once.
+    // On the main thread, in config.yml as it is now on disk: each variant whose file was hashed gets url and sha
+    // together in its slot for the version, and config.yml is saved once.
     private static RpManager.SlotResult setSlots(String rpName, String version, String versionKey,
                                                  Map<String, String> urls, Map<String, String> shas,
                                                  Map<String, String> failed) {
         try {
-            if (!shas.isEmpty()) {
-                ConfigurationSection rpConfig = RpManager.getRpConfig().getConfigurationSection(rpName);
-                if (rpConfig == null) {
-                    Log.warn("Server resource pack " + rpName + " is no longer in config.yml, so it was not set to "
-                            + version + ".");
-                    return RpManager.SlotResult.ofError();
-                }
-                for (Map.Entry<String, String> sha : shas.entrySet()) {
-                    setSlot(rpConfig, sha.getKey(), versionKey, urls.get(sha.getKey()), sha.getValue());
-                }
-                ArchitectPlugin.getPluginInstance().saveConfig();
+            if (shas.isEmpty()) {
+                return new RpManager.SlotResult(List.of(), failed, false);
             }
-            return new RpManager.SlotResult(List.copyOf(shas.keySet()), failed, false);
+            List<String> set = new ArrayList<>();
+            boolean saved = ConfigFile.update(config -> {
+                ConfigurationSection packs = RpManager.getRpConfig(config);
+                ConfigurationSection rpConfig = packs == null ? null : packs.getConfigurationSection(rpName);
+                if (rpConfig != null) {
+                    shas.forEach((variant, sha) -> {
+                        setSlot(rpConfig, variant, versionKey, urls.get(variant), sha);
+                        set.add(variant);
+                    });
+                }
+            });
+            if (!saved) {
+                return RpManager.SlotResult.ofError(); // ConfigFile logged why
+            }
+            if (set.isEmpty()) {
+                Log.warn("Server resource pack " + rpName + " is no longer in config.yml, so it was not set to "
+                        + version + ".");
+                return RpManager.SlotResult.ofError();
+            }
+            return new RpManager.SlotResult(set, failed, false);
         } catch (RuntimeException ex) {
             Log.error("Failed to set the server resource pack " + rpName + " to " + version + " for MC " + versionKey, ex);
             return RpManager.SlotResult.ofError();

@@ -18,6 +18,7 @@ package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.google.gson.Gson;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.ConfigFile;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
@@ -501,7 +502,12 @@ public class RpManager {
     }
     
     public static ConfigurationSection getRpConfig() {
-        return ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection("ServerResourcePacks");
+        return getRpConfig(ArchitectPlugin.getPluginInstance().getConfig());
+    }
+
+    // the server resource packs in this config, such as the one an update of config.yml is given
+    static ConfigurationSection getRpConfig(ConfigurationSection config) {
+        return config.getConfigurationSection("ServerResourcePacks");
     }
 
     /**
@@ -509,7 +515,7 @@ public class RpManager {
      * Each slot in done was set. Each slot in failed was left as it was, for the reason given, which names its url. A
      * result with error set comes from work that failed: the error is in the log.
      */
-    record SlotResult(List<String> done, Map<String, String> failed, boolean error) {
+    public record SlotResult(List<String> done, Map<String, String> failed, boolean error) {
         static SlotResult ofError() {
             return new SlotResult(List.of(), Map.of(), true);
         }
@@ -519,8 +525,9 @@ public class RpManager {
      * Hashes the packs of a pack's slots again, as /rp calcsha does: with allVersions every slot, else the newest slot
      * of each variant. The slots are read on the main thread, and their packs hashed off it in a fixed order, by
      * variant and then by version; a pack that cannot be downloaded does not stop the others. Then, on the main
-     * thread, each slot gets the sha of its pack, if its url is still the one that was hashed, and config.yml is saved
-     * once. The result reaches callback on the main thread, and the log ends with each slot that failed, and its url.
+     * thread, config.yml is read again, each slot gets the sha of its pack, if its url is still the one that was
+     * hashed, and config.yml is saved once. The result reaches callback on the main thread, and the log ends with each
+     * slot that failed, and its url.
      */
     public static void refreshSHA(CommandSender cs, String rp, boolean allVersions, Consumer<SlotResult> callback) {
         ConfigurationSection pack = rp.isEmpty() ? null : getRpConfig().getConfigurationSection(rp);
@@ -598,26 +605,28 @@ public class RpManager {
         return paths;
     }
 
-    // On the main thread: each slot gets the sha of its pack, if its url is still the one that was hashed, and
-    // config.yml is saved once.
+    // On the main thread, in config.yml as it is now on disk: each slot gets the sha of its pack, if its url is still
+    // the one that was hashed, and config.yml is saved once.
     private static SlotResult setShas(String rp, Map<String, String> urls, Map<String, String> shas,
                                       Map<String, String> failed) {
         try {
-            ConfigurationSection pack = getRpConfig().getConfigurationSection(rp);
             List<String> done = new ArrayList<>();
-            for(Map.Entry<String, String> sha : shas.entrySet()) {
-                ConfigurationSection slot = pack == null ? null : pack.getConfigurationSection(sha.getKey());
-                String url = urls.get(sha.getKey());
-                if(slot != null && url.equals(slot.getString("url"))) {
-                    slot.set("sha", sha.getValue());
-                    done.add(sha.getKey());
-                } else {
-                    // as when /rp server set it meanwhile, with the sha of its new url
-                    failed.put(sha.getKey(), url + ": the slot changed while its pack was hashed");
+            if(!shas.isEmpty() && !ConfigFile.update(config -> {
+                ConfigurationSection packs = getRpConfig(config);
+                ConfigurationSection pack = packs == null ? null : packs.getConfigurationSection(rp);
+                for(Map.Entry<String, String> sha : shas.entrySet()) {
+                    ConfigurationSection slot = pack == null ? null : pack.getConfigurationSection(sha.getKey());
+                    String url = urls.get(sha.getKey());
+                    if(slot != null && url.equals(slot.getString("url"))) {
+                        slot.set("sha", sha.getValue());
+                        done.add(sha.getKey());
+                    } else {
+                        // as when /rp server set it meanwhile, here or on another server, with the sha of its new url
+                        failed.put(sha.getKey(), url + ": the slot changed while its pack was hashed");
+                    }
                 }
-            }
-            if(!done.isEmpty()) {
-                ArchitectPlugin.getPluginInstance().saveConfig();
+            })) {
+                return SlotResult.ofError(); // ConfigFile logged why
             }
             failed.forEach((slot, reason) -> Log.warn("The SHA of server resource pack " + rp + ", slot " + slot
                     + ", was not recalculated: " + reason));

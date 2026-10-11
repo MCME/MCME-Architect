@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.entityLogging;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.ConfigFile;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger.Coordinates;
 import org.bukkit.Bukkit;
@@ -83,7 +84,7 @@ public class ELogDynmapUtil {
                 borderWidth = getDynmapConfig().getInt("borderWidth",0);
                 borderOpacity = getDynmapConfig().getDouble("borderOpacity",0.5);
                 areaOpacity = getDynmapConfig().getDouble("areaOpacity",0.5);
-                ArchitectPlugin.getPluginInstance().saveConfig();
+                ConfigFile.update(config -> getDynmapConfig(config)); // keeps the section, made if there was none
                 init = true;
                 clearMarkers();
             } catch(Throwable e) {  // Throwable: an incompatible Dynmap surfaces as Error, not Exception
@@ -93,10 +94,14 @@ public class ELogDynmapUtil {
     }
     
     private static ConfigurationSection getDynmapConfig() {
-        ConfigurationSection section = ArchitectPlugin.getPluginInstance()
-                                                      .getConfig().getConfigurationSection("entityLogger");
+        return getDynmapConfig(ArchitectPlugin.getPluginInstance().getConfig());
+    }
+
+    // The entityLogger section of this config, made with the logger on if there is none.
+    private static ConfigurationSection getDynmapConfig(ConfigurationSection config) {
+        ConfigurationSection section = config.getConfigurationSection("entityLogger");
         if(section==null) {
-            section = ArchitectPlugin.getPluginInstance().getConfig().createSection("entityLogger");
+            section = config.createSection("entityLogger");
             section.set("enabled", true);
         }
         return section;
