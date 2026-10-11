@@ -607,8 +607,9 @@ public class RpManager {
 
     /**
      * Removes the slot for a version from every variant of a pack, as /rp server remove does, in config.yml as it is
-     * on disk now. The result's done is the slots removed, by their path in the pack; none when no variant has a slot
-     * for that version any more.
+     * on disk now. A section this leaves empty is removed too: the variant, then its resolution and its client, and
+     * the pack itself when nothing at all is left of it. The result's done is the slots removed, by their path in the
+     * pack; none when no variant has a slot for that version any more.
      */
     public static SlotResult removeSlots(String rp, String versionKey) {
         List<String> removed = new ArrayList<>();
@@ -620,7 +621,12 @@ public class RpManager {
                 if(variantSection.isSet(versionKey)) {
                     variantSection.set(versionKey, null);
                     removed.add(variant + "." + versionKey);
+                    pruneEmpty(pack, variant);
                 }
+            }
+            // An empty pack would make the search for a client's slot fail on its empty list of clients.
+            if(!removed.isEmpty() && pack.getKeys(false).isEmpty()) {
+                packs.set(rp, null);
             }
         });
         if(!saved) {
@@ -628,6 +634,21 @@ public class RpManager {
         }
         removed.forEach(slot -> Log.info("Server resource pack " + rp + ", slot " + slot + ", was removed."));
         return new SlotResult(removed, Map.of(), false);
+    }
+
+    // Removes the section at this path in the pack if it is empty, and then each section above it that this leaves
+    // empty, up to the pack, which is left to the caller.
+    private static void pruneEmpty(ConfigurationSection pack, String path) {
+        String section = path;
+        while(section != null) {
+            ConfigurationSection emptied = pack.getConfigurationSection(section);
+            if(emptied == null || !emptied.getKeys(false).isEmpty()) {
+                return;
+            }
+            pack.set(section, null);
+            int dot = section.lastIndexOf('.');
+            section = dot < 0 ? null : section.substring(0, dot);
+        }
     }
 
     // The paths of a pack's variants: vanilla.16px.light and so on.

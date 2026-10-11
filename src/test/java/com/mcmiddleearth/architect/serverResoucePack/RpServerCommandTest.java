@@ -102,6 +102,10 @@ class RpServerCommandTest {
         // packs with a slot made under a release name, as by "/rp server p v1.8.9 26.2release"
         addSlots(config, "Dead", PATHS, "26_2", "1_21_4", "26_2release");
         addSlots(config, "Erech", PATHS, "26_2", "26_2release");
+        // packs where 26_2release is the last slot of a variant, of a client, and of the whole pack
+        addSlots(config, "Lonely", Map.of("vanilla.16px.light", ""), "26_2", "26_2release");
+        addSlots(config, "Lonely", Map.of("vanilla.16px.footprints", "", "sodium.16px.light", ""), "26_2release");
+        addSlots(config, "Gone", Map.of("vanilla.16px.light", ""), "26_2release");
         for (String pack : List.of("Crash", "Mordor", "Paths")) {
             config.set("gitHubRpReleases." + pack + ".owner", "mcme");
             config.set("gitHubRpReleases." + pack + ".repo", pack.toLowerCase(Locale.ROOT));
@@ -321,6 +325,44 @@ class RpServerCommandTest {
                 () -> assertTrue(plugin.getConfig().contains("ServerResourcePacks.Erech.vanilla.16px.light.26_2release"),
                         "the slot, in Architect's config"),
                 () -> assertEquals(before, Files.readString(configFile()), "config.yml"));
+    }
+
+    // Removing a variant's last slot left the variant behind empty ({}), and a client of that variant was sent nothing
+    // from it. The sections a removal empties are pruned now: the variant, and then its resolution and its client.
+    @Test
+    void removePrunesTheSectionsItEmpties() {
+        Admin admin = admin();
+
+        admin.performCommand("rp server remove Lonely 26_2release");
+
+        String reply = awaitReply(admin);
+        YamlConfiguration saved = YamlConfiguration.loadConfiguration(configFile().toFile());
+        String pack = "ServerResourcePacks.Lonely.";
+        assertAll(
+                () -> assertTrue(reply.contains("vanilla.16px.footprints.26_2release"), reply),
+                () -> assertTrue(saved.isSet(pack + "vanilla.16px.light.26_2"), "the slot left, in config.yml"),
+                () -> assertFalse(saved.isSet(pack + "vanilla.16px.footprints"), "the variant emptied, in config.yml"),
+                () -> assertFalse(saved.isSet(pack + "sodium"), "the client emptied, in config.yml"),
+                () -> assertFalse(plugin.getConfig().isSet(pack + "vanilla.16px.footprints"),
+                        "the variant emptied, in Architect's config"),
+                () -> assertFalse(plugin.getConfig().isSet(pack + "sodium"), "the client emptied, in Architect's config"));
+    }
+
+    // A pack whose last slot is removed is removed as a whole, and the admin is told: an empty pack would make the
+    // search for a client's slot fail on its empty list of clients.
+    @Test
+    void removingThePacksLastSlotRemovesThePack() {
+        Admin admin = admin();
+
+        admin.performCommand("rp server remove Gone 26_2release");
+
+        String reply = awaitReply(admin);
+        YamlConfiguration saved = YamlConfiguration.loadConfiguration(configFile().toFile());
+        assertAll(
+                () -> assertTrue(reply.contains("no slots left"), "the reply says the pack is gone: " + reply),
+                () -> assertFalse(saved.isSet("ServerResourcePacks.Gone"), "the pack, in config.yml"),
+                () -> assertFalse(plugin.getConfig().isSet("ServerResourcePacks.Gone"), "the pack, in Architect's config"),
+                () -> assertEquals("", RpManager.getRpUrl("Gone", null), "the url a client of the pack is sent"));
     }
 
     // remove completes, and then the packs, and then the slots of the pack, as an admin types them.

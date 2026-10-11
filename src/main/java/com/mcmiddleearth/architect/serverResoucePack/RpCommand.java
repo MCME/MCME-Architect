@@ -432,7 +432,9 @@ public class RpCommand extends AbstractArchitectCommand {
                     + " any more.");
         } else {
             PluginData.getMessageUtil().sendInfoMessage(cs, "Slot " + args[3] + " removed from resource pack " + rpName
-                    + ": " + String.join(", ", result.done()) + ".");
+                    + ": " + String.join(", ", result.done()) + "."
+                    + (RpManager.getRpConfig().isSet(rpName) ? ""
+                        : " " + rpName + " had no slots left, so it was removed from config.yml."));
         }
     }
 
