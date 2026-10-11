@@ -71,6 +71,9 @@ public class RpManager {
 
     private static final Map<UUID, String> sodiumClients = new java.util.concurrent.ConcurrentHashMap<>();
 
+    // The slots without a valid SHA-1 that were logged, by path and url: each is logged once, not for every player.
+    private static final Set<String> unhashedSlots = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     private static final RpDatabaseConnector dbConnector = new RpDatabaseConnector(ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(rpDatabaseConfig));
     
     private static final RegionEditConversationFactory regionEditConversationFactory
@@ -213,22 +216,42 @@ public class RpManager {
         return "";
     }
     
+    /**
+     * The hash to send with the pack of rp to this player (null: default settings): the 20 bytes of the slot's SHA-1,
+     * or null when the slot has no valid one. Paper sends a null hash as an empty one, and the client then loads the
+     * pack without checking it; an all-zero hash, as before, made every client reject the pack.
+     */
     public static byte[] getSHA(String rp, Player player) {
-        byte[] result = new byte[20];
         ConfigurationSection section = getConfigSection(rp, player);
-        if(section!=null) {
-            String sha = section.getString("sha");
-            return stringToSHA(sha);
+        if(section==null) {
+            return null;
+        }
+        String sha = section.getString("sha");
+        byte[] result = stringToSHA(sha);
+        if(result==null && unhashedSlots.add(section.getCurrentPath() + " " + section.getString("url"))) {
+            Log.warn("Resource pack " + describeSlot(section) + " has no valid SHA-1 in config.yml (sha: " + sha
+                    + "), so its pack is sent without a hash, which clients do not check. /rp calcsha " + rp
+                    + " all sets it.");
         }
         return result;
     }
-    
-    private static byte[] stringToSHA(String sha) {
-        byte[] result = new byte[20];
-        if(sha==null) {
-            return result;
+
+    // "Mordor, variant vanilla.16px.light, version 26_2" for the slot ServerResourcePacks.Mordor.vanilla.16px.light.26_2
+    static String describeSlot(ConfigurationSection slot) {
+        String path = slot.getCurrentPath();
+        String[] parts = path.split("[.]");
+        if(parts.length == 6) {
+            return parts[1] + ", variant " + parts[2] + "." + parts[3] + "." + parts[4] + ", version " + parts[5];
         }
-        result = new BigInteger(sha.trim(),16).toByteArray();
+        return path.substring(path.indexOf('.') + 1);
+    }
+    
+    // The 20 bytes of a SHA-1 written as 40 hex digits; null when there is none, or it is no SHA-1.
+    private static byte[] stringToSHA(String sha) {
+        if(sha==null || !sha.trim().matches("[0-9a-fA-F]{40}")) {
+            return null;
+        }
+        byte[] result = new BigInteger(sha.trim(),16).toByteArray();
         if(result.length>20) {
             result = Arrays.copyOfRange(result,1,21);
         } else if(result.length<20) {
