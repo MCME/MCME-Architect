@@ -3,36 +3,55 @@ package com.mcmiddleearth.architect.serverResoucePack;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.testsupport.TestConfig;
 import org.bukkit.Bukkit;
+import org.bukkit.command.Command;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 // /rp server, which points a pack's version slot at the files of a release, as an admin uses it. Its downloads never
-// reach the internet. One mock/load per class, as in LogFileTest.
+// reach the internet: the packs it hashes are local files. One mock/load per class, as in LogFileTest.
 class RpServerCommandTest {
 
     private static final String SHA = "33bece3b361f804e0966271ceaf85a691fe6a11d";
 
+    @TempDir
+    static Path files;
+
     private static ServerMock server;
     private static ArchitectPlugin plugin;
+    private static int admins;
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -52,10 +71,24 @@ class RpServerCommandTest {
                 "                    '26_2':",
                 "                        url: https://example.invalid/Crash-Footprints-old.zip",
                 "                        sha: " + SHA,
+                "    Paths:",
+                "        vanilla:",
+                "            16px:",
+                "                light:",
+                "                    '26_2':",
+                "                        url: '" + pack("Paths-old.zip") + "'",
+                "                        sha: " + sha1(pack("Paths-old.zip")),
+                "                footprints:",
+                "                    '26_2':",
+                "                        url: '" + pack("Paths-Footprints-old.zip") + "'",
+                "                        sha: " + sha1(pack("Paths-Footprints-old.zip")),
                 "gitHubRpReleases:",
                 "    Crash:",
                 "        owner: mcme",
                 "        repo: crash",
+                "    Paths:",
+                "        owner: mcme",
+                "        repo: paths",
                 "");
         plugin = MockBukkit.load(ArchitectPlugin.class);
         assertEquals(folder, plugin.getDataFolder(), "Architect reads the test's config.yml");
@@ -84,6 +117,53 @@ class RpServerCommandTest {
                         "the error in Architect's log, with its stack trace"));
     }
 
+    // A release name in place of the Minecraft version, as in "/rp server p v1.8.9 26.2release", made a slot that no
+    // client's version matches. Such a version is refused: nothing is written, and the admin is told the versions
+    // there are.
+    @Test
+    void anUnknownMinecraftVersionIsRefusedAndWritesNothing() throws Exception {
+        Admin admin = admin();
+        String before = Files.readString(configFile());
+
+        admin.performCommand("rp server Paths v1.9 26.2release");
+
+        String reply = awaitReply(admin);
+        Set<String> versions = versions();
+        assertAll(
+                () -> assertTrue(reply.contains("26.2release"), "the reply names the version: " + reply),
+                () -> assertTrue(versions.stream().allMatch(reply::contains),
+                        "the reply names the versions there are: " + reply),
+                () -> assertFalse(plugin.getConfig().contains("ServerResourcePacks.Paths.vanilla.16px.light.26_2release"),
+                        "a slot for that version, in Architect's config"),
+                () -> assertEquals(before, Files.readString(configFile()), "config.yml"));
+    }
+
+    // The Minecraft version of /rp server completes to the versions there are, as an admin types them: 26.2.
+    @Test
+    void theMinecraftVersionCompletesToTheVersionsThereAre() throws Exception {
+        Admin admin = admin();
+        PlayerMock builder = server.addPlayer();
+        builder.setOp(false);
+        Command rp = server.getCommandMap().getCommand("rp");
+        Set<String> versions = versions();
+
+        List<String> all = rp.tabComplete(admin, "rp", new String[] {"server", "Paths", "v1.9", ""});
+        assertAll(
+                () -> assertEquals(List.of("26.2", "26.1"),
+                        rp.tabComplete(admin, "rp", new String[] {"server", "Paths", "v1.9", "26"}), "newest first"),
+                () -> assertEquals(versions, new HashSet<>(all), "the versions offered"),
+                () -> assertEquals(versions.size(), all.size(), "the number of versions offered: " + all),
+                () -> assertEquals(List.of(), rp.tabComplete(builder, "rp", new String[] {"server", "Paths", "v1.9", ""}),
+                        "offered to a player who may not use /rp server"));
+    }
+
+    // After a release, /rp release suggests the whole /rp server command, Minecraft version included.
+    @Test
+    void theReleaseHintNamesTheMinecraftVersionToo() {
+        assertEquals("RP release finished. You might want to do /rp server Paths v1.9 <mcVersion>",
+                RpCommand.releaseFinishedHint("Paths", "v1.9"));
+    }
+
     private static Admin admin() {
         Admin admin = new Admin();
         server.addPlayer(admin);
@@ -93,6 +173,33 @@ class RpServerCommandTest {
             // what joining said
         }
         return admin;
+    }
+
+    // A local pack file of this name, made on first use: its file: URL.
+    private static String pack(String name) throws IOException {
+        Path file = files.resolve(name);
+        if (!Files.exists(file)) {
+            Files.writeString(file, "the pack " + name);
+        }
+        return file.toUri().toString();
+    }
+
+    private static String sha1(String url) throws Exception {
+        byte[] bytes = Files.readAllBytes(Path.of(java.net.URI.create(url)));
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(bytes));
+    }
+
+    private static Path configFile() {
+        return new File(plugin.getDataFolder(), "config.yml").toPath();
+    }
+
+    // The Minecraft versions in Architect's protocolVersions.yml, as an admin types them: 26.2, 1.21.4 and so on.
+    private static Set<String> versions() throws IOException {
+        try (InputStream in = ArchitectPlugin.class.getClassLoader().getResourceAsStream("protocolVersions.yml")) {
+            assertTrue(in != null, "protocolVersions.yml is on the classpath");
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
+            return yaml.getKeys(false).stream().map(key -> key.replace('_', '.')).collect(Collectors.toSet());
+        }
     }
 
     // the errors Architect logs from now on
@@ -115,6 +222,11 @@ class RpServerCommandTest {
             }
         });
         return errors;
+    }
+
+    // the first thing the admin is told, at once or later
+    private static String awaitReply(PlayerMock player) {
+        return awaitMessage(player, "");
     }
 
     // The reply comes from work on another thread, and on a later tick.
@@ -144,7 +256,7 @@ class RpServerCommandTest {
         private final List<String> offMainThread = new CopyOnWriteArrayList<>();
 
         Admin() {
-            super(RpServerCommandTest.server, "Admin", UUID.randomUUID());
+            super(RpServerCommandTest.server, "Admin" + (++admins), UUID.randomUUID());
         }
 
         @Override

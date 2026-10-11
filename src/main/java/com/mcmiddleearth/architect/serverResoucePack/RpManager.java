@@ -56,7 +56,8 @@ public class RpManager {
     private static final File regionFolder = new File(ArchitectPlugin.getPluginInstance().getDataFolder(),"regions");
 
     private static final File versionFile = new File(ArchitectPlugin.getPluginInstance().getDataFolder(), "protocolVersions.yml");
-    private static final Map<String, Integer> protocolVersions = new HashMap<>();
+    // in the order of the file, so versions with the same protocol keep that order
+    private static final Map<String, Integer> protocolVersions = new LinkedHashMap<>();
 
     private static final String rpDatabaseConfig = "rpSettingsDatabase";
 
@@ -378,6 +379,21 @@ public class RpManager {
             }
         }
         return null;
+    }
+
+    /**
+     * The Minecraft versions a pack can have a slot for, newest first: the keys of protocolVersions.yml, such as
+     * 26_2 and 1_21_4. A slot under any other key matches no client's version.
+     */
+    public static List<String> getMcVersions() {
+        return protocolVersions.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .map(Map.Entry::getKey)
+                .toList();
+    }
+
+    public static boolean isMcVersion(String versionKey) {
+        return protocolVersions.containsKey(versionKey);
     }
 
     public static String getCurrentRpName(Player player) {

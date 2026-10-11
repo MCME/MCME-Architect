@@ -23,6 +23,7 @@ import com.sk89q.worldedit.regions.Region;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -46,8 +47,7 @@ public class RpCommand extends AbstractArchitectCommand {
                 RpReleaseUtil.releaseResourcePack(args[1], args[2], title, (exit, exitCode) -> {
                     Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
                         if (exit && exitCode == 0) {
-                            PluginData.getMessageUtil().sendInfoMessage(cs,
-                                    "RP release finished. You might want to do /rp server "+args[1]+" "+args[2]);
+                            PluginData.getMessageUtil().sendInfoMessage(cs, releaseFinishedHint(args[1], args[2]));
 
                         } else {
                             PluginData.getMessageUtil().sendErrorMessage(cs,
@@ -64,6 +64,12 @@ public class RpCommand extends AbstractArchitectCommand {
         if(args.length>0 && args[0].equalsIgnoreCase("server")
                 && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
             if(args.length>3) {
+                // A release name in place of the version once made a slot that matches no client's version.
+                if(!RpManager.isMcVersion(args[3].replace('.','_'))) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "Unknown Minecraft version: " + args[3]
+                            + ". Use one of: " + String.join(", ", mcVersionNames()) + ".");
+                    return true;
+                }
                 RpReleaseUtil.setServerResourcePack(cs, args[1], args[2], args[3], success -> {
                     if (success) {
                         PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
@@ -365,6 +371,25 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         new RPSwitcher(urlStr, (Player) cs).start();*/
         return true;
+    }
+
+    static String releaseFinishedHint(String rpName, String version) {
+        return "RP release finished. You might want to do /rp server "+rpName+" "+version+" <mcVersion>";
+    }
+
+    // The Minecraft versions a pack can have a slot for, as an admin types them: 26.2, 1.21.4 and so on.
+    private static List<String> mcVersionNames() {
+        return RpManager.getMcVersions().stream().map(version -> version.replace('_','.')).toList();
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender cs, Command command, String alias, String[] args) {
+        if(args.length == 4 && args[0].equalsIgnoreCase("server")
+                && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            String typed = args[3].toLowerCase(Locale.ROOT);
+            return new ArrayList<>(mcVersionNames().stream().filter(version -> version.startsWith(typed)).toList());
+        }
+        return new ArrayList<>();
     }
 
     // While the player's settings are still being read from the RP database, a change would start from defaults
