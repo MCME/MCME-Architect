@@ -162,8 +162,19 @@ public class RpReleaseUtil {
                 updateSection(rpConfig, "vanilla.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Footprints.zip");
             }
             ArchitectPlugin.getPluginInstance().saveConfig();
+            final String mcVersion = requiredMcVersion;
             Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
-                callback.accept(RpManager.refreshSHA(cs, finalRpName, false));
+                boolean success;
+                try {
+                    success = RpManager.refreshSHA(cs, finalRpName, false);
+                } catch (Exception ex) {
+                    // Nothing in the background may fail silently: the error is logged, and the admin told.
+                    Log.error("Failed to set the server resource pack " + finalRpName + " to " + version
+                            + " for MC " + mcVersion, ex);
+                    success = false;
+                }
+                final boolean result = success;
+                Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> callback.accept(result));
             });
         }
     }

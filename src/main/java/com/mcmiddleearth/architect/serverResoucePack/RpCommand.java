@@ -69,7 +69,8 @@ public class RpCommand extends AbstractArchitectCommand {
                         PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
                                 + " set to version: " + args[2] + " for MC: "+ args[3]);
                     } else {
-                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack!");
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack! See "
+                                + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
                     }
                 });
             } else {
