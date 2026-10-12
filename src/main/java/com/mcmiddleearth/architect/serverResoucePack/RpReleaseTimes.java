@@ -34,7 +34,10 @@ final class RpReleaseTimes {
         return seconds < 0 ? null : Duration.ofSeconds(seconds);
     }
 
-    /** Records how long the pack's release took. A file that can't be read is replaced. */
+    /**
+     * Records how long the pack's release took. A file that isn't valid YAML is replaced; one that can't be read or
+     * written throws IOException.
+     */
     static void record(File folder, String pack, Duration took) throws IOException {
         File file = new File(folder, FILE);
         YamlConfiguration times = new YamlConfiguration();

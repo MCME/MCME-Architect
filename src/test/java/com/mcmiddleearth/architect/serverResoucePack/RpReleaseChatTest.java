@@ -47,7 +47,8 @@ class RpReleaseChatTest {
         assertEquals("", RpReleaseChat.lastTimeTook(null));
     }
 
-    // Review focus 3: quotes, and section signs, which colour legacy text, show as typed
+    // Architect adds no formatting to a title: quotes and section signs stay as typed (only the console or RCON can
+    // send a section sign; the client may still colour it)
     @Test
     void aTitleIsShownAsTyped() {
         Component start = RpReleaseChat.start(PREFIX, "Human", "v4", "It's \"new\" §cred", null);

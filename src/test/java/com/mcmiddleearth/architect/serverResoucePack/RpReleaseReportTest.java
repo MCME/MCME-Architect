@@ -90,7 +90,7 @@ class RpReleaseReportTest {
                 ended(0, "Rohan", "v1.0-Lite").releaseUrl());
     }
 
-    // Review focus 5: a pack's name can hold the words a step line ends with
+    // A pack's name can hold the words a step line ends with
     @Test
     void aStepsGroupComesFromTheEndOfItsLine() {
         assertAll(
@@ -367,7 +367,7 @@ class RpReleaseReportTest {
                 + " (started 2026-10-12 12:00:00). Start this one again once it has finished."), verdict.details());
     }
 
-    // Review focus 2: the refusal's sentence comes before the files it lists
+    // The refusal's sentence comes before the files it lists
     @Test
     void aLauncherRefusalShowsItsSentenceBeforeTheFiles() throws IOException {
         RpReleaseVerdict verdict = replay("launcher-edited.txt", 3, "Rohan", "v1.0", false);

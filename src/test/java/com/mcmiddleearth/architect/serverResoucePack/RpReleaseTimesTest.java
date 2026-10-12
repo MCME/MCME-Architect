@@ -27,7 +27,7 @@ class RpReleaseTimesTest {
         assertNull(RpReleaseTimes.last(folder.toFile(), "Human"));
     }
 
-    // Review focus 4: a broken file costs the start line its sentence, and the next record replaces it
+    // A broken file costs the start line its sentence, and the next record replaces it
     @Test
     void aBrokenFileGivesNoTimeAndIsReplaced(@TempDir Path folder) throws Exception {
         Files.writeString(folder.resolve(RpReleaseTimes.FILE), "Human: [unclosed");

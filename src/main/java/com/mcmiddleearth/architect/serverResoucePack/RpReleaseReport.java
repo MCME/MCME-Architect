@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  * verdict. Once the script has ended, {@link #verdict} turns that into the closing message's text. The lines it reads
  * are a contract with ResourcePackScripts, listed in "What MCME-Architect reads" in its docs/release-pipeline.md:
  * change both together. Lines come from the thread that reads the script's output, which can still deliver some after
- * the script has ended, so every method is synchronized.
+ * the script has ended, so accept and verdict are synchronized.
  */
 final class RpReleaseReport {
 

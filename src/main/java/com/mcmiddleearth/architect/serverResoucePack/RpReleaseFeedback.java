@@ -23,7 +23,9 @@ import java.util.UUID;
  */
 public final class RpReleaseFeedback implements Listener {
 
-    /** How long after a join held results come: after what joining says, about 2 seconds. */
+    /**
+     * How long after a join held results are shown: 40 ticks, about 2 seconds, after what the server says on joining.
+     */
     static final long DELIVERY_DELAY_TICKS = 40;
 
     private final Plugin plugin;
