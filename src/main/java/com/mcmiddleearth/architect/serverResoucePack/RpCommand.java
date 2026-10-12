@@ -418,24 +418,35 @@ public class RpCommand extends AbstractArchitectCommand {
         if(rpName.isEmpty()) {
             return;
         }
-        if(!RpManager.getSlotVersions(rpName).contains(args[3].replace('.','_'))) {
+        String versionKey = args[3].replace('.','_');
+        if(!RpManager.getSlotVersions(rpName).contains(versionKey)) {
             PluginData.getMessageUtil().sendErrorMessage(cs, "Resource pack " + rpName + " has no slot for " + args[3]
                     + ". Its slots: " + String.join(", ", slotNames(rpName)) + ".");
             return;
         }
-        RpManager.SlotResult result = RpManager.removeSlots(rpName, args[3].replace('.','_'));
+        // A pack without a slot would send nothing to the players in its regions, and say nothing about it.
+        if(!RpManager.hasOtherSlot(rpName, versionKey)) {
+            sendLastSlotRefusal(cs, rpName);
+            return;
+        }
+        RpManager.SlotResult result = RpManager.removeSlots(rpName, versionKey);
         if(result.error()) {
             PluginData.getMessageUtil().sendErrorMessage(cs, "Error while removing a slot of resource pack " + rpName
                     + "! See " + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+        } else if(!result.failed().isEmpty()) {
+            sendLastSlotRefusal(cs, rpName); // the pack's other slots were removed meanwhile, as on another server
         } else if(result.done().isEmpty()) {
             PluginData.getMessageUtil().sendErrorMessage(cs, "Resource pack " + rpName + " has no slot for " + args[3]
                     + " any more.");
         } else {
             PluginData.getMessageUtil().sendInfoMessage(cs, "Slot " + args[3] + " removed from resource pack " + rpName
-                    + ": " + String.join(", ", result.done()) + "."
-                    + (RpManager.getRpConfig().isSet(rpName) ? ""
-                        : " " + rpName + " had no slots left, so it was removed from config.yml."));
+                    + ": " + String.join(", ", result.done()) + ".");
         }
+    }
+
+    private static void sendLastSlotRefusal(CommandSender cs, String rpName) {
+        PluginData.getMessageUtil().sendErrorMessage(cs, "That is " + rpName + "'s last slot: set another version first"
+                + " with /rp server " + rpName + " <tag> <mcVersion>, or remove the pack from config.yml by hand.");
     }
 
     // The versions a pack has slots for, as an admin types them: 26.2, 26.2release and so on.

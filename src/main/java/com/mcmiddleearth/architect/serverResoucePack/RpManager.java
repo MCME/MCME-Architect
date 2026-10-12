@@ -607,37 +607,67 @@ public class RpManager {
 
     /**
      * Removes the slot for a version from every variant of a pack, as /rp server remove does, in config.yml as it is
-     * on disk now. A section this leaves empty is removed too: the variant, then its resolution and its client, and
-     * the pack itself when nothing at all is left of it. The result's done is the slots removed, by their path in the
-     * pack; none when no variant has a slot for that version any more.
+     * on disk now. A section this leaves empty is removed too: the variant, then its resolution and its client. The
+     * pack's last slots are never removed (see hasOtherSlot), and this is checked again on the file, which another
+     * server may have changed. The result's done is the slots removed, by their path in the pack; none when no variant
+     * has a slot for that version any more. Its failed is the slots kept as the pack's last: nothing is changed then.
      */
     public static SlotResult removeSlots(String rp, String versionKey) {
         List<String> removed = new ArrayList<>();
+        Map<String, String> kept = new TreeMap<>();
         boolean saved = ConfigFile.update(config -> {
             ConfigurationSection packs = getRpConfig(config);
             ConfigurationSection pack = packs == null ? null : packs.getConfigurationSection(rp);
+            boolean last = pack != null && !hasOtherSlot(pack, versionKey);
             for(String variant : pack == null ? List.<String>of() : variantPaths(pack)) {
                 ConfigurationSection variantSection = pack.getConfigurationSection(variant);
-                if(variantSection.isSet(versionKey)) {
+                if(!variantSection.isSet(versionKey)) {
+                    continue;
+                }
+                if(last) {
+                    kept.put(variant + "." + versionKey, "it is the last slot of " + rp);
+                } else {
                     variantSection.set(versionKey, null);
                     removed.add(variant + "." + versionKey);
                     pruneEmpty(pack, variant);
                 }
-            }
-            // An empty pack would make the search for a client's slot fail on its empty list of clients.
-            if(!removed.isEmpty() && pack.getKeys(false).isEmpty()) {
-                packs.set(rp, null);
             }
         });
         if(!saved) {
             return SlotResult.ofError(); // ConfigFile logged why
         }
         removed.forEach(slot -> Log.info("Server resource pack " + rp + ", slot " + slot + ", was removed."));
-        return new SlotResult(removed, Map.of(), false);
+        return new SlotResult(removed, kept, false);
+    }
+
+    /**
+     * Whether a client could still be sent a pack of this pack, as it is in Architect's config, once its slots for this
+     * version are removed. Without one, a pack sends nothing to the players in its regions, and says nothing about it;
+     * so its last slots are kept. A slot under a key that protocolVersions.yml lacks, such as 26_2release, serves no
+     * client, and does not count.
+     */
+    public static boolean hasOtherSlot(String rp, String versionKey) {
+        ConfigurationSection pack = rp.isEmpty() ? null : getRpConfig().getConfigurationSection(rp);
+        return pack != null && hasOtherSlot(pack, versionKey);
+    }
+
+    private static boolean hasOtherSlot(ConfigurationSection pack, String versionKey) {
+        for(String variant : variantPaths(pack)) {
+            ConfigurationSection variantSection = pack.getConfigurationSection(variant);
+            if(variantSection.isSet("url")) {
+                return true; // a variant with one pack for every version
+            }
+            for(String version : variantSection.getKeys(false)) {
+                if(!version.equals(versionKey) && isMcVersion(version) && variantSection.isConfigurationSection(version)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // Removes the section at this path in the pack if it is empty, and then each section above it that this leaves
-    // empty, up to the pack, which is left to the caller.
+    // empty, up to the pack, which keeps a slot.
     private static void pruneEmpty(ConfigurationSection pack, String path) {
         String section = path;
         while(section != null) {

@@ -106,6 +106,8 @@ class RpServerCommandTest {
         addSlots(config, "Lonely", Map.of("vanilla.16px.light", ""), "26_2", "26_2release");
         addSlots(config, "Lonely", Map.of("vanilla.16px.footprints", "", "sodium.16px.light", ""), "26_2release");
         addSlots(config, "Gone", Map.of("vanilla.16px.light", ""), "26_2release");
+        addSlots(config, "Barrow", Map.of("vanilla.16px.light", ""), "26_2", "26_2release");
+        addSlots(config, "Pair", Map.of("vanilla.16px.light", ""), "26_2", "26_2release");
         for (String pack : List.of("Crash", "Mordor", "Paths")) {
             config.set("gitHubRpReleases." + pack + ".owner", "mcme");
             config.set("gitHubRpReleases." + pack + ".repo", pack.toLowerCase(Locale.ROOT));
@@ -348,21 +350,60 @@ class RpServerCommandTest {
                 () -> assertFalse(plugin.getConfig().isSet(pack + "sodium"), "the client emptied, in Architect's config"));
     }
 
-    // A pack whose last slot is removed is removed as a whole, and the admin is told: an empty pack would make the
-    // search for a client's slot fail on its empty list of clients.
+    // A pack's last slot is not removed, and nothing is changed: a pack without a slot sends nothing to the players in
+    // its regions, and says nothing about it, and only an edit of config.yml by hand would set it again. The admin is
+    // told how to go on instead.
     @Test
-    void removingThePacksLastSlotRemovesThePack() {
+    void removeRefusesThePacksLastSlot() throws Exception {
         Admin admin = admin();
+        String before = Files.readString(configFile());
 
         admin.performCommand("rp server remove Gone 26_2release");
 
         String reply = awaitReply(admin);
         YamlConfiguration saved = YamlConfiguration.loadConfiguration(configFile().toFile());
+        String slot = "ServerResourcePacks.Gone.vanilla.16px.light.26_2release";
         assertAll(
-                () -> assertTrue(reply.contains("no slots left"), "the reply says the pack is gone: " + reply),
-                () -> assertFalse(saved.isSet("ServerResourcePacks.Gone"), "the pack, in config.yml"),
-                () -> assertFalse(plugin.getConfig().isSet("ServerResourcePacks.Gone"), "the pack, in Architect's config"),
-                () -> assertEquals("", RpManager.getRpUrl("Gone", null), "the url a client of the pack is sent"));
+                () -> assertTrue(reply.contains("That is Gone's last slot: set another version first with /rp server Gone"
+                        + " <tag> <mcVersion>, or remove the pack from config.yml by hand."), "the reply: " + reply),
+                () -> assertTrue(saved.isSet(slot + ".url"), "the slot, in config.yml"),
+                () -> assertTrue(plugin.getConfig().isSet(slot + ".url"), "the slot, in Architect's config"),
+                () -> assertEquals(before, Files.readString(configFile()), "config.yml"));
+    }
+
+    // A slot under a release name serves no client, so it does not count: the last slot a client can be sent is kept
+    // even beside one.
+    @Test
+    void removeRefusesTheLastSlotThatServesAClient() {
+        Admin admin = admin();
+
+        admin.performCommand("rp server remove Barrow 26.2");
+
+        String reply = awaitReply(admin);
+        assertAll(
+                () -> assertTrue(reply.contains("That is Barrow's last slot"), "the reply: " + reply),
+                () -> assertTrue(plugin.getConfig().isSet("ServerResourcePacks.Barrow.vanilla.16px.light.26_2.url"),
+                        "the slot, in Architect's config"));
+    }
+
+    // The check is made again on config.yml as it is on disk: when another server has removed the pack's other slots
+    // meanwhile, the last one is kept all the same.
+    @Test
+    void removeRefusesTheLastSlotThatAnotherServerLeft() throws Exception {
+        Admin admin = admin();
+        YamlConfiguration otherServer = YamlConfiguration.loadConfiguration(configFile().toFile());
+        otherServer.set("ServerResourcePacks.Pair.vanilla.16px.light.26_2", null);
+        otherServer.save(configFile().toFile());
+
+        admin.performCommand("rp server remove Pair 26_2release");
+
+        String reply = awaitReply(admin);
+        YamlConfiguration saved = YamlConfiguration.loadConfiguration(configFile().toFile());
+        String slot = "ServerResourcePacks.Pair.vanilla.16px.light.26_2release";
+        assertAll(
+                () -> assertTrue(reply.contains("That is Pair's last slot"), "the reply: " + reply),
+                () -> assertTrue(saved.isSet(slot + ".url"), "the slot, in config.yml"),
+                () -> assertTrue(plugin.getConfig().isSet(slot + ".url"), "the slot, in Architect's config"));
     }
 
     // remove completes, and then the packs, and then the slots of the pack, as an admin types them.
