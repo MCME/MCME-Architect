@@ -4,6 +4,7 @@ import com.mcmiddleearth.architect.serverResoucePack.RpReleaseReport.Step;
 import com.mcmiddleearth.architect.serverResoucePack.RpReleaseVerdict.Kind;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,9 @@ class RpReleaseChatTest {
         assertEquals(ClickEvent.suggestCommand("/rp server Human v4.1.3 26.2"), buttons.get(0).clickEvent());
         assertEquals(ClickEvent.suggestCommand("/rp server Human v4.1.3 26.3"), buttons.get(1).clickEvent());
         assertEquals(ClickEvent.openUrl(URL), buttons.get(2).clickEvent());
+        assertEquals(HoverEvent.showText(Component.text("Fill in /rp server Human v4.1.3 26.2")),
+                buttons.get(0).hoverEvent());
+        assertEquals(HoverEvent.showText(Component.text(URL)), buttons.get(2).hoverEvent());
         assertEquals(NamedTextColor.GOLD, buttons.get(0).color());
         assertEquals(NamedTextColor.AQUA, lines.get(0).color());
     }
@@ -87,6 +91,8 @@ class RpReleaseChatTest {
         List<Component> lines = RpReleaseChat.verdict(PREFIX, verdict, "Human", "v4.1.3");
         assertEquals("[Architect] Put it live: [/rp server …] ", text(lines.get(1)));
         assertEquals(ClickEvent.suggestCommand("/rp server Human v4.1.3 "), lines.get(1).children().get(0).clickEvent());
+        assertEquals(HoverEvent.showText(Component.text("Fill in /rp server Human v4.1.3 <Minecraft version>")),
+                lines.get(1).children().get(0).hoverEvent());
     }
 
     @Test

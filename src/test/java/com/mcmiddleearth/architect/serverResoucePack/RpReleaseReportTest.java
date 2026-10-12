@@ -160,6 +160,28 @@ class RpReleaseReportTest {
     }
 
     @Test
+    void theWrappersCountOfWarningsWinsOverTheWarningsSeen() {
+        read("WARNING!!! a", "WARNING!!! b",
+                "Release run 20261012-101500-Human-v4.1.3: OK with warnings, released. 7 warning(s), 0 error(s).");
+        RpReleaseVerdict verdict = ended(0, "Human", "v4.1.3");
+        assertEquals("Human v4.1.3 is released, with 7 warnings:", verdict.headline());
+        assertEquals(List.of("  a", "  b", "…and 5 more: the Resource packs page on the dashboard, run"
+                + " 20261012-101500-Human-v4.1.3."), verdict.details());
+    }
+
+    @Test
+    void theDynmapPackBuiltWithWarningsListsThem() {
+        read("compiling Gondor RP zips", "WARNING!!! 7-Zip had a problem with some files of Gondor.zip (its report is"
+                + " above); they may be missing from it.");
+        RpReleaseVerdict verdict = report.verdict(new ScriptResult(true, 0, true), "Gondor", "v1.0", true, TIMEOUT);
+        assertEquals(Kind.DYNMAP_BUILT, verdict.kind());
+        assertEquals("Gondor's dynmap pack is built and in place, with 1 warning:", verdict.headline());
+        assertEquals(List.of("  7-Zip had a problem with some files of Gondor.zip (its report is above); they may be"
+                + " missing from it."), verdict.details());
+        assertFalse(verdict.released(), "nothing to put live");
+    }
+
+    @Test
     void aStopShowsItsErrorLineAndTheLineBeforeWhenItSaysAbove() {
         read("fatal: unable to access 'https://github.com/MCME/RP-Rohan.git/': Could not resolve host: github.com",
                 "ERROR: Couldn't fetch Rohan-Vanilla from GitHub (git's reason is above), so the release would build old files.");
@@ -175,6 +197,13 @@ class RpReleaseReportTest {
     }
 
     @Test
+    void blankLinesAreNotTheLineBeforeAnErrorThatPointsAbove() {
+        read("fatal: x", "", "   ",
+                "ERROR: Couldn't fetch Rohan-Vanilla from GitHub (git's reason is above).");
+        assertEquals("Last output: fatal: x", ended(1, "Rohan", "v1.0").details().get(0));
+    }
+
+    @Test
     void aStopThatDoesNotPointAboveShowsOnlyItsErrorLine() {
         read("compiling Rohan RP zips", "ERROR: The tag 'v1 0' can't be used.");
         assertEquals(List.of("The tag 'v1 0' can't be used."), ended(1, "Rohan", "v1 0").details());
@@ -187,6 +216,14 @@ class RpReleaseReportTest {
         assertEquals(Kind.FAILED, verdict.kind());
         assertEquals("Rohan v1.0 failed with exit code 127.", verdict.headline());
         assertEquals(List.of("Last output: sh: 1: releaseGeneral.sh: not found"), verdict.details());
+    }
+
+    @Test
+    void aRefusalWithoutLauncherLinesShowsTheLastOutput() {
+        read("sh: 0: cannot open releaseGeneral.sh: No such file");
+        RpReleaseVerdict verdict = ended(2, "Rohan", "v1.0");
+        assertEquals(Kind.NOT_STARTED, verdict.kind());
+        assertEquals(List.of("Last output: sh: 0: cannot open releaseGeneral.sh: No such file"), verdict.details());
     }
 
     @Test

@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
@@ -149,6 +150,25 @@ class RpReleaseCommandTest {
     }
 
     @Test
+    void aReleaseThatFailedLeavesNoTimeForTheNextStartLine() {
+        RpReleaseUtil.ScriptStarter normal = RpReleaseUtil.starter;
+        RpReleaseUtil.starter = (directory, command) ->
+                new FakeScript(Duration.ZERO, 1, "compiling Human RP zips", "ERROR: x");
+        PlayerMock admin = admin();
+        admin.performCommand("rp release h v4.1.3 Better leaves");
+        told(admin, "failed");
+        while (admin.nextComponentMessage() != null) {
+            // the rest of the closing message, which was sent with its headline
+        }
+        RpReleaseUtil.starter = normal;
+
+        admin.performCommand("rp release h v4.1.4 Again");
+
+        List<String> second = texts(told(admin, "Put it live"));
+        assertEquals("[Architect] Releasing Human v4.1.4 (\"Again\"). The result comes here.", second.get(0));
+    }
+
+    @Test
     void anUnknownPackIsRefusedBeforeAnythingStarts() {
         PlayerMock admin = admin();
         admin.performCommand("rp release zz v1 x");
@@ -209,11 +229,15 @@ class RpReleaseCommandTest {
             return new FakeScript(Duration.ZERO, 0, SODIUM_RELEASE);
         };
         PlayerMock admin = admin();
+        List<String> logged = logged();
         admin.performCommand("rp release h v4.1.3 Better leaves");
         told(admin, "Releasing");
         admin.disconnect();
         left.countDown();
-        tickFor(1000); // the release ends while the admin is away
+        // The release ends while the admin is away: its own thread logs the result, schedules the closing message and
+        // ends, and the next tick holds that message for the admin
+        assertTrue(awaitLogged(logged, "[RP release Human] Result:"), "the release ends, of " + logged);
+        assertTrue(awaitNoAsyncTask(), "the release's own thread has ended");
 
         admin.reconnect();
         List<String> told = texts(told(admin, "Put it live"));
@@ -293,12 +317,26 @@ class RpReleaseCommandTest {
         return told;
     }
 
-    private static void tickFor(long millis) {
-        long end = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
-        while (System.nanoTime() < end) {
+    // Waits up to 10 seconds, while the server ticks, for Architect to log a line with this text
+    private static boolean awaitLogged(List<String> logged, String text) {
+        return await(() -> logged.stream().anyMatch(line -> line.contains(text)));
+    }
+
+    // Waits up to 10 seconds, while the server ticks, for the tasks off the main thread to end, and ticks once more
+    // for what they scheduled on it
+    private static boolean awaitNoAsyncTask() {
+        boolean ended = await(() -> server.getScheduler().getActiveWorkers().isEmpty());
+        server.getScheduler().performOneTick();
+        return ended;
+    }
+
+    private static boolean await(BooleanSupplier done) {
+        long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (!done.getAsBoolean() && System.nanoTime() < end) {
             server.getScheduler().performOneTick();
             sleep();
         }
+        return done.getAsBoolean();
     }
 
     private static void sleep() {

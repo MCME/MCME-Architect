@@ -60,6 +60,18 @@ class RpReleaseFeedbackTest {
     }
 
     @Test
+    void aReleaserWhoWasOnTheServerIsNotToldTheResultAgainOnTheirNextJoin() {
+        PlayerMock admin = server.addPlayer("Admin");
+        feedback.finish(admin, List.of(line("done")));
+        assertEquals(List.of("done"), told(admin));
+        admin.disconnect();
+        admin.reconnect();
+        told(admin); // what reconnecting said
+        join(admin);
+        assertEquals(List.of(), told(admin));
+    }
+
+    @Test
     void aReleaserWhoLeftGetsTheClosingMessageWhenBackButNoSteps() {
         PlayerMock admin = server.addPlayer("Admin");
         admin.disconnect();
