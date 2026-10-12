@@ -15,9 +15,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.*;
-import java.util.function.BiConsumer;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -40,40 +41,101 @@ public class RpReleaseUtil {
     // Where the files of a release are downloaded from: GitHub. A test points it at a server of its own.
     static String releaseSite = "https://github.com/";
 
-    public static void releaseResourcePack(String rpName, String version, String title, BiConsumer<Boolean,Integer> callback ) {
-        String finalRpName = RpManager.matchRpName(rpName);//.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase();
+    // Whether this server runs Windows, where releases don't run. A test sets it.
+    static boolean onWindows = System.getProperty("os.name").toLowerCase(Locale.ROOT).startsWith("windows");
+
+    /** Starts a release script in its folder. */
+    interface ScriptStarter {
+        Process start(File directory, String... command) throws IOException;
+    }
+
+    // How release scripts are started. A test starts a fake instead.
+    static ScriptStarter starter = RpReleaseUtil::startScript;
+
+    /**
+     * Why the pack can't be released from this server, or null when it can: a Windows server, or a gitHubRpReleases
+     * entry without an owner, repo, script or path. rpName is the pack's name in config.yml.
+     */
+    static String cannotRelease(String rpName) {
+        if (onWindows) {
+            return "Releases only run on Linux servers.";
+        }
+        ConfigurationSection config = ArchitectPlugin.getPluginInstance().getConfig();
+        String entry = "gitHubRpReleases." + rpName + ".";
+        if (Stream.of("owner", "repo", "script", "path").anyMatch(key -> config.getString(entry + key) == null)) {
+            return rpName + " can't be released from this server: its gitHubRpReleases entry needs owner, repo,"
+                    + " script and path. Ask an admin.";
+        }
+        return null;
+    }
+
+    /**
+     * Releases a pack, and tells cs how it goes: a start line now, a line as each group of zips is done, and the
+     * closing message, which waits for a releaser who has left the server. rpName is the pack's name in config.yml,
+     * and cannotRelease(rpName) is null. Called on the main thread; the script runs on another.
+     */
+    public static void releaseResourcePack(CommandSender cs, String rpName, String version, String title) {
+        ArchitectPlugin plugin = ArchitectPlugin.getPluginInstance();
+        RpReleaseFeedback feedback = plugin.getReleaseFeedback();
+        String prefix = PluginData.getMessageUtil().getPREFIX();
+        ConfigurationSection config = plugin.getConfig();
         // Read on the main thread: an update of config.yml reads it again there, in place, and a read from the
         // release's own thread meanwhile could find it empty.
-        String gitHubOwner = getGitHubOwner(finalRpName);
-        String gitHubRepo = getGitHubRepo(finalRpName);
-        String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
-        String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
-        Duration timeout = getTimeout(ArchitectPlugin.getPluginInstance().getConfig(), finalRpName);
-        Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
+        String gitHubOwner = getGitHubOwner(rpName);
+        String gitHubRepo = getGitHubRepo(rpName);
+        String releaseScript = config.getString("gitHubRpReleases." + rpName + ".script");
+        String scriptPath = config.getString("gitHubRpReleases." + rpName + ".path");
+        Duration timeout = getTimeout(config, rpName);
+        boolean dynmap = "releaseDynmap.sh".equals(releaseScript);
+        File dataFolder = plugin.getDataFolder();
+        feedback.tell(cs, RpReleaseChat.start(prefix, rpName, version, title, RpReleaseTimes.last(dataFolder, rpName)));
+        RpReleaseReport report = new RpReleaseReport(step -> Bukkit.getScheduler().runTask(plugin,
+                () -> feedback.tell(cs, RpReleaseChat.step(prefix, rpName, step))));
+        long started = System.nanoTime();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            RpReleaseVerdict verdict;
+            boolean succeeded = false;
             try {
-                boolean isWindows = System.getProperty("os.name")
-                        .toLowerCase().startsWith("windows");
-                if (isWindows || gitHubOwner==null || gitHubRepo==null || releaseScript==null || scriptPath==null) {
-                    runOnMain(callback, true, -1);
-                    return;
-                }
-                Process process = startScript(new File(scriptPath), "sh", releaseScript, finalRpName, gitHubOwner,
+                Process process = starter.start(new File(scriptPath), "sh", releaseScript, rpName, gitHubOwner,
                         gitHubRepo, version, title);
-                ScriptResult result = awaitScript(process, timeout, GRACE,
-                        line -> Log.info("[RP release " + finalRpName + "] " + line));
+                ScriptResult result = awaitScript(process, timeout, GRACE, line -> {
+                    Log.info("[RP release " + rpName + "] " + line);
+                    report.accept(line);
+                });
                 if (!result.terminated()) {
-                    Log.warn("The RP release script for '" + finalRpName + "' version " + version + " still ran after "
+                    Log.warn("The RP release script for '" + rpName + "' version " + version + " still ran after "
                             + timeout.toMinutes() + " minutes, so it was stopped.");
                 }
                 if (!result.outputComplete()) {
-                    Log.warn("Some of the output of the RP release script for '" + finalRpName + "' version "
+                    Log.warn("Some of the output of the RP release script for '" + rpName + "' version "
                             + version + " may be missing from the log: it could not be read to its end.");
                 }
-                runOnMain(callback, result.terminated(), result.exitCode());
-            } catch (InterruptedException | IOException e) {
-                Log.error("Failed to run RP release script for '" + finalRpName + "' version " + version, e);
-                runOnMain(callback, false, -1);
+                verdict = report.verdict(result, rpName, version, dynmap, timeout);
+                succeeded = result.terminated() && result.exitCode() == 0;
+            } catch (IOException e) {
+                Log.error("Failed to run RP release script for '" + rpName + "' version " + version, e);
+                verdict = RpReleaseVerdict.couldNotStart(rpName, version,
+                        e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+            } catch (InterruptedException e) {
+                // The server is stopping, so there is nobody to tell, and nothing may be scheduled any more
+                Log.error("The RP release of '" + rpName + "' version " + version + " was interrupted", e);
+                Thread.currentThread().interrupt();
+                return;
             }
+            Log.info("[RP release " + rpName + "] Result: " + verdict.headline());
+            RpReleaseVerdict closing = verdict;
+            boolean record = succeeded;
+            Duration took = Duration.ofNanos(System.nanoTime() - started);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (record) {
+                    try {
+                        RpReleaseTimes.record(dataFolder, rpName, took);
+                    } catch (IOException e) {
+                        Log.warn("Couldn't note how long the RP release of '" + rpName + "' took", e);
+                    }
+                }
+                feedback.finish(cs, RpReleaseChat.verdict(prefix, closing, rpName, version));
+            });
         });
     }
 
@@ -106,7 +168,7 @@ public class RpReleaseUtil {
         });
         try {
             Future<?> lines = reader.submit(new StreamGobbler(process.getInputStream(), process.getErrorStream(),
-                    output));
+                    skippingFailedLines(output)));
             boolean terminated = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
             if (!terminated) {
                 stop(process, grace);
@@ -123,6 +185,22 @@ public class RpReleaseUtil {
         } finally {
             reader.shutdownNow();
         }
+    }
+
+    // Passes each line to output, and goes on when output fails on one: a script whose output is no longer read
+    // stops once the pipe is full, and holds the release lock until its time is up. The first failure is logged.
+    private static Consumer<String> skippingFailedLines(Consumer<String> output) {
+        AtomicBoolean failed = new AtomicBoolean();
+        return line -> {
+            try {
+                output.accept(line);
+            } catch (RuntimeException e) {
+                if (failed.compareAndSet(false, true)) {
+                    Log.warn("A line of the RP release script's output could not be handled. The rest is still read,"
+                            + " but the result shown in chat may be incomplete.", e);
+                }
+            }
+        };
     }
 
     // Stops a script that is still running, and what it started, which may hold its output open. Each is asked to
@@ -143,11 +221,6 @@ public class RpReleaseUtil {
             process.destroyForcibly();
         }
         started.stream().filter(ProcessHandle::isAlive).forEach(ProcessHandle::destroyForcibly);
-    }
-
-    // Deliver the release result on the main thread (the callback messages the command sender).
-    private static void runOnMain(BiConsumer<Boolean, Integer> callback, boolean exit, int exitCode) {
-        Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> callback.accept(exit, exitCode));
     }
 
     /**
