@@ -1,0 +1,55 @@
+release launcher: Releasing with ResourcePackScripts development at ceb7213.
+compiling Human RP zips
+Human-Sodium
+Already up to date.
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Sodium.zip
+Add new data to archive: 2 files, 102 bytes
+Archive size: 384 bytes
+Everything is Ok
+Human-Sodium-Footprints
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Sodium-Footprints.zip
+Add new data to archive: 2 files, 108 bytes
+Archive size: 390 bytes
+Everything is Ok
+Human-Vanilla
+Generating vanilla resource pack!
+Source path: Human-Sodium
+Output path: release
+Vanilla path: Vanilla-26.2
+Error running process script: Command '['python3', 'objmc.py', '--obj', 'oak_table.obj', '--tex', 'oak_table.png', '--offset', '0', '0', '0', '--out', 'oak_table.json', 'oak_table.png']' returned non-zero exit status 1.
+Script output (stdout): No stdout
+Script error output (stderr): objmc stopped for mcme:block/oak_table
+
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Vanilla.zip
+Add new data to archive: 5 files, 95 bytes
+Archive size: 815 bytes
+Everything is Ok
+Human-Vanilla-Footprints
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Vanilla-Footprints.zip
+Add new data to archive: 7 files, 134 bytes
+Archive size: 1216 bytes
+Everything is Ok
+Human-Lite
+Generating vanilla resource pack!
+Source path: Human-Sodium
+Output path: release
+Vanilla path: Vanilla-26.2
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Lite.zip
+Add new data to archive: 4 files, 93 bytes
+Archive size: 663 bytes
+Everything is Ok
+Human-Lite-Footprints
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Lite-Footprints.zip
+Add new data to archive: 6 files, 132 bytes
+Archive size: 1064 bytes
+Everything is Ok
+releasing Human RP zips
+release note: Version v4.1.3 for Minecraft 26.2 and 26.3
+https://github.com/MCME/RP-Human/releases/tag/v4.1.3
+Release run 20261012-165232-Human-v4.1.3: FAILED, released. 0 warning(s), 1 error(s). Human-Sodium.zip 2 files, Human-Sodium-Footprints.zip 2 files, Human-Vanilla.zip 5 files, Human-Vanilla-Footprints.zip 7 files, Human-Lite.zip 4 files, Human-Lite-Footprints.zip 6 files

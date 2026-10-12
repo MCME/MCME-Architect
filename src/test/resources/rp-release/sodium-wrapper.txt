@@ -1,0 +1,56 @@
+release launcher: Releasing with ResourcePackScripts development at 23f94c0.
+compiling Human RP zips
+Human-Sodium
+Already up to date.
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Sodium.zip
+Add new data to archive: 2 files, 102 bytes
+Archive size: 384 bytes
+Everything is Ok
+Human-Sodium-Footprints
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Sodium-Footprints.zip
+Add new data to archive: 2 files, 108 bytes
+Archive size: 390 bytes
+Everything is Ok
+Human-Vanilla
+Generating vanilla resource pack!
+Source path: Human-Sodium
+Output path: release
+Vanilla path: Vanilla-26.2
+        WARNING!!! Missing model file: mcme:block/oak_table_1
+        WARNING!!! Missing model file: mcme:block/oak_table_2
+        WARNING!!! Missing model file: mcme:block/oak_table_3
+        WARNING!!! Missing model file: mcme:block/oak_table_4
+        WARNING!!! Missing model file: mcme:block/oak_table_5
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Vanilla.zip
+Add new data to archive: 5 files, 95 bytes
+Archive size: 815 bytes
+Everything is Ok
+Human-Vanilla-Footprints
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Vanilla-Footprints.zip
+Add new data to archive: 7 files, 134 bytes
+Archive size: 1216 bytes
+Everything is Ok
+Human-Lite
+Generating vanilla resource pack!
+Source path: Human-Sodium
+Output path: release
+Vanilla path: Vanilla-26.2
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Lite.zip
+Add new data to archive: 4 files, 93 bytes
+Archive size: 663 bytes
+Everything is Ok
+Human-Lite-Footprints
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Human-Lite-Footprints.zip
+Add new data to archive: 6 files, 132 bytes
+Archive size: 1064 bytes
+Everything is Ok
+releasing Human RP zips
+release note: Version v4.1.3 for Minecraft 26.2 and 26.3
+https://github.com/MCME/RP-Human/releases/tag/v4.1.3
+Release run 20261012-165229-Human-v4.1.3: OK with warnings, released. 5 warning(s), 0 error(s). Human-Sodium.zip 2 files, Human-Sodium-Footprints.zip 2 files, Human-Vanilla.zip 5 files, Human-Vanilla-Footprints.zip 7 files, Human-Lite.zip 4 files, Human-Lite-Footprints.zip 6 files

@@ -1,0 +1,5 @@
+release launcher: Someone edited ResourcePackScripts on the server. That change must go through a pull request; until then no release runs here. What git status shows:
+release launcher:   ?? extra1.txt
+release launcher:   ?? extra2.txt
+release launcher:   ?? extra3.txt
+release launcher:   ?? extra4.txt
