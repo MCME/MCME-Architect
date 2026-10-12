@@ -76,7 +76,8 @@ final class RpReleaseReport {
             return;
         }
         Matcher match;
-        if (STEP.matcher(line).matches()) {
+        // After publishing, step lines fall through, as the wrapper's fold() ignores them (after_release)
+        if (group != Group.PUBLISHING && STEP.matcher(line).matches()) {
             step(groupOf(line));
         } else if ((match = WARNING.matcher(line)).matches()) {
             warnings++;
@@ -98,7 +99,10 @@ final class RpReleaseReport {
         } else if (WRAPPER_BUSY.matcher(line).matches()) {
             wrapperBusy = line;
         }
-        lastLine = line;
+        // The wrapper's verdict line, and the problem lines it prints after it, are not the release's own output
+        if (wrapperVerdict == null) {
+            lastLine = line;
+        }
     }
 
     /**
@@ -109,8 +113,8 @@ final class RpReleaseReport {
                                           Duration timeout) {
         String release = pack + " " + tag;
         if (!result.terminated()) {
-            return verdict(Kind.TIMED_OUT, release + " was stopped after " + timeout.toMinutes() + " minutes, during "
-                    + during() + ". Check the release on GitHub, or ask an admin.", List.of());
+            return verdict(Kind.TIMED_OUT, release + " was stopped after " + count(timeout.toMinutes(), "minute")
+                    + ", during " + during() + ". Check the release on GitHub, or ask an admin.", List.of());
         }
         int exit = result.exitCode();
         if (exit == 0 && dynmap) {
@@ -202,8 +206,9 @@ final class RpReleaseReport {
         if (total == 0) {
             return verdict(kind, headline + ".", List.of());
         }
-        List<String> lines = new ArrayList<>(indented(shownWarnings));
-        int more = total - shownWarnings.size();
+        List<String> listed = shownWarnings.subList(0, Math.min(total, shownWarnings.size()));
+        List<String> lines = new ArrayList<>(indented(listed));
+        int more = total - listed.size();
         if (more > 0) {
             lines.add("…and " + more + " more: " + where() + ".");
         }

@@ -81,6 +81,15 @@ class RpReleaseReportTest {
         assertEquals(List.of(Step.ZIPS_DONE, Step.PUBLISHING), steps);
     }
 
+    @Test
+    void aTagThatEndsLikeAStepLineStillGivesTheReleaseUrl() {
+        read("compiling Rohan RP zips", "releasing Rohan RP zips",
+                "https://github.com/MCME/RP-Rohan/releases/tag/v1.0-Lite");
+        assertEquals(List.of(Step.ZIPS_DONE, Step.PUBLISHING), steps);
+        assertEquals("https://github.com/MCME/RP-Rohan/releases/tag/v1.0-Lite",
+                ended(0, "Rohan", "v1.0-Lite").releaseUrl());
+    }
+
     // Review focus 5: a pack's name can hold the words a step line ends with
     @Test
     void aStepsGroupComesFromTheEndOfItsLine() {
@@ -142,6 +151,15 @@ class RpReleaseReportTest {
     }
 
     @Test
+    void noMoreWarningsAreListedThanTheWrapperCounted() {
+        read("WARNING!!! a", "WARNING!!! b", "WARNING!!! c",
+                "Release run 20261012-101500-Rohan-v1.0: OK with warnings, released. 1 warning(s), 0 error(s).");
+        RpReleaseVerdict verdict = ended(0, "Rohan", "v1.0");
+        assertEquals("Rohan v1.0 is released, with 1 warning:", verdict.headline());
+        assertEquals(List.of("  a"), verdict.details());
+    }
+
+    @Test
     void aStopShowsItsErrorLineAndTheLineBeforeWhenItSaysAbove() {
         read("fatal: unable to access 'https://github.com/MCME/RP-Rohan.git/': Could not resolve host: github.com",
                 "ERROR: Couldn't fetch Rohan-Vanilla from GitHub (git's reason is above), so the release would build old files.");
@@ -172,6 +190,14 @@ class RpReleaseReportTest {
     }
 
     @Test
+    void theWrappersOwnLinesAreNeverTheLastOutput() {
+        read("releasing Human RP zips", "release not found",
+                "Release run 20261012-101500-Human-v4.1.3: FAILED, nothing released. 0 warning(s), 1 error(s).",
+                "WARNING!!! No GitHub release was created.");
+        assertEquals(List.of("Last output: release not found"), ended(1, "Human", "v4.1.3").details());
+    }
+
+    @Test
     void aReleaseStillRunningAtItsTimeoutWasStoppedDuringItsLastStep() {
         read("compiling Human RP zips", "Human-Sodium", "Human-Vanilla", "Human-Lite");
         RpReleaseVerdict verdict = report.verdict(new ScriptResult(false, -1, true), "Human", "v4.1.3", false,
@@ -180,6 +206,14 @@ class RpReleaseReportTest {
         assertEquals("Human v4.1.3 was stopped after 45 minutes, during the Lite zips. Check the release on GitHub,"
                 + " or ask an admin.", verdict.headline());
         assertFalse(verdict.headline().contains("exit"), "no exit code was observed");
+    }
+
+    @Test
+    void aTimeoutOfOneMinuteIsOneMinute() {
+        RpReleaseVerdict verdict = report.verdict(new ScriptResult(false, -1, true), "Human", "v4.1.3", false,
+                Duration.ofMinutes(1));
+        assertEquals("Human v4.1.3 was stopped after 1 minute, during the start. Check the release on GitHub, or ask"
+                + " an admin.", verdict.headline());
     }
 
     @Test
@@ -215,9 +249,11 @@ class RpReleaseReportTest {
     @Test
     void failedChecksWithoutCountsFoundProblems() {
         read("Release run 20261012-101500-Rohan-v1.0: FAILED, released. 0 warning(s), 0 error(s).",
-                "WARNING!!! Rohan.zip has 10 files; the last good release (v0.9) had 20.");
+                "WARNING!!! Rohan.zip is empty.");
+        RpReleaseVerdict verdict = ended(0, "Rohan", "v1.0");
         assertEquals("Rohan v1.0 is released, but its checks found problems: see the dashboard,"
-                + " run 20261012-101500-Rohan-v1.0.", ended(0, "Rohan", "v1.0").headline());
+                + " run 20261012-101500-Rohan-v1.0.", verdict.headline());
+        assertEquals(List.of("  Rohan.zip is empty."), verdict.details());
     }
 
     // ── whole outputs, captured from real releases ───────────────────
