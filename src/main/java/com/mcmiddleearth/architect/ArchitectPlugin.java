@@ -71,6 +71,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     private BukkitTask rpSwitchTask;
 
     private DevUtil devUtil;
+    private RpReleaseFeedback releaseFeedback;
     
     @Override
     public void onEnable() {
@@ -110,6 +111,8 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         pluginManager.registerEvents(new DoorListener(), this);
         pluginManager.registerEvents(new InventoryListener(), this);
         pluginManager.registerEvents(new RpListener(), this);
+        releaseFeedback = new RpReleaseFeedback(this, PluginData.getMessageUtil().getPREFIX());
+        pluginManager.registerEvents(releaseFeedback, this);
         pluginManager.registerEvents(new ChunkUpdateListener(), this);
         pluginManager.registerEvents(new OpItemListener(), this);
         pluginManager.registerEvents(new ClipboardPlayerListener(), this);
@@ -225,5 +228,10 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     @Override
     public DevUtil getDevUtil() {
         return devUtil;
+    }
+
+    /** Delivers the chat lines of /rp release, and holds them for a releaser who left. */
+    public RpReleaseFeedback getReleaseFeedback() {
+        return releaseFeedback;
     }
 }

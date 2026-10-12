@@ -1,0 +1,11 @@
+release launcher: Releasing with ResourcePackScripts development at 6bdfc25.
+compiling Rohan RP zips
+Already up to date.
+7-Zip (a) 0.0 : a stand-in for the tests
+Creating archive: Rohan.zip
+Add new data to archive: 2 files, 93 bytes
+Archive size: 378 bytes
+Everything is Ok
+7-Zip (a) 0.0 : a stand-in for the tests
+ERROR: the tests told 7-Zip to fail
+ERROR: 7-Zip couldn't make Rohan-Footprints.zip (its report is above). Nothing was published.

@@ -258,13 +258,6 @@ class RpServerCommandTest {
                         "offered to a player who may not use /rp server"));
     }
 
-    // After a release, /rp release suggests the whole /rp server command, Minecraft version included.
-    @Test
-    void theReleaseHintNamesTheMinecraftVersionToo() {
-        assertEquals("RP release finished. You might want to do /rp server Paths v1.9 <mcVersion>",
-                RpCommand.releaseFinishedHint("Paths", "v1.9"));
-    }
-
     // /rp server remove <pack> <mc> takes the slot for a version out of every variant of the pack: the way to remove
     // a slot made under a release name, which no client's version matches.
     @Test

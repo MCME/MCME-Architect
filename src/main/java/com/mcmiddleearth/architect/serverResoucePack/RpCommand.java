@@ -44,18 +44,17 @@ public class RpCommand extends AbstractArchitectCommand {
         if(args.length>0 && args[0].equalsIgnoreCase("release")
                 && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
             if(args.length>3) {
+                String rpName = matchPack(cs, args[1]);
+                if(rpName.isEmpty()) {
+                    return true;
+                }
+                String refusal = RpReleaseUtil.cannotRelease(rpName);
+                if(refusal != null) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, refusal);
+                    return true;
+                }
                 String title = Joiner.on(" ").join(Arrays.copyOfRange(args, 3, args.length));
-                RpReleaseUtil.releaseResourcePack(args[1], args[2], title, (exit, exitCode) -> {
-                    Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
-                        if (exit && exitCode == 0) {
-                            PluginData.getMessageUtil().sendInfoMessage(cs, releaseFinishedHint(args[1], args[2]));
-
-                        } else {
-                            PluginData.getMessageUtil().sendErrorMessage(cs,
-                                    "Error while creating RP release! Process terminated=" + exit + " exitCode=" + exitCode);
-                        }
-                    });
-                });
+                RpReleaseUtil.releaseResourcePack(cs, rpName, args[2], title);
             } else {
                 PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp release <rpName> <Version> <Title>"
                         +"\nReleasing is not implemented for all resource packs.");
@@ -462,10 +461,6 @@ public class RpCommand extends AbstractArchitectCommand {
                     + ". Use one of: " + String.join(", ", RpManager.getRpConfig().getKeys(false)) + ".");
         }
         return rpName;
-    }
-
-    static String releaseFinishedHint(String rpName, String version) {
-        return "RP release finished. You might want to do /rp server "+rpName+" "+version+" <mcVersion>";
     }
 
     // The Minecraft versions a pack can have a slot for, as an admin types them: 26.2, 1.21.4 and so on.
