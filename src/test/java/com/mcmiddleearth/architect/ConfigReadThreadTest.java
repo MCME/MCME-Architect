@@ -1,5 +1,6 @@
 package com.mcmiddleearth.architect;
 
+import com.mcmiddleearth.architect.serverResoucePack.RpReleaseUtil;
 import com.mcmiddleearth.architect.testsupport.TestConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -62,14 +63,23 @@ class ConfigReadThreadTest {
     }
 
     // /rp release runs its script off the main thread: its owner, repo, script, path and timeout are read before.
+    // A Windows server is told releases don't run there before any of them is read, so this one is a Linux server.
     @Test
-    void rpReleaseReadsItsSettingsOnTheMainThread() {
-        server.dispatchCommand(server.getConsoleSender(), "rp release Paths v2 A new release");
+    void rpReleaseReadsItsSettingsOnTheMainThread() throws Exception {
+        Field onWindows = RpReleaseUtil.class.getDeclaredField("onWindows");
+        onWindows.setAccessible(true);
+        boolean wasWindows = onWindows.getBoolean(null);
+        onWindows.setBoolean(null, false);
+        try {
+            server.dispatchCommand(server.getConsoleSender(), "rp release Paths v2 A new release");
 
-        assertAll(
-                () -> assertTrue(awaitRead("gitHubRpReleases.Paths.owner"), "the owner is read, of " + config.read),
-                () -> assertEquals(List.of(), config.readOffTheMainThread("gitHubRpReleases"),
-                        "the settings read off the main thread"));
+            assertAll(
+                    () -> assertTrue(awaitRead("gitHubRpReleases.Paths.owner"), "the owner is read, of " + config.read),
+                    () -> assertEquals(List.of(), config.readOffTheMainThread("gitHubRpReleases"),
+                            "the settings read off the main thread"));
+        } finally {
+            onWindows.setBoolean(null, wasWindows);
+        }
     }
 
     // /inv upload and /inv download run their scripts off the main thread: which script, and where, is read before.
