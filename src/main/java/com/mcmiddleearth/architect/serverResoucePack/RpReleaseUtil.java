@@ -1,7 +1,9 @@
 package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.ConfigFile;
 import com.mcmiddleearth.architect.Log;
+import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.util.StreamGobbler;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -10,7 +12,10 @@ import org.bukkit.configuration.ConfigurationSection;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -32,23 +37,28 @@ public class RpReleaseUtil {
      */
     record ScriptResult(boolean terminated, int exitCode, boolean outputComplete) {}
 
+    // Where the files of a release are downloaded from: GitHub. A test points it at a server of its own.
+    static String releaseSite = "https://github.com/";
+
     public static void releaseResourcePack(String rpName, String version, String title, BiConsumer<Boolean,Integer> callback ) {
         String finalRpName = RpManager.matchRpName(rpName);//.substring(0,1).toUpperCase()+rpName.substring(1).toLowerCase();
+        // Read on the main thread: an update of config.yml reads it again there, in place, and a read from the
+        // release's own thread meanwhile could find it empty.
+        String gitHubOwner = getGitHubOwner(finalRpName);
+        String gitHubRepo = getGitHubRepo(finalRpName);
+        String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
+        String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
+        Duration timeout = getTimeout(ArchitectPlugin.getPluginInstance().getConfig(), finalRpName);
         Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
             try {
                 boolean isWindows = System.getProperty("os.name")
                         .toLowerCase().startsWith("windows");
-                String gitHubOwner = getGitHubOwner(finalRpName);
-                String gitHubRepo = getGitHubRepo(finalRpName);
-                String releaseScript = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".script");
-                String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString("gitHubRpReleases."+finalRpName+".path");
                 if (isWindows || gitHubOwner==null || gitHubRepo==null || releaseScript==null || scriptPath==null) {
                     runOnMain(callback, true, -1);
                     return;
                 }
                 Process process = startScript(new File(scriptPath), "sh", releaseScript, finalRpName, gitHubOwner,
                         gitHubRepo, version, title);
-                Duration timeout = getTimeout(ArchitectPlugin.getPluginInstance().getConfig(), finalRpName);
                 ScriptResult result = awaitScript(process, timeout, GRACE,
                         line -> Log.info("[RP release " + finalRpName + "] " + line));
                 if (!result.terminated()) {
@@ -140,41 +150,112 @@ public class RpReleaseUtil {
         Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> callback.accept(exit, exitCode));
     }
 
-    public static void setServerResourcePack(CommandSender cs, String rpName, String version, String requiredMcVersion,
-                                             Consumer<Boolean> callback) {
+    /**
+     * Points the slots of a pack for one Minecraft version at the files of a release. Each file is downloaded and
+     * hashed off the main thread first. Then, on the main thread, config.yml is read again, each slot whose file was
+     * hashed gets its url and sha together, and config.yml is saved once; a slot whose file could not be hashed keeps
+     * its url and sha. The result, whose slots are the variants, reaches callback on the main thread. /rp server has
+     * checked that rpName matches a pack in config.yml, and that mcVersion (26.2 or 26_2) is a key of
+     * protocolVersions.yml.
+     */
+    public static void setServerResourcePack(CommandSender cs, String rpName, String version, String mcVersion,
+                                             Consumer<RpManager.SlotResult> callback) {
         String finalRpName = RpManager.matchRpName(rpName);
-        requiredMcVersion = requiredMcVersion.replace('.','_');
-        ConfigurationSection rpConfig = RpManager.getRpConfig();
-        rpConfig = rpConfig.getConfigurationSection(finalRpName);
-        if(rpConfig ==null) {
-            callback.accept(false);
+        String versionKey = mcVersion.replace('.','_');
+        ConfigurationSection rpConfig = RpManager.getRpConfig().getConfigurationSection(finalRpName);
+        if(finalRpName.isEmpty() || rpConfig == null) {
+            Log.warn("No server resource pack in config.yml matches '" + rpName + "'.");
+            callback.accept(RpManager.SlotResult.ofError());
+            return;
+        }
+        // the file of the release for each variant
+        Map<String, String> urls = new LinkedHashMap<>();
+        String download = releaseSite + getGitHubOwner(finalRpName) + "/" + getGitHubRepo(finalRpName)
+                + "/releases/download/" + version + "/";
+        if (rpConfig.contains("sodium")) {
+            urls.put("vanilla.16px.light", download + finalRpName + "-Vanilla.zip");
+            urls.put("vanilla.16px.footprints", download + finalRpName + "-Vanilla-Footprints.zip");
+            urls.put("sodium.16px.light", download + finalRpName + "-Sodium.zip");
+            urls.put("sodium.16px.footprints", download + finalRpName + "-Sodium-Footprints.zip");
+            urls.put("lite.16px.light", download + finalRpName + "-Lite.zip");
+            urls.put("lite.16px.footprints", download + finalRpName + "-Lite-Footprints.zip");
         } else {
-            String download = "https://github.com/" + getGitHubOwner(finalRpName) + "/" + getGitHubRepo(finalRpName) + "/releases/download/";
-            if (rpConfig.contains("sodium")) {
-                updateSection(rpConfig, "vanilla.16px.light",requiredMcVersion, download + version + "/"+finalRpName+"-Vanilla.zip");
-                updateSection(rpConfig, "vanilla.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Vanilla-Footprints.zip");
-                updateSection(rpConfig, "sodium.16px.light",requiredMcVersion, download + version + "/"+finalRpName+"-Sodium.zip");
-                updateSection(rpConfig, "sodium.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Sodium-Footprints.zip");
-                updateSection(rpConfig, "lite.16px.light",requiredMcVersion, download + version + "/"+finalRpName+"-Lite.zip");
-                updateSection(rpConfig, "lite.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Lite-Footprints.zip");
-            } else {
-                updateSection(rpConfig, "vanilla.16px.light",requiredMcVersion, download + version + "/"+finalRpName+".zip");
-                updateSection(rpConfig, "vanilla.16px.footprints",requiredMcVersion, download + version + "/"+finalRpName+"-Footprints.zip");
+            urls.put("vanilla.16px.light", download + finalRpName + ".zip");
+            urls.put("vanilla.16px.footprints", download + finalRpName + "-Footprints.zip");
+        }
+        ArchitectPlugin plugin = ArchitectPlugin.getPluginInstance();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            Map<String, String> shas = new LinkedHashMap<>();
+            Map<String, String> failed = new LinkedHashMap<>();
+            try {
+                for (Map.Entry<String, String> file : urls.entrySet()) {
+                    try {
+                        shas.put(file.getKey(), RpManager.sha1(file.getValue(), () -> Bukkit.getScheduler().runTask(
+                                plugin, () -> PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ..."))));
+                    } catch (IOException ex) {
+                        String reason = file.getValue() + ": " + RpManager.describe(ex);
+                        Log.warn("Server resource pack " + finalRpName + ", variant " + file.getKey() + ", version "
+                                + versionKey + " was not set to " + version + ": " + reason);
+                        failed.put(file.getKey(), reason);
+                    }
+                }
+            } catch (Exception ex) {
+                // Nothing in the background may fail silently: the error is logged, and the admin told.
+                Log.error("Failed to set the server resource pack " + finalRpName + " to " + version
+                        + " for MC " + versionKey, ex);
+                Bukkit.getScheduler().runTask(plugin, () -> callback.accept(RpManager.SlotResult.ofError()));
+                return;
             }
-            ArchitectPlugin.getPluginInstance().saveConfig();
-            Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
-                callback.accept(RpManager.refreshSHA(cs, finalRpName, false));
+            Bukkit.getScheduler().runTask(plugin,
+                    () -> callback.accept(setSlots(finalRpName, version, versionKey, urls, shas, failed)));
+        });
+    }
+
+    // On the main thread, in config.yml as it is now on disk: each variant whose file was hashed gets url and sha
+    // together in its slot for the version, and config.yml is saved once.
+    private static RpManager.SlotResult setSlots(String rpName, String version, String versionKey,
+                                                 Map<String, String> urls, Map<String, String> shas,
+                                                 Map<String, String> failed) {
+        try {
+            if (shas.isEmpty()) {
+                return new RpManager.SlotResult(List.of(), failed, false);
+            }
+            List<String> set = new ArrayList<>();
+            boolean saved = ConfigFile.update(config -> {
+                ConfigurationSection packs = RpManager.getRpConfig(config);
+                ConfigurationSection rpConfig = packs == null ? null : packs.getConfigurationSection(rpName);
+                if (rpConfig != null) {
+                    shas.forEach((variant, sha) -> {
+                        setSlot(rpConfig, variant, versionKey, urls.get(variant), sha);
+                        set.add(variant);
+                    });
+                }
             });
+            if (!saved) {
+                return RpManager.SlotResult.ofError(); // ConfigFile logged why
+            }
+            if (set.isEmpty()) {
+                Log.warn("Server resource pack " + rpName + " is no longer in config.yml, so it was not set to "
+                        + version + ".");
+                return RpManager.SlotResult.ofError();
+            }
+            return new RpManager.SlotResult(set, failed, false);
+        } catch (RuntimeException ex) {
+            Log.error("Failed to set the server resource pack " + rpName + " to " + version + " for MC " + versionKey, ex);
+            return RpManager.SlotResult.ofError();
         }
     }
 
-    private static void updateSection(ConfigurationSection rpConfig, String path, String requiredMcVersion, String url) {
-        ConfigurationSection section = rpConfig.getConfigurationSection(path);
-        if(section.contains("url")) {
+    // A variant that held one pack for every version, as in old configs, has its url and sha replaced by its first
+    // version slot.
+    private static void setSlot(ConfigurationSection rpConfig, String variant, String versionKey, String url, String sha) {
+        ConfigurationSection section = rpConfig.getConfigurationSection(variant);
+        if(section != null && section.contains("url")) {
             section.set("url", null);
             section.set("sha", null);
         }
-        rpConfig.set(path+"."+requiredMcVersion+".url", url);
+        rpConfig.set(variant + "." + versionKey + ".url", url);
+        rpConfig.set(variant + "." + versionKey + ".sha", sha);
     }
 
     private static String getGitHubOwner(String rpName) {

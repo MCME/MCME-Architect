@@ -17,12 +17,12 @@
 package com.mcmiddleearth.architect.customHeadManager;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.ConfigFile;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.HeadUtil;
 import com.mcmiddleearth.util.PathSafety;
 import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -105,9 +105,7 @@ public class CustomHeadManagerData {
     }
     
     public static void saveGallery() {
-        ConfigurationSection config = ArchitectPlugin.getPluginInstance().getConfig();
-        config.createSection(CONFIG_KEY, serializeLocation(gallery.getLocation()));
-        ArchitectPlugin.getPluginInstance().saveConfig();
+        ConfigFile.update(config -> config.createSection(CONFIG_KEY, serializeLocation(gallery.getLocation())));
     }
     
     public static String getFullName(String name) {

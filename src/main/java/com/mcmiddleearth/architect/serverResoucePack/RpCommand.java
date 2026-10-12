@@ -23,6 +23,8 @@ import com.sk89q.worldedit.regions.Region;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Stream;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -46,8 +48,7 @@ public class RpCommand extends AbstractArchitectCommand {
                 RpReleaseUtil.releaseResourcePack(args[1], args[2], title, (exit, exitCode) -> {
                     Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
                         if (exit && exitCode == 0) {
-                            PluginData.getMessageUtil().sendInfoMessage(cs,
-                                    "RP release finished. You might want to do /rp server "+args[1]+" "+args[2]);
+                            PluginData.getMessageUtil().sendInfoMessage(cs, releaseFinishedHint(args[1], args[2]));
 
                         } else {
                             PluginData.getMessageUtil().sendErrorMessage(cs,
@@ -63,17 +64,45 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         if(args.length>0 && args[0].equalsIgnoreCase("server")
                 && PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            if(args.length>1 && args[1].equalsIgnoreCase("remove")) {
+                removeSlot(cs, args);
+                return true;
+            }
             if(args.length>3) {
-                RpReleaseUtil.setServerResourcePack(cs, args[1], args[2], args[3], success -> {
-                    if (success) {
+                String rpName = matchPack(cs, args[1]);
+                if(rpName.isEmpty()) {
+                    return true;
+                }
+                // A release name in place of the version once made a slot that matches no client's version.
+                if(!RpManager.isMcVersion(args[3].replace('.','_'))) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "Unknown Minecraft version: " + args[3]
+                            + ". Use one of: " + String.join(", ", mcVersionNames()) + ".");
+                    return true;
+                }
+                RpReleaseUtil.setServerResourcePack(cs, rpName, args[2], args[3], result -> {
+                    if (result.error()) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack! See "
+                                + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+                        return;
+                    }
+                    result.failed().forEach((variant, reason) -> PluginData.getMessageUtil().sendErrorMessage(cs,
+                            "Variant " + variant + " of " + rpName + " was not set for MC " + args[3]
+                            + " and keeps its url and sha: " + reason));
+                    if (result.failed().isEmpty()) {
                         PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
                                 + " set to version: " + args[2] + " for MC: "+ args[3]);
+                    } else if (result.done().isEmpty()) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Server resource pack " + rpName
+                                + " was not changed.");
                     } else {
-                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while setting server resource pack!");
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Server resource pack " + rpName
+                                + " set to version " + args[2] + " for MC " + args[3] + " in "
+                                + String.join(", ", result.done()) + " only.");
                     }
                 });
             } else {
-                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <rpVersion> <requiredMcVersion>");
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server <rpName> <rpVersion> <requiredMcVersion>"
+                        + " or /rp server remove <rpName> <mcVersion>");
             }
             return true;
         }
@@ -114,17 +143,29 @@ public class RpCommand extends AbstractArchitectCommand {
                 PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
                 return true;
             }
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    String rpName = RpManager.matchRpName(args[1]);
-                    boolean allVersions = args.length > 2 && args[2].equals("all");
-                    if(RpManager.refreshSHA(cs, rpName, allVersions)) {
-                        PluginData.getMessageUtil().sendInfoMessage(cs, "SHA recalculated for rp: "+rpName);
-                    } else {
-                        PluginData.getMessageUtil().sendErrorMessage(cs, "Error while recalculating SHA for rp: "+args[1]);
-                    }
-                }}.runTaskAsynchronously(ArchitectPlugin.getPluginInstance());
+            String rpName = matchPack(cs, args[1]);
+            if(rpName.isEmpty()) {
+                return true;
+            }
+            boolean allVersions = args.length > 2 && args[2].equals("all");
+            RpManager.refreshSHA(cs, rpName, allVersions, result -> {
+                if(result.error()) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "Error while recalculating SHA for rp: " + rpName
+                            + "! See " + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+                    return;
+                }
+                result.failed().forEach((slot, reason) -> PluginData.getMessageUtil().sendErrorMessage(cs,
+                        "Slot " + slot + " of " + rpName + " keeps its sha: " + reason));
+                if(result.failed().isEmpty()) {
+                    PluginData.getMessageUtil().sendInfoMessage(cs, "SHA recalculated for rp: "+rpName);
+                } else if(result.done().isEmpty()) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "SHA not recalculated for rp: " + rpName + ".");
+                } else {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "SHA recalculated for rp: " + rpName + ", but not for "
+                            + (result.failed().size() == 1 ? "the slot" : "the " + result.failed().size() + " slots")
+                            + " above.");
+                }
+            });
             return true;
         }
         if (!(cs instanceof Player)) {
@@ -364,6 +405,93 @@ public class RpCommand extends AbstractArchitectCommand {
         }
         new RPSwitcher(urlStr, (Player) cs).start();*/
         return true;
+    }
+
+    // /rp server remove <rpName> <mcVersion> removes the slot for a version from every variant of a pack: the
+    // counterpart of /rp server for a slot that is there, such as one made under a release name.
+    private static void removeSlot(CommandSender cs, String[] args) {
+        if(args.length<4) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Command syntax: /rp server remove <rpName> <mcVersion>");
+            return;
+        }
+        String rpName = matchPack(cs, args[2]);
+        if(rpName.isEmpty()) {
+            return;
+        }
+        String versionKey = args[3].replace('.','_');
+        if(!RpManager.getSlotVersions(rpName).contains(versionKey)) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Resource pack " + rpName + " has no slot for " + args[3]
+                    + ". Its slots: " + String.join(", ", slotNames(rpName)) + ".");
+            return;
+        }
+        // A pack without a slot would send nothing to the players in its regions, and say nothing about it.
+        if(!RpManager.hasOtherSlot(rpName, versionKey)) {
+            sendLastSlotRefusal(cs, rpName);
+            return;
+        }
+        RpManager.SlotResult result = RpManager.removeSlots(rpName, versionKey);
+        if(result.error()) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Error while removing a slot of resource pack " + rpName
+                    + "! See " + LogFileManager.location(ArchitectPlugin.getPluginInstance()) + ".");
+        } else if(!result.failed().isEmpty()) {
+            sendLastSlotRefusal(cs, rpName); // the pack's other slots were removed meanwhile, as on another server
+        } else if(result.done().isEmpty()) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Resource pack " + rpName + " has no slot for " + args[3]
+                    + " any more.");
+        } else {
+            PluginData.getMessageUtil().sendInfoMessage(cs, "Slot " + args[3] + " removed from resource pack " + rpName
+                    + ": " + String.join(", ", result.done()) + ".");
+        }
+    }
+
+    private static void sendLastSlotRefusal(CommandSender cs, String rpName) {
+        PluginData.getMessageUtil().sendErrorMessage(cs, "That is " + rpName + "'s last slot: set another version first"
+                + " with /rp server " + rpName + " <tag> <mcVersion>, or remove the pack from config.yml by hand.");
+    }
+
+    // The versions a pack has slots for, as an admin types them: 26.2, 26.2release and so on.
+    private static List<String> slotNames(String rpName) {
+        return RpManager.getSlotVersions(rpName).stream().map(version -> version.replace('_','.')).toList();
+    }
+
+    // The pack a name matches; or "", once the admin is told the packs there are.
+    private static String matchPack(CommandSender cs, String name) {
+        String rpName = RpManager.matchRpName(name);
+        if(rpName.isEmpty()) {
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Unknown resource pack: " + name
+                    + ". Use one of: " + String.join(", ", RpManager.getRpConfig().getKeys(false)) + ".");
+        }
+        return rpName;
+    }
+
+    static String releaseFinishedHint(String rpName, String version) {
+        return "RP release finished. You might want to do /rp server "+rpName+" "+version+" <mcVersion>";
+    }
+
+    // The Minecraft versions a pack can have a slot for, as an admin types them: 26.2, 1.21.4 and so on.
+    private static List<String> mcVersionNames() {
+        return RpManager.getMcVersions().stream().map(version -> version.replace('_','.')).toList();
+    }
+
+    // /rp server completes its words for resource pack admins: remove or the pack, and then the Minecraft version,
+    // or, to remove a slot, the pack and then its slots.
+    @Override
+    public List<String> onTabComplete(CommandSender cs, Command command, String alias, String[] args) {
+        if(args.length < 2 || !args[0].equalsIgnoreCase("server")
+                || !PluginData.hasPermission(cs, Permission.RESOURCE_PACK_ADMIN)) {
+            return new ArrayList<>();
+        }
+        boolean remove = args[1].equalsIgnoreCase("remove");
+        List<String> packs = List.copyOf(RpManager.getRpConfig().getKeys(false));
+        List<String> options = switch(args.length) {
+            case 2 -> Stream.concat(Stream.of("remove"), packs.stream()).toList();
+            case 3 -> remove ? packs : List.of();
+            case 4 -> remove ? slotNames(RpManager.matchRpName(args[2])) : mcVersionNames();
+            default -> List.of();
+        };
+        String typed = args[args.length - 1].toLowerCase(Locale.ROOT);
+        return new ArrayList<>(options.stream().filter(option -> option.toLowerCase(Locale.ROOT).startsWith(typed))
+                .toList());
     }
 
     // While the player's settings are still being read from the RP database, a change would start from defaults

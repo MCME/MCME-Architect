@@ -21,6 +21,10 @@ public class InventoryUtil {
     }
 
     private static void executeScript(String action, String rpName, String description, BiConsumer<Boolean, Integer> callback) {
+        // Read on the main thread: an update of config.yml reads it again there, in place, and a read from the
+        // script's own thread meanwhile could find it empty.
+        String script = ArchitectPlugin.getPluginInstance().getConfig().getString(action+".script");
+        String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString(action+".path");
         Bukkit.getScheduler().runTaskAsynchronously(ArchitectPlugin.getPluginInstance(), () -> {
             boolean exit = false;
             int exitCode = -1;
@@ -28,8 +32,6 @@ public class InventoryUtil {
             try {
                 boolean isWindows = System.getProperty("os.name")
                         .toLowerCase().startsWith("windows");
-                String script = ArchitectPlugin.getPluginInstance().getConfig().getString(action+".script");
-                String scriptPath = ArchitectPlugin.getPluginInstance().getConfig().getString(action+".path");
                 if (isWindows || script == null || scriptPath == null) {
                     runOnMain(callback, false, -1);
                     return;

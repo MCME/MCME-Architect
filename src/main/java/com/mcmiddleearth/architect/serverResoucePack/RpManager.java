@@ -18,6 +18,7 @@ package com.mcmiddleearth.architect.serverResoucePack;
 
 import com.google.gson.Gson;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.ConfigFile;
 import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
@@ -40,11 +41,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.net.URL;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
 /**
  *
@@ -56,7 +59,8 @@ public class RpManager {
     private static final File regionFolder = new File(ArchitectPlugin.getPluginInstance().getDataFolder(),"regions");
 
     private static final File versionFile = new File(ArchitectPlugin.getPluginInstance().getDataFolder(), "protocolVersions.yml");
-    private static final Map<String, Integer> protocolVersions = new HashMap<>();
+    // in the order of the file, so versions with the same protocol keep that order
+    private static final Map<String, Integer> protocolVersions = new LinkedHashMap<>();
 
     private static final String rpDatabaseConfig = "rpSettingsDatabase";
 
@@ -70,6 +74,9 @@ public class RpManager {
     private static final Map<UUID, Object> pendingLoads = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final Map<UUID, String> sodiumClients = new java.util.concurrent.ConcurrentHashMap<>();
+
+    // The slots without a valid SHA-1 that were logged, by path and url: each is logged once, not for every player.
+    private static final Set<String> unhashedSlots = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private static final RpDatabaseConnector dbConnector = new RpDatabaseConnector(ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(rpDatabaseConfig));
     
@@ -213,22 +220,42 @@ public class RpManager {
         return "";
     }
     
+    /**
+     * The hash to send with the pack of rp to this player (null: default settings): the 20 bytes of the slot's SHA-1,
+     * or null when the slot has no valid one. Paper sends a null hash as an empty one, and the client then loads the
+     * pack without checking it; an all-zero hash, as before, made every client reject the pack.
+     */
     public static byte[] getSHA(String rp, Player player) {
-        byte[] result = new byte[20];
         ConfigurationSection section = getConfigSection(rp, player);
-        if(section!=null) {
-            String sha = section.getString("sha");
-            return stringToSHA(sha);
+        if(section==null) {
+            return null;
+        }
+        String sha = section.getString("sha");
+        byte[] result = stringToSHA(sha);
+        if(result==null && unhashedSlots.add(section.getCurrentPath() + " " + section.getString("url"))) {
+            Log.warn("Resource pack " + describeSlot(section) + " has no valid SHA-1 in config.yml (sha: " + sha
+                    + "), so its pack is sent without a hash, which clients do not check. /rp calcsha " + rp
+                    + " all sets it.");
         }
         return result;
     }
-    
-    private static byte[] stringToSHA(String sha) {
-        byte[] result = new byte[20];
-        if(sha==null) {
-            return result;
+
+    // "Mordor, variant vanilla.16px.light, version 26_2" for the slot ServerResourcePacks.Mordor.vanilla.16px.light.26_2
+    static String describeSlot(ConfigurationSection slot) {
+        String path = slot.getCurrentPath();
+        String[] parts = path.split("[.]");
+        if(parts.length == 6) {
+            return parts[1] + ", variant " + parts[2] + "." + parts[3] + "." + parts[4] + ", version " + parts[5];
         }
-        result = new BigInteger(sha.trim(),16).toByteArray();
+        return path.substring(path.indexOf('.') + 1);
+    }
+    
+    // The 20 bytes of a SHA-1 written as 40 hex digits; null when there is none, or it is no SHA-1.
+    private static byte[] stringToSHA(String sha) {
+        if(sha==null || !sha.trim().matches("[0-9a-fA-F]{40}")) {
+            return null;
+        }
+        byte[] result = new BigInteger(sha.trim(),16).toByteArray();
         if(result.length>20) {
             result = Arrays.copyOfRange(result,1,21);
         } else if(result.length<20) {
@@ -335,7 +362,9 @@ public class RpManager {
                 for(String version: variantSection.getKeys(false)) {
                     Integer protocolVersion = protocolVersions.get(version);
                     if(protocolVersion==null) {
-                        return null;
+                        // A slot under a key protocolVersions.yml lacks, such as 26_2release, matches no client: it is
+                        // passed over, as in getLatestVersion, so the variant's other slots still serve.
+                        continue;
                     }
                     ArchitectPlugin.getPluginInstance().getDevUtil().log(2,"Protocol: "+protocolVersion);
                     if(protocolResult < protocolVersion && protocolVersion <= data.getProtocolVersion()) {
@@ -355,6 +384,21 @@ public class RpManager {
             }
         }
         return null;
+    }
+
+    /**
+     * The Minecraft versions a pack can have a slot for, newest first: the keys of protocolVersions.yml, such as
+     * 26_2 and 1_21_4. A slot under any other key matches no client's version.
+     */
+    public static List<String> getMcVersions() {
+        return protocolVersions.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .map(Map.Entry::getKey)
+                .toList();
+    }
+
+    public static boolean isMcVersion(String versionKey) {
+        return protocolVersions.containsKey(versionKey);
     }
 
     public static String getCurrentRpName(Player player) {
@@ -460,70 +504,284 @@ public class RpManager {
     }
     
     public static ConfigurationSection getRpConfig() {
-        return ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection("ServerResourcePacks");
+        return getRpConfig(ArchitectPlugin.getPluginInstance().getConfig());
     }
 
-    public static boolean refreshSHA(CommandSender cs, String rp, boolean allVersions) {
-        ConfigurationSection config = getRpConfig().getConfigurationSection(rp);
-        if(config!=null) {
-            for(String clientKey: config.getKeys(false)) {
-                ConfigurationSection clientSection = config.getConfigurationSection(clientKey);
-                for(String resolutionKey: clientSection.getKeys(false)) {
-                    ConfigurationSection resolutionSection = clientSection.getConfigurationSection(resolutionKey);
-                    for (String variantKey : resolutionSection.getKeys(false)) {
-                        try {
-                            ConfigurationSection variantSection = resolutionSection.getConfigurationSection(variantKey);
-                            List<ConfigurationSection> sections = new LinkedList<>();
-                            if (variantSection.contains("url")) {
-                                sections.add(variantSection);
-                            } else {
-                                if (allVersions) {
-                                    sections.addAll(variantSection.getKeys(false).stream()
-                                            .map(variantSection::getConfigurationSection).collect(Collectors.toSet()));
-                                } else {
-                                    sections.add(variantSection
-                                            .getConfigurationSection(getLatestVersion(variantSection.getKeys(false))));
-                                }
-                            }
-                            for (ConfigurationSection section : sections) {
-                                URL url = new URL(section.getString("url"));
-                                MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-                                try (InputStream fis = url.openStream()) {
-                                    byte[] data = new byte[1024];
-                                    int read;
-                                    long time = System.currentTimeMillis();
-                                    while ((read = fis.read(data)) != -1) {
-                                        sha1.update(data, 0, read);
-                                        if (System.currentTimeMillis() - time > 5000) {
-                                            time = System.currentTimeMillis();
-                                            Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(),
-                                                    () -> PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ..."));
-                                        }
-                                    }
-                                }
-                                byte[] hashBytes = sha1.digest();
-                                StringBuilder sb = new StringBuilder();
-                                for (byte b : hashBytes) {
-                                    sb.append(String.format("%02x", b));
-                                }
-                                final String hashString = sb.toString();
-                                final ConfigurationSection shaSection = section;
-                                Bukkit.getScheduler().runTask(ArchitectPlugin.getPluginInstance(), () -> {
-                                    shaSection.set("sha", hashString);
-                                    ArchitectPlugin.getPluginInstance().saveConfig();
-                                });
-                            }
-                        } catch(IOException | NoSuchAlgorithmException ex){
-                            Log.error("Failed to calculate SHA for RP '" + rp + "' client=" + clientKey
-                                    + " resolution=" + resolutionKey + " variant=" + variantKey, ex);
-                            return false;
-                        }
+    // the server resource packs in this config, such as the one an update of config.yml is given
+    static ConfigurationSection getRpConfig(ConfigurationSection config) {
+        return config.getConfigurationSection("ServerResourcePacks");
+    }
+
+    /**
+     * What a command did to the slots of a pack, each named by its path in the pack, such as vanilla.16px.light.26_2.
+     * Each slot in done was set. Each slot in failed was left as it was, for the reason given, which names its url. A
+     * result with error set comes from work that failed: the error is in the log.
+     */
+    public record SlotResult(List<String> done, Map<String, String> failed, boolean error) {
+        static SlotResult ofError() {
+            return new SlotResult(List.of(), Map.of(), true);
+        }
+    }
+
+    /**
+     * Hashes the packs of a pack's slots again, as /rp calcsha does: with allVersions every slot, else the newest slot
+     * of each variant. The slots are read on the main thread, and their packs hashed off it in a fixed order, by
+     * variant and then by version; a pack that cannot be downloaded does not stop the others. Then, on the main
+     * thread, config.yml is read again, each slot gets the sha of its pack, if its url is still the one that was
+     * hashed, and config.yml is saved once. The result reaches callback on the main thread, and the log ends with each
+     * slot that failed, and its url.
+     */
+    public static void refreshSHA(CommandSender cs, String rp, boolean allVersions, Consumer<SlotResult> callback) {
+        ConfigurationSection pack = rp.isEmpty() ? null : getRpConfig().getConfigurationSection(rp);
+        if(pack == null) {
+            Log.warn("No server resource pack in config.yml is named '" + rp + "'.");
+            callback.accept(SlotResult.ofError());
+            return;
+        }
+        // by the path of the slot, so in the order of variant, then version
+        Map<String, String> urls = new TreeMap<>();
+        Map<String, String> failed = new TreeMap<>();
+        for(String variant : variantPaths(pack)) {
+            ConfigurationSection variantSection = pack.getConfigurationSection(variant);
+            Map<String, ConfigurationSection> slots = new TreeMap<>();
+            if(variantSection.contains("url")) {
+                slots.put(variant, variantSection);
+            } else if(allVersions) {
+                for(String version : variantSection.getKeys(false)) {
+                    if(variantSection.isConfigurationSection(version)) {
+                        slots.put(variant + "." + version, variantSection.getConfigurationSection(version));
+                    }
+                }
+            } else {
+                String latest = getLatestVersion(variantSection.getKeys(false));
+                if(latest.isEmpty()) {
+                    failed.put(variant, "it has no slot for a version of protocolVersions.yml");
+                } else {
+                    slots.put(variant + "." + latest, variantSection.getConfigurationSection(latest));
+                }
+            }
+            slots.forEach((path, slot) -> {
+                if(slot == null || slot.getString("url") == null) {
+                    failed.put(path, "it has no url");
+                } else {
+                    urls.put(path, slot.getString("url"));
+                }
+            });
+        }
+        ArchitectPlugin plugin = ArchitectPlugin.getPluginInstance();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            Map<String, String> shas = new TreeMap<>();
+            try {
+                for(Map.Entry<String, String> slot : urls.entrySet()) {
+                    try {
+                        shas.put(slot.getKey(), sha1(slot.getValue(), () -> Bukkit.getScheduler().runTask(plugin,
+                                () -> PluginData.getMessageUtil().sendInfoMessage(cs, "calculating ..."))));
+                    } catch(IOException | IllegalArgumentException ex) {
+                        failed.put(slot.getKey(), slot.getValue() + ": " + describe(ex));
+                    }
+                }
+            } catch(Exception ex) {
+                // Nothing in the background may fail silently: the error is logged, and the admin told.
+                Log.error("Failed to recalculate the SHA of server resource pack " + rp, ex);
+                Bukkit.getScheduler().runTask(plugin, () -> callback.accept(SlotResult.ofError()));
+                return;
+            }
+            Bukkit.getScheduler().runTask(plugin, () -> callback.accept(setShas(rp, urls, shas, failed)));
+        });
+    }
+
+    /** The versions a pack has slots for, in any of its variants, as keys of config.yml (26_2), sorted. */
+    public static List<String> getSlotVersions(String rp) {
+        ConfigurationSection pack = rp.isEmpty() ? null : getRpConfig().getConfigurationSection(rp);
+        Set<String> versions = new TreeSet<>();
+        for(String variant : pack == null ? List.<String>of() : variantPaths(pack)) {
+            ConfigurationSection variantSection = pack.getConfigurationSection(variant);
+            for(String version : variantSection.getKeys(false)) {
+                if(variantSection.isConfigurationSection(version)) {
+                    versions.add(version);
+                }
+            }
+        }
+        return List.copyOf(versions);
+    }
+
+    /**
+     * Removes the slot for a version from every variant of a pack, as /rp server remove does, in config.yml as it is
+     * on disk now. A section this leaves empty is removed too: the variant, then its resolution and its client. The
+     * pack's last slots are never removed (see hasOtherSlot), and this is checked again on the file, which another
+     * server may have changed. The result's done is the slots removed, by their path in the pack; none when no variant
+     * has a slot for that version any more. Its failed is the slots kept as the pack's last: nothing is changed then.
+     */
+    public static SlotResult removeSlots(String rp, String versionKey) {
+        List<String> removed = new ArrayList<>();
+        Map<String, String> kept = new TreeMap<>();
+        boolean saved = ConfigFile.update(config -> {
+            ConfigurationSection packs = getRpConfig(config);
+            ConfigurationSection pack = packs == null ? null : packs.getConfigurationSection(rp);
+            boolean last = pack != null && !hasOtherSlot(pack, versionKey);
+            for(String variant : pack == null ? List.<String>of() : variantPaths(pack)) {
+                ConfigurationSection variantSection = pack.getConfigurationSection(variant);
+                if(!variantSection.isSet(versionKey)) {
+                    continue;
+                }
+                if(last) {
+                    kept.put(variant + "." + versionKey, "it is the last slot of " + rp);
+                } else {
+                    variantSection.set(versionKey, null);
+                    removed.add(variant + "." + versionKey);
+                    pruneEmpty(pack, variant);
+                }
+            }
+        });
+        if(!saved) {
+            return SlotResult.ofError(); // ConfigFile logged why
+        }
+        removed.forEach(slot -> Log.info("Server resource pack " + rp + ", slot " + slot + ", was removed."));
+        return new SlotResult(removed, kept, false);
+    }
+
+    /**
+     * Whether a client could still be sent a pack of this pack, as it is in Architect's config, once its slots for this
+     * version are removed. Without one, a pack sends nothing to the players in its regions, and says nothing about it;
+     * so its last slots are kept. A slot under a key that protocolVersions.yml lacks, such as 26_2release, serves no
+     * client, and does not count.
+     */
+    public static boolean hasOtherSlot(String rp, String versionKey) {
+        ConfigurationSection pack = rp.isEmpty() ? null : getRpConfig().getConfigurationSection(rp);
+        return pack != null && hasOtherSlot(pack, versionKey);
+    }
+
+    private static boolean hasOtherSlot(ConfigurationSection pack, String versionKey) {
+        for(String variant : variantPaths(pack)) {
+            ConfigurationSection variantSection = pack.getConfigurationSection(variant);
+            if(variantSection.isSet("url")) {
+                return true; // a variant with one pack for every version
+            }
+            for(String version : variantSection.getKeys(false)) {
+                if(!version.equals(versionKey) && isMcVersion(version) && variantSection.isConfigurationSection(version)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Removes the section at this path in the pack if it is empty, and then each section above it that this leaves
+    // empty, up to the pack, which keeps a slot.
+    private static void pruneEmpty(ConfigurationSection pack, String path) {
+        String section = path;
+        while(section != null) {
+            ConfigurationSection emptied = pack.getConfigurationSection(section);
+            if(emptied == null || !emptied.getKeys(false).isEmpty()) {
+                return;
+            }
+            pack.set(section, null);
+            int dot = section.lastIndexOf('.');
+            section = dot < 0 ? null : section.substring(0, dot);
+        }
+    }
+
+    // The paths of a pack's variants: vanilla.16px.light and so on.
+    private static List<String> variantPaths(ConfigurationSection pack) {
+        List<String> paths = new ArrayList<>();
+        for(String client : pack.getKeys(false)) {
+            ConfigurationSection clientSection = pack.getConfigurationSection(client);
+            for(String resolution : clientSection == null ? Set.<String>of() : clientSection.getKeys(false)) {
+                ConfigurationSection resolutionSection = clientSection.getConfigurationSection(resolution);
+                for(String variant : resolutionSection == null ? Set.<String>of() : resolutionSection.getKeys(false)) {
+                    if(resolutionSection.isConfigurationSection(variant)) {
+                        paths.add(client + "." + resolution + "." + variant);
                     }
                 }
             }
-            return true;
         }
-        return false;
+        return paths;
+    }
+
+    // On the main thread, in config.yml as it is now on disk: each slot gets the sha of its pack, if its url is still
+    // the one that was hashed, and config.yml is saved once.
+    private static SlotResult setShas(String rp, Map<String, String> urls, Map<String, String> shas,
+                                      Map<String, String> failed) {
+        try {
+            List<String> done = new ArrayList<>();
+            if(!shas.isEmpty() && !ConfigFile.update(config -> {
+                ConfigurationSection packs = getRpConfig(config);
+                ConfigurationSection pack = packs == null ? null : packs.getConfigurationSection(rp);
+                for(Map.Entry<String, String> sha : shas.entrySet()) {
+                    ConfigurationSection slot = pack == null ? null : pack.getConfigurationSection(sha.getKey());
+                    String url = urls.get(sha.getKey());
+                    if(slot != null && url.equals(slot.getString("url"))) {
+                        slot.set("sha", sha.getValue());
+                        done.add(sha.getKey());
+                    } else {
+                        // as when /rp server set it meanwhile, here or on another server, with the sha of its new url
+                        failed.put(sha.getKey(), url + ": the slot changed while its pack was hashed");
+                    }
+                }
+            })) {
+                return SlotResult.ofError(); // ConfigFile logged why
+            }
+            failed.forEach((slot, reason) -> Log.warn("The SHA of server resource pack " + rp + ", slot " + slot
+                    + ", was not recalculated: " + reason));
+            return new SlotResult(done, failed, false);
+        } catch(RuntimeException ex) {
+            Log.error("Failed to recalculate the SHA of server resource pack " + rp, ex);
+            return SlotResult.ofError();
+        }
+    }
+
+    // How long a download of a pack may wait to connect, and then for its next bytes: a server that stops answering
+    // ends the download with an error, instead of holding it, and the admin waiting for its answer, forever.
+    private static final int CONNECT_TIMEOUT_MILLIS = 30_000;
+    private static final int READ_TIMEOUT_MILLIS = 60_000;
+
+    /**
+     * Downloads the pack at url, and returns its SHA-1 as 40 hex digits; progress runs every 5 seconds meanwhile. Call
+     * it off the main thread. A download that does not get the whole file throws; an HTTP answer other than 200,
+     * such as 404 for a release that is gone, as an HttpStatusException.
+     */
+    static String sha1(String url, Runnable progress) throws IOException {
+        URLConnection connection = URI.create(url).toURL().openConnection();
+        connection.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
+        connection.setReadTimeout(READ_TIMEOUT_MILLIS);
+        if (connection instanceof HttpURLConnection http && http.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            HttpStatusException status = new HttpStatusException(http.getResponseCode(), http.getResponseMessage());
+            http.disconnect();
+            throw status;
+        }
+        MessageDigest sha1;
+        try {
+            sha1 = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("This Java has no SHA-1", ex); // every Java has it
+        }
+        try (InputStream in = connection.getInputStream()) {
+            byte[] data = new byte[8192];
+            long time = System.currentTimeMillis();
+            for (int read = in.read(data); read != -1; read = in.read(data)) {
+                sha1.update(data, 0, read);
+                if (System.currentTimeMillis() - time > 5000) {
+                    time = System.currentTimeMillis();
+                    progress.run();
+                }
+            }
+        }
+        return HexFormat.of().formatHex(sha1.digest());
+    }
+
+    // A download that got an HTTP answer other than 200, such as 404 for a release that is gone.
+    static final class HttpStatusException extends IOException {
+        HttpStatusException(int code, String message) {
+            super("HTTP " + code + (message == null ? "" : " " + message));
+        }
+    }
+
+    // What went wrong with a download, for an admin: "HTTP 404 Not Found", or the kind of error and its message.
+    static String describe(Exception ex) {
+        if (ex instanceof HttpStatusException) {
+            return ex.getMessage();
+        }
+        return ex.getClass().getSimpleName() + (ex.getMessage() == null ? "" : ": " + ex.getMessage());
     }
 
     private static String getLatestVersion(Collection<String> versions) {
