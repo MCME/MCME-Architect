@@ -16,6 +16,10 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,6 +48,9 @@ class ConfigReadThreadTest {
                 "    Paths:",
                 "        owner: mcme",
                 "        repo: paths",
+                // a complete entry, whose folder isn't there: /rp release goes on, and its script can't start
+                "        script: releaseVanillaSodium.sh",
+                "        path: /nowhere",
                 "");
         ArchitectPlugin plugin = MockBukkit.load(ArchitectPlugin.class);
         assertEquals(folder, plugin.getDataFolder(), "Architect reads the test's config.yml");
@@ -62,22 +69,31 @@ class ConfigReadThreadTest {
         }
     }
 
-    // /rp release runs its script off the main thread: its owner, repo, script, path and timeout are read before.
-    // A Windows server is told releases don't run there before any of them is read, so this one is a Linux server.
+    // /rp release runs its script off the main thread: its owner, repo, script, path and timeout are read before. This
+    // is a Linux server (a Windows one is told releases don't run there before any setting is read), with a complete
+    // entry, so the release goes on, and its script can't start, as its folder isn't there. The reads off the main
+    // thread are checked once the release's own thread has ended: one made there would show only then.
     @Test
     void rpReleaseReadsItsSettingsOnTheMainThread() throws Exception {
         Field onWindows = RpReleaseUtil.class.getDeclaredField("onWindows");
         onWindows.setAccessible(true);
         boolean wasWindows = onWindows.getBoolean(null);
         onWindows.setBoolean(null, false);
+        Logger architectLog = ArchitectPlugin.getPluginInstance().getLogger();
+        LogNotes logged = new LogNotes();
+        architectLog.addHandler(logged);
         try {
             server.dispatchCommand(server.getConsoleSender(), "rp release Paths v2 A new release");
 
+            // The release's own thread logs the result as its last act that can read a setting
+            assertTrue(awaitLogged(logged, "[RP release Paths] Result:"), "the release ends, of " + logged.lines);
+            assertTrue(awaitNoAsyncTask(), "the release's own thread has ended");
             assertAll(
                     () -> assertTrue(awaitRead("gitHubRpReleases.Paths.owner"), "the owner is read, of " + config.read),
                     () -> assertEquals(List.of(), config.readOffTheMainThread("gitHubRpReleases"),
                             "the settings read off the main thread"));
         } finally {
+            architectLog.removeHandler(logged);
             onWindows.setBoolean(null, wasWindows);
         }
     }
@@ -97,12 +113,47 @@ class ConfigReadThreadTest {
 
     // Waits up to 10 seconds, while the server ticks, for the config to be read at this path.
     private static boolean awaitRead(String path) throws InterruptedException {
+        return await(() -> config.read.contains(path));
+    }
+
+    // Waits up to 10 seconds, while the server ticks, for Architect to log a line with this text.
+    private static boolean awaitLogged(LogNotes logged, String text) throws InterruptedException {
+        return await(() -> logged.lines.stream().anyMatch(line -> line.contains(text)));
+    }
+
+    // Waits up to 10 seconds, while the server ticks, for the tasks off the main thread to end, and ticks once more
+    // for what they scheduled on it: so none of it outlives the test.
+    private static boolean awaitNoAsyncTask() throws InterruptedException {
+        boolean ended = await(() -> server.getScheduler().getActiveWorkers().isEmpty());
+        server.getScheduler().performOneTick();
+        return ended;
+    }
+
+    private static boolean await(BooleanSupplier done) throws InterruptedException {
         long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
-        while (!config.read.contains(path) && System.nanoTime() < end) {
+        while (!done.getAsBoolean() && System.nanoTime() < end) {
             server.getScheduler().performOneTick();
             Thread.sleep(10);
         }
-        return config.read.contains(path);
+        return done.getAsBoolean();
+    }
+
+    // What Architect logs, noted while this is a handler of its logger.
+    private static final class LogNotes extends Handler {
+        private final List<String> lines = new CopyOnWriteArrayList<>();
+
+        @Override
+        public void publish(LogRecord record) {
+            lines.add(record.getMessage());
+        }
+
+        @Override
+        public void flush() {
+        }
+
+        @Override
+        public void close() {
+        }
     }
 
     // A config that notes each path read from it, and which of those reads were made off the main thread.
