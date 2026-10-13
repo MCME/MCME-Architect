@@ -19,6 +19,7 @@ package com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
+import com.mcmiddleearth.architect.util.WorldEditGuard;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.sk89q.worldedit.math.BlockVector2;
@@ -113,6 +114,9 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 }
                 return new ResponsePrompt(info);
             case "setborder":
+                if (!WorldEditGuard.isAvailable()) {
+                    return new ResponsePrompt(ccError+"This feature needs WorldEdit, which isn't available on this server version yet.");
+                }
                 Region newWeRegion = WEUtil.getSelection(getPlayer(cc));
                 if(newWeRegion!=null) {
                     getRegion(cc).setRegion(newWeRegion.clone());

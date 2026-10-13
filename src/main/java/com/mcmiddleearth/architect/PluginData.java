@@ -109,13 +109,18 @@ public class PluginData {
         ConfigurationSection entityConfig = ArchitectPlugin.getPluginInstance().getConfig()
                                                        .getConfigurationSection(ENITIY_LIMIT_SECTION);
         if(entityConfig==null) {
-            entityConfig = ArchitectPlugin.getPluginInstance().getConfig().createSection(ENITIY_LIMIT_SECTION);
-            entityConfig.set("number", 500);
-            entityConfig.set("radius", 80);
-            ArchitectPlugin.getPluginInstance().saveConfig();
+            ConfigFile.update(config -> {
+                if(config.getConfigurationSection(ENITIY_LIMIT_SECTION)==null) {
+                    ConfigurationSection limits = config.createSection(ENITIY_LIMIT_SECTION);
+                    limits.set("number", 500);
+                    limits.set("radius", 80);
+                }
+            });
+            // the update read config.yml again: the section is looked up in what it read
+            entityConfig = ArchitectPlugin.getPluginInstance().getConfig().getConfigurationSection(ENITIY_LIMIT_SECTION);
         }
-        entityStandLimit = entityConfig.getInt("number",500);
-        entityLimitRadius = entityConfig.getInt("radius",80);
+        entityStandLimit = entityConfig==null ? 500 : entityConfig.getInt("number",500);
+        entityLimitRadius = entityConfig==null ? 80 : entityConfig.getInt("radius",80);
         worldConfigs.clear();
         WorldConfig config = new WorldConfig(WorldConfig.getDefaultWorldConfigName(), defaultWorldConfig);
         worldConfigs.put(defaultKey, config);

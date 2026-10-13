@@ -30,6 +30,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.List;
+
 /**
  *
  * @author Eriol_Eandur
@@ -45,7 +47,7 @@ public class SpecialBlockBurningFurnace extends SpecialBlock {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, BlockFace blockFace, Block clicked,
                            final Location interactionPoint, Player player) {
         final Location playerLoc = player.getLocation();
         final BlockState state = blockPlace.getState();
@@ -71,6 +73,7 @@ public class SpecialBlockBurningFurnace extends SpecialBlock {
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 10);
+        return List.of(blockPlace);
     }
 
     @Override

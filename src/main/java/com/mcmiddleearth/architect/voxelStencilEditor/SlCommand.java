@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.voxelStencilEditor;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -25,6 +26,7 @@ import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.confirmation.ConfirmationFactory;
 import com.mcmiddleearth.pluginutil.confirmation.Confirmationable;
+import com.mcmiddleearth.util.PathSafety;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -100,6 +102,14 @@ public class SlCommand extends AbstractArchitectCommand implements Confirmationa
             return true;
         }
         if (args[0].equalsIgnoreCase("create")) {
+            try {
+                PathSafety.resolveInside(VoxelConstants.STENCIL_LISTS_DIR,
+                                         args[1] + "." + VoxelConstants.STENCIL_LIST_EXT);
+            } catch (SecurityException ex) {
+                Log.warn("Rejected unsafe stencil-list name '" + args[1] + "' for /sl create: " + ex.getMessage());
+                PluginData.getMessageUtil().sendErrorMessage(player, "Invalid list name.");
+                return true;
+            }
             stencilLists.put(player.getUniqueId(), new StencilList(args[1]));
             sendListCreatedMessage(player, args[1]);
             return true;
@@ -147,7 +157,13 @@ public class SlCommand extends AbstractArchitectCommand implements Confirmationa
     }
     
     private int addStencils(StencilList list, String stencilName) {
-        File search = new File(VoxelConstants.STENCILS_DIR+"/"+stencilName);
+        File search;
+        try {
+            search = PathSafety.resolveInside(VoxelConstants.STENCILS_DIR, stencilName);
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe stencil name '" + stencilName + "' for addStencils: " + ex.getMessage());
+            return 0;
+        }
         File dir;
         if(search.isDirectory()) {
             dir = search;

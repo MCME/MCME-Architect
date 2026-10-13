@@ -47,4 +47,9 @@ public class WaterFlowArea extends ExceptionArea {
                 
     }
     
+    @Override
+    public String typeName() {
+        return "water";
+    }
+
 }

@@ -54,7 +54,7 @@ import java.util.Map;
 public class BlockCycleListener implements Listener {
 
     private final Map<Player, BlockDataManager> playerBlockDataManager = new HashMap<>();
-    
+
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     private void cycleAttribute(PlayerInteractEvent event) {
         if(event.getAction().equals(Action.LEFT_CLICK_BLOCK)

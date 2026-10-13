@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.additionalListeners;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.nms.AccessInventory;
@@ -40,8 +41,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -128,7 +127,7 @@ public class OpItemListener implements Listener {
                 String name = entry.getKey().getKey().getKey();
                 int level = entry.getValue();
                 if(!PluginData.isEnchantmentAllowed(name, level)) {
-                    Logger.getGlobal().info("not allowed! "+name+" "+level);
+                    Log.info("Removed disallowed enchantment " + name + " (level " + level + ") from an item.");
                     itemMeta.removeEnchant(entry.getKey());
                 }
             }

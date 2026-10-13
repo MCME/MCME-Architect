@@ -45,7 +45,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
-import java.util.logging.Logger;
 
 /**
  *
@@ -115,15 +114,19 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         if (ItemBlockManager.allowPlace(blockPlace, player)) {
-            super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
-            placeArmorStand(blockPlace, blockFace, playerLoc,contentDamage[NumericUtil.getRandom(0, contentDamage.length-1)]);
+            List<Block> placed = super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
+            int currentDamage = contentDamage.length>0
+                    ? contentDamage[NumericUtil.getRandom(0, contentDamage.length-1)] : 0;
+            placeArmorStand(blockPlace, blockFace, playerLoc, currentDamage);
+            return placed;
         } else {
             PluginData.getMessageUtil().sendErrorMessage(player, "Too many entities (paintings, item frames, item blocks and armorstands) in this chunk already. (Limit: "
                                                                  +ItemBlockManager.getLimit(blockPlace)+")");
+            return List.of();
         }
     }
     
@@ -210,6 +213,9 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     public int getNextDurability(int currentDurability) {
+        if(contentDamage.length==0) {
+            return 0;
+        }
         for(int i=0;i<contentDamage.length;i++) {
             if(contentDamage[i]==currentDurability) {
                 return ((i+1)<contentDamage.length?contentDamage[i+1]:contentDamage[0]);
@@ -219,6 +225,9 @@ public class SpecialBlockItemBlock extends SpecialBlock {
     }
     
     public int getPreviousDurability(int currentDurability) {
+        if(contentDamage.length==0) {
+            return 0;
+        }
         for(int i=0;i<contentDamage.length;i++) {
             if(contentDamage[i]==currentDurability) {
                 return ((i-1)>=0?contentDamage[i-1]:contentDamage[contentDamage.length-1]);
@@ -262,7 +271,7 @@ public class SpecialBlockItemBlock extends SpecialBlock {
                 SpecialBlockItemBlock specialBlock = (SpecialBlockItemBlock) SpecialBlockInventoryData
                                                              .getSpecialBlock(SpecialBlockItemBlock
                                                                               .getIdFromArmorStand((ArmorStand)entity));
-                if(!specialBlock.isArmorStandChanged((ArmorStand)entity, loc.getBlock())) {
+                if(specialBlock!=null && !specialBlock.isArmorStandChanged((ArmorStand)entity, loc.getBlock())) {
                     return (ArmorStand) entity;
                 }
             }

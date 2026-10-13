@@ -17,20 +17,25 @@
 package com.mcmiddleearth.architect.noPhysicsEditor;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.WorldConfig;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
+import com.mcmiddleearth.architect.mapLayers.NoPhysicsLayer;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.util.Vector;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -122,57 +127,85 @@ public class NoPhysicsData {
         } else {
             exceptionAreas.put(name, new WaterFlowArea(region));
         }
+        MapLayers.changed(NoPhysicsLayer.ID);
     }
     
     public static void deleteExceptionArea(String name) {
         exceptionAreas.remove(name);
+        MapLayers.changed(NoPhysicsLayer.ID);
     }
     
     public static boolean exceptionAreaExists(String name) {
         return exceptionAreas.containsKey(name);
     }
     
+    /**
+     * Writes every area to a temporary file, then moves that over NoPhyExceptionAreas.txt in one step: the file is
+     * never missing, and a failed write never replaces it. Any failure throws, so the command says it failed.
+     */
     public static void save() throws IOException {
-        File temp = new File(dataFile.getAbsoluteFile()+".tmp");
-        if(temp.exists()) {
-            temp.delete();
+        Path temp = new File(dataFile.getAbsoluteFile()+".tmp").toPath();
+        List<String> lines = new ArrayList<>();
+        for(String name: exceptionAreas.keySet()) {
+            lines.add(ExceptionAreaLine.format(name, exceptionAreas.get(name)));
         }
-        try (FileWriter fw = new FileWriter(temp);
-            PrintWriter writer = new PrintWriter(fw)) {
-            for(String name: exceptionAreas.keySet()) {
-                ExceptionArea area = exceptionAreas.get(name);
-                writer.println(area.getX()+";"+area.getY()+";"+area.getZ()+";"
-                        +area.getDX()+";"+area.getDY()+";"+area.getDZ()+";"
-                        +area.getWorldUID()+";"+name);
-            }
-        }
-        if(dataFile.exists()) {
-            dataFile.delete();
-        }
-        temp.renameTo(dataFile);
+        Files.deleteIfExists(temp); // a leftover the server may not be allowed to write to
+        Files.write(temp, lines, StandardCharsets.UTF_8); // unlike a PrintWriter, it throws a write error
+        // the same folder is always the same file system, so the move can always be atomic
+        Files.move(temp, dataFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     }
     
+    /**
+     * Reads NoPhyExceptionAreas.txt; a line that cannot be read is skipped and logged. The next save drops such a
+     * line, so the file as it was is then kept in {@link #backupFile()}.
+     */
     public static void loadExceptionAreas() {
-        try (Scanner scanner = new Scanner(dataFile)) {
-            scanner.useDelimiter(";");
-            while(scanner.hasNext()) {
-                int minX = scanner.nextInt();
-                int minY = scanner.nextInt();
-                int minZ = scanner.nextInt();
-                int maxX = minX+scanner.nextInt();
-                int maxY = minY+scanner.nextInt();
-                int maxZ = minZ+scanner.nextInt();
-                Vector minPoint = new Vector(minX,minY,minZ);
-                Vector maxPoint = new Vector(maxX,maxY,maxZ);
-                UUID world = UUID.fromString(scanner.next());
-                String name = scanner.nextLine().substring(1);
-//Logger.getGlobal().info("loadnophy "+name+" "+world);
-                if(world==null) continue;
-                exceptionAreas.put(name,new RedstoneCircuitArea(world,minPoint,maxPoint));
+        try {
+            byte[] bytes = Files.readAllBytes(dataFile.toPath());
+            // decoded leniently: a stray byte costs one character of a name, not every area
+            String text = new String(bytes, StandardCharsets.UTF_8);
+            if(text.startsWith("\uFEFF")) {
+                text = text.substring(1);
             }
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(NoPhysicsData.class.getName()).log(Level.WARNING,"No physics exception data file not found.");
+            boolean skipped = false;
+            for(String line: text.lines().toList()) {
+                if(line.isBlank()) {
+                    continue;
+                }
+                try {
+                    Map.Entry<String, ExceptionArea> read = ExceptionAreaLine.parse(line);
+                    exceptionAreas.put(read.getKey(), read.getValue());
+                } catch(RuntimeException ex) {
+                    skipped = true;
+                    Log.warn("Skipping an unreadable line in " + dataFile.getName() + " (" + ex
+                            + "; it is dropped at the next save): " + line);
+                }
+            }
+            if(skipped) {
+                keepCopy(bytes);
+            }
+        } catch (NoSuchFileException ex) {
+            Log.warn("No-physics exception area data file not found (expected on first run): " + dataFile.getAbsolutePath());
+        } catch (IOException ex) {
+            Log.error("Failed to read no-physics exception areas from " + dataFile.getAbsolutePath(), ex);
         }
+        MapLayers.changed(NoPhysicsLayer.ID);
+    }
+
+    /** A whole-file failure, such as a file saved as UTF-16, skips every line: the next save would lose them all. */
+    private static void keepCopy(byte[] bytes) {
+        try {
+            Files.write(backupFile().toPath(), bytes);
+            Log.warn("A copy of " + dataFile.getName() + " with the skipped lines is kept in "
+                    + backupFile().getName());
+        } catch(IOException ex) {
+            Log.error("Could not keep a copy of " + dataFile.getName() + " in " + backupFile().getName(), ex);
+        }
+    }
+
+    /** Where a load that skipped a line keeps NoPhyExceptionAreas.txt as it was, replacing an older copy. */
+    public static File backupFile() {
+        return new File(dataFile.getPath() + ".bak");
     }
 
     public static Map<String, ExceptionArea> getExceptionAreas() {

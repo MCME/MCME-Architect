@@ -19,6 +19,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.List;
+
 public class SpecialBlockItemFrame extends SpecialBlock {
 
     private final ItemStack item;
@@ -43,7 +45,8 @@ public class SpecialBlockItemFrame extends SpecialBlock {
     }
 
     @Override
-    public void placeBlock(Block blockPlace, BlockFace blockFace, Block clicked, Location interactionPoint, Player player) {
+    public List<Block> placeBlock(Block blockPlace, BlockFace blockFace, Block clicked, Location interactionPoint,
+                                  Player player) {
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -65,5 +68,7 @@ public class SpecialBlockItemFrame extends SpecialBlock {
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 2);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
+        // an item frame is an entity, not a block
+        return List.of();
     }
 }

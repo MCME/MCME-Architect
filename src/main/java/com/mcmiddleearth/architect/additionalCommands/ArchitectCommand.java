@@ -21,8 +21,7 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger;
-import com.mcmiddleearth.pluginutil.nms.AccessInventory;
-import com.mcmiddleearth.pluginutil.nms.NMSUtil;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
@@ -155,6 +154,25 @@ public class ArchitectCommand extends AbstractArchitectCommand{
             PluginData.getMessageUtil().sendInvalidSubcommandError(sender);
             return true;
         }
+        if (args[0].equalsIgnoreCase("maplayers")) {
+            if (!(sender instanceof ConsoleCommandSender || PluginData.hasPermission(sender, Permission.MAP_LAYERS))) {
+                PluginData.getMessageUtil().sendNoPermissionError(sender);
+                return true;
+            }
+            if (args.length < 2 || !args[1].equalsIgnoreCase("refresh")) {
+                PluginData.getMessageUtil().sendErrorMessage(sender, "Usage: /architect maplayers refresh");
+                return true;
+            }
+            switch (MapLayers.refreshAll()) {
+                case NOT_RUNNING -> PluginData.getMessageUtil().sendErrorMessage(sender,
+                        "Architect's map layers are not running.");
+                case NO_MAP -> PluginData.getMessageUtil().sendInfoMessage(sender,
+                        "dynmap is not enabled here, so Architect's map layers are not drawn.");
+                case DRAWN -> PluginData.getMessageUtil().sendInfoMessage(sender,
+                        "Architect's map layers are drawn again, and loaded chunks recounted.");
+            }
+            return true;
+        }
         if(!(sender instanceof ConsoleCommandSender 
                 || (sender instanceof Player 
                     && (PluginData.hasPermission(sender, Permission.ARCHITECT_INFO)
@@ -249,11 +267,11 @@ public class ArchitectCommand extends AbstractArchitectCommand{
         }
         if(args[0].equalsIgnoreCase("eLog")) {
             if(args.length>1 && args[1].equalsIgnoreCase("true")) {
-                EntityLogger.setLogging(true,((Player)sender).getWorld());
-                PluginData.getMessageUtil().sendInfoMessage(sender, "Entity logging on!");
+                PluginData.getMessageUtil().sendInfoMessage(sender, EntityLogger.start()
+                        ? "Entity logging on!" : "Entity logging is already on.");
             } else {
-                EntityLogger.setLogging(false,((Player)sender).getWorld());
-                PluginData.getMessageUtil().sendInfoMessage(sender, "Entity logging off!");
+                PluginData.getMessageUtil().sendInfoMessage(sender, EntityLogger.stop()
+                        ? "Entity logging off!" : "Entity logging is already off.");
             }
             return true;
         }
@@ -313,12 +331,9 @@ public class ArchitectCommand extends AbstractArchitectCommand{
     private String getNBT(CommandSender sender, ItemStack item) {
         String nbt = "";
         if(item!=null) {
-            nbt = AccessInventory.getItemNBT(item).toString();
-            /*try {
-                Object nmsItem = NMSUtil.getCraftBukkitDeclaredField("inventory.CraftItemStack","handle",item);
-                Object tag = NMSUtil.invokeNMS("ItemStack", "getTag", new Class[]{}, nmsItem);
-                nbt = NBTTagUtil.asString(tag);
-            } catch(NullPointerException ex) {}*/
+            // Native data-component dump (Paper's ItemStack#toString() already includes it),
+            // plus the plugin's persistent-data container contents.
+            nbt = item.getPersistentDataContainer() + " " + item;
         }
         return nbt;
     }
@@ -344,7 +359,7 @@ public class ArchitectCommand extends AbstractArchitectCommand{
 
     @Override
     public String getUsageDescription() {
-        return " help | world | dev | version | reload [#page]: Argument 'help' shows information about Architect commands. 'world' shows a list of all server worlds. 'dev' switches on/off debug messages. 'version' displays Architect version. 'reload' reloads Architect plugin.";
+        return " help | world | dev | version | reload | maplayers refresh [#page]: Argument 'help' shows information about Architect commands. 'world' shows a list of all server worlds. 'dev' switches on/off debug messages. 'version' displays Architect version. 'reload' reloads Architect plugin. 'maplayers refresh' redraws Architect's web-map layers.";
     }
 
 }

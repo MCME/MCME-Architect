@@ -280,7 +280,7 @@ public class BlockPickerListener implements Listener {
                 }
             } else {
                 String preSet = WeSelectCommand.getWeSelect(player.getUniqueId(),false);
-                List<String> info = new BlockDataManager().getBlockInfo(block.getBlockData(),block.getData());
+                List<String> info = new BlockDataManager().getBlockInfo(block.getBlockData(), true);
                 PluginData.getMessageUtil().sendInfoMessage(player, "Data for block at ("+ChatColor.GREEN
                         +block.getLocation().getBlockX()+", "
                         +block.getLocation().getBlockY()+", "

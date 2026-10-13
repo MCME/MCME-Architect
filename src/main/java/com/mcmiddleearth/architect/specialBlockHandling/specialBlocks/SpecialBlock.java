@@ -17,11 +17,11 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.chunkUpdate.ChunkUpdateUtil;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsListener;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import com.mcmiddleearth.architect.specialBlockHandling.data.SpecialBlockInventoryData;
-import com.mcmiddleearth.connect.log.Log;
 import com.mcmiddleearth.pluginutil.LegacyMaterialUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.util.DevUtil;
@@ -38,9 +38,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -84,9 +83,7 @@ public class SpecialBlock {
             case BRANCH_TRUNK_CONNECT -> SpecialBlockBranchTrunkConnect.loadFromConfig(section, fullName);
             case BRANCH_TRUNK_CONNECT_COMPLEX ->
                     SpecialBlockBranchTrunkConnectComplex.loadFromConfig(section, fullName);
-            case BLOCK_CONNECT ->
-//Logger.getGlobal().info("Block connect:"+itemKey);
-                    SpecialBlockConnect.loadFromConfig(section, fullName);
+            case BLOCK_CONNECT -> SpecialBlockConnect.loadFromConfig(section, fullName);
             case DIAGONAL_CONNECT -> SpecialBlockDiagonalConnect.loadFromConfig(section, fullName);
             case BISECTED -> SpecialBlockBisected.loadFromConfig(section, fullName);
             case THREE_AXIS -> SpecialBlockThreeAxis.loadFromConfig(section, fullName);
@@ -174,7 +171,7 @@ public class SpecialBlock {
                      -> collection.put(key, SpecialBlockInventoryData.fullName(rpName,(String) entry)));
             }
         } catch(ClassCastException ex) {
-            Logger.getLogger(ArchitectPlugin.class.getName()).log(Level.WARNING, "Error while loading special block collection!", ex);
+            Log.warn("Error while loading block collection for '" + getId() + "' (RP " + rpName + "): " + ex.getMessage());
         }
     }
     
@@ -203,9 +200,19 @@ public class SpecialBlock {
         return clicked.getRelative(blockFace);
     }
 
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
+    /**
+     * Places this special block at blockPlace, or, on a sneak-click where isEditOnSneaking allows it, edits the clicked
+     * block.
+     * @return every new block placed, both halves of a door too: TheGaffer counts a break for each block a player
+     *         breaks, and in a no-physics world no block takes another along, so places and breaks count alike.
+     *         Empty if nothing new was placed.
+     */
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, final Block clicked,
                            final Location interactionPoint, final Player player) {
         final BlockState state = getBlockState(blockPlace, clicked, blockFace, player, interactionPoint);
+        if(placesNothing(state, blockPlace)) {
+            return List.of();
+        }
         /*new BukkitRunnable() {
             @Override
             public void run() {*/
@@ -229,15 +236,26 @@ public class SpecialBlock {
                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
             }
         }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);*/
+        return List.of(blockPlace);
     }
 
-    public void handleBlockBreak(BlockState state) {
+    // A state that is missing, or that leaves the block as it is, places nothing: there is no block data for the
+    // clicked face, say.
+    protected static boolean placesNothing(BlockState state, Block block) {
+        return state == null || state.getBlockData().equals(block.getBlockData());
+    }
+
+    // Called six ticks after the player broke this special block, whose state was state.
+    public void handleBlockBreak(BlockState state, Player player) {
         //Logger.getGlobal().info("BlockBreak: "+state.getBlockData());
         //Logger.getGlobal().info("BlockBreak: "+(state instanceof Waterlogged waterlogged));
         //Logger.getGlobal().info("BlockBreak: "+(((Waterlogged)state.getBlockData()).isWaterlogged()));
-        if(state.getBlockData() instanceof Waterlogged waterlogged && waterlogged.isWaterlogged()) {
-            state.setType(Material.AIR);
-            state.update(true, false);
+        // A waterlogged block broken turns to water, which is taken away here. Not whatever is there instead: the
+        // block itself, if another plugin cancelled the break, or a block placed there since. The block is set, and
+        // state is left as it was, so an override can still compare it with the block.
+        if(state.getBlockData() instanceof Waterlogged waterlogged && waterlogged.isWaterlogged()
+                && state.getBlock().getType().equals(Material.WATER)) {
+            state.getBlock().setType(Material.AIR, false);
         }
     }
 

@@ -92,4 +92,9 @@ public class RedstoneCircuitArea extends ExceptionArea {
                 || material.equals(Material.ANVIL);                                  
     }
     
+    @Override
+    public String typeName() {
+        return "redstone";
+    }
+    
 }

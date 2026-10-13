@@ -20,6 +20,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.ConfigFile;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.util.HttpTextInputHandler;
 import java.io.BufferedReader;
@@ -45,9 +46,9 @@ public class HeadDataBuilderText extends HttpTextInputHandler {
         if(ArchitectPlugin.getPluginInstance().getConfig().isString(CONFIG_KEY)) {
             uploadPath = ArchitectPlugin.getPluginInstance().getConfig().getString(CONFIG_KEY);
         } else {
-            uploadPath = "https://raw.githubusercontent.com/EriolEandur/MCME-Architect/master/src/main/resources/";
-            ArchitectPlugin.getPluginInstance().getConfig().set(CONFIG_KEY, uploadPath);
-            ArchitectPlugin.getPluginInstance().saveConfig();
+            String path = "https://raw.githubusercontent.com/EriolEandur/MCME-Architect/master/src/main/resources/";
+            uploadPath = path;
+            ConfigFile.update(config -> config.set(CONFIG_KEY, path));
         }
     }
     

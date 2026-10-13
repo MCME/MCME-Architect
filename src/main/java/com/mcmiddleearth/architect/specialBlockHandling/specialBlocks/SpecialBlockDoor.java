@@ -32,6 +32,8 @@ import org.bukkit.entity.Player;
 // 1.13 remove import org.bukkit.material.Door;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.List;
+
 /**
  *
  * @author Eriol_Eandur
@@ -76,10 +78,11 @@ public class SpecialBlockDoor extends SpecialBlock {
     }
     
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, getBlockData().getMaterial(), powered, false, hingeRight, false);
+        return List.of(blockPlace, blockPlace.getRelative(BlockFace.UP));
     }
     
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, 
@@ -101,8 +104,10 @@ public class SpecialBlockDoor extends SpecialBlock {
             public void run() {
                 lowerState.getBlock().setBlockData(lowerState.getBlockData(),false);//update(true, false);
                 upperState.getBlock().setBlockData(upperState.getBlockData(),false);//.update(true, false);
-                DevUtil.log("4 door block place: ID "+lowerState.getType()+" - DV "+lowerState.getRawData());
-                DevUtil.log("4 door block place: ID "+upperState.getType()+" - DV "+upperState.getRawData());
+                DevUtil.log("4 door block place: ID "+lowerState.getType()
+                        +" - data "+lowerState.getBlockData().getAsString());
+                DevUtil.log("4 door block place: ID "+upperState.getType()
+                        +" - data "+upperState.getBlockData().getAsString());
                 final BlockState tempLowerState = lowerState.getBlock().getState();
                 final BlockState tempUpperState = upperState.getBlock().getState();
                 if(tempLowerState.getBlockData() instanceof Door && tempUpperState.getBlockData() instanceof Door) {
@@ -147,8 +152,10 @@ public class SpecialBlockDoor extends SpecialBlock {
                     new BukkitRunnable() {
                         @Override
                         public void run() {
-                            DevUtil.log("4 door block place x2: ID "+tempLowerState.getType()+" - DV "+tempLowerState.getRawData());
-                            DevUtil.log("4 door block place x2: ID "+tempUpperState.getType()+" - DV "+tempUpperState.getRawData());
+                            DevUtil.log("4 door block place x2: ID "+tempLowerState.getType()
+                                    +" - data "+tempLowerState.getBlockData().getAsString());
+                            DevUtil.log("4 door block place x2: ID "+tempUpperState.getType()
+                                    +" - data "+tempUpperState.getBlockData().getAsString());
                             tempLowerState.getBlock().setBlockData(tempLowerState.getBlockData(),false);//.update(true, false);
                             tempUpperState.getBlock().setBlockData(tempUpperState.getBlockData(),false);//.update(true, false);
                         }
@@ -220,7 +227,9 @@ public class SpecialBlockDoor extends SpecialBlock {
                    return false;
                }
            }
-           return powered == (block.getData()>9);
+           // From the door's block data, not its legacy data value: on Paper, the first read of one builds the whole
+           // legacy material table on the main thread, which holds the server up for seconds.
+           return block.getBlockData() instanceof Door door && powered == door.isPowered();
         }
         return false;
     }

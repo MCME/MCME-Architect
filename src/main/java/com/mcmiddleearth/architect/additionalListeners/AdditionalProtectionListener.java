@@ -143,7 +143,7 @@ public class AdditionalProtectionListener extends WatchedListener{
         return type.equals(Material.FLOWER_POT) || type.name().startsWith("POTTED");
     }
     
-   @EventHandler(priority=EventPriority.HIGH)
+   @EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
     public void dyeSignProtection(PlayerInteractEvent event) {
         if(event.getClickedBlock()!= null 
                 && (event.getClickedBlock().getBlockData() instanceof Sign
@@ -174,7 +174,7 @@ public class AdditionalProtectionListener extends WatchedListener{
         }
     }
 
-    @EventHandler(priority=EventPriority.HIGH)
+    @EventHandler(priority=EventPriority.HIGH, ignoreCancelled = true)
     public void restoneInteract(PlayerInteractEvent event) {
         if(event.hasBlock() && event.getClickedBlock().getType().equals(Material.REDSTONE_WIRE)) {
             if((PluginData.isModuleEnabled(event.getPlayer().getWorld(),Modules.REDSTONE_PROTECTION))) {

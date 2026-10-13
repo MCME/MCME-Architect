@@ -1,9 +1,9 @@
 package com.mcmiddleearth.util;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 
 import java.io.*;
-import java.util.logging.Logger;
 
 public class ResourceUtil {
 
@@ -11,7 +11,7 @@ public class ResourceUtil {
         InputStream inputStream = ArchitectPlugin.class.getResourceAsStream("/" + resource);
         if (!file.exists()) {
             if (inputStream == null) {
-                Logger.getGlobal().severe("resource " + resource + " not found in plugin jar");
+                Log.error("Resource '" + resource + "' not found in plugin jar; cannot create " + file.getAbsolutePath());
             } else {
                 try {
                     if (file.createNewFile()) {
@@ -56,7 +56,7 @@ public class ResourceUtil {
                         in.close();
                     }
                 } catch (IOException var12) {
-                    Logger.getGlobal().severe("IOException: " + var12.getLocalizedMessage());
+                    Log.error("Failed to copy resource '" + resource + "' to " + file.getAbsolutePath(), var12);
                 }
             }
         }

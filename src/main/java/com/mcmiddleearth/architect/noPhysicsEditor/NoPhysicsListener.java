@@ -110,6 +110,19 @@ public class NoPhysicsListener extends WatchedListener{
         }
     }
 
+    /**
+     * Freezes every current change that goes through BlockRedstoneEvent, in every world and inside redstone exception
+     * areas too. This is on purpose: the MCME resource packs reuse redstone block states as decoration. In the old
+     * inventories in src/main/resources, for example, wire at power 1 to 6 is chains, moss, dirt, coal, a puddle, a
+     * pipe or an aqueduct. Repeaters are baskets, carpets and candles when unpowered, and a fireplace grate, foundry
+     * forms and tools when powered. A powered observer and an unlit torch are blocks of their own. Any power update
+     * would change those builds. The cost: levers, buttons and plates cannot switch, and doors, trapdoors, gates,
+     * lamps, rails, note blocks and even command blocks ignore power.
+     * <p>
+     * A world that wants working redstone (survival, say) would gate this on a module of its own, or on the redstone
+     * protection module, which already stops players without build rights from clicking wire states. Gating it on the
+     * no-physics list module would tie two separate features together.
+     */
     @EventHandler
     private void onRedstoneChange(BlockRedstoneEvent event) {
         event.setNewCurrent(event.getOldCurrent());

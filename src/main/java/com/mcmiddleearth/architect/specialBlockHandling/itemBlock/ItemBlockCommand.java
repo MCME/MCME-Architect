@@ -21,6 +21,7 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.specialBlocks.SpecialBlockItemBlock;
+import com.mcmiddleearth.architect.util.WorldEditGuard;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.sk89q.worldedit.regions.Region;
@@ -128,6 +129,7 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
                 PluginData.getMessageUtil().sendNoPermissionError(cs);
                 return true;
             }
+            if (!WorldEditGuard.require(cs)) return true;
             Region weRegion = WEUtil.getSelection((Player)cs);
             if(weRegion==null) {
                 PluginData.getMessageUtil().sendErrorMessage(cs, "Please make a WE selection first.");
@@ -173,6 +175,7 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
             if(args[1].equalsIgnoreCase("-base")) {
                 PluginData.setItemBlockBaseLimit(p.getWorld(), limit);
                 PluginData.getMessageUtil().sendInfoMessage(p, "Item block base limit set to "+limit+".");
+                ItemBlockManager.updateDynmapRegions();
                 return true;
             }
             ItemBlockRegion region = ItemBlockManager.getRegion(args[1]);
@@ -183,6 +186,7 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
             region.setLimit(limit);
             PluginData.getMessageUtil().sendInfoMessage(p, "Region limit set to "+limit+".");
             ItemBlockManager.saveItemBlockRegion(region);
+            ItemBlockManager.updateDynmapRegions();
             return true;
         }
         PluginData.getMessageUtil().sendInvalidSubcommandError(cs);

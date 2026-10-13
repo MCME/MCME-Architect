@@ -17,6 +17,7 @@
 package com.mcmiddleearth.architect.specialBlockHandling.specialBlocks;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.specialBlockHandling.SpecialBlockType;
 import org.bukkit.Bukkit;
@@ -34,7 +35,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Arrays;
-import java.util.logging.Logger;
+import java.util.List;
 
 /**
  *
@@ -79,7 +80,7 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
         try {
             editData[0] = new EditData(editSection, /*blockDataNorth*/ data[2]);
         } catch(IllegalArgumentException | NullPointerException ex) {
-            Logger.getLogger(SpecialBlockFourDirectionsComplex.class.getSimpleName()).warning("Invalid edit data!");
+            Log.warn("Invalid edit data in 'editDataNorth' section of special block config: " + ex.getMessage());
             return null;
         }
         for(int i = 1; i < 4; i++) {
@@ -135,10 +136,10 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
     public boolean isEditOnSneaking() { return true; }
 
     @Override
-    public void placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
+    public List<Block> placeBlock(final Block blockPlace, final BlockFace blockFace, Block clicked,
                            final Location interactionPoint, final Player player) {
         if(!player.isSneaking()) {
-            super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
+            return super.placeBlock(blockPlace, blockFace, clicked, interactionPoint, player);
         } else {
             //Block clicked = blockPlace.getRelative(blockFace.getOppositeFace());
             /*Location loc = player.getLocation().clone();
@@ -146,8 +147,6 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
             loc.setYaw(loc.getYaw()+180);*/
             //String blockId = SpecialBlockInventoryData.getSpecialBlockDataFromItem(
                 //        SpecialBlockInventoryData.getItem(clicked, SpecialBlockInventoryData.rpName(getId()))).getId();
-//Logger.getGlobal().info("block place: "+clicked);
-//Logger.getGlobal().info("matches: "+matches(clicked));
            //if(getId().equals(SpecialBlockInventoryData.getSpecialBlockDataFromItem(
             //        SpecialBlockInventoryData.getItem(clicked, SpecialBlockInventoryData.rpName(getId()))).getId())) {
             //if(getBlockDatas()[0].getMaterial().equals(clicked.getType())) {
@@ -157,10 +156,8 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
                 BlockData data = clicked.getBlockData();
                 BlockFace editFace = getBlockFace(player.getLocation().getYaw()+180);
                 for(int i = 0; i < 4 ; i++) {
-//Logger.getGlobal().info("try: "+i);
                     int[] indices = editData[i].getIndicesFor(data);
                     if (indices.length > 0) {
-//Logger.getGlobal().info("found");
                         int editIndex = switch (editFace) {
                             case EAST -> 1;
                             case SOUTH -> 2;
@@ -182,7 +179,6 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
                             }*/
                             BlockData finalData = data;
                             if (PluginData.isAllowedBlock(player, data)) {
-                                Logger.getGlobal().info("place: " + finalData.toString());
                                 clicked.setBlockData(finalData, false);
                                 new BukkitRunnable() {
                                     @Override
@@ -192,7 +188,7 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
                                 }.runTaskLater(ArchitectPlugin.getPluginInstance(), 1);
                             }
                         }
-                        return;
+                        return List.of();
                     }
                     //data = rotateData(data);
                     //editFace = rotateFace(editFace);
@@ -218,6 +214,7 @@ public class SpecialBlockFourDirectionsComplex extends SpecialBlockOrientable {
                     }
                 }*/
             }
+            return List.of();
         }
     }
 

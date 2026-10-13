@@ -3,7 +3,7 @@ ServerResourcePacks:
         vanilla:
             16px:
                 light:
-                    1_18_1:
+                    '1_18_1':
                         url: https://github.com/MCME/RP-Human/releases/download/v3.0.4/Human.zip
                         sha: 7f838c761529237eaf1d9cdc8cd4c439d9cb0770
 rpSettingsDatabase:
@@ -14,6 +14,15 @@ rpSettingsDatabase:
     port: 3306
 dynmap:
     enabled: true
+# Architect's layers on the web map (dynmap, shown in LiveAtlas). Every key is optional; these are the defaults.
+# rpRegions and itemBlockLimit read the dynmap section above until they have a block of their own here.
+#mapLayers:
+#    rpRegions:       {enabled: true, hidden: true, color: '#800080', borderWidth: 2, borderOpacity: 0.15, areaOpacity: 0.25}
+#    itemBlockLimit:  {enabled: true, hidden: true, color: '#ff0000', borderWidth: 2, borderOpacity: 0.15, areaOpacity: 0.25}
+#    noPhysics:       {enabled: true, hidden: true, redstoneColor: '#ff8c00', waterColor: '#1e64ff',
+#                      borderWidth: 2, borderOpacity: 0.3, areaOpacity: 0.2}
+#    itemBlockBudget: {enabled: true, hidden: true, warnPercent: 50, highPercent: 80,
+#                      warnColor: '#ffd700', highColor: '#ff8c00', fullColor: '#ff0000', areaOpacity: 0.35}
 entityLogger:
     enabled: true
 EntityLimit:
@@ -26,6 +35,8 @@ headGalleryLocation:
     z: 18.49381355206614
     pitch: 30.449993
     yaw: 6.750458
+# /rp release runs a resource pack's release script. timeoutMinutes (optional, per pack) is how long the script may run
+# before Architect stops it: 30 by default.
 gitHubRpReleases:
     Human:
         owner: EriolEandur
@@ -46,3 +57,32 @@ gitHubRpReleases:
 inventoryDownload:
     script: updateInventory.sh
     path: /opt/mcme-network/bungee-mcme/servers-mcme/devserver/resourcePackAutomation/
+logging:
+    file:
+        enabled: true
+        alsoServerLog: false
+        maxSizeMB: 10
+        maxFiles: 5
+        retentionDays: 14
+biomeTuning:
+    # Live biome tuning (/biometune): undo steps kept per biome, and backups kept per biome file.
+    undoDepth: 20
+    backupsPerBiome: 20
+    # Spare biomes, which builders claim with /biometune claim or the editor's New biome button: ids such as
+    # mcme:custom_001. sparePattern is the namespace, a colon, the prefix, then one # per digit (1 to 9 of them),
+    # in lower-case letters, digits, _, - and . (and / in the prefix).
+    # /biometune spares add writes new spares into targetPack, a pack folder in the world's datapacks folder (its
+    # name: letters, digits, _, - and ., not dots alone), which must already exist with a pack.mcmeta (Paper 26.2 no
+    # longer makes the bukkit pack; older worlds have one). The labels of all biomes are kept in that pack too, in
+    # mcme-biometune.json, which also records which spares are claimed. Only the one in targetPack is read, so a new
+    # targetPack frees every claimed spare: when you move to another pack, move mcme-biometune.json with the biomes.
+    sparePattern: 'mcme:custom_###'
+    targetPack: bukkit
+    refresh:
+        # Seconds between two previews by the same builder.
+        cooldownSeconds: 5
+        # A refresh that has not finished after this many seconds ends with a "please rejoin" disconnect.
+        timeoutSeconds: 15
+        # Publish refreshes this many players per second, and can run again after publishCooldownSeconds.
+        publishPlayersPerSecond: 5
+        publishCooldownSeconds: 30

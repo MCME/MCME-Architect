@@ -1,0 +1,5 @@
+release launcher: Releasing with ResourcePackScripts development at 6bdfc25.
+compiling Rohan RP zips
+fatal: unable to access 'https://127.0.0.1:9/RP-Rohan.git/': Failed to connect to 127.0.0.1 port 9 after 0 ms: Could not connect to server
+ERROR: Couldn't fetch Rohan-Vanilla from GitHub (git's reason is above), so the release would build old files. Nothing was built. Try again in a few minutes. If it keeps failing, an admin fixes what git's reason names.
+Release run 20261012-165231-Rohan-v1.0: FAILED, nothing released. 0 warning(s), 2 error(s). 

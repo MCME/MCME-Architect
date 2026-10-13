@@ -6,6 +6,8 @@
 package com.mcmiddleearth.architect.bannerEditor;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
+import com.mcmiddleearth.util.PathSafety;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
@@ -45,7 +47,24 @@ public class BannerEditorConfig {
         this.patternId = patternId;
     }
     
+    /**
+     * @return true if {@code filename} is safe to use inside the banner directory; false (logged)
+     *         if it would escape via directory traversal.
+     */
+    private static boolean isSafeBannerName(String filename, String operation) {
+        try {
+            PathSafety.resolveInside(dataDir, filename);
+            return true;
+        } catch (SecurityException ex) {
+            Log.warn("Rejected unsafe banner name '" + filename + "' for " + operation + ": " + ex.getMessage());
+            return false;
+        }
+    }
+
     public boolean saveBanner(ItemStack banner, String fileName, String description,UUID creator) throws IOException {
+        if(!isSafeBannerName(fileName, "save")) {
+            return false;
+        }
         YamlConfiguration data = new YamlConfiguration();
         data.set("description", description);
         data.set("Banner", banner.serialize());
@@ -61,6 +80,9 @@ public class BannerEditorConfig {
     }
     
     public ItemStack loadBanner(String filename){
+        if(!isSafeBannerName(filename, "load")) {
+            return null;
+        }
         File file = new File(dataDir+"/"+filename+"."+fileExtension);
         YamlConfiguration data = new YamlConfiguration();
         try {
@@ -76,6 +98,9 @@ public class BannerEditorConfig {
     }
 
     public boolean isCreator(String filename, UUID creator) {
+        if(!isSafeBannerName(filename, "isCreator")) {
+            return false;
+        }
         File file = new File(dataDir+"/"+filename+"."+fileExtension);
         if(file.exists()) {
             try {
@@ -92,6 +117,9 @@ public class BannerEditorConfig {
     }
     
     public boolean existsFile(String filename) {
+        if(!isSafeBannerName(filename, "exists")) {
+            return false;
+        }
         File file = new File(dataDir+"/"+filename+".yml");
         if(file.exists()) {
             return true;
@@ -102,6 +130,9 @@ public class BannerEditorConfig {
     }
     
     public boolean deleteFile(String filename) {
+        if(!isSafeBannerName(filename, "delete")) {
+            return false;
+        }
         boolean result = false;
         File file = new File(dataDir+"/"+filename+".yml");
         if(file.exists()) {

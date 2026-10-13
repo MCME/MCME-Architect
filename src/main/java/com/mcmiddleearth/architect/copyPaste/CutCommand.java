@@ -9,6 +9,7 @@ import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
+import com.mcmiddleearth.architect.util.WorldEditGuard;
 import com.mcmiddleearth.pluginutil.WEUtil;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
@@ -37,6 +38,7 @@ public class CutCommand extends AbstractArchitectCommand {
             PluginData.getMessageUtil().sendNoPermissionError(cs);
             return true;
         }
+        if (!WorldEditGuard.require(cs)) return true;
         Region weRegion = WEUtil.getSelection((Player)cs);
         if(weRegion==null) {
             PluginData.getMessageUtil().sendErrorMessage(cs, "Please make a WE selection first.");

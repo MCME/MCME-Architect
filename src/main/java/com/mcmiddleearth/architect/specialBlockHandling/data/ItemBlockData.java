@@ -31,7 +31,6 @@ import org.bukkit.util.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
-import java.util.logging.Logger;
 
 /**
  *
@@ -53,7 +52,13 @@ public class ItemBlockData implements BlockData {
             if(data instanceof SpecialBlockItemBlock) {
                 SpecialBlockItemBlock itemBlockData = (SpecialBlockItemBlock) data;
                 ArmorStand armorStand = SpecialBlockItemBlock.getArmorStand(block.getLocation());
+                if(armorStand==null) {
+                    return null;
+                }
                 ItemStack contentItem = armorStand.getHelmet();
+                if(contentItem==null) {
+                    return null;
+                }
                 ItemMeta meta = contentItem.getItemMeta();
                 int contentDamage = 0;
                 if(meta instanceof Damageable) {
@@ -70,9 +75,7 @@ public class ItemBlockData implements BlockData {
         String[] firstSplit = data.split("::");
         String blockData = firstSplit[1];
         String[] itemBlockData = firstSplit[0].split("[:=\\[,\\]]");
-Logger.getGlobal().info("itemBlockData: "+itemBlockData[1]);
         SpecialBlock specialBlock = SpecialBlockInventoryData.getSpecialBlock(itemBlockData[1]);
-Logger.getGlobal().info("specialBlock: "+specialBlock);
         if(specialBlock instanceof SpecialBlockItemBlock) {
             int currentDamage;
             if (itemBlockData[3].equals("?")) {
@@ -219,6 +222,11 @@ Logger.getGlobal().info("****************");*/
 
     @Override
     public boolean isOccluding() {
+        return false;
+    }
+
+    @Override
+    public boolean isReplaceable() {
         return false;
     }
 

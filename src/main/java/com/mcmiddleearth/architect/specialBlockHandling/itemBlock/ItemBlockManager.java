@@ -17,9 +17,12 @@
 package com.mcmiddleearth.architect.specialBlockHandling.itemBlock;
 
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
-import com.mcmiddleearth.architect.serverResoucePack.RpManager;
+import com.mcmiddleearth.architect.mapLayers.ItemBlockBudgetLayer;
+import com.mcmiddleearth.architect.mapLayers.ItemBlockRegionLayer;
+import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.util.DevUtil;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -33,8 +36,6 @@ import org.bukkit.scheduler.BukkitTask;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -51,6 +52,8 @@ public class ItemBlockManager {
     
     
     private static BukkitTask glowTask;
+
+    private static int limitsVersion;
     
     public static void init() {
         //loadPlayerData();
@@ -59,6 +62,7 @@ public class ItemBlockManager {
             regionFolder.mkdir();
         }
         regions.clear();
+        updateDynmapRegions(); // every region is gone until it loads again, below
         for(File file: regionFolder.listFiles((File dir, String name) -> name.endsWith(".reg"))) {
             try {
                 YamlConfiguration config = new YamlConfiguration();
@@ -83,7 +87,7 @@ public class ItemBlockManager {
                     }
                 }.runTaskTimer(ArchitectPlugin.getPluginInstance(), 200, 20);
             } catch (IOException | InvalidConfigurationException ex) {
-                Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+                Log.error("Failed to load item block region file " + file, ex);
             }
         }
     }
@@ -100,9 +104,7 @@ public class ItemBlockManager {
             limit = region.getLimit();
         }
         return limit> Arrays.asList(block.getChunk().getEntities())
-                                 .stream().filter(entity -> entity instanceof ArmorStand
-                                                          || entity instanceof Painting
-                                                          || entity instanceof ItemFrame).count();
+                                 .stream().filter(ItemBlockCount::countsTowardLimit).count();
     }
     
     public static int getLimit(Block block) {
@@ -125,11 +127,30 @@ public class ItemBlockManager {
         return regions.get(name);
     }
     
+    /** The region with the highest limit whose footprint holds this block column, whatever the height; or null. */
+    public static ItemBlockRegion regionForColumn(String world, int x, int z) {
+        ItemBlockRegion best = null;
+        for(ItemBlockRegion region: regions.values()) {
+            if((best==null || region.getLimit() > best.getLimit()) && region.coversColumn(world, x, z)) {
+                best = region;
+            }
+        }
+        return best;
+    }
+
+    /** The regions or the limits changed: the web map's item-block layers are drawn again. */
     public static void updateDynmapRegions() {
-        ItemBlockDynmapUtil.clearMarkers();
-        regions.values().forEach((region) -> {
-            ItemBlockDynmapUtil.createMarker(region);
-        });
+        limitsVersion++;
+        MapLayers.changed(ItemBlockRegionLayer.ID);
+        MapLayers.changed(ItemBlockBudgetLayer.ID);
+    }
+
+    /**
+     * Moves on at every change to the regions or the limits, as each goes through {@link #updateDynmapRegions()}:
+     * the web map keeps each chunk's limit until it does.
+     */
+    public static int limitsVersion() {
+        return limitsVersion;
     }
     
     public static boolean removeRegion(String name) {
@@ -154,7 +175,8 @@ public class ItemBlockManager {
             config.set("itemBlockRegion", region.saveToMap());
             config.save(new File(regionFolder,region.getName()+".reg"));
         } catch (IOException ex) {
-            Logger.getLogger(RpManager.class.getName()).log(Level.SEVERE, null, ex);
+            Log.error("Failed to save item block region '" + region.getName() + "' to "
+                    + new File(regionFolder, region.getName() + ".reg"), ex);
         }
     }
 
