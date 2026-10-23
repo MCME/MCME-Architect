@@ -1307,7 +1307,8 @@ copied it. The undo history is kept in memory only, up to 30 steps per player; t
 
 - `architect.copypaste` (Designer bundle): all seven commands.
 - `architect.copypaste.limit.<n>`: the most blocks you may `/copy` or `/cut` at once. The highest `<n>` you hold
-  counts. It is in no bundle and not listed in plugin.yml: grant it with your permissions plugin.
+  counts; a node set to false does not. It is in no bundle and not listed in plugin.yml: grant it with your
+  permissions plugin.
 - `architect.copypaste.unlimited` (op by default, in no bundle): no limit.
 
 Without a limit node or `.unlimited`, you may copy 0 blocks: "…You are allowed to copy 0 blocks only." So designers need
@@ -3034,7 +3035,7 @@ permissions plugin grants it.
 
 | Node | Default | What it allows |
 |---|---|---|
-| `architect.copypaste.limit.<n>` | not set | `/copy` and `/cut` of selections up to `<n>` blocks, for example `architect.copypaste.limit.50000`. The highest `<n>` among a player's nodes applies; with none, the limit is 0. Ops have no limit node, but they have `architect.copypaste.unlimited`. |
+| `architect.copypaste.limit.<n>` | not set | `/copy` and `/cut` of selections up to `<n>` blocks, for example `architect.copypaste.limit.50000`. The highest `<n>` among a player's nodes set to true applies; with none, the limit is 0. Ops have no limit node, but they have `architect.copypaste.unlimited`. |
 
 ---
 
