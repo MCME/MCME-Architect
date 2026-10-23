@@ -815,7 +815,9 @@ renaming a pack folder breaks all its items.
 1. acts only where `modules.specialBlocks.place` is on, for a main-hand right-click on a block with an `MCME Block`
    item, and ignores a second click in the same tick within one block of the first;
 2. looks the `SpecialBlock` up by the item's id; `VANILLA` and `DOOR_VANILLA` entries are left to vanilla;
-3. cancels the event, computes the target with `getBlock(...)`, checks `canPlace` and TheGaffer, and calls
+3. cancels the event, computes the target with `getBlock(...)` and checks `canPlace`. For doors and `UPSHIFT` blocks
+   every space they need must be free, and a refusal of such a block tells the player there is no room. It then asks
+   TheGaffer about every block `getBlocksToPlace(...)` lists (the clicked block, for a sneak edit), and calls
    `placeBlock(...)`, which takes the state from `getBlockState(...)`, sets it without physics and sends it to the
    player (for types whose `isEditOnSneaking()` is true, sneaking edits the clicked block instead);
 4. unless the click was a sneak edit, reports every block that `placeBlock` returns to TheGaffer, through

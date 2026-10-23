@@ -124,6 +124,13 @@ public class SpecialBlockDoubleY extends SpecialBlock{
         }
         return placed;
     }
+
+    /** The lower block, and the upper one when its space is empty, as placeBlock sets them. */
+    @Override
+    public List<Block> getBlocksToPlace(Block blockPlace) {
+        Block upper = blockPlace.getRelative(BlockFace.UP);
+        return upper.isEmpty() ? List.of(blockPlace, upper) : List.of(blockPlace);
+    }
     
     @Override
     protected BlockState getBlockState(Block blockPlace, Block clicked, BlockFace blockFace,

@@ -63,5 +63,17 @@ public class SpecialBlockUpshift extends SpecialBlock {
                            final Location interactionPoint, final Player player) {
         return super.placeBlock(blockPlace.getRelative(BlockFace.UP),blockFace,clicked,interactionPoint,player);
     }
+
+    /** An UPSHIFT block is set one block higher than where it is aimed. */
+    @Override
+    public List<Block> getBlocksToPlace(Block blockPlace) {
+        return List.of(blockPlace.getRelative(BlockFace.UP));
+    }
+
+    /** Both the aimed space and the one above, where the block goes, must be free. */
+    @Override
+    public boolean canPlace(Block blockPlace) {
+        return isFree(blockPlace) && isFree(blockPlace.getRelative(BlockFace.UP));
+    }
     
 }

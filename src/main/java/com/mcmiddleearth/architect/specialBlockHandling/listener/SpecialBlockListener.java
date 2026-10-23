@@ -191,22 +191,30 @@ public class SpecialBlockListener extends WatchedListener{
         } else {
             blockPlace = event.getClickedBlock().getRelative(event.getBlockFace());
         }*/
-        if((player.isSneaking() && data.isEditOnSneaking())
-            || data.canPlace(blockPlace))  {
-            // A sneak-edit changes the clicked block; anything else places a new block at blockPlace.
-            boolean edit = player.isSneaking() && data.isEditOnSneaking();
-            Location permissionLocation = (edit? event.getClickedBlock().getLocation():
-                                                 blockPlace.getLocation());
-            if(!TheGafferUtil.checkGafferPermission(player,permissionLocation)) {
+        boolean edit = player.isSneaking() && data.isEditOnSneaking();
+        if(!edit && !data.canPlace(blockPlace)) {
+            // A block that fills more than its own space says why it does not fit; a single block stays silent.
+            List<Block> spaces = data.getBlocksToPlace(blockPlace);
+            if(spaces.size() != 1 || !spaces.get(0).getLocation().equals(blockPlace.getLocation())) {
+                PluginData.getMessageUtil().sendErrorMessage(player,
+                        "Not enough room: every space this block fills must be empty.");
+            }
+            return;
+        }
+        // A sneak-edit changes the clicked block; anything else sets the blocks getBlocksToPlace lists. TheGaffer is
+        // asked about each, and the first refusal stops the placement with one message.
+        List<Block> changed = edit ? List.of(event.getClickedBlock()) : data.getBlocksToPlace(blockPlace);
+        for(Block block : changed) {
+            if(!TheGafferUtil.checkGafferPermission(player, block.getLocation())) {
                 return;
             }
+        }
 //Logger.getGlobal().info("Block place");
-            // Counted as vanilla places would be: each new block placeBlock reports, and none for an edit.
-            List<Block> placed = data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(),
-                    event.getInteractionPoint(), player);
-            if(!edit) {
-                placed.forEach(block -> TheGafferUtil.recordPlace(player, block.getLocation()));
-            }
+        // Counted as vanilla places would be: each new block placeBlock reports, and none for an edit.
+        List<Block> placed = data.placeBlock(blockPlace, event.getBlockFace(), event.getClickedBlock(),
+                event.getInteractionPoint(), player);
+        if(!edit) {
+            placed.forEach(block -> TheGafferUtil.recordPlace(player, block.getLocation()));
         }
     }
 

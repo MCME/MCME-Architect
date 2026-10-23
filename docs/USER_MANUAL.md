@@ -138,8 +138,9 @@ world. Like every world switch, it is on by default (see [Per-world settings](#p
 
 - An item whose entry was renamed or removed answers `Special block data not found, item is probably outdated.` Take
   a new one from the build inventory.
-- Place doors (including three- and four-block doors) and `UPSHIFT` blocks only where the spaces above the spot are
-  empty. `DOUBLE_Y_BLOCK` places its upper block only where there is room.
+- Doors (including three- and four-block doors) and `UPSHIFT` blocks need empty spaces above the spot. Where one is
+  taken, they place nothing and say `Not enough room: every space this block fills must be empty.` `DOUBLE_Y_BLOCK`
+  places its upper block only where there is room.
 - Placed special blocks count for your TheGaffer job statistics; sneak-click edits do not.
 
 #### Placement types
