@@ -1,9 +1,7 @@
 package com.mcmiddleearth.architect.additionalListeners;
 
-import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.util.TheGafferUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Lectern;
@@ -11,10 +9,8 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
-import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTakeLecternBookEvent;
 import org.bukkit.inventory.ItemStack;
@@ -54,17 +50,6 @@ public class LecternProtectionListener implements Listener {
                     || event.getPlayer().hasPermission(Permission.LECTERN_EDITOR.getPermissionNode())) {
                 BlockData data = event.getClickedBlock().getBlockData();
                 if(data instanceof org.bukkit.block.data.type.Lectern lecternData) {
-                    if(lecternData.isPowered() && lectern.getInventory().getItem(0)!=null) {
-                        event.setCancelled(true);
-                        event.getPlayer().openBook(Objects.requireNonNull(lectern.getInventory().getItem(0)));
-                        Bukkit.getPluginManager().registerEvents(new Listener() {
-                            @EventHandler
-                            public void onEdit(PlayerEditBookEvent event) {
-                                Objects.requireNonNull(lectern.getInventory().getItem(0)).setItemMeta(event.getNewBookMeta());
-                                HandlerList.unregisterAll(this);
-                            }
-                        }, ArchitectPlugin.getPluginInstance());
-                    }
                     if(!lecternData.hasBook()
                             && event.getItem()!=null
                             && (event.getItem().getType().equals(Material.WRITTEN_BOOK)

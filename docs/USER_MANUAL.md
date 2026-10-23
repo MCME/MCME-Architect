@@ -1035,7 +1035,7 @@ These rules are always on:
 - With build permission or `architect.lecternEditor`, right-click an empty lectern with a written or writable book to
   put a copy on it. One book is taken from your hand unless you are in creative mode.
 - To change a book and quill on a lectern, take it with Take Book (with build permission or `architect.lecternEditor`),
-  edit it and put it back. A powered lectern does not open its book for editing in 3.2.0.
+  edit it and put it back. A powered lectern behaves as in vanilla.
 
 **Good to know:** a player without build permission gets the protection message when they click a lectern or take a
 book, but still reads it or gets the copy.
@@ -2639,7 +2639,7 @@ These rules apply in every world, and no setting turns them off:
 - Turtle eggs cannot be trampled.
 - Clicking a flower pot or a sign (dye, glow ink, wax), and opening a sign's edit screen, need build permission.
 - Lecterns: the Take Book button gives a copy of the book. Only players with build permission there, or with
-  `architect.lecternEditor`, take the book itself, put books on lecterns and write in a powered lectern's book.
+  `architect.lecternEditor`, take the book itself and put books on lecterns.
 - Placing barrier, light and structure void blocks needs `architect.invisibleBlocks`, except for items from
   Architect's build inventories.
 - Right-clicking one door of a double door opens both.
