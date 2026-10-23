@@ -196,6 +196,13 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 if(region!=null) {
                     return new ResponsePrompt(ccError+"A region with that name already exists.");
                 }
+                // Checked before the old file is removed, so a refused name keeps the region as it was.
+                if(!RpManager.isValidRegionName(words[1])) {
+                    return new ResponsePrompt(ccError+"Invalid name. A name may not contain / or \\.");
+                }
+                if(RpManager.regionFileExists(words[1])) {
+                    return new ResponsePrompt(ccError+"A region with that name already exists.");
+                }
                 region = getRegion(cc);
                 RpManager.removeRegion(region.getName());
                 region.setName(words[1]);

@@ -95,13 +95,17 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                     return true;
                 }
                 if(args[0].equalsIgnoreCase("files")) {
+                    String[] listArgs = Arrays.copyOfRange(args, 1, args.length);
+                    if(!isListFolderAllowed(p, ArmorStandEditorConfig.getDataDir(), listArgs)) {
+                        return true;
+                    }
                     PluginData.getMessageUtil().sendFancyFileListMessage(p,
                                     new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
                                             .addSimple(PluginData.getMessageUtil().STRESSED+"Armor Stand "
                                                       +PluginData.getMessageUtil().INFO+"files /"),
                                     ArmorStandEditorConfig.getDataDir(),
                                     FileUtil.getFileExtFilter(ArmorStandEditorConfig.getFileExtension()),
-                                    Arrays.copyOfRange(args, 1, args.length), 
+                                    listArgs,
                                     "/armor files", 
                                     "/armor p", 
                                     true);
@@ -118,7 +122,7 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                 if(args[0].equalsIgnoreCase("paste")) {
                     Vector loc = p.getLocation().toVector();
                     loc = loc.add(playerConfig.getCopiedArmorStandRelativeLoc());
-                    playerConfig.placeArmorStand(loc.toLocation(p.getWorld()),false);
+                    playerConfig.placeArmorStand(p, loc.toLocation(p.getWorld()),false);
                     return true;
                 }
                 // 'place2' debug subcommand removed (audit Phase 0): it ran an unbounded

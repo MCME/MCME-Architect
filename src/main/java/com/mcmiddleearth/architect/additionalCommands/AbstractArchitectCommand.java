@@ -16,9 +16,12 @@
  */
 package com.mcmiddleearth.architect.additionalCommands;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import com.mcmiddleearth.util.PathSafety;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.ChatColor;
@@ -69,12 +72,51 @@ public abstract class AbstractArchitectCommand implements TabExecutor{
                          +ChatColor.WHITE+line[2],
                             line[0], 
                             PluginData.getMessageUtil()
-                                    .hoverFormat(line[0]+line[1]+": "
+                                    .hoverFormat(splitLongWords(line[0]+line[1]+": "
                                                 +hoverText
-                                                +" \n "+ChatColor.WHITE+"Click to use.",": ",true)));
+                                                +" \n "+ChatColor.WHITE+"Click to use."),": ",true)));
         }
         PluginData.getMessageUtil().sendFancyListMessage(player, header, helpList, 
                                                          getHelpCommand(), page);
     }
     
+    /**
+     * Whether the folder a player named for a file list stays inside the list's base folder. The file list
+     * reads that folder from {@code listArgs[0]}; a lone page number resolves inside the base. If the folder
+     * is outside, the player is told, the refusal is logged and false is returned.
+     */
+    protected static boolean isListFolderAllowed(CommandSender sender, File baseDir, String[] listArgs) {
+        if (listArgs.length == 0 || PathSafety.isInsideFolder(baseDir, listArgs[0])) {
+            return true;
+        }
+        Log.warn("Rejected unsafe folder name '" + listArgs[0] + "' outside " + baseDir);
+        PluginData.getMessageUtil().sendErrorMessage(sender, "Invalid folder name. Pick a folder from the list.");
+        return false;
+    }
+
+    // The longest word a hover line holds: PluginUtils' line is 40 characters, less its 2-character colour code, less 1.
+    static final int HOVER_WORD_MAX = 37;
+
+    /**
+     * The text with every word longer than a hover line holds cut into pieces that fit, so hoverFormat only gets words
+     * it can wrap. Words are split on single spaces, as hoverFormat splits them; everything else is kept as it is.
+     */
+    static String splitLongWords(String text) {
+        String[] words = text.split(" ", -1);
+        StringBuilder result = new StringBuilder();
+        for (int w = 0; w < words.length; w++) {
+            if (w > 0) {
+                result.append(' ');
+            }
+            String word = words[w];
+            for (int start = 0; start < word.length(); start += HOVER_WORD_MAX) {
+                if (start > 0) {
+                    result.append(' ');
+                }
+                result.append(word, start, Math.min(start + HOVER_WORD_MAX, word.length()));
+            }
+        }
+        return result.toString();
+    }
+
 }

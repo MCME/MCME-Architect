@@ -1,6 +1,6 @@
 # MCME-Architect — User Manual
 
-For builders, staff and server admins of MCME-Architect 3.2.0 on Paper 26.2. For the architecture, building, testing
+For builders, staff and server admins of MCME-Architect 3.2.1 on Paper 26.2. For the architecture, building, testing
 and releasing, see the [Developer Manual](DEV_MANUAL.md).
 
 ## Contents
@@ -121,7 +121,8 @@ dragon eggs under [Special placement](#special-placement); container access and 
    or from an item set (`/get`).
 2. Hold it in your main hand. The off hand does not place special blocks.
 3. Right-click a block. The new block goes where its type puts it, usually against the face you clicked. It only
-   replaces air, water, lava, fire or short grass; a `MULTI_FACE` block can also join a block of its own material.
+   replaces air, an invisible light block, water, lava, fire or short grass; a `MULTI_FACE` block can also join a block
+   of its own material.
    Clicking a flower pot never places anything.
 4. To place against a door, trapdoor, button, lever or fence gate, sneak while you click. Without sneaking you use that
    block instead, unless its state is on the world's `noInteraction` list.
@@ -138,8 +139,9 @@ world. Like every world switch, it is on by default (see [Per-world settings](#p
 
 - An item whose entry was renamed or removed answers `Special block data not found, item is probably outdated.` Take
   a new one from the build inventory.
-- Place doors (including three- and four-block doors) and `UPSHIFT` blocks only where the spaces above the spot are
-  empty. `DOUBLE_Y_BLOCK` places its upper block only where there is room.
+- Doors (including three- and four-block doors) and `UPSHIFT` blocks need empty spaces above the spot; an invisible
+  light block counts as empty. Where a space is taken, they place nothing and say `Not enough room: every space this
+  block fills must be empty.` `DOUBLE_Y_BLOCK` places its upper block only where there is room.
 - Placed special blocks count for your TheGaffer job statistics; sneak-click edits do not.
 
 #### Placement types
@@ -240,7 +242,7 @@ When it is off, `/inv` answers `Custom build inventories are not enabled in this
 
 - `/inv search` opens the saved inventories, because every word that starts with `s` or `c` does. Search with
   `/inv b s:<text>`. The letters are case-sensitive: `/inv B` is refused.
-- `/inv i` answers `Not implemented yet!`: no command opens item inventories in 3.2.0.
+- `/inv i` answers `Not implemented yet!`: no command opens item inventories in 3.2.1.
 
 #### Using the window
 
@@ -318,9 +320,10 @@ builders take from it.
 
 **Good to know**
 
-- In 3.2.0 every saved inventory is public: everyone who can use `/inv` can open it and take from it. The file says
+- In 3.2.1 every saved inventory is public: everyone who can use `/inv` can open it and take from it. The file says
   `isPrivate: true`, which Architect reads the other way round.
-- `/inv create` always answers `Inventory saved.`, even when saving failed; check the window.
+- A saved inventory's name may not contain `/` or `\`: such a name is refused with `Invalid name. A name may not
+  contain / or \.` Otherwise `/inv create` answers `Inventory saved.`, even when saving failed; check the window.
 - After a create or delete, ask staff to run `/inv reload`. Until then, players who opened the window before do not
   see a new tab, and after a delete the window may not open for them.
 - If your pack has no saved-inventory folder yet, the window shows the saved inventories of the `Human` pack. A pack's
@@ -351,7 +354,7 @@ A private set is only hidden: `/get list` shows it to its owner alone, but anyon
 **Limits**
 
 - A player can have at most 11 private sets; the twelfth is refused.
-- In 3.2.0, private sets can be lost once their owner has been offline for about 14 hours: the next save of the set
+- In 3.2.1, private sets can be lost once their owner has been offline for about 14 hours: the next save of the set
   file leaves them out, and after the next restart they are gone. Use a public set
   for anything you want to keep.
 - Set names are case-sensitive, but `list`, `armor` and `help` cannot be used as set names in any case (`List` and
@@ -436,7 +439,7 @@ full each chunk is (see [Map layers](#map-layers)).
 | `/itemblock glow off` | Stops the glow. Any word that is not a number works. | none |
 | `/itemblock remove <radius> [height]` | Removes every armor stand with a custom name around you, not only those of item blocks. | `architect.itemBlock.remove` |
 | `/itemblock list` | Lists the limit regions with their limits. | none |
-| `/itemblock create <name>` | Creates a limit region from your WorldEdit selection. | `architect.itemBlock.region.create` |
+| `/itemblock create <name>` | Creates a limit region from your WorldEdit selection. The name may not contain `/` or `\`, and no region file may have it yet. | `architect.itemBlock.region.create` |
 | `/itemblock delete <name>` | Deletes a limit region. | `architect.itemBlock.region.create` |
 | `/itemblock limit <name> <number>` | Sets a region's limit. | `architect.itemBlock.region.limit` |
 | `/itemblock limit -base <number>` | Sets the base limit of the world you are in. | `architect.itemBlock.region.limit` |
@@ -462,7 +465,7 @@ This part is for staff and for the server admin. The blocks of each pack live in
 them with a git repository.
 
 > [!WARNING]
-> In 3.2.0, two editor paths write values that Bukkit cannot read back. The whole tab file then fails to load, and all
+> In 3.2.1, two editor paths write values that Bukkit cannot read back. The whole tab file then fails to load, and all
 > its blocks disappear from the build inventory, although the editor reports the save and `Inventory reload done!`.
 >
 > - **Changing the item during an edit.** At `To change the inventory item hold in main hand a new item and type 'ok'`,
@@ -634,7 +637,7 @@ E4  E3  E2  E1  E0     J1  J2  J3  J4
 - A file with a YAML error is skipped as a whole, and Architect's log names it. Single skipped entries (unknown type,
   duplicate key, invalid state) are only reported at debug level 2: run `/architect dev 2` and `/architect dev`, then
   `/inv reload`, to see them in chat.
-- These types cannot be loaded in 3.2.0, so their entries are skipped: `OPEN_HALF_DOOR`, `BRANCH_TWIGS_UPPER`,
+- These types cannot be loaded in 3.2.1, so their entries are skipped: `OPEN_HALF_DOOR`, `BRANCH_TWIGS_UPPER`,
   `BRANCH_TWIGS_LOWER`, `BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS` and `BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS`.
   `MATCH_ORIENTATION` behaves like `FOUR_DIRECTIONS`, and `MOB_SPAWNER_BLOCK` places nothing.
 - An item's id is `<pack>/<key>`. Renaming a key or a pack folder makes the existing items of it outdated.
@@ -693,8 +696,10 @@ folder names must match that form.
 
 **Good to know**
 
-- Keep the description to one word. The bundled upload script passes it unquoted, so a longer description commits
-  nothing, yet the command reports success.
+- The description may hold letters, digits, spaces and `. , : ; ! ' ( ) / _ -`; no word may start with `-`. Anything
+  else is refused. The bundled upload script passes the description to git quoted, as one message. A copy of the
+  script from before 3.2.1 passes it unquoted, and then a description of more than one word commits nothing, yet the
+  command reports success: quote `$2` in that copy as the bundled script does.
 - A failure inside a script can still be reported as success, because only the script's last line sets the exit code.
   Check Architect's log.
 - `git commit -a` does not add new files: add a new tab file to the repository by hand once.
@@ -725,7 +730,7 @@ bundle.
 |---|---|---|---|---|
 | Oak, spruce, birch, jungle, acacia, dark oak or iron door | `Half` | Right-click a block: only the lower half of the door is placed, turned the way you look. | `architect.place.halfDoor` | `modules.specialBlocks.halfDoors` |
 | Red bed | `Half` | Right-click a block: one half of a bed is placed, turned the way you look. You get the foot, or the head if the name ends in `(head)`. | `architect.place.halfBed` | `modules.specialBlocks.halfBeds` |
-| Redstone torch | `Unlit` | Right-click a block: a redstone torch is placed on the face you clicked. In 3.2.0 it comes out lit, despite the key word; set `lit=false` with the stick. | `architect.place.torch` | `modules.specialBlocks.redstoneTorch` |
+| Redstone torch | `Unlit` | Right-click a block: a redstone torch is placed on the face you clicked. In 3.2.1 it comes out lit, despite the key word; set `lit=false` with the stick. | `architect.place.torch` | `modules.specialBlocks.redstoneTorch` |
 | Wheat, melon seeds, pumpkin seeds, brown or red mushroom, cactus, rose bush, dead bush, nether wart or lily pad | `Placeable` | Right-click a block: the plant is placed without the soil or water it needs. Right-click a crop of the same kind to lower its growth stage by one instead; below the lowest it starts again at the highest. | `architect.place.plant` | `modules.specialBlocks.plants` |
 | Piston | `Table` or `Wheel` | Place it: you get a sticky piston head on its own, facing you. | `architect.place.pistonExtension` | `modules.specialBlocks.pistonExtenstions` (spelt this way) |
 | Furnace | `Burning` | Place it: you get a lit furnace that faces you and stays lit. | `architect.place.burningFurnace` | `modules.specialBlocks.burningFurnace` |
@@ -734,13 +739,13 @@ bundle.
 
 Where `modules.specialBlocks.burningFurnace` is on, any furnace, smoker or blast furnace can be set to burn for ever:
 
-1. Open it. With the default inventory access, a furnace needs `architect.inventory.open` and build permission (see
-   [Inventory access](#inventory-access)).
+1. Open it. With the default inventory access, a furnace, smoker or blast furnace needs `architect.inventory.open` and
+   build permission (see [Inventory access](#inventory-access)).
 2. Click its top slot, the input. If the slot is empty, the furnace lights: its input becomes the cod, salmon, tropical
    fish, chicken, rabbit, porkchop or mutton on your cursor (cod if you hold none of these), and its fuel coal.
 3. To put it out, click the input slot again while it holds something. The furnace goes out and is emptied.
 
-Clicking the first slot of your hotbar while a furnace is open also lights or puts out that furnace.
+Lighting or putting out a furnace needs build permission there.
 
 In such a world every furnace that finishes smelting gets its input and coal back and loses its result, so it keeps
 burning. Furnaces there cannot be used for real smelting.
@@ -971,9 +976,11 @@ world's `inventoryAccess` list gives each type one of four values:
 | `EXCEPTION` | As `BUILDER`, and only for block types a redstone exception area covers, inside such an area (see [No physics](#no-physics)). |
 
 A new file sets `ANVIL`, `CHEST`, `CRAFTING`, `CREATIVE`, `ENDER_CHEST`, `PLAYER`, `WORKBENCH` and `MERCHANT` to
-`TRUE`; `BREWING` and `FURNACE` to `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`, `ENCHANTING` and `HOPPER` to
-`EXCEPTION`; and shulker boxes to `TRUE`. A type that is not listed is added as `TRUE` the first time someone opens
-one. An inventory with no place in the world can always be opened; minecart and animal inventories follow their type's rule.
+`TRUE`; `BREWING`, `FURNACE`, `SMOKER` and `BLAST_FURNACE` to `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`,
+`ENCHANTING` and `HOPPER` to `EXCEPTION`; and shulker boxes to `TRUE`. A type that is not listed is added the first
+time someone opens one: `SMOKER` and `BLAST_FURNACE` as `BUILDER`, any other type as `TRUE`. Files written before
+3.2.1 may already list smokers and blast furnaces as `'TRUE'`: set them to `BUILDER` to protect them like furnaces. An
+inventory with no place in the world can always be opened; minecart and animal inventories follow their type's rule.
 
 ```yaml
 inventoryAccess:
@@ -985,7 +992,10 @@ inventoryAccess:
 ```
 
 **Look, but don't take.** Where `modules.protection.chestInventory` is on, a player without build permission at a
-container may open it and look, but its contents are put back as they were when they close it.
+storage container may open it and look, but cannot take, move, swap or put items. Storage containers are chests,
+barrels, shulker boxes, hoppers, droppers, dispensers, crafters, furnaces, brewing stands, lecterns, storage
+minecarts, chest boats and the inventories of mounts. In creative, copying such a container with its contents
+(Ctrl + middle-click) is refused there too. Ender chests, workstations and villager trades work as in vanilla.
 `architect.inventory.ignoreProtection` (op by default, in no bundle) lifts this.
 
 **Good to know**
@@ -1029,7 +1039,7 @@ These rules are always on:
 - With build permission or `architect.lecternEditor`, right-click an empty lectern with a written or writable book to
   put a copy on it. One book is taken from your hand unless you are in creative mode.
 - To change a book and quill on a lectern, take it with Take Book (with build permission or `architect.lecternEditor`),
-  edit it and put it back. A powered lectern does not open its book for editing in 3.2.0.
+  edit it and put it back. A powered lectern behaves as in vanilla.
 
 **Good to know:** a player without build permission gets the protection message when they click a lectern or take a
 book, but still reads it or gets the copy.
@@ -1057,7 +1067,7 @@ Three switches take items, or their powers, away. On a new install all three are
 **Good to know**
 
 - `modules.protection.blockOpItems` is read from the server's first world only, and then applies in every world.
-- The world setting `allowedEnchantments` has no effect in 3.2.0: its names never match, so every enchantment is
+- The world setting `allowedEnchantments` has no effect in 3.2.1: its names never match, so every enchantment is
   removed. Enchanted books keep the enchantments stored in them.
 
 ---
@@ -1198,7 +1208,7 @@ banner. `architect.bannerEditor.save` (Artist bundle) to save. You may delete yo
 
 **Good to know**
 
-- Orientation, the starting mode, does nothing in 3.2.0: the stick cannot turn a banner.
+- Orientation, the starting mode, does nothing in 3.2.1: the stick cannot turn a banner.
 - The pattern number stays set. After a remove, the patterns above it move down one number.
 - Any word works as a mode if its first letter fits: `/banner colour` selects colour mode.
 - Your mode and pattern number are forgotten when the server restarts.
@@ -1301,7 +1311,8 @@ copied it. The undo history is kept in memory only, up to 30 steps per player; t
 
 - `architect.copypaste` (Designer bundle): all seven commands.
 - `architect.copypaste.limit.<n>`: the most blocks you may `/copy` or `/cut` at once. The highest `<n>` you hold
-  counts. It is in no bundle and not listed in plugin.yml: grant it with your permissions plugin.
+  counts; a node set to false does not. It is in no bundle and not listed in plugin.yml: grant it with your
+  permissions plugin.
 - `architect.copypaste.unlimited` (op by default, in no bundle): no limit.
 
 Without a limit node or `.unlimited`, you may copy 0 blocks: "…You are allowed to copy 0 blocks only." So designers need
@@ -1590,7 +1601,7 @@ resends just that block. Only you get these updates. Clicks with the stick and t
 | Command | What it does |
 |---|---|
 | `/chunkupdate auto <world>\|-default [true\|false]` | Turns automatic updates on (`true`) or off (anything else, or nothing) in a world, or in `defaultWorldConfig.yml`. It takes effect at once. |
-| `/chunkupdate [radius]` | Does nothing in 3.2.0; it answers "Manual chunk updates are not available. Rejoin to reload your chunks." |
+| `/chunkupdate [radius]` | Does nothing in 3.2.1; it answers "Manual chunk updates are not available. Rejoin to reload your chunks." |
 
 **Permissions:** `architect.chunkupdate` (Artist bundle) for `/chunkupdate`. `/chunkupdate auto` also needs
 `architect.chunkupdate.auto`, which is in no bundle and defaults to op, so only ops have it unless you grant it.
@@ -1688,7 +1699,7 @@ New players start with automatic switching on, client type `vanilla`, variant `l
 
 1. **Pack:** your region's pack, or the one you loaded.
 2. **Client type:** yours, if the pack has it. Otherwise the first client type the pack lists.
-3. **Resolution:** `16px`, or else the first one listed. 3.2.0 has no command to change the resolution.
+3. **Resolution:** `16px`, or else the first one listed. 3.2.1 has no command to change the resolution.
 4. **Variant:** yours, if the pack has it. Otherwise the first one listed.
 5. **Version:** the newest version of the pack that is not newer than your Minecraft version. A client older than all
    of them gets the oldest. Architect reads your version from your connection, or from ViaVersion when the server has
@@ -1729,7 +1740,8 @@ To make a region:
 1. Make a WorldEdit selection: a cuboid, polygon, cylinder or ellipsoid, because other shapes are lost at the next
    restart. A polygonal selection covers the full height of the world from Y 0 up; a cuboid covers only the heights
    you selected.
-2. Run `/rp create <name>`. Architect saves the region and opens the region editor in chat.
+2. Run `/rp create <name>`. The name may not contain `/` or `\`, and no region file may have it yet, loaded or not.
+   Architect saves the region and opens the region editor in chat.
 3. Type `rp <pack>` to set the pack, and `weight <n>` to set the weight.
 4. Type `quit`.
 
@@ -1752,7 +1764,7 @@ In the editor, type these words in chat, without a `/`. What you type there does
 | `addpoint <i> [x z]` | Inserts a polygon point as number `i`; a number past the end adds it at the end. Uses your own position if you leave `x z` out. |
 | `setpoint <i> [x z]` | Moves polygon point `i`. |
 | `removepoint <i>` | Deletes polygon point `i`. |
-| `name <newName>` | Renames the region. |
+| `name <newName>` | Renames the region. The new name follows the same rules as in `/rp create`. |
 | `quit` | Closes the editor. |
 
 Every change is saved at once and redrawn on the web map (see [Map layers](#map-layers)). The point and height commands
@@ -2011,7 +2023,7 @@ hex box that overrides the sliders. `Show` shows the new colour in the window on
 `Copy from biome…` takes the colour from another biome, vanilla biomes included. `Clear` removes the value, so the
 default or the climate's colour applies.
 
-**Music, sounds and particles** are edited as raw JSON in 3.2.0. The JSON editor shows the live value in a text box.
+**Music, sounds and particles** are edited as raw JSON in 3.2.1. The JSON editor shows the live value in a text box.
 The game checks your JSON when you click `Apply`, and `Clear` removes the value. In the Audio & particles section,
 `Copy from biome…` copies the music and sounds, the particles, or both, from another biome, such as
 `minecraft:basalt_deltas`. Values that biome leaves unset are removed here too.
@@ -2317,12 +2329,12 @@ it logs, how to reload it, and the `/architect` command.
 
 #### Getting the jar
 
-- **GitHub:** the releases of `MCME/MCME-Architect` on github.com. Release `v3.2.0` has `MCME-Architect-3.2.0.jar` and
-  `MCME-Architect-3.2.0.jar.sha256`. Compare the jar's SHA-256 checksum with the `.sha256` file before you install it.
-- **Maven repository:** `com.mcmiddleearth:MCME-Architect:3.2.0` in `https://repo.mcmiddleearth.com/releases`.
+- **GitHub:** the releases of `MCME/MCME-Architect` on github.com. Release `v3.2.1` has `MCME-Architect-3.2.1.jar` and
+  `MCME-Architect-3.2.1.jar.sha256`. Compare the jar's SHA-256 checksum with the `.sha256` file before you install it.
+- **Maven repository:** `com.mcmiddleearth:MCME-Architect:3.2.1` in `https://repo.mcmiddleearth.com/releases`.
 
 Jars built from source carry the build type and the commit in their name, for example
-`MCME-Architect-3.2.0-DEV-<commit>.jar`. `/architect version` shows only `3.2.0`, so the file name is the only way to
+`MCME-Architect-3.2.1-DEV-<commit>.jar`. `/architect version` shows only `3.2.1`, so the file name is the only way to
 tell such builds apart.
 
 #### First start
@@ -2384,7 +2396,7 @@ its layout (such as the indentation) can change.
 | `inventoryDownload`, `inventoryUpload` | `script` and `path` of the scripts that `/inv download` and `/inv upload` run. The bundled file has only `inventoryDownload`. | [Blocks and inventories](#blocks-and-inventories) |
 | `logging.file` | Architect's own log files (below). | [Logs and debugging](#logs-and-debugging) |
 | `biomeTuning` | Live biome tuning: undo depth, backups, spare biomes, target pack and refresh timing. | [Biome tuning](#biome-tuning) |
-| `EntityLimit` | `number` and `radius`. Read, but used by nothing in 3.2.0. | — |
+| `EntityLimit` | `number` and `radius`. Read, but used by nothing in 3.2.1. | — |
 | `CopyPasteUndoLimit` | Undo steps kept per player for `/undo` and `/redo` (default `30`). Not in the bundled file: add it to change it. | [Copy, paste and shaping](#copy-paste-and-shaping) |
 | `CustomHeadUploadPath` | The web address that `/chead upload` reads head lists from. Architect adds it at the first `/chead upload`. | [Custom heads](#custom-heads) |
 
@@ -2490,13 +2502,13 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `poweredDoors` | Architect places doors taken from the creative inventory itself: oak, spruce, jungle, acacia and dark oak doors powered, birch and iron doors unpowered. Doors of newer wood types stay as the game places them. |
 | `halfDoors` | A door item named `Half…` places only the lower half (`architect.place.halfDoor`). A lone half door cannot be opened in any world, whatever this switch says. |
 | `halfBeds` | A red bed named `Half…` places one half of a bed (`architect.place.halfBed`). |
-| `redstoneTorch` | A redstone torch named `Unlit…` places a torch on the clicked face; in 3.2.0 it comes out lit (`architect.place.torch`). |
+| `redstoneTorch` | A redstone torch named `Unlit…` places a torch on the clicked face; in 3.2.1 it comes out lit (`architect.place.torch`). |
 | `plants` | Plant items named `Placeable…` can be placed on any block (`architect.place.plant`). |
 | `pistonExtenstions` (spelt this way) | A piston named `Table…` or `Wheel…` places a piston head (`architect.place.pistonExtension`). |
-| `burningFurnace` | Furnaces that finish smelting are refilled, so they burn for ever. Clicking the input slot lights a furnace or puts it out. A furnace named `Burning…` is placed lit (`architect.place.burningFurnace`). |
+| `burningFurnace` | Furnaces that finish smelting are refilled, so they burn for ever. Clicking the input slot lights a furnace or puts it out, where the player may build. A furnace named `Burning…` is placed lit (`architect.place.burningFurnace`). |
 | `dragonEgg` | Dragon eggs never teleport. Only players in creative mode with `architect.interactDragonEgg` and build permission can break one. |
-| `doubleSlabs` | No effect in 3.2.0. |
-| `sixSidedLogs` | No effect in 3.2.0. |
+| `doubleSlabs` | No effect in 3.2.1. |
+| `sixSidedLogs` | No effect in 3.2.1. |
 
 **Environment (`modules.environment.*`)**
 
@@ -2530,7 +2542,7 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `bannerEditor` | `/banner`, and editing banners with a stick. |
 | `paintingEditor` | Changing a painting's motif with a stick. |
 | `armorStandEditor` | `/armor`, and editing armor stands with a stick. New armor stands in the world get no gravity and cannot be damaged. |
-| `armorStandRollback` | `/armor rollback`, which is unfinished in 3.2.0. |
+| `armorStandRollback` | `/armor rollback`, which is unfinished in 3.2.1. |
 | `customHeadManager` | `/chead`, and taking a copy of a head by clicking it with a stick. |
 | `resourcePackSwitcher` | The `/rp` player commands and region commands in this world. `/rp check` and the admin commands that also run from the console keep working, and RP regions switch packs whatever this switch says. |
 | `fullBrightness` | `/fbt` gives night vision in this world. When off, players who arrive in the world lose their night vision. In `server.yml`, it decides at start whether `/fbt` exists at all. |
@@ -2538,19 +2550,19 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `weSchemViewer` | `/schlist`. |
 | `voxelViewer` | `/vv`. |
 | `stencilListEditor` | `/sl`. |
-| `modules.commmand.itemTexture` (three m, a group of its own) | No effect in 3.2.0. |
+| `modules.commmand.itemTexture` (three m, a group of its own) | No effect in 3.2.1. |
 
 **Protection (`modules.protection.*`)**
 
 | Key | When on |
 |---|---|
-| `blockOpItems` | Items lose every enchantment and every attribute modifier when a player picks them up, drops them, selects them or moves them in an inventory. Read from the first loaded world only, for the whole server. In 3.2.0 no enchantment is kept (see `allowedEnchantments` below). |
+| `blockOpItems` | Items lose every enchantment and every attribute modifier when a player picks them up, drops them, selects them or moves them in an inventory. Read from the first loaded world only, for the whole server. In 3.2.1 no enchantment is kept (see `allowedEnchantments` below). |
 | `removeContainerItemsOnBreak` | A broken container drops nothing: its contents are deleted. Jukeboxes and decorated pots lose their contents too. |
 | `blockArrowShooting` | Nobody can shoot a bow or crossbow, mobs included. |
 | `tnt` | TNT cannot be lit. |
 | `armorStand` | Armor stands are protected: mobs, projectiles, fire and fishing rods cannot harm or pull them. Players need `architect.armorStandEditor` to hit them, and also build permission to place or use them. |
 | `hangingEntity` | Paintings and item frames do not break from physics, explosions or mobs. Players need `architect.hangingEntityEditor` and build permission to place them, and to use or hit item frames. |
-| `chestInventory` | Players without build permission (and without `architect.inventory.ignoreProtection`) can look into a container, but its contents are restored when they close it. |
+| `chestInventory` | Players without build permission (and without `architect.inventory.ignoreProtection`) can look into a storage container, but cannot move items into or out of it, or copy it with its contents in creative. Ender chests, workstations and trading are not affected. |
 | `redstone` | Clicking redstone wire without build permission is undone. |
 | `lilyPad` | Boats do not break lily pads, or change any other block. |
 
@@ -2559,8 +2571,8 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | Key | When on |
 |---|---|
 | `modules.chunkupdate.auto` | After every block click, placement or break, Architect sends the nearby blocks again to the player who acted, so their client shows connections (fences, walls, panes, gates, doors) correctly. |
-| `modules.chunkupdate.manual` | Allows `/chunkupdate`, which does nothing in 3.2.0. Also needed in your current world to use `/chunkupdate auto`. |
-| `modules.voxelBiomeBrushFix` | No effect in 3.2.0. |
+| `modules.chunkupdate.manual` | Allows `/chunkupdate`, which does nothing in 3.2.1. Also needed in your current world to use `/chunkupdate auto`. |
+| `modules.voxelBiomeBrushFix` | No effect in 3.2.1. |
 
 #### Other keys
 
@@ -2575,7 +2587,7 @@ see its row.
 | `noInteraction` | 11 entries: acacia, jungle, dark oak and spruce fence gates; `minecraft:birch_fence_gate[powered=true]`; acacia, jungle, dark oak and spruce doors with `powered=false`; `minecraft:repeater`; `minecraft:comparator` | Block states nobody may right-click, while `specialBlocks.blockPlayerInteraction` is on. Doors on the list are also left out of Architect's double-door opening, and right-clicking such a block with a special block item places the item instead of using the block. |
 | `disabledBlockStates` | `minecraft:blue_stained_glass_pane[east=false,north=false,south=false,west=false]` | Block states the stick never switches to, and that special blocks never connect into. |
 | `inventoryAccess.<TYPE>` | see below | Who may open each type of container. |
-| `allowedEnchantments.<Name>` | `Durability: 1` | Meant as the enchantments, each with a highest level, that `blockOpItems` keeps. In 3.2.0 no entry ever matches, so `blockOpItems` removes every enchantment: switch `blockOpItems` off to keep enchantments. Read from the first loaded world only. |
+| `allowedEnchantments.<Name>` | `Durability: 1` | Meant as the enchantments, each with a highest level, that `blockOpItems` keeps. In 3.2.1 no entry ever matches, so `blockOpItems` removes every enchantment: switch `blockOpItems` off to keep enchantments. Read from the first loaded world only. |
 | `doubleSlabReplacements.<pack>.<name>` | an example for the pack `gondor` | `from` and `to`, both block data. When a player stacks two slabs into a double slab, and the slab that was there matches `from` exactly, the double slab becomes `to`. `<pack>` is the player's resource pack (or the RP region's), written in lower case. Needs `specialBlocks.place`. |
 | `viewDistance` | `255` | The view distance Architect tells players in this world who have not set their own with `/viewdistance`; 255 means no limit in practice. With the defaults, every player in the world is told 255 and keeps every chunk it has received. Needs ProtocolLib and `command.viewdistance`. |
 | `armorStand.minScale`, `armorStand.maxScale` | `0.0625`, `16.0` | Smallest and largest scale of the armor stand editor's scale mode. In a world file, set both keys: a missing one reads as 0. |
@@ -2593,10 +2605,11 @@ and each takes one of these values:
 | `EXCEPTION` | As `BUILDER`, and the container must stand in a redstone exception area of `/nophy`. Those areas cover dispensers, droppers, hoppers, dyed shulker boxes, enchanting tables, beacons and undamaged anvils. |
 
 - Defaults: `ANVIL`, `CHEST`, `CRAFTING`, `CREATIVE`, `ENDER_CHEST`, `MERCHANT`, `PLAYER` and `WORKBENCH` are
-  `'TRUE'`; `BREWING` and `FURNACE` are `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`, `ENCHANTING` and `HOPPER` are
-  `EXCEPTION`. `SHULKER_BOX` is a section whose `default` is `'TRUE'`; Architect reads only `default`, not single
-  colours.
-- A type missing from both files is added to `defaultWorldConfig.yml` as `'TRUE'` the first time someone opens one.
+  `'TRUE'`; `BREWING`, `FURNACE`, `SMOKER` and `BLAST_FURNACE` are `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`,
+  `ENCHANTING` and `HOPPER` are `EXCEPTION`. `SHULKER_BOX` is a section whose `default` is `'TRUE'`; Architect reads
+  only `default`, not single colours.
+- A type missing from both files is added to `defaultWorldConfig.yml` the first time someone opens one: `SMOKER` and
+  `BLAST_FURNACE` as `BUILDER`, any other type as `'TRUE'`.
 - Write the values in upper case, and quote `'TRUE'` and `'FALSE'`: unquoted, YAML reads them as true and false, which
   Architect cannot use.
 
@@ -2633,7 +2646,7 @@ These rules apply in every world, and no setting turns them off:
 - Turtle eggs cannot be trampled.
 - Clicking a flower pot or a sign (dye, glow ink, wax), and opening a sign's edit screen, need build permission.
 - Lecterns: the Take Book button gives a copy of the book. Only players with build permission there, or with
-  `architect.lecternEditor`, take the book itself, put books on lecterns and write in a powered lectern's book.
+  `architect.lecternEditor`, take the book itself and put books on lecterns.
 - Placing barrier, light and structure void blocks needs `architect.invisibleBlocks`, except for items from
   Architect's build inventories.
 - Right-clicking one door of a double door opens both.
@@ -2673,7 +2686,7 @@ Architect keeps its files in `plugins/MCME-Architect/`. Back up the whole folder
 | `regions/<name>.reg` | RP regions | One file per region. Older `.json` region files found here are converted once, then deleted. |
 | `rp-release-times.yml` | `/rp release` | How long the last successful release of each pack took. |
 | `inventories/block/<pack>/` | build inventories | `categories.yml` and the block files of one pack. The folder name must equal the pack's key under `ServerResourcePacks`, including case. Architect creates `inventories/block/` but not the pack folders, and it rewrites the block files when it loads them. |
-| `inventories/item/<pack>/` | item inventories | Loaded, but no command opens them in 3.2.0. |
+| `inventories/item/<pack>/` | item inventories | Loaded, but no command opens them in 3.2.1. |
 | `inventories/saved/<pack>/<name>.yml` | `/inv create` | Saved inventories. |
 | `itemSets.yml` | `/get` | Kits. |
 | `itemBlockRegions/<name>.reg` | `/itemblock` | Item block limit regions. |
@@ -2823,14 +2836,14 @@ without a restart leaves live biome edits in the game while Architect forgets th
 | Syntax | Who may use it | What it does |
 |---|---|---|
 | `/architect`, `/architect help [page]` | players with `architect.help` (everyone by default) | Lists the Architect commands you may use, ten per page, with clickable lines. Careful: clicking the lines of `/copy`, `/cut`, `/paste`, `/undo`, `/redo` and `/flip` runs that command at once. |
-| `/architect version` | the console, `architect.reload` | Shows Architect's version, for example `Version: 3.2.0`. |
+| `/architect version` | the console, `architect.reload` | Shows Architect's version, for example `Version: 3.2.1`. |
 | `/architect reload` | the console, `architect.reload` | Reloads Architect's settings and data; see [Reloading](#reloading). |
 | `/architect reloaddata` | the console, `architect.reload` | Reloads the server's data packs (loot tables, advancements and the like). Not Architect's own data. |
 | `/architect world` | the console, `architect.info` or `architect.reload` | Lists the loaded worlds. In game, clicking a name puts `/mvtp <world>` (a Multiverse command) in your chat box. |
 | `/architect blockdata` | players with `architect.info` or `architect.reload` | Shows the full block data of the block you look at, up to 100 blocks away. |
 | `/architect dev [true\|false\|<level>\|-r]` | the console, `architect.info` or `architect.reload` | Architect's debug output; see [Logs and debugging](#logs-and-debugging). |
 | `/architect checkNBT [player]` | the console, `architect.checknbt` | Shows the stored data of the item in your main hand, or of every item an online player carries. From the console, name a player. |
-| `/architect weather clear\|rain\|thunder` | players with `architect.weather` | Changes the weather in your world once, past `weatherBlocking`. In 3.2.0 `thunder` gives rain only. |
+| `/architect weather clear\|rain\|thunder` | players with `architect.weather` | Changes the weather in your world once, past `weatherBlocking`. In 3.2.1 `thunder` gives rain only. |
 | `/architect maplayers refresh` | the console, `architect.maplayers` | Draws Architect's map layers again and recounts the loaded chunks; see [Map layers](#map-layers). |
 | `/architect eLog true`, `/architect eLog` | the console, `architect.reload` | Starts or stops the entity logger; see [Logs and debugging](#logs-and-debugging). |
 | `/architect placeAllBlockStates [file]` | players with `architect.reload` | A developer tool. Places every state of every block type in a large grid next to you, with no undo: never use it in a build world. With `file`, it places nothing and writes the list to `blockList.txt` in the server's main folder. |
@@ -2843,7 +2856,7 @@ without a restart leaves live biome edits in the game while Architect forgets th
 
 ## Command reference
 
-Every command Architect registers in 3.2.0. Permissions are per subcommand where they differ; the
+Every command Architect registers in 3.2.1. Permissions are per subcommand where they differ; the
 [Permissions](#permissions) chapter explains each node. Every command also works with the prefix `mcme-architect:`,
 for example `/mcme-architect:undo`, which helps when another plugin has a command of the same name.
 
@@ -2861,7 +2874,7 @@ for example `/mcme-architect:undo`, which helps when another plugin has a comman
 | `/inv` (admin) | `/inv reload`, `/inv download <pack>`, `/inv upload <pack> <description>` | Reloads the inventory files; runs the download or upload script. | `architect.inventory.reload`, `architect.inventory.download`, `architect.inventory.upload` | [Blocks and inventories](#blocks-and-inventories) |
 | `/itemblock` | `/itemblock help`, `stats <radius> [height]`, `glow <radius>\|off`, `remove <radius> [height]`, `list`, `create <name>`, `delete <name>`, `limit <name> <n>`, `limit -base <n>` | Item block counts, glow and clean-up (`remove` removes every named armor stand in the box), and item block limit regions. | `architect.itemBlock`, plus `architect.itemBlock.remove` for `remove`, `architect.itemBlock.region.create` for `create` and `delete`, and `architect.itemBlock.region.limit` for `limit` | [Blocks and inventories](#blocks-and-inventories) |
 | `/nophy` | `/nophy list <world\|-default>`, `/nophy add\|remove <world\|-default> <block>`, `/nophy exception redstone\|water <name>`, `/nophy exception delete <name>`, `/nophy exception list [page]`, `/nophy help [page]` | Shows and edits the no-physics list; manages exception areas. | `architect.noPhysicsList.view`, plus `architect.noPhysicsList.edit` for `add` and `remove`, and `architect.noPhysicsList.exception` for `exception` | [Placing and physics](#placing-and-physics) |
-| `/chunkupdate` | `/chunkupdate [radius]`, `/chunkupdate auto <world\|-default> [true]` | The radius form does nothing in 3.2.0. `auto` switches automatic block resends on (with `true`) or off. | `architect.chunkupdate`, plus `architect.chunkupdate.auto` for `auto` | [Seeing and moving](#seeing-and-moving) |
+| `/chunkupdate` | `/chunkupdate [radius]`, `/chunkupdate auto <world\|-default> [true]` | The radius form does nothing in 3.2.1. `auto` switches automatic block resends on (with `true`) or off. | `architect.chunkupdate`, plus `architect.chunkupdate.auto` for `auto` | [Seeing and moving](#seeing-and-moving) |
 | `/switchstick` (`/swst`, `/ss`) | `/switchstick [help]` | Switches your stick's block-state editing on or off. It is off until you first run this. | `architect.switchstick` | [Placing and physics](#placing-and-physics) |
 | `/weselect` (`/wes`) | `/weselect <command>`, `/weselect shift <command>`, `/weselect show`, `/weselect reset`, `/weselect help [page]` | Sets the command that flint clicks put in your chat box, for a click and a sneak-click; `#` becomes the block data. | `architect.weselect` | [Placing and physics](#placing-and-physics) |
 | `/sign` | `/sign <1-4> <text>`, `/sign glow true\|false` | Changes a line of the sign you selected with a stick; switches glowing text. | `architect.signEditor` | [Editing tools](#editing-tools) |
@@ -2935,7 +2948,7 @@ Notes:
 
 ### All nodes
 
-What each node allows in 3.2.0, as the code checks it. "Build permission" means TheGaffer's permission to build at
+What each node allows in 3.2.1, as the code checks it. "Build permission" means TheGaffer's permission to build at
 that spot. Bundle names are short: adventurer, artist, designer, head designer.
 
 | Node | Default | Bundle | What it allows |
@@ -2944,7 +2957,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.armorStandEditor` | op | adventurer | `/armor`: every mode, copy and paste, listing and loading saved stands. Where armor stand protection is on, also hitting armor stands, and placing and using them (with build permission). |
 | `architect.armorStandEditor.delete` | op | head designer | Renaming and deleting other players' saved armor stands. |
 | `architect.armorStandEditor.trusted` | op | artist | Saving armor stands to files, renaming and deleting your own files. Includes `architect.armorStandEditor`. |
-| `architect.armorStandRollback` | op | — | `/armor rollback`, which is unfinished in 3.2.0: it does not roll anything back. |
+| `architect.armorStandRollback` | op | — | `/armor rollback`, which is unfinished in 3.2.1: it does not roll anything back. |
 | `architect.bannerEditor` | op | adventurer | `/banner`, editing banners with a stick (with build permission), and deleting your own banner files. |
 | `architect.bannerEditor.delete` | op | head designer | Deleting other players' banner files. |
 | `architect.bannerEditor.save` | op | artist | `/banner save`. Includes `architect.bannerEditor`. |
@@ -2953,7 +2966,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.biomeTune.publish` | op | — | `/biometune publish`, and `/biometune preview <player>`. |
 | `architect.biomeTune.save` | op | — | `/biometune save`: writing a biome to its datapack file. |
 | `architect.checknbt` | op | — | `/architect checkNBT`. |
-| `architect.chunkupdate` | op | artist | `/chunkupdate`, which does nothing in 3.2.0. Also needed for `/chunkupdate auto`. |
+| `architect.chunkupdate` | op | artist | `/chunkupdate`, which does nothing in 3.2.1. Also needed for `/chunkupdate auto`. |
 | `architect.chunkupdate.auto` | op | — | `/chunkupdate auto`, together with `architect.chunkupdate`. |
 | `architect.copypaste` | op | designer | `/copy`, `/cut`, `/paste`, `/undo`, `/redo`, `/flip` and `/rot`. |
 | `architect.copypaste.unlimited` | op | — | Copying and cutting selections of any size. |
@@ -2965,7 +2978,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.gamemodeSwitcher.adventure`, `architect.gamemodeSwitcher.creative`, `architect.gamemodeSwitcher.survival` | false | — | That game mode with the F3+F4 switcher, without op. |
 | `architect.gamemodeSwitcher.spectator` | false | — | Spectator mode with F3+F4 or F3+N, without op. Give another mode's node with it: without one, a player cannot switch out of spectator mode. |
 | `architect.get.armor` | op | adventurer | `/get armor`. |
-| `architect.get.doors`, `architect.get.food`, `architect.get.logs`, `architect.get.misc`, `architect.get.plants`, `architect.get.slabs` | op | adventurer | No effect in 3.2.0. |
+| `architect.get.doors`, `architect.get.food`, `architect.get.logs`, `architect.get.misc`, `architect.get.plants`, `architect.get.slabs` | op | adventurer | No effect in 3.2.1. |
 | `architect.get.head` | op | adventurer | `/get head`. |
 | `architect.get.other` | op | head designer | Publishing, unpublishing and deleting other players' kits. |
 | `architect.get.private` | op | artist | `/get pcreate`: private kits. |
@@ -2990,8 +3003,8 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.itemBlock.region.ignore` | op | head designer | Placing item blocks in a chunk that has reached its limit. |
 | `architect.itemBlock.region.limit` | op | head designer | `/itemblock limit`, for regions and for the world's base limit. |
 | `architect.itemBlock.remove` | op | head designer | `/itemblock remove`. |
-| `architect.itemTexture` | op | — | No effect in 3.2.0. |
-| `architect.itemTexture.manager` | op | — | No effect in 3.2.0. |
+| `architect.itemTexture` | op | — | No effect in 3.2.1. |
+| `architect.itemTexture.manager` | op | — | No effect in 3.2.1. |
 | `architect.lecternEditor` | op | — | Taking a lectern's book (not a copy) and putting books on lecterns, without build permission. |
 | `architect.maplayers` | op | head designer | `/architect maplayers refresh`. |
 | `architect.noPhysicsList.edit` | op | head designer | `/nophy add` and `/nophy remove`. Includes `architect.noPhysicsList.view`. |
@@ -2999,13 +3012,13 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.noPhysicsList.view` | op | adventurer | `/nophy`, `/nophy list` and `/nophy help`. |
 | `architect.paintingEditor` | op | adventurer | Changing a painting's motif with a stick (with build permission). |
 | `architect.place.burningFurnace` | op | adventurer | Placing a lit furnace from a furnace named `Burning…`. |
-| `architect.place.doubleSlab` | op | adventurer | No effect in 3.2.0. |
+| `architect.place.doubleSlab` | op | adventurer | No effect in 3.2.1. |
 | `architect.place.halfBed` | op | adventurer | Placing half beds from a red bed named `Half…`. |
 | `architect.place.halfDoor` | op | adventurer | Placing half doors from a door named `Half…`. |
 | `architect.place.pistonExtension` | op | adventurer | Placing piston heads from a piston named `Table…` or `Wheel…`. |
 | `architect.place.plant` | op | adventurer | Placing plants named `Placeable…` on any block. |
-| `architect.place.sixSidedLog` | op | adventurer | No effect in 3.2.0. |
-| `architect.place.torch` | op | adventurer | Placing redstone torches from a torch named `Unlit…` (they come out lit in 3.2.0). |
+| `architect.place.sixSidedLog` | op | adventurer | No effect in 3.2.1. |
+| `architect.place.torch` | op | adventurer | Placing redstone torches from a torch named `Unlit…` (they come out lit in 3.2.1). |
 | `architect.randomiser.allowMaterials` | op | head designer | `/random allow` and `/random deny`. Includes `architect.randomiser.user`. |
 | `architect.randomiser.user` | op | designer | `/random`, except `allow` and `deny`. |
 | `architect.ranks.adventurer`, `architect.ranks.artist`, `architect.ranks.designer`, `architect.ranks.headDesigner` | op | — | The rank bundles; see [Rank bundles](#rank-bundles). |
@@ -3028,7 +3041,7 @@ permissions plugin grants it.
 
 | Node | Default | What it allows |
 |---|---|---|
-| `architect.copypaste.limit.<n>` | not set | `/copy` and `/cut` of selections up to `<n>` blocks, for example `architect.copypaste.limit.50000`. The highest `<n>` among a player's nodes applies; with none, the limit is 0. Ops have no limit node, but they have `architect.copypaste.unlimited`. |
+| `architect.copypaste.limit.<n>` | not set | `/copy` and `/cut` of selections up to `<n>` blocks, for example `architect.copypaste.limit.50000`. The highest `<n>` among a player's nodes set to true applies; with none, the limit is 0. Ops have no limit node, but they have `architect.copypaste.unlimited`. |
 
 ---
 
@@ -3060,7 +3073,7 @@ Each entry gives the symptom, the cause and the fix.
 
 - **Dropped items vanish.** Cause: `modules.environment.dropBlocking` is on, which deletes dropped items. Fix: set it
   to `false` in that world's file (or in `defaultWorldConfig.yml`) and run `/architect reload`.
-- **Enchantments disappear from items.** Cause: `modules.protection.blockOpItems` is on, and in 3.2.0
+- **Enchantments disappear from items.** Cause: `modules.protection.blockOpItems` is on, and in 3.2.1
   `allowedEnchantments` never matches, so every enchantment is removed. It is read from the first loaded world only.
   Fix: set `blockOpItems: false` in the main world's file or in `defaultWorldConfig.yml`, and run `/architect reload`.
 - **Blocks ignore their neighbours after a fresh install: torches, plants and sand stay put when the block below them
@@ -3069,12 +3082,13 @@ Each entry gives the symptom, the cause and the fix.
   without physics), or `noPhysicsListEnabled: false`, and run `/architect reload`. Or list the blocks that should keep
   physics.
 - **Levers, buttons, lamps and doors ignore redstone power.** Cause: Architect freezes redstone power on the whole
-  server, on purpose: the resource packs use redstone block states as decoration. Fix: none in 3.2.0.
+  server, on purpose: the resource packs use redstone block states as decoration. Fix: none in 3.2.1.
 - **No mobs, no weather changes, no fire spread, no leaf decay.** Cause: the environment switches are on by default.
   Fix: switch off the ones you do not want; see [Module switches](#module-switches).
-- **Players cannot open furnaces, brewing stands, hoppers or dispensers.** Cause: `inventoryAccess` sets them to
-  `BUILDER` or `EXCEPTION`. Fix: give `architect.inventory.open` and build permission, put `EXCEPTION` containers in a
-  redstone exception area (`/nophy exception redstone <name>`), or set the type to `'TRUE'`.
+- **Players cannot open furnaces, smokers, blast furnaces, brewing stands, hoppers or dispensers.** Cause:
+  `inventoryAccess` sets them to `BUILDER` or `EXCEPTION`. Fix: give `architect.inventory.open` and build permission,
+  put `EXCEPTION` containers in a redstone exception area (`/nophy exception redstone <name>`), or set the type to
+  `'TRUE'`.
 
 ### Building tools
 
@@ -3090,7 +3104,7 @@ Each entry gives the symptom, the cause and the fix.
 - **With a stick in hand, doors, buttons and block breaking do nothing.** Cause: where `modules.command.cycleBlocks` is
   on, every block click made with a stick is cancelled. Fix: hold something else, or switch the module off in that
   world.
-- **A build inventory tab is empty or gone after an edit in the in-game editor.** Cause: in 3.2.0 the editor can write
+- **A build inventory tab is empty or gone after an edit in the in-game editor.** Cause: in 3.2.1 the editor can write
   a value that cannot be read back. Changing an entry's item writes `itemMaterial: !!org.bukkit.Material {}`, and
   answering `yes` to listing a collection entry in its tab writes a `!!…SpecialBlock {}` value under
   `collection.indirect`. At the reload that follows, Architect skips the whole file and logs an error for it. Fix: open
@@ -3099,7 +3113,7 @@ Each entry gives the symptom, the cause and the fix.
   than in the editor.
 - **Item blocks are refused everywhere in a new item block region.** Cause: `/itemblock create` makes a region with
   limit 0. Fix: `/itemblock limit <name> <n>`.
-- **`/chunkupdate` says "Manual chunk updates are not available."** Cause: the radius form does nothing in 3.2.0.
+- **`/chunkupdate` says "Manual chunk updates are not available."** Cause: the radius form does nothing in 3.2.1.
   Automatic resends (`modules.chunkupdate.auto`) still work. Fix: rejoin, so the client loads the chunks again.
 - **`/inv upload` fails at once with `exitCode=-1`.** Cause: `config.yml` has no `inventoryUpload` section (the bundled
   file has none), or the server runs Windows. Fix: add `inventoryUpload` with `script` and `path`, on a Linux server.

@@ -25,6 +25,7 @@ import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.architect.mapLayers.RpRegionLayer;
 import com.mcmiddleearth.architect.serverResoucePack.RegionEditConversation.RegionEditConversationFactory;
 import com.mcmiddleearth.util.DevUtil;
+import com.mcmiddleearth.util.PathSafety;
 import com.mcmiddleearth.util.ResourceUtil;
 import com.viaversion.viaversion.api.Via;
 import org.bukkit.Bukkit;
@@ -143,6 +144,16 @@ public class RpManager {
     
     public static RpRegion getRegion(String name) {
         return regions.get(name);
+    }
+
+    /** Whether a player-given name can name a region file: a file directly in the region folder. */
+    public static boolean isValidRegionName(String name) {
+        return PathSafety.isPlainName(regionFolder, name, "reg");
+    }
+
+    /** Whether a region file with this name is on disk, whether or not its region is loaded. */
+    public static boolean regionFileExists(String name) {
+        return new File(regionFolder, name + ".reg").exists();
     }
     
     /** The regions changed: the web map's RP-region layer is drawn again. */

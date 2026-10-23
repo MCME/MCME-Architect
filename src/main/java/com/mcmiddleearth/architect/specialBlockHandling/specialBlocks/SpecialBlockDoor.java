@@ -82,7 +82,19 @@ public class SpecialBlockDoor extends SpecialBlock {
                            final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, getBlockData().getMaterial(), powered, false, hingeRight, false);
+        return getBlocksToPlace(blockPlace);
+    }
+
+    /** A door's two halves. */
+    @Override
+    public List<Block> getBlocksToPlace(Block blockPlace) {
         return List.of(blockPlace, blockPlace.getRelative(BlockFace.UP));
+    }
+
+    /** A door fills every block getBlocksToPlace lists, so each of them must be free. */
+    @Override
+    public boolean canPlace(Block blockPlace) {
+        return getBlocksToPlace(blockPlace).stream().allMatch(SpecialBlock::isFree);
     }
     
     public void placeBlock(final Block blockPlace, final BlockFace blockFace, 

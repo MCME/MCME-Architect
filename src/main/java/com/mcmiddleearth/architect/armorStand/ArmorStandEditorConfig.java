@@ -8,6 +8,7 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.armorStand.guard.ArmorStandGuard;
 import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.util.PathSafety;
+import com.mcmiddleearth.util.TheGafferUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -56,7 +57,12 @@ public class ArmorStandEditorConfig {
         }
      }
 
-    public void placeArmorStand(Location loc, boolean exact) {
+    /**
+     * Pastes the copied stand at loc or, unless exact, in loc's block at the copied stand's spot within its block.
+     * TheGaffer is asked about the spot where the stand would appear: if it refuses, the player is told, nothing is
+     * placed and false is returned.
+     */
+    public boolean placeArmorStand(Player player, Location loc, boolean exact) {
         Map<String,Object> data = (Map<String,Object>)copiedEntity.get("ArmorStand");
         Location saved = deserializeLocation((Map<String,Object>) data.get("location"));
         if(!exact) {
@@ -64,10 +70,14 @@ public class ArmorStandEditorConfig {
             loc.setZ(loc.getBlockZ()+saved.getZ()-saved.getBlockZ());
             loc.setYaw(saved.getYaw());
         }
+        if(!TheGafferUtil.checkGafferPermission(player, loc)) {
+            return false;
+        }
         data.put("location",serializeLocation(loc));
         ArmorStand armor = ArmorStandUtil.deserializeArmorStand((Map<String,Object>)copiedEntity.get("ArmorStand"));
         ArmorStandGuard.setModifiedFlag(armor);
         data.put("location",serializeLocation(saved));
+        return true;
     }
     
     public final void clearCopiedArmorStand() {

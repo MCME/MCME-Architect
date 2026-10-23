@@ -1,6 +1,6 @@
 # MCME-Architect — Developer Manual
 
-For developers of MCME-Architect 3.2.0. For how to use the plugin, see the [User Manual](USER_MANUAL.md).
+For developers of MCME-Architect 3.2.1. For how to use the plugin, see the [User Manual](USER_MANUAL.md).
 
 ## Contents
 
@@ -178,7 +178,7 @@ The jar lands in `target/`.
 ### The jar name
 
 `<finalName>` is `${project.artifactId}-${project.version}-${build.type}-${git.commit.id.abbrev}`. A local build gives
-`target/MCME-Architect-3.2.0-DEV-<commit>.jar`.
+`target/MCME-Architect-3.2.1-DEV-<commit>.jar`.
 
 - `build.type` is a pom property: `DEV` by default; pass `-Dbuild.type=RELEASE` for a release build (`SNAPSHOT` is
   also allowed).
@@ -225,8 +225,8 @@ Only three build plugins are pinned: `git-commit-id-maven-plugin` 9.0.1, `maven-
 ### The test stack
 
 - JUnit Jupiter 6.1, with `junit-jupiter-params`, and MockBukkit for Paper 26.2. Assertions are JUnit's own.
-- 3.2.0 has 86 test classes and 11 helper classes. About two in five test classes use no MockBukkit at all: plain unit
-  tests, mostly in `biomeTuning` and `mapLayers`.
+- 3.2.1 has 99 test classes and 11 helper classes. About a third of the test classes use no MockBukkit at all:
+  plain unit tests, mostly in `biomeTuning` and `mapLayers`.
 - Surefire runs with `<reuseForks>false</reuseForks>`: **every test class runs in a fresh JVM**, one class after
   another. The reason is the static state described in [Mental model](#mental-model): a second load of the plugin in
   the same JVM would use a stale, deleted data-folder path.
@@ -815,7 +815,9 @@ renaming a pack folder breaks all its items.
 1. acts only where `modules.specialBlocks.place` is on, for a main-hand right-click on a block with an `MCME Block`
    item, and ignores a second click in the same tick within one block of the first;
 2. looks the `SpecialBlock` up by the item's id; `VANILLA` and `DOOR_VANILLA` entries are left to vanilla;
-3. cancels the event, computes the target with `getBlock(...)`, checks `canPlace` and TheGaffer, and calls
+3. cancels the event, computes the target with `getBlock(...)` and checks `canPlace`. For doors and `UPSHIFT` blocks
+   every space they need must be free, and a refusal of such a block tells the player there is no room. It then asks
+   TheGaffer about every block `getBlocksToPlace(...)` lists (the clicked block, for a sneak edit), and calls
    `placeBlock(...)`, which takes the state from `getBlockState(...)`, sets it without physics and sends it to the
    player (for types whose `isEditOnSneaking()` is true, sneaking edits the clicked block instead);
 4. unless the click was a sneak edit, reports every block that `placeBlock` returns to TheGaffer, through

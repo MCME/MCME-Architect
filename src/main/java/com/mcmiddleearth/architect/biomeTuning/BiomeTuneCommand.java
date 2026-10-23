@@ -415,15 +415,28 @@ public class BiomeTuneCommand extends AbstractArchitectCommand {
 
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, Command command, String alias, String[] args) {
+        // Only what the sender may use, by the rules onCommand applies. Nothing is an empty list, not null: on null,
+        // Bukkit would offer the names of every online player.
+        if (!PluginData.hasPermission(sender, Permission.BIOME_TUNE)) {
+            return List.of();
+        }
         String sub = args[0].toLowerCase(Locale.ROOT);
+        if (args.length > 1 && !PluginData.hasPermission(sender, permissionFor(sub, args))) {
+            return List.of();
+        }
         List<String> options = switch (args.length) {
-            case 1 -> args[0].contains(":") ? biomes(false) : FIRST_WORDS; // a biome id opens the editor
+            case 1 -> args[0].contains(":") ? biomes(false) // a biome id opens the editor
+                    : FIRST_WORDS.stream()
+                            .filter(word -> PluginData.hasPermission(sender, permissionFor(word, new String[] {word})))
+                            .toList();
             case 2 -> switch (sub) {
                 case "edit", "info", "set", "unset", "undo", "revert", "save", "label", "selftest" -> biomes(false);
                 case "copy" -> biomes(true);
                 case "preview" -> playerNames();
                 case "publish" -> List.of("world", "server");
-                case "spares" -> List.of("add");
+                // while add is typed, permissionFor sees no add yet, so its own node is checked here
+                case "spares" -> PluginData.hasPermission(sender, Permission.BIOME_TUNE_ADMIN)
+                        ? List.of("add") : List.<String>of();
                 case "debug" -> List.of("refresh", "legacylogin");
                 default -> List.<String>of();
             };

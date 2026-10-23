@@ -84,7 +84,7 @@ public class ArchitectCommand extends AbstractArchitectCommand{
                             .addFancy(ChatColor.DARK_AQUA+"/"+commandKey,
                                         clickCommand, 
                                         PluginData.getMessageUtil()
-                                                .hoverFormat("/"+commandKey+usageHelp,":",true))
+                                                .hoverFormat(splitLongWords("/"+commandKey+usageHelp),":",true))
                             .addClickable(ChatColor.WHITE+shortHelp, clickCommand);
                         if(runAtOnce) {
                             cmdLine.setRunDirect();

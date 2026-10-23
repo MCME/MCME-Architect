@@ -62,7 +62,7 @@ public class SpecialBlockThinWall extends SpecialBlockDoor {
                            final Location interactionPoint, final Player player) {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, getBlockData().getMaterial(), powered, true, hingeRight, open);
-        return List.of(blockPlace, blockPlace.getRelative(BlockFace.UP));
+        return getBlocksToPlace(blockPlace);
     }
     
    @Override

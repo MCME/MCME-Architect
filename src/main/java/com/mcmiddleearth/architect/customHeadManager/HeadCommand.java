@@ -78,6 +78,9 @@ public class HeadCommand extends AbstractArchitectCommand {
             } else {
                 messageArgs = Arrays.copyOfRange(args,1,args.length);
             }
+            if(!isListFolderAllowed(player, CustomHeadManagerData.getAcceptedHeadDir(), messageArgs)) {
+                return true;
+            }
             PluginData.getMessageUtil().sendFancyFileListMessage(player, 
                              new FancyMessage(MessageType.INFO,PluginData.getMessageUtil())
                                 .addSimple(PluginData.getMessageUtil().STRESSED+"Custom Head "
@@ -154,6 +157,9 @@ public class HeadCommand extends AbstractArchitectCommand {
                 messageArgs = new String[0];
             } else {
                 messageArgs = Arrays.copyOfRange(args,1,args.length);
+            }
+            if(!isListFolderAllowed(player, CustomHeadManagerData.getSubmittedHeadDir(), messageArgs)) {
+                return true;
             }
             PluginData.getMessageUtil().sendFancyFileListMessage(player, 
                          new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())

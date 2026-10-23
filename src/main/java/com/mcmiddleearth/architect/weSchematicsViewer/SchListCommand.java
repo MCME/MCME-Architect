@@ -52,6 +52,9 @@ public class SchListCommand extends AbstractArchitectCommand {
         }
         File baseDir = new File(ArchitectPlugin.getPluginInstance()
                                  .getDataFolder().getParent() + "/WorldEdit/schematics");
+        if(!isListFolderAllowed(player, baseDir, args)) {
+            return true;
+        }
         PluginData.getMessageUtil().sendFancyFileListMessage(player, 
                          new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
                             .addSimple(PluginData.getMessageUtil().STRESSED+"World Edit Schematics"

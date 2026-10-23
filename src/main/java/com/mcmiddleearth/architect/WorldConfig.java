@@ -346,10 +346,14 @@ public class WorldConfig {
         return configValue == null ? null : InventoryAccess.valueOf(configValue);
     }
 
+    // A type the default list does not name yet is written into it the first time it is asked about. Smokers and blast
+    // furnaces get BUILDER, as furnaces have it in a new list; any other type gets TRUE.
     private InventoryAccess createNewInventoryConfigEntry(ConfigurationSection section, String key) {
-        section.set(key, InventoryAccess.TRUE.name());
+        InventoryAccess access = (key.equals(InventoryType.SMOKER.name()) || key.equals(InventoryType.BLAST_FURNACE.name()))
+                ? InventoryAccess.BUILDER : InventoryAccess.TRUE;
+        section.set(key, access.name());
         saveDefaultConfig();
-        return InventoryAccess.TRUE;
+        return access;
     }
 
     private void createInventoryAccess(ConfigurationSection config) {
@@ -365,6 +369,8 @@ public class WorldConfig {
         section.set(InventoryType.ENCHANTING.name(), InventoryAccess.EXCEPTION.name());
         section.set(InventoryType.ENDER_CHEST.name(), InventoryAccess.TRUE.name());
         section.set(InventoryType.FURNACE.name(), InventoryAccess.BUILDER.name());
+        section.set(InventoryType.SMOKER.name(), InventoryAccess.BUILDER.name());
+        section.set(InventoryType.BLAST_FURNACE.name(), InventoryAccess.BUILDER.name());
         section.set(InventoryType.HOPPER.name(), InventoryAccess.EXCEPTION.name());
         section.set(InventoryType.PLAYER.name(), InventoryAccess.TRUE.name());
         section.set(InventoryType.WORKBENCH.name(), InventoryAccess.TRUE.name());

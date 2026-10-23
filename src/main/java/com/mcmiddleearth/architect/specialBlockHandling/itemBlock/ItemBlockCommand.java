@@ -129,6 +129,14 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
                 PluginData.getMessageUtil().sendNoPermissionError(cs);
                 return true;
             }
+            if (!ItemBlockManager.isValidRegionName(args[1])) {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Invalid name. A name may not contain / or \\.");
+                return true;
+            }
+            if (ItemBlockManager.regionFileExists(args[1])) {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "An itemblock region with that name already exists.");
+                return true;
+            }
             if (!WorldEditGuard.require(cs)) return true;
             Region weRegion = WEUtil.getSelection((Player)cs);
             if(weRegion==null) {
