@@ -67,4 +67,29 @@ public final class PathSafety {
             return false;
         }
     }
+
+    /**
+     * Whether a folder a player named, which may hold sub-folders separated by {@code /}, stays inside
+     * {@code baseDir}. Null or blank means the base itself. A {@code \} counts as {@code /} on every OS, so a
+     * Linux server and a Windows test run give the same answer. java.io puts an absolute name under the
+     * base, as the file lists do; {@code Path.resolve} would not, so it is not used here.
+     */
+    public static boolean isInsideFolder(File baseDir, String folder) {
+        if (folder == null || folder.isBlank()) {
+            return true;
+        }
+        return isInside(baseDir, new File(baseDir, folder.replace('\\', '/')));
+    }
+
+    /**
+     * Whether a player-given name can name a new file {@code name + "." + extension} directly in
+     * {@code baseDir}: not blank, no {@code /} or {@code \}, not {@code .} or {@code ..}, and inside the base.
+     */
+    public static boolean isPlainName(File baseDir, String name, String extension) {
+        if (name == null || name.isBlank() || name.indexOf('/') >= 0 || name.indexOf('\\') >= 0
+                || name.equals(".") || name.equals("..")) {
+            return false;
+        }
+        return isInside(baseDir, new File(baseDir, name + "." + extension));
+    }
 }
