@@ -986,7 +986,10 @@ inventoryAccess:
 ```
 
 **Look, but don't take.** Where `modules.protection.chestInventory` is on, a player without build permission at a
-container may open it and look, but its contents are put back as they were when they close it.
+storage container may open it and look, but cannot take, move, swap or put items. Storage containers are chests,
+barrels, shulker boxes, hoppers, droppers, dispensers, crafters, furnaces, brewing stands, lecterns, storage
+minecarts, chest boats and the inventories of mounts. In creative, copying such a container with its contents
+(Ctrl + middle-click) is refused there too. Ender chests, workstations and villager trades work as in vanilla.
 `architect.inventory.ignoreProtection` (op by default, in no bundle) lifts this.
 
 **Good to know**
@@ -2551,7 +2554,7 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `tnt` | TNT cannot be lit. |
 | `armorStand` | Armor stands are protected: mobs, projectiles, fire and fishing rods cannot harm or pull them. Players need `architect.armorStandEditor` to hit them, and also build permission to place or use them. |
 | `hangingEntity` | Paintings and item frames do not break from physics, explosions or mobs. Players need `architect.hangingEntityEditor` and build permission to place them, and to use or hit item frames. |
-| `chestInventory` | Players without build permission (and without `architect.inventory.ignoreProtection`) can look into a container, but its contents are restored when they close it. |
+| `chestInventory` | Players without build permission (and without `architect.inventory.ignoreProtection`) can look into a storage container, but cannot move items into or out of it, or copy it with its contents in creative. Ender chests, workstations and trading are not affected. |
 | `redstone` | Clicking redstone wire without build permission is undone. |
 | `lilyPad` | Boats do not break lily pads, or change any other block. |
 
