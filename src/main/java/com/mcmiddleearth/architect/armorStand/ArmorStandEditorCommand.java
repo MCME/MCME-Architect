@@ -122,7 +122,7 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                 if(args[0].equalsIgnoreCase("paste")) {
                     Vector loc = p.getLocation().toVector();
                     loc = loc.add(playerConfig.getCopiedArmorStandRelativeLoc());
-                    playerConfig.placeArmorStand(loc.toLocation(p.getWorld()),false);
+                    playerConfig.placeArmorStand(p, loc.toLocation(p.getWorld()),false);
                     return true;
                 }
                 // 'place2' debug subcommand removed (audit Phase 0): it ran an unbounded
