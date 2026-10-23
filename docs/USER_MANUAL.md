@@ -735,13 +735,13 @@ bundle.
 
 Where `modules.specialBlocks.burningFurnace` is on, any furnace, smoker or blast furnace can be set to burn for ever:
 
-1. Open it. With the default inventory access, a furnace needs `architect.inventory.open` and build permission (see
-   [Inventory access](#inventory-access)).
+1. Open it. With the default inventory access, a furnace, smoker or blast furnace needs `architect.inventory.open` and
+   build permission (see [Inventory access](#inventory-access)).
 2. Click its top slot, the input. If the slot is empty, the furnace lights: its input becomes the cod, salmon, tropical
    fish, chicken, rabbit, porkchop or mutton on your cursor (cod if you hold none of these), and its fuel coal.
 3. To put it out, click the input slot again while it holds something. The furnace goes out and is emptied.
 
-Clicking the first slot of your hotbar while a furnace is open also lights or puts out that furnace.
+Lighting or putting out a furnace needs build permission there.
 
 In such a world every furnace that finishes smelting gets its input and coal back and loses its result, so it keeps
 burning. Furnaces there cannot be used for real smelting.
@@ -972,9 +972,11 @@ world's `inventoryAccess` list gives each type one of four values:
 | `EXCEPTION` | As `BUILDER`, and only for block types a redstone exception area covers, inside such an area (see [No physics](#no-physics)). |
 
 A new file sets `ANVIL`, `CHEST`, `CRAFTING`, `CREATIVE`, `ENDER_CHEST`, `PLAYER`, `WORKBENCH` and `MERCHANT` to
-`TRUE`; `BREWING` and `FURNACE` to `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`, `ENCHANTING` and `HOPPER` to
-`EXCEPTION`; and shulker boxes to `TRUE`. A type that is not listed is added as `TRUE` the first time someone opens
-one. An inventory with no place in the world can always be opened; minecart and animal inventories follow their type's rule.
+`TRUE`; `BREWING`, `FURNACE`, `SMOKER` and `BLAST_FURNACE` to `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`,
+`ENCHANTING` and `HOPPER` to `EXCEPTION`; and shulker boxes to `TRUE`. A type that is not listed is added the first
+time someone opens one: `SMOKER` and `BLAST_FURNACE` as `BUILDER`, any other type as `TRUE`. Files written before
+3.2.1 may already list smokers and blast furnaces as `'TRUE'`: set them to `BUILDER` to protect them like furnaces. An
+inventory with no place in the world can always be opened; minecart and animal inventories follow their type's rule.
 
 ```yaml
 inventoryAccess:
@@ -2497,7 +2499,7 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `redstoneTorch` | A redstone torch named `Unlit…` places a torch on the clicked face; in 3.2.0 it comes out lit (`architect.place.torch`). |
 | `plants` | Plant items named `Placeable…` can be placed on any block (`architect.place.plant`). |
 | `pistonExtenstions` (spelt this way) | A piston named `Table…` or `Wheel…` places a piston head (`architect.place.pistonExtension`). |
-| `burningFurnace` | Furnaces that finish smelting are refilled, so they burn for ever. Clicking the input slot lights a furnace or puts it out. A furnace named `Burning…` is placed lit (`architect.place.burningFurnace`). |
+| `burningFurnace` | Furnaces that finish smelting are refilled, so they burn for ever. Clicking the input slot lights a furnace or puts it out, where the player may build. A furnace named `Burning…` is placed lit (`architect.place.burningFurnace`). |
 | `dragonEgg` | Dragon eggs never teleport. Only players in creative mode with `architect.interactDragonEgg` and build permission can break one. |
 | `doubleSlabs` | No effect in 3.2.0. |
 | `sixSidedLogs` | No effect in 3.2.0. |
@@ -2597,9 +2599,9 @@ and each takes one of these values:
 | `EXCEPTION` | As `BUILDER`, and the container must stand in a redstone exception area of `/nophy`. Those areas cover dispensers, droppers, hoppers, dyed shulker boxes, enchanting tables, beacons and undamaged anvils. |
 
 - Defaults: `ANVIL`, `CHEST`, `CRAFTING`, `CREATIVE`, `ENDER_CHEST`, `MERCHANT`, `PLAYER` and `WORKBENCH` are
-  `'TRUE'`; `BREWING` and `FURNACE` are `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`, `ENCHANTING` and `HOPPER` are
-  `EXCEPTION`. `SHULKER_BOX` is a section whose `default` is `'TRUE'`; Architect reads only `default`, not single
-  colours.
+  `'TRUE'`; `BREWING`, `FURNACE`, `SMOKER` and `BLAST_FURNACE` are `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`,
+  `ENCHANTING` and `HOPPER` are `EXCEPTION`. `SHULKER_BOX` is a section whose `default` is `'TRUE'`; Architect reads
+  only `default`, not single colours.
 - A type missing from both files is added to `defaultWorldConfig.yml` as `'TRUE'` the first time someone opens one.
 - Write the values in upper case, and quote `'TRUE'` and `'FALSE'`: unquoted, YAML reads them as true and false, which
   Architect cannot use.
@@ -3076,9 +3078,10 @@ Each entry gives the symptom, the cause and the fix.
   server, on purpose: the resource packs use redstone block states as decoration. Fix: none in 3.2.0.
 - **No mobs, no weather changes, no fire spread, no leaf decay.** Cause: the environment switches are on by default.
   Fix: switch off the ones you do not want; see [Module switches](#module-switches).
-- **Players cannot open furnaces, brewing stands, hoppers or dispensers.** Cause: `inventoryAccess` sets them to
-  `BUILDER` or `EXCEPTION`. Fix: give `architect.inventory.open` and build permission, put `EXCEPTION` containers in a
-  redstone exception area (`/nophy exception redstone <name>`), or set the type to `'TRUE'`.
+- **Players cannot open furnaces, smokers, blast furnaces, brewing stands, hoppers or dispensers.** Cause:
+  `inventoryAccess` sets them to `BUILDER` or `EXCEPTION`. Fix: give `architect.inventory.open` and build permission,
+  put `EXCEPTION` containers in a redstone exception area (`/nophy exception redstone <name>`), or set the type to
+  `'TRUE'`.
 
 ### Building tools
 
