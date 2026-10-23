@@ -107,6 +107,26 @@ class ArmorStandBuildCheckTest {
         return chat.toString();
     }
 
+    // A guard: inside the area, /armor paste places a stand at the player, as before.
+    @Test
+    void aPasteInsideTheAreaPlacesAStand() {
+        player.teleport(new Location(world, 10.5, 64, 0.5));
+
+        player.performCommand("armor paste");
+
+        assertEquals(1, stands());
+    }
+
+    // A guard: inside the area, the stick's right-click paste places a stand above the clicked block, as before.
+    @Test
+    void aStickPasteInsideTheAreaPlacesAStand() {
+        mode(ArmorStandEditorMode.PASTE);
+
+        click(Action.RIGHT_CLICK_BLOCK, stone(12, 63, 0));
+
+        assertEquals(1, stands());
+    }
+
     @Test
     void aPastedStandIsCheckedWhereItAppears() {
         player.teleport(new Location(world, 30.5, 64, 0.5));
