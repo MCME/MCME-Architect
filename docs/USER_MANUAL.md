@@ -240,9 +240,7 @@ When it is off, `/inv` answers `Custom build inventories are not enabled in this
 
 - `/inv search` opens the saved inventories, because every word that starts with `s` or `c` does. Search with
   `/inv b s:<text>`. The letters are case-sensitive: `/inv B` is refused.
-- The in-game help lists `/get delete` and `/get reload`; the commands are `/inv delete` and `/inv reload`. Its note
-  that `/inv c` falls back to the Gondor pack is out of date (see [Which pack you get](#which-pack-you-get)), and
-  `/inv i` from the usage text answers `Not implemented yet!`.
+- `/inv i` answers `Not implemented yet!`: no command opens item inventories in 3.2.0.
 
 #### Using the window
 
@@ -352,9 +350,9 @@ A private set is only hidden: `/get list` shows it to its owner alone, but anyon
 
 **Limits**
 
-- A player can have at most 11 private sets. The twelfth is refused with a message that says "max. 10".
+- A player can have at most 11 private sets; the twelfth is refused.
 - In 3.2.0, private sets can be lost once their owner has been offline for about 14 hours: the next save of the set
-  file leaves them out, and after the next restart they are gone. The help text promises 100 days. Use a public set
+  file leaves them out, and after the next restart they are gone. Use a public set
   for anything you want to keep.
 - Set names are case-sensitive, but `list`, `armor` and `help` cannot be used as set names in any case (`List` and
   `HELP` neither).
@@ -375,10 +373,8 @@ A private set is only hidden: `/get list` shows it to its owner alone, but anyon
 
 **Good to know**
 
-- The usage text lists `/get doors|logs|plants|food|head|slabs|armor|misc`. Only `head` and `armor` are subcommands;
-  the other words are read as set names and answer `Item set not found.` Their permissions (`architect.get.doors` and
-  the like) do nothing.
-- The help line for `/get unpublish` says "Make an item kit public."; it makes the set private.
+- Only `head` and `armor` are subcommands: `/get doors` and the like are read as set names and answer `Item set not
+  found.` The permissions `architect.get.doors` and the like do nothing.
 - A set keeps copies of the items. A special block in a set stops working when its entry is renamed or removed.
 - `/architect reload` reads `itemSets.yml` again, but keeps sets you deleted from the file by hand. Edit the file while
   the server is stopped.
@@ -454,9 +450,8 @@ come with the Head Designer bundle.
 
 **Good to know**
 
-- `/itemblock` without a subcommand fails with an internal error; use `/itemblock help`. The help and the plugin.yml
-  usage list only some subcommands. A radius or limit that is not a number answers
-  `You need to specify a texture number.`; a missing radius shows the help.
+- `/itemblock` without a subcommand fails with an internal error; use `/itemblock help`. A radius or limit that is not a
+  number answers `You need to specify a number.`; a missing radius shows the help.
 - A new region has limit 0: nobody without the ignore permission can place an item block in it until you set a limit.
 - `/itemblock remove` also deletes other named armor stands in range. Look first with `/itemblock glow`.
 
@@ -473,7 +468,7 @@ them with a git repository.
 > - **Changing the item during an edit.** At `To change the inventory item hold in main hand a new item and type 'ok'`,
 >   answer `!skip`, and change `itemMaterial` in the file instead.
 > - **Answering `yes` in a collection view.** At
->   `Should the … item be listed directly in the category of it's collection?`, answer `no`. When you edit an entry
+>   `Should the … item be listed directly in the category of its collection?`, answer `no`. When you edit an entry
 >   that is already in a tab, `!skip` does the same harm, so edit such entries from their tab, not from a collection
 >   view.
 >
@@ -497,17 +492,17 @@ them with a git repository.
 
 **Adding a block**
 
-1. `Type in an unique ID for the new item!`: a key that the pack does not have yet. Use letters, digits and
+1. `Type in a unique ID for the new item!`: a key that the pack does not have yet. Use letters, digits and
    underscores.
 2. `Which type of block do you want to add?`: one of the types in the table below.
-3. `Left-click a block to use for blockData<Key>.`: asked once for every state the type needs. Type a state, such as
-   `minecraft:oak_stairs[facing=north]`, or hold a prismarine shard and left-click a block in the world to copy its
-   state. The prompt does not mention the shard.
+3. `Left-click a block with a prismarine shard to use for blockData<Key>.`: asked once for every state the type needs.
+   Type a state, such as `minecraft:oak_stairs[facing=north]`, or hold a prismarine shard and left-click a block in the
+   world to copy its state.
 4. `Hold the item you want to add to custom inventory in main hand and type 'ok'.`: the item's type, custom model data
    and leather colour are taken.
 5. `Current custom model data is …`: a whole number (0 or more), or `!skip`.
-6. `Enter a description for the custom inventory:`: this is the block's name in the window, which search also uses.
-7. Only in a collection view: `Should the new inventory item be listed directly in the category of it's collection.`:
+6. `Enter a display name for the new inventory item:`: the block's name in the window, which search also uses.
+7. Only in a collection view: `Should the new inventory item be listed directly in the category of its collection?`:
    answer `no` (see the warning).
 
 The editor then saves and reloads the build inventories, and says so:
@@ -537,7 +532,7 @@ gets no tab; instead it is added to the base block's `collection`, at the slot y
 4. One question for each state: type or shard-click a new state, or `!skip`.
 5. `To change the inventory item …`: answer `!skip` (see the warning).
 6. `Current custom model data is …`: a number, or `!skip`.
-7. `Current description is …`: a new name, or `!skip`.
+7. `Current display name is …`: a new name, or `!skip`.
 8. Only in a collection view: the tab question (see the warning), then `Current item slot is <slot>.`: a slot label
    from the list, or `!skip`. A new slot swaps places with the block that is there.
 
@@ -705,7 +700,6 @@ folder names must match that form.
 - `git commit -a` does not add new files: add a new tab file to the repository by hand once.
 - `/inv download` reloads all inventories even when the script failed, and never deletes files that were removed from
   the repository.
-- The usage errors name `/rp upload` and `/rp download`; the commands are `/inv upload` and `/inv download`.
 
 ---
 
@@ -788,8 +782,7 @@ permission. Anyone else's left-click is cancelled.
   can come out differently from what the name suggests; when it matters, use the build inventory.
 - Nobody can open half a door that stands alone, in any world.
 - `Placeable` carrots and potatoes do not work, and a sticky piston never counts as a `Table` or `Wheel`.
-- plugin.yml marks `architect.interactDragonEgg` as off by default and "doesn't make sense to give to anyone", yet the
-  Adventurer bundle grants it.
+- `architect.interactDragonEgg` is off by default, yet the Adventurer bundle grants it.
 
 ### No physics
 
@@ -860,7 +853,7 @@ lit, set its state with the stick.
   the new entry: the default entries stop applying there. Add every entry the world needs. For an inherited entry,
   `remove` answers that it is not on the list.
 - The NO or ALLOW in `/nophy` replies is that of the world you stand in, not of the world you named.
-  `/nophy exception list` calls every area a redstone area and does not show its type.
+  `/nophy exception list` does not show an area's type.
 - Because neighbours no longer update, Architect does part of their work itself, wherever you may build. It connects
   newly placed fences, glass panes, walls, chests, stairs, chorus plants and redstone wire to their neighbours, each kind
   with its own switch (`modules.environment.noPhysicsConnectFences`, `…Glass`, `…Walls`, `…Chests`, `…Stairs`,
@@ -898,8 +891,8 @@ disabledBlockStates:
 
 **Good to know**
 
-- `/switchstick` turns the stick on, though its help says it disables the stick. Until you turn it on, a click only
-  says "The stick is disabled. You can turn it on with /switchstick."
+- Until you turn the stick on with `/switchstick`, a click only says "The stick is disabled. You can turn it on with
+  /switchstick."
 - Where the switch is on, every left- or right-click on a block with a stick in hand is cancelled, whether or not you
   may edit there: the stick cannot press buttons or break blocks. Doors are the exception: a right-click opens or
   closes a door as usual, so the stick cannot change a door's properties (except on doors the world's
@@ -1132,7 +1125,7 @@ scale in per cent.
 | `/armor p <name>` | Loads a saved stand into your clipboard and selects paste mode. |
 | `/armor rename <old> <new>` | Renames a file. |
 | `/armor delete <name>` | Deletes a file, or an empty folder. |
-| `/armor place` | Selects paste mode, as `/armor p` does. Its help says it places the stand; it does not. |
+| `/armor place` | Selects paste mode, as `/armor p` does. |
 
 `/armor` alone shows your mode, and `/armor help [page]` shows the help. `/armor rollback` is unfinished and does
 nothing useful yet.
@@ -1209,7 +1202,6 @@ banner. `architect.bannerEditor.save` (Artist bundle) to save. You may delete yo
 - The pattern number stays set. After a remove, the patterns above it move down one number.
 - Any word works as a mode if its first letter fits: `/banner colour` selects colour mode.
 - Your mode and pattern number are forgotten when the server restarts.
-- The help still speaks of "up to 6 different patterns"; add mode has no such limit.
 
 ### Signs
 
@@ -1241,7 +1233,6 @@ The sign editor edits sign text in place, with colours, hex colours, Tengwar or 
 **Good to know**
 
 - `&3` gives dark red and `&4` dark aqua: the other way round from the game's own codes.
-- You select with a left-click, though the error says "Right-click a sign with a stick to select it first."
 - To empty a line, send `/sign <n> &r`.
 - A line longer than 15 characters (10 on a hanging sign; codes do not count) gets a warning that it may be cut off,
   but is written anyway.
@@ -1313,7 +1304,7 @@ copied it. The undo history is kept in memory only, up to 30 steps per player; t
   counts. It is in no bundle and not listed in plugin.yml: grant it with your permissions plugin.
 - `architect.copypaste.unlimited` (op by default, in no bundle): no limit.
 
-Without a limit node or `.unlimited`, you may copy 0 blocks: "…You are allowed to copy 0 block only." So designers need
+Without a limit node or `.unlimited`, you may copy 0 blocks: "…You are allowed to copy 0 blocks only." So designers need
 a limit node as well. Take a limit away by removing its node.
 
 **Switch:** `modules.command.copypaste`. `/copy` and `/cut` need WorldEdit on the server.
@@ -1374,8 +1365,7 @@ key `allowed Materials`; Architect reads it only at startup.
 
 - `/random prob` needs exactly one number per value. Too few gives "You're missing arguments for this command.", too
   many an internal error. If they add up to less than 100, the last value gets the rest; above 100, the excess comes
-  off the last values. The subcommand is `prob`, not `probs` as the usage line says, and the help describes these
-  rules wrongly.
+  off the last values.
 - `/random range` with the larger number first ends in an internal error, unless the numbers are one apart: then every
   block gets the second number.
 - A value the block does not allow leaves the block as it was and writes an error to the log.
@@ -1418,7 +1408,7 @@ includes the viewer) for `/vv delete`; `architect.voxel.stencilListEditor` (Desi
 
 - `/sl load` cannot read a list written by `/sl save`: it ends in an internal error. To change such a list, build it
   again with `/sl create` and save over the old one.
-- `/sl save` takes no name. The help shows one, but the list is saved under its create or load name.
+- `/sl save` takes no name: the list is saved under its create or load name.
 - A folder name on its own adds nothing: use `/sl add trees/*`, not `/sl add trees`.
 - A pattern works as a regular expression once `*` becomes `.*`, so `.`, `+` and `(` have special meanings.
 - `/vv delete` says "File deleted." even when the file could not be deleted.
@@ -1457,7 +1447,7 @@ the user node as well; the Head Designer bundle holds both.
 
 | Command | What it does |
 |---|---|
-| `/chead [help [page]]` | Help. It lists only warp, list and submit. |
+| `/chead [help [page]]` | Help, with the manager subcommands marked. |
 | `/chead warp` | Teleports you to the head gallery. |
 | `/chead list [folder] [page]` | Browses the accepted heads; folders are categories. Clicking a head puts `/get head <category/name>` in the chat box. |
 | `/chead submit <headName>` | Submits your own skin as a head. |
@@ -1584,9 +1574,6 @@ their own. Needs ProtocolLib on the server. Players' own values are kept in
 
 **Good to know**
 
-- `/viewdistance default` says it gives you the server's view distance, but you get the world's `viewDistance` (255
-  unless changed).
-- Clicking `/viewdistance` in `/architect help` runs it with its usage text and fails: type the command instead.
 - Admins: do not edit `viewDistances.dat` by hand. One broken line stops Architect from starting or reloading.
 
 ### Chunk update
@@ -1603,11 +1590,10 @@ resends just that block. Only you get these updates. Clicks with the stick and t
 | Command | What it does |
 |---|---|
 | `/chunkupdate auto <world>\|-default [true\|false]` | Turns automatic updates on (`true`) or off (anything else, or nothing) in a world, or in `defaultWorldConfig.yml`. It takes effect at once. |
-| `/chunkupdate [radius]` | Does nothing in 3.2.0, although it answers "Chunk updates have been queued." |
+| `/chunkupdate [radius]` | Does nothing in 3.2.0; it answers "Manual chunk updates are not available. Rejoin to reload your chunks." |
 
 **Permissions:** `architect.chunkupdate` (Artist bundle) for `/chunkupdate`. `/chunkupdate auto` also needs
-`architect.chunkupdate.auto`, which is in no bundle and not listed in plugin.yml, so only ops have it unless you grant
-it.
+`architect.chunkupdate.auto`, which is in no bundle and defaults to op, so only ops have it unless you grant it.
 
 **Switches:** `modules.chunkupdate.manual` must be on in your world before `/chunkupdate` does anything at all;
 `modules.chunkupdate.auto` controls the automatic updates.
@@ -1663,7 +1649,7 @@ of a pack and put them live.
 | `/rp <pack> [-force]` | Loads the pack. `<pack>` is the start of the pack's name, in any case: `/rp h` and `/rp human` both load Human. With `-force`, Architect sends the pack again even if you already have it. |
 | `/rp r`, `/rp h`, `/rp l`, `/rp p`, `/rp d`, `/rp m` | Shortcuts for Rohan, Human, Lothlorien, Paths of the Dead, Dwarven (Moria) and Mordor. `/rp g` and `/rp e` load Human too: Human replaced the Gondor and Eriador packs. |
 | `/rp check` | Tells you which pack the region you stand in uses, or that there is none. |
-| `/rp [help [page]]` | Lists the shortcuts. |
+| `/rp [help [page]]` | Lists the shortcuts and every `/rp` subcommand; the admin ones are marked. |
 
 **Permission:** `architect.resourcePackSwitcher` (Adventurer bundle). `/rp check` needs no permission.
 
@@ -1725,9 +1711,7 @@ has tried the pack, you see "Resource pack loaded successfully." or a message th
 
 - Your client type is set again each time you join the network. `/rp client lite` on a vanilla client lasts until
   your next join.
-- If a pack lacks your client type or variant, you get the first one the pack lists, whatever the reply says ("the rp
-  for vanilla clients", "default variant").
-- The variant error suggests `dark`, but packs released with `/rp release` have `light` and `footprints`.
+- If a pack lacks your client type or variant, you get the first one the pack lists, as the reply says.
 - While automatic switching is on, `/rp client` and `/rp variant` also load the pack of the region you stand in,
   which replaces a pack you loaded by hand. With it off they reload your own pack, unless you switched automatic
   switching off inside a region: then they load that region's pack, wherever you are.
@@ -2149,7 +2133,6 @@ them by name.
 - `/biometune publish` followed by any word other than `server` publishes to your world.
 - The `[Publish]` and `[Save]` buttons in chat show even without those permissions. Clicking them then says you have
   no permission.
-- In `/architect help`, clicking the `/biometune` entry answers "Invalid subcommand." Type `/biometune` yourself.
 - If biome tuning cannot run on the server's Paper build, every subcommand answers "Biome tuning is unavailable on
   this server version: …".
 
@@ -2211,7 +2194,7 @@ uses its default.
 
 Biome tuning writes its log lines (saves, claims, labels, refreshes) to Architect's own log file in
 `plugins/MCME-Architect/logs/`, not to the server console, unless `logging.file.alsoServerLog` is `true`. When the
-editor says "see the server log", look in that file.
+editor says "see Architect's log", look in that file.
 
 ---
 
@@ -2310,7 +2293,7 @@ it logs, how to reload it, and the `/architect` command.
 | Paper | 26.2 | Architect is a Paper plugin for Minecraft 26.2 (`api-version: 26.2`). |
 | Java | 25 | The jar is compiled for Java 25, the Java that Paper 26.2 runs on. |
 | PluginUtils | 2.0.5 or later | MCME's shared plugin library: chat messages and clickable lists, WorldEdit selections, number and file helpers, and a second debug channel. plugin.yml declares it as a hard dependency, so the server does not enable Architect without it. Architect is built against 2.0.4, but on Minecraft 26.2 clickable chat lines (help pages, lists, buttons) work only from 2.0.5. |
-| WorldEdit | 7.4.5, the version Architect is built against | Selections for `/copy`, `/cut`, `/nophy exception`, `/rp create` and `/itemblock create`, and the shapes of RP regions and item block regions. plugin.yml does not declare WorldEdit, so the server enables Architect without it. Treat it as required all the same: without it those commands answer `This feature needs WorldEdit, which isn't available on this server version yet.`, and Architect cannot load the saved RP regions and item block regions. No-physics exception areas still load and work. |
+| WorldEdit | 7.4.5, the version Architect is built against | Selections for `/copy`, `/cut`, `/nophy exception`, `/rp create` and `/itemblock create`, and the shapes of RP regions and item block regions. plugin.yml does not declare WorldEdit, so the server enables Architect without it. Treat it as required all the same: without it those commands answer `This feature needs WorldEdit, which is not installed on this server.`, and Architect cannot load the saved RP regions and item block regions. No-physics exception areas still load and work. |
 
 **Optional**
 
@@ -2839,7 +2822,7 @@ without a restart leaves live biome edits in the game while Architect forgets th
 
 | Syntax | Who may use it | What it does |
 |---|---|---|
-| `/architect`, `/architect help [page]` | players with `architect.help` (everyone by default) | Lists the Architect commands you may use, ten per page, with clickable lines. Careful: clicking the lines of `/copy`, `/cut`, `/paste`, `/undo`, `/redo` and `/flip` runs that command at once, and the `/rot` line runs `/rotate`, which is not Architect's. |
+| `/architect`, `/architect help [page]` | players with `architect.help` (everyone by default) | Lists the Architect commands you may use, ten per page, with clickable lines. Careful: clicking the lines of `/copy`, `/cut`, `/paste`, `/undo`, `/redo` and `/flip` runs that command at once. |
 | `/architect version` | the console, `architect.reload` | Shows Architect's version, for example `Version: 3.2.0`. |
 | `/architect reload` | the console, `architect.reload` | Reloads Architect's settings and data; see [Reloading](#reloading). |
 | `/architect reloaddata` | the console, `architect.reload` | Reloads the server's data packs (loot tables, advancements and the like). Not Architect's own data. |
@@ -2853,7 +2836,6 @@ without a restart leaves live biome edits in the game while Architect forgets th
 | `/architect placeAllBlockStates [file]` | players with `architect.reload` | A developer tool. Places every state of every block type in a large grid next to you, with no undo: never use it in a build world. With `file`, it places nothing and writes the list to `blockList.txt` in the server's main folder. |
 
 - `architect.reload` allows everything that `architect.info` allows.
-- plugin.yml's text says `architect.info` covers `version`; in 3.2.0 `version` needs `architect.reload`.
 - Senders that are neither the console nor a player, such as command blocks and RCON, can use only `checkNBT`, and
   `maplayers refresh` if they hold `architect.maplayers`.
 
@@ -2880,7 +2862,7 @@ for example `/mcme-architect:undo`, which helps when another plugin has a comman
 | `/itemblock` | `/itemblock help`, `stats <radius> [height]`, `glow <radius>\|off`, `remove <radius> [height]`, `list`, `create <name>`, `delete <name>`, `limit <name> <n>`, `limit -base <n>` | Item block counts, glow and clean-up (`remove` removes every named armor stand in the box), and item block limit regions. | `architect.itemBlock`, plus `architect.itemBlock.remove` for `remove`, `architect.itemBlock.region.create` for `create` and `delete`, and `architect.itemBlock.region.limit` for `limit` | [Blocks and inventories](#blocks-and-inventories) |
 | `/nophy` | `/nophy list <world\|-default>`, `/nophy add\|remove <world\|-default> <block>`, `/nophy exception redstone\|water <name>`, `/nophy exception delete <name>`, `/nophy exception list [page]`, `/nophy help [page]` | Shows and edits the no-physics list; manages exception areas. | `architect.noPhysicsList.view`, plus `architect.noPhysicsList.edit` for `add` and `remove`, and `architect.noPhysicsList.exception` for `exception` | [Placing and physics](#placing-and-physics) |
 | `/chunkupdate` | `/chunkupdate [radius]`, `/chunkupdate auto <world\|-default> [true]` | The radius form does nothing in 3.2.0. `auto` switches automatic block resends on (with `true`) or off. | `architect.chunkupdate`, plus `architect.chunkupdate.auto` for `auto` | [Seeing and moving](#seeing-and-moving) |
-| `/switchstick` (`/swst`, `/ss`) | `/switchstick [help]` | Switches your stick's block-state editing on or off. It is off until you first run this (plugin.yml's description says the opposite). | `architect.switchstick` | [Placing and physics](#placing-and-physics) |
+| `/switchstick` (`/swst`, `/ss`) | `/switchstick [help]` | Switches your stick's block-state editing on or off. It is off until you first run this. | `architect.switchstick` | [Placing and physics](#placing-and-physics) |
 | `/weselect` (`/wes`) | `/weselect <command>`, `/weselect shift <command>`, `/weselect show`, `/weselect reset`, `/weselect help [page]` | Sets the command that flint clicks put in your chat box, for a click and a sneak-click; `#` becomes the block data. | `architect.weselect` | [Placing and physics](#placing-and-physics) |
 | `/sign` | `/sign <1-4> <text>`, `/sign glow true\|false` | Changes a line of the sign you selected with a stick; switches glowing text. | `architect.signEditor` | [Editing tools](#editing-tools) |
 | `/banner` | `/banner [help [page]]`, `/banner <n>`, `/banner <mode> [n]`, `/banner save <file> <description>`, `/banner load <file>`, `/banner delete <file>`, `/banner files [folder] [page]` | Chooses what a stick click does to a banner; saves and loads banner designs. | `architect.bannerEditor`, plus `architect.bannerEditor.save` for `save`, and `architect.bannerEditor.delete` to delete other players' files | [Editing tools](#editing-tools) |
@@ -2938,7 +2920,7 @@ No bundle grants these nodes:
 - `architect.invisibleBlocks`, `architect.lecternEditor`, `architect.inventory.ignoreProtection`,
   `architect.checknbt`;
 - the copy size: `architect.copypaste.unlimited` and `architect.copypaste.limit.<n>`;
-- `architect.chunkupdate.auto` and `architect.armorStandRollback`, which plugin.yml does not declare;
+- `architect.chunkupdate.auto` and `architect.armorStandRollback`;
 - `architect.itemTexture`, which has no effect.
 
 Notes:
@@ -2962,6 +2944,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.armorStandEditor` | op | adventurer | `/armor`: every mode, copy and paste, listing and loading saved stands. Where armor stand protection is on, also hitting armor stands, and placing and using them (with build permission). |
 | `architect.armorStandEditor.delete` | op | head designer | Renaming and deleting other players' saved armor stands. |
 | `architect.armorStandEditor.trusted` | op | artist | Saving armor stands to files, renaming and deleting your own files. Includes `architect.armorStandEditor`. |
+| `architect.armorStandRollback` | op | — | `/armor rollback`, which is unfinished in 3.2.0: it does not roll anything back. |
 | `architect.bannerEditor` | op | adventurer | `/banner`, editing banners with a stick (with build permission), and deleting your own banner files. |
 | `architect.bannerEditor.delete` | op | head designer | Deleting other players' banner files. |
 | `architect.bannerEditor.save` | op | artist | `/banner save`. Includes `architect.bannerEditor`. |
@@ -2971,6 +2954,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.biomeTune.save` | op | — | `/biometune save`: writing a biome to its datapack file. |
 | `architect.checknbt` | op | — | `/architect checkNBT`. |
 | `architect.chunkupdate` | op | artist | `/chunkupdate`, which does nothing in 3.2.0. Also needed for `/chunkupdate auto`. |
+| `architect.chunkupdate.auto` | op | — | `/chunkupdate auto`, together with `architect.chunkupdate`. |
 | `architect.copypaste` | op | designer | `/copy`, `/cut`, `/paste`, `/undo`, `/redo`, `/flip` and `/rot`. |
 | `architect.copypaste.unlimited` | op | — | Copying and cutting selections of any size. |
 | `architect.customHeadManager.manager` | op | head designer | `/chead` `reviewList`, `review`, `accept`, `reject`, `delete`, `rename`, `setCollection`, `reload` and `upload`. Needs `architect.customHeadManager.user` as well. |
@@ -3007,6 +2991,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.itemBlock.region.limit` | op | head designer | `/itemblock limit`, for regions and for the world's base limit. |
 | `architect.itemBlock.remove` | op | head designer | `/itemblock remove`. |
 | `architect.itemTexture` | op | — | No effect in 3.2.0. |
+| `architect.itemTexture.manager` | op | — | No effect in 3.2.0. |
 | `architect.lecternEditor` | op | — | Taking a lectern's book (not a copy) and putting books on lecterns, without build permission. |
 | `architect.maplayers` | op | head designer | `/architect maplayers refresh`. |
 | `architect.noPhysicsList.edit` | op | head designer | `/nophy add` and `/nophy remove`. Includes `architect.noPhysicsList.view`. |
@@ -3038,20 +3023,12 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.weselect` | op | artist | `/weselect`. |
 | `pluginutil.developer` (PluginUtils) | op | — | PluginUtils' `/dev`, including `/dev MCME-Architect`. |
 
-**Nodes the code checks that plugin.yml does not declare.** Bukkit gives an undeclared node to ops only, unless a
+**A node the code checks that plugin.yml cannot declare.** Bukkit gives an undeclared node to ops only, unless a
 permissions plugin grants it.
 
 | Node | Default | What it allows |
 |---|---|---|
 | `architect.copypaste.limit.<n>` | not set | `/copy` and `/cut` of selections up to `<n>` blocks, for example `architect.copypaste.limit.50000`. The highest `<n>` among a player's nodes applies; with none, the limit is 0. Ops have no limit node, but they have `architect.copypaste.unlimited`. |
-| `architect.chunkupdate.auto` | op | `/chunkupdate auto`, together with `architect.chunkupdate`. |
-| `architect.armorStandRollback` | op | `/armor rollback`, which is unfinished in 3.2.0: it does not roll anything back. |
-| `architect.itemTexture.manager` | op | No effect in 3.2.0. |
-
-Where plugin.yml's descriptions differ from the table above, the table follows the code. For example,
-`architect.copypaste` covers all seven copy and paste commands, `architect.cycleBlocks` edits any block state (not
-only plant growth), and `architect.inventory.open` matters for furnaces and enchanting tables, not for anvils, which
-everyone may open by default.
 
 ---
 
@@ -3101,13 +3078,13 @@ Each entry gives the symptom, the cause and the fix.
 
 ### Building tools
 
-- **`/copy` says "You are allowed to copy 0 block only."** Cause: the player has no `architect.copypaste.limit.<n>`
+- **`/copy` says "You are allowed to copy 0 blocks only."** Cause: the player has no `architect.copypaste.limit.<n>`
   node; no bundle grants one. Fix: grant `architect.copypaste.limit.<n>` with a large enough `<n>`, or
   `architect.copypaste.unlimited`.
 - **`/undo` or `/redo` acts on WorldEdit's history instead.** Cause: WorldEdit has commands with the same names. Fix:
   use `/un` and `/re`, or `/mcme-architect:undo` and `/mcme-architect:redo`.
-- **Commands answer "This feature needs WorldEdit, which isn't available on this server version yet."** Cause:
-  WorldEdit is not installed. The message is old: WorldEdit runs on Paper 26.2. Fix: install WorldEdit and restart.
+- **Commands answer "This feature needs WorldEdit, which is not installed on this server."** Cause: WorldEdit is not
+  installed. Fix: install WorldEdit and restart.
 - **The stick says "The stick is disabled. You can turn it on with /switchstick."** Cause: each player's stick starts
   off. Fix: run `/switchstick` once.
 - **With a stick in hand, doors, buttons and block breaking do nothing.** Cause: where `modules.command.cycleBlocks` is
@@ -3122,8 +3099,8 @@ Each entry gives the symptom, the cause and the fix.
   than in the editor.
 - **Item blocks are refused everywhere in a new item block region.** Cause: `/itemblock create` makes a region with
   limit 0. Fix: `/itemblock limit <name> <n>`.
-- **`/chunkupdate` says "Chunk updates have been queued." but nothing changes.** Cause: the command does nothing in
-  3.2.0. Automatic resends (`modules.chunkupdate.auto`) still work. Fix: rejoin, so the client loads the chunks again.
+- **`/chunkupdate` says "Manual chunk updates are not available."** Cause: the radius form does nothing in 3.2.0.
+  Automatic resends (`modules.chunkupdate.auto`) still work. Fix: rejoin, so the client loads the chunks again.
 - **`/inv upload` fails at once with `exitCode=-1`.** Cause: `config.yml` has no `inventoryUpload` section (the bundled
   file has none), or the server runs Windows. Fix: add `inventoryUpload` with `script` and `path`, on a Linux server.
 - **`/chead warp` says there is no gallery after a restart.** Cause: Architect starts before the worlds load, so it

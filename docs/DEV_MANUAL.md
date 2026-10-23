@@ -697,7 +697,7 @@ The server needs WorldEdit 7.4, but `plugin.yml` lists it in neither `depend` no
   `/itemblock create`. The RP region editor's `setborder` checks `WorldEditGuard.isAvailable()` with its own message.
 - RP regions and item-block regions are WorldEdit `Region` objects, and `loadData()` loads their files, so start-up
   touches WorldEdit classes. In tests, build regions on `NullWorld` (see [MockBukkit lessons](#mockbukkit-lessons)).
-- The comment and the player message in `WorldEditGuard` still say no 26.x WorldEdit exists. That is out of date.
+- The comment in `WorldEditGuard` still says no 26.x WorldEdit exists. That is out of date.
 
 ### ProtocolLib
 
@@ -1079,7 +1079,8 @@ again when the player joins (`ClipboardPlayerListener`).
    final classes, collaborators passed in, and interfaces where a test needs a seam.
 
 2. **`plugin.yml`.** Declare the command, without `permission:` (Architect checks permissions in the executor), and the
-   permission, with `description:`. Many older entries say `descriptions:`, which Bukkit ignores; do not copy them.
+   permission, with `description:`. Bukkit ignores a misspelt key such as `descriptions:` without a warning;
+   `PluginYmlPermissionsTest` fails when a permission has no description.
 
    ```yaml
    commands:
@@ -1095,8 +1096,8 @@ again when the player joins (`ClipboardPlayerListener`).
 
 3. **The permission node.** Add it to the `Permission` enum. Make it a child of a rank bundle
    (`architect.ranks.adventurer`, `artist`, `designer` or `headDesigner`; each includes the one below) if everyone of
-   that rank should have it. `PluginYmlPermissionsTest` fails when a child is not declared. A node that is checked but
-   not declared falls back to ops only.
+   that rank should have it. `PluginYmlPermissionsTest` fails when a child or a node of the `Permission` enum is not
+   declared. A node that is checked but not declared falls back to ops only.
 
 4. **The executor.** Extend `AbstractArchitectCommand`:
 
