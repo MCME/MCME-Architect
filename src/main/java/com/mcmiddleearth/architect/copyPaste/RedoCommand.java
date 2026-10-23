@@ -46,7 +46,7 @@ public class RedoCommand extends AbstractArchitectCommand {
         int redid;
         try {
             redid = CopyPasteManager.redoEdits(player, redos);
-            PluginData.getMessageUtil().sendInfoMessage(cs, "Successuly restored "+redid+" edit"+(redid!=1?"s":"")+".");
+            PluginData.getMessageUtil().sendInfoMessage(cs, "Successfully restored "+redid+" edit"+(redid!=1?"s":"")+".");
         } catch (CopyPasteException ex) {
             PluginData.getMessageUtil().sendErrorMessage(cs, ex.getMessage());
         }

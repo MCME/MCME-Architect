@@ -131,7 +131,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
                         page = NumericUtil.getInt(args[2]);
                     }
                     PluginData.getMessageUtil().sendFancyListMessage(p, 
-                                new FancyMessage(PluginData.getMessageUtil()).addSimple("Redstone Circuit Areas: "),
+                                new FancyMessage(PluginData.getMessageUtil()).addSimple("Exception Areas: "),
                                 getExceptionAreaList(),
                                 "/nophy exception list", page);
                 } else {
@@ -267,7 +267,7 @@ public class NoPhysicsCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return ": Manages lists of blocks which will be affected by game physics. \n "
+        return ": Manages the no-physics lists and their exception areas. \n "
                 +ChatColor.WHITE+"Click for detailed help.";
     }
     

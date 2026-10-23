@@ -82,11 +82,11 @@ public class ChunkUpdateCommand extends AbstractArchitectCommand {
     }
 
     private void sendNotEnabledErrorMessage(CommandSender sender) {
-        PluginData.getMessageUtil().sendErrorMessage(sender,"Chunk updates is not enabled for this world.");
+        PluginData.getMessageUtil().sendErrorMessage(sender,"Chunk updates are not enabled for this world.");
     }
 
     private void sendChunkUpdateMessage(Player p) {
-        PluginData.getMessageUtil().sendInfoMessage(p,"Chunk updates have been queued.");
+        PluginData.getMessageUtil().sendInfoMessage(p,"Manual chunk updates are not available. Rejoin to reload your chunks.");
     }
 
     private void sendAutoChunkUpdateMessage(Player p, boolean enable) {
@@ -101,12 +101,12 @@ public class ChunkUpdateCommand extends AbstractArchitectCommand {
 
     @Override
     public String getShortDescription() {
-        return ": Updates chunks around you.";
+        return ": Switches automatic chunk updates.";
     }
 
     @Override
     public String getUsageDescription() {
-        return ": Resends the chunks around you to all players in area. Use to remove client side glitches.";
+        return " [radius] | auto <world>|-default [true]: 'auto' switches automatic chunk updates on (true) or off in a world, or in the default config. The radius form does nothing at the moment.";
     }
     
     private void sendWorldNotFoundMessage(Player p) {

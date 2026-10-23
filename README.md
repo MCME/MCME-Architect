@@ -12,7 +12,7 @@ behave on the build server and gives builders the tools to build Middle-earth:
 
 ## Status
 
-**3.2.0** (October 2026) is the current release, for Paper 26.2, and it runs on MCME's servers. `master` holds the
+**3.2.1** (October 2026) is the current release, for Paper 26.2, and it runs on MCME's servers. `master` holds the
 releases; the next version is built on `development`.
 
 ## Features

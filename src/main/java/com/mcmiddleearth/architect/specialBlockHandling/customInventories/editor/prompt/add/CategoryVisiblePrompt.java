@@ -18,7 +18,7 @@ public class CategoryVisiblePrompt extends FixedSetPrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Should the new inventory item be listed directly in the category of it's collection. "+formatFixedSet();
+        return "Should the new inventory item be listed directly in the category of its collection? "+formatFixedSet();
     }
 
     @Override

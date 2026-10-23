@@ -129,6 +129,14 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
                 PluginData.getMessageUtil().sendNoPermissionError(cs);
                 return true;
             }
+            if (!ItemBlockManager.isValidRegionName(args[1])) {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Invalid name. A name may not contain / or \\.");
+                return true;
+            }
+            if (ItemBlockManager.regionFileExists(args[1])) {
+                PluginData.getMessageUtil().sendErrorMessage(cs, "An itemblock region with that name already exists.");
+                return true;
+            }
             if (!WorldEditGuard.require(cs)) return true;
             Region weRegion = WEUtil.getSelection((Player)cs);
             if(weRegion==null) {
@@ -198,11 +206,11 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
     }
     
     private void sendItemRemovedMessage(CommandSender cs) {
-        PluginData.getMessageUtil().sendInfoMessage(cs, "Item block armor stands removed.");
+        PluginData.getMessageUtil().sendInfoMessage(cs, "Named armor stands removed.");
     }
     
     private void sendNotANumberMessage(Player p) {
-        PluginData.getMessageUtil().sendErrorMessage(p, "You need to specify a texture number.");
+        PluginData.getMessageUtil().sendErrorMessage(p, "You need to specify a number.");
     }
     
     @Override
@@ -216,7 +224,7 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
     }
     @Override
     public String getUsageDescription() {
-        return " remove <radius> | list|create|remove|limit <region> [limit]: Removes all item block armor stands within <radius> blocks around you and manages item block limit regions.";
+        return " <subcommand>: stats, glow, remove, list, create, delete or limit. Counts, highlights or removes the named armor stands around you, and manages item block limit regions. \n "+ChatColor.WHITE+"Click for detailed help.";
     }
     
     @Override
@@ -227,7 +235,13 @@ public class ItemBlockCommand extends AbstractArchitectCommand {
     @Override
     protected void sendHelpMessage(Player player, int page) {
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"Item block command -";
-        help = new String[][]{{getUsageDescription(),"    ","    ","    "}};
+        help = new String[][]{{"/itemblock stats ","<radius> [height]",": Counts the named armor stands around you."},
+                              {"/itemblock glow ","<radius>|off",": Makes the armor stands around you glow, or stops it."},
+                              {"/itemblock remove ","<radius> [height]",": Removes every named armor stand around you,"," not only those of item blocks."},
+                              {"/itemblock list","",": Lists the item block limit regions."},
+                              {"/itemblock create ","<name>",": Creates a limit region from your WE selection."},
+                              {"/itemblock delete ","<name>",": Deletes a limit region."},
+                              {"/itemblock limit ","<name>|-base <limit>",": Sets a region's limit, or the base limit of your world."}};
         super.sendHelpMessage(player, page);
     }
     

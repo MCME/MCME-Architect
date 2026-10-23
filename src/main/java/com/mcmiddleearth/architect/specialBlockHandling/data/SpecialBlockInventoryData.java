@@ -149,7 +149,7 @@ public class SpecialBlockInventoryData {
     }
     
     private static void loadFromFile(String rpName, File file) {
-        DevUtil.log(1,"Loading items into to inventory for resource pack "+rpName+" from "+file.getName());
+        DevUtil.log(1,"Loading items into inventory for resource pack "+rpName+" from "+file.getName());
         CustomInventory inventory = inventories.get(rpName);
         SearchInventory searchInventory = searchInventories.get(rpName);
         YamlConfiguration config = new YamlConfiguration();
@@ -169,7 +169,7 @@ public class SpecialBlockInventoryData {
             DevUtil.log(2, "Loading category items.");
             for(String itemKey : config.getStringList("Main")) {
                 if(getSpecialBlock(fullName(rpName, itemKey))!=null) {
-                    DevUtil.log(2, "Error. Double custom block ID "+fullName(rpName,itemKey)+"'. Block skipped.");
+                    DevUtil.log(2, "Error. Double custom block ID '"+fullName(rpName,itemKey)+"'. Block skipped.");
                 } else {
                     addSpecialBlock(inventory, searchInventory, categoryName, itemConfig, rpName, itemKey);
                 }
@@ -177,7 +177,7 @@ public class SpecialBlockInventoryData {
             DevUtil.log(2, "Loading uncategorized items.");
             for(String itemKey: itemConfig.getKeys(false)) {
                 if(getSpecialBlock(fullName(rpName, itemKey))!=null) {
-                    DevUtil.log(2, "Warning. Double custom block ID "+fullName(rpName,itemKey)
+                    DevUtil.log(2, "Warning. Double custom block ID '"+fullName(rpName,itemKey)
                             +"'. Maybe that Block was already loaded from Main lists?");
                 } else {
                     addSpecialBlock(inventory, searchInventory, null, itemConfig, rpName, itemKey);
@@ -201,7 +201,7 @@ public class SpecialBlockInventoryData {
                 String typeName = section.getString("type");
                 if (typeName == null) {
                     typeName = "VANILLA";
-                    DevUtil.log(2, "Waring, missing block type for: " + fullName(rpName, itemKey));
+                    DevUtil.log(2, "Warning, missing block type for: " + fullName(rpName, itemKey));
                 }
                 type = SpecialBlockType.valueOf(typeName);
             } catch (IllegalArgumentException e) {

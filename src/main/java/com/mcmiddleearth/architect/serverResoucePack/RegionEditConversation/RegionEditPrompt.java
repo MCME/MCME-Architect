@@ -75,7 +75,7 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                     RpManager.updateDynmapRegions();
                     return new ResponsePrompt("Region weight set to: "+words[1]);
                 } else {
-                    return new ResponsePrompt("Weight must be a number greater 0.");
+                    return new ResponsePrompt("Weight must be a number greater than 0.");
                 }
             case "rp":
                 if(words.length<2) {
@@ -115,7 +115,7 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 return new ResponsePrompt(info);
             case "setborder":
                 if (!WorldEditGuard.isAvailable()) {
-                    return new ResponsePrompt(ccError+"This feature needs WorldEdit, which isn't available on this server version yet.");
+                    return new ResponsePrompt(ccError+"This feature needs WorldEdit, which is not installed on this server.");
                 }
                 Region newWeRegion = WEUtil.getSelection(getPlayer(cc));
                 if(newWeRegion!=null) {
@@ -194,6 +194,13 @@ public class RegionEditPrompt extends StringPrompt implements ConversationAbando
                 }
                 RpRegion region = RpManager.getRegion(words[1]);
                 if(region!=null) {
+                    return new ResponsePrompt(ccError+"A region with that name already exists.");
+                }
+                // Checked before the old file is removed, so a refused name keeps the region as it was.
+                if(!RpManager.isValidRegionName(words[1])) {
+                    return new ResponsePrompt(ccError+"Invalid name. A name may not contain / or \\.");
+                }
+                if(RpManager.regionFileExists(words[1])) {
                     return new ResponsePrompt(ccError+"A region with that name already exists.");
                 }
                 region = getRegion(cc);

@@ -61,6 +61,9 @@ public class VvCommand extends AbstractArchitectCommand {
             } else {
                 messageArgs = Arrays.copyOfRange(args,1,args.length);
             }
+            if(!isListFolderAllowed(player, VoxelConstants.STENCIL_LISTS_DIR, messageArgs)) {
+                return true;
+            }
             PluginData.getMessageUtil().sendFancyFileListMessage(player, 
                          new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
                             .addSimple(PluginData.getMessageUtil().HIGHLIGHT_STRESSED+"Stencil Lists"
@@ -71,13 +74,17 @@ public class VvCommand extends AbstractArchitectCommand {
                          "/vv list", 
                          "/b sl", true);
         } else if(args[0].toLowerCase().startsWith("stencil")) {
+            String[] messageArgs = Arrays.copyOfRange(args,1,args.length);
+            if(!isListFolderAllowed(player, VoxelConstants.STENCILS_DIR, messageArgs)) {
+                return true;
+            }
             PluginData.getMessageUtil().sendFancyFileListMessage(player, 
                          new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
                             .addSimple(PluginData.getMessageUtil().STRESSED+"Voxel Stencils"
                                     + PluginData.getMessageUtil().INFO +" /"), 
                          VoxelConstants.STENCILS_DIR, 
                          FileUtil.getFileExtFilter(VoxelConstants.STENCIL_EXT), 
-                         Arrays.copyOfRange(args,1,args.length),
+                         messageArgs,
                          "/vv stencil", 
                          "/b st", true);
         } else if(args[0].equalsIgnoreCase("delete")) {

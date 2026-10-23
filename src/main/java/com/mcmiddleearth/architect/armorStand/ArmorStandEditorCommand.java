@@ -95,13 +95,17 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                     return true;
                 }
                 if(args[0].equalsIgnoreCase("files")) {
+                    String[] listArgs = Arrays.copyOfRange(args, 1, args.length);
+                    if(!isListFolderAllowed(p, ArmorStandEditorConfig.getDataDir(), listArgs)) {
+                        return true;
+                    }
                     PluginData.getMessageUtil().sendFancyFileListMessage(p,
                                     new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
                                             .addSimple(PluginData.getMessageUtil().STRESSED+"Armor Stand "
                                                       +PluginData.getMessageUtil().INFO+"files /"),
                                     ArmorStandEditorConfig.getDataDir(),
                                     FileUtil.getFileExtFilter(ArmorStandEditorConfig.getFileExtension()),
-                                    Arrays.copyOfRange(args, 1, args.length), 
+                                    listArgs,
                                     "/armor files", 
                                     "/armor p", 
                                     true);
@@ -118,7 +122,7 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
                 if(args[0].equalsIgnoreCase("paste")) {
                     Vector loc = p.getLocation().toVector();
                     loc = loc.add(playerConfig.getCopiedArmorStandRelativeLoc());
-                    playerConfig.placeArmorStand(loc.toLocation(p.getWorld()),false);
+                    playerConfig.placeArmorStand(p, loc.toLocation(p.getWorld()),false);
                     return true;
                 }
                 // 'place2' debug subcommand removed (audit Phase 0): it ran an unbounded
@@ -330,7 +334,7 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
     }
 
     private void sendCopiedArmorStandClearedMessage(CommandSender cs) {
-        PluginData.getMessageUtil().sendInfoMessage(cs, "armor stand clippboard was cleared.");
+        PluginData.getMessageUtil().sendInfoMessage(cs, "Armor stand clipboard was cleared.");
     }
 
     private void sendPartsHelpMessage(CommandSender cs) {
@@ -356,7 +360,7 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
     }
 
     private void sendExistsMessage(CommandSender cs) {
-        PluginData.getMessageUtil().sendErrorMessage(cs, "File already exists. Delete first.");
+        PluginData.getMessageUtil().sendErrorMessage(cs, "File already exists, or the file name is not allowed.");
     }
 
     private void sendCopyFirstMessage(CommandSender cs) {
@@ -417,10 +421,16 @@ public class ArmorStandEditorCommand extends AbstractArchitectCommand {
         List<String[]> helpList = new ArrayList<>();
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"Armor Stand Editor -";
         help = new String[][]{{"/armor parts","",": Shows help about armor stand parts."},
-                              {"/armor place","",": Places copied armor stand."},
+                              {"/armor paste","",": Places copied armor stand at once,"," at the same offset from you as when you copied it."},
                               {"/armor clear","",": Clears copied armor stand."},
                               {"/armor save ","<filename> <description>",": Saves armor stand."},
-                              {"/armor files ","[folder]",": Shows saved armor stands."}};
+                              {"/armor files ","[folder]",": Shows saved armor stands."},
+                              {"/armor rename ","<filename> <newName>",": Renames a saved armor stand."},
+                              {"/armor delete ","<filename>",": Deletes a saved armor stand."},
+                              {"/armor ","<1-360>",": Sets the step size."," Degrees for rotations, 1/100 block for moves, percent for scale."},
+                              {"/armor +","",": Raises the step size by one."},
+                              {"/armor -","",": Lowers the step size by one (not below 2)."},
+                              {"/armor default","",": Sets the step size back to 10."}};
         helpList.addAll(Arrays.asList(help));
             for(ArmorStandEditorMode mode: ArmorStandEditorMode.values()) {
                 helpList.add(new String[]{"/armor "+mode.getName(),mode.getArguments(),mode.getHelpText()});

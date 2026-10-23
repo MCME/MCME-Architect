@@ -84,7 +84,7 @@ public class ArchitectCommand extends AbstractArchitectCommand{
                             .addFancy(ChatColor.DARK_AQUA+"/"+commandKey,
                                         clickCommand, 
                                         PluginData.getMessageUtil()
-                                                .hoverFormat("/"+commandKey+usageHelp,":",true))
+                                                .hoverFormat(splitLongWords("/"+commandKey+usageHelp),":",true))
                             .addClickable(ChatColor.WHITE+shortHelp, clickCommand);
                         if(runAtOnce) {
                             cmdLine.setRunDirect();
@@ -324,7 +324,7 @@ public class ArchitectCommand extends AbstractArchitectCommand{
     
    private void sendManualMessage(CommandSender cs) {
         cs.sendMessage(PluginData.getMessageUtil().HIGHLIGHT_STRESSED
-                +"http://www.mcmiddleearth.com/resources/mcme-architect-manual.95");
+                +"https://github.com/MCME/MCME-Architect/blob/master/docs/USER_MANUAL.md");
     }
 
 
@@ -359,7 +359,7 @@ public class ArchitectCommand extends AbstractArchitectCommand{
 
     @Override
     public String getUsageDescription() {
-        return " help | world | dev | version | reload | maplayers refresh [#page]: Argument 'help' shows information about Architect commands. 'world' shows a list of all server worlds. 'dev' switches on/off debug messages. 'version' displays Architect version. 'reload' reloads Architect plugin. 'maplayers refresh' redraws Architect's web-map layers.";
+        return " [subcommand]: 'help [page]' lists the Architect commands you may use. Staff tools: world, blockdata, dev, version, reload, reloaddata, checkNBT, weather, eLog and maplayers refresh.";
     }
 
 }

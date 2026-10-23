@@ -70,7 +70,12 @@ public class SpecialBlockDoorFourBlocks extends SpecialBlockDoor {
         final Location playerLoc = player.getLocation();
         placeDoor(blockPlace, playerLoc, lowerMaterial, lowerPowered, false, false, false);
         placeDoor(blockPlace.getRelative(BlockFace.UP,2), playerLoc, upperMaterial, upperPowered, false, false, false);
-        // the two halves of each door
+        return getBlocksToPlace(blockPlace);
+    }
+
+    /** The two halves of each door. */
+    @Override
+    public List<Block> getBlocksToPlace(Block blockPlace) {
         return List.of(blockPlace, blockPlace.getRelative(BlockFace.UP), blockPlace.getRelative(BlockFace.UP, 2),
                        blockPlace.getRelative(BlockFace.UP, 3));
     }

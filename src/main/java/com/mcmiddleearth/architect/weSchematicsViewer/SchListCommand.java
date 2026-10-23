@@ -52,6 +52,9 @@ public class SchListCommand extends AbstractArchitectCommand {
         }
         File baseDir = new File(ArchitectPlugin.getPluginInstance()
                                  .getDataFolder().getParent() + "/WorldEdit/schematics");
+        if(!isListFolderAllowed(player, baseDir, args)) {
+            return true;
+        }
         PluginData.getMessageUtil().sendFancyFileListMessage(player, 
                          new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
                             .addSimple(PluginData.getMessageUtil().STRESSED+"World Edit Schematics"
@@ -80,7 +83,7 @@ public class SchListCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return " [#page]: Lists all WE schematics, you can click at folder names to navigate into them.";
+        return " [folder] [page]: Lists all WE schematics, you can click at folder names to navigate into them.";
     }
     
     @Override

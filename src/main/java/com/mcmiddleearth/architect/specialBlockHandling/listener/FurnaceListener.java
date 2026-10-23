@@ -20,10 +20,12 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.watcher.WatchedListener;
+import com.mcmiddleearth.util.TheGafferUtil;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Furnace;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.inventory.FurnaceSmeltEvent;
@@ -81,8 +83,14 @@ public class FurnaceListener extends WatchedListener{
             return;
         }
         InventoryHolder holder = event.getInventory().getHolder();
-        if(holder instanceof Furnace && event.getSlot()==0 && event.getResult().equals(Event.Result.ALLOW)) {
+        // The raw slot: getSlot() is 0 for the first hotbar slot too.
+        if(holder instanceof Furnace && event.getRawSlot()==0 && event.getResult().equals(Event.Result.ALLOW)) {
             event.setCancelled(true);
+            // Lighting or putting out a furnace changes the world: only where the player may build.
+            if(!(event.getWhoClicked() instanceof Player player)
+                    || !TheGafferUtil.checkGafferPermission(player, ((Furnace) holder).getLocation())) {
+                return;
+            }
             final Furnace furnace = (Furnace) holder;
             ItemStack current = event.getCurrentItem();
             ItemStack cursor = event.getCursor();

@@ -126,7 +126,8 @@ public class CopyPasteManager {
         Set<PermissionAttachmentInfo> permissions = player.getEffectivePermissions();
         int maxLimit = 0;
         for(PermissionAttachmentInfo info: permissions) {
-            if(info.getPermission().startsWith("architect.copypaste.limit.")) {
+            // Only a node set to true counts: a permissions plugin takes a limit away by setting it to false.
+            if(info.getValue() && info.getPermission().startsWith("architect.copypaste.limit.")) {
                 String limitString = info.getPermission().replace("architect.copypaste.limit.", "");
                 if(NumericUtil.isInt(limitString)) {
                     int limit = NumericUtil.getInt(limitString);
@@ -164,7 +165,7 @@ public class CopyPasteManager {
                 UndoData data = list.get(list.size()-1);
                 saveRedoData(player,data);
                 if(!data.undo()) {
-                    throw new CopyPasteException("Error while undoing edits (reverted "+count+" edits before the error occured.");
+                    throw new CopyPasteException("Error while undoing edits (reverted "+count+" edits before the error occurred).");
                 }
                 list.remove(list.size()-1);
                 count++;
@@ -183,7 +184,7 @@ public class CopyPasteManager {
                 UndoData data = list.get(list.size()-1);
                 saveUndoData(player,data);
                 if(!data.undo()) {
-                    throw new CopyPasteException("Error while redoing edits (redone "+count+" edits before the error occured.");
+                    throw new CopyPasteException("Error while redoing edits (redone "+count+" edits before the error occurred).");
                 }
                 list.remove(list.size()-1);
                 count++;

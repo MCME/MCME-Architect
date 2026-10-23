@@ -21,6 +21,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -473,5 +475,130 @@ class SpecialBlockGafferTest {
         Block door = ground.getRelative(BlockFace.UP);
         assertEquals(placed(door, door.getRelative(BlockFace.UP), door.getRelative(BlockFace.UP, 2),
                 door.getRelative(BlockFace.UP, 3)), FakeGaffer.builds);
+    }
+
+    // A special block that fills more than one space needs every one of them empty, and says so when one is not.
+    @Test
+    void aDoorIsNotPlacedWhereItsUpperHalfWouldReplaceABlock() {
+        Block ground = world.getBlockAt(60, 64, 0);
+        ground.setType(Material.DIRT);
+        Block target = ground.getRelative(BlockFace.UP);
+        target.getRelative(BlockFace.UP).setType(Material.STONE);
+
+        rightClick("door", ground, BlockFace.UP);
+        server.getScheduler().performTicks(4); // doors are set a few ticks later
+
+        assertEquals(Material.AIR, target.getType(), "no door");
+        assertEquals(Material.STONE, target.getRelative(BlockFace.UP).getType(), "the block above is kept");
+        assertEquals(List.of(), FakeGaffer.asked);
+        String message = player.nextMessage();
+        assertTrue(message != null && message.contains("Not enough room"), "told why: " + message);
+    }
+
+    // TheGaffer is asked about every space a door fills; one refusal and nothing is placed.
+    @ParameterizedTest
+    @CsvSource({"door, 1, 62", "thinwall, 1, 64", "door3, 2, 66", "door4, 3, 68"})
+    void everySpaceADoorFillsIsAskedAbout(String door, int top, int x) {
+        Block ground = world.getBlockAt(x, 64, 0);
+        ground.setType(Material.DIRT);
+        Block target = ground.getRelative(BlockFace.UP);
+        Block highest = target.getRelative(BlockFace.UP, top);
+        FakeGaffer.allowed = location -> !location.equals(highest.getLocation());
+
+        rightClick(door, ground, BlockFace.UP);
+        server.getScheduler().performTicks(4);
+
+        assertTrue(FakeGaffer.asked.contains(highest.getLocation()), "asked about the top: " + FakeGaffer.asked);
+        assertEquals(Material.AIR, target.getType(), "no door");
+        assertEquals(List.of(), FakeGaffer.builds);
+        String message = player.nextMessage();
+        assertTrue(message != null && message.contains("You are not in the job's area."), "told why: " + message);
+    }
+
+    // An UPSHIFT block changes the block above the one it is aimed at, so that is the block TheGaffer is asked about.
+    @Test
+    void anUpshiftBlockIsAskedAboutTheBlockItChanges() {
+        Block ground = world.getBlockAt(70, 64, 0);
+        ground.setType(Material.DIRT);
+        Block higher = ground.getRelative(BlockFace.UP, 2);
+        FakeGaffer.allowed = location -> !location.equals(higher.getLocation());
+
+        rightClick("upshift", ground, BlockFace.UP);
+
+        assertEquals(List.of(higher.getLocation()), FakeGaffer.asked);
+        assertEquals(Material.AIR, higher.getType(), "not placed");
+    }
+
+    @Test
+    void anUpshiftBlockIsNotPlacedUnderABlock() {
+        Block ground = world.getBlockAt(72, 64, 0);
+        ground.setType(Material.DIRT);
+        Block higher = ground.getRelative(BlockFace.UP, 2);
+        higher.setType(Material.STONE);
+
+        rightClick("upshift", ground, BlockFace.UP);
+
+        assertEquals(Material.STONE, higher.getType(), "the block above is kept");
+        assertEquals(List.of(), FakeGaffer.asked);
+        String message = player.nextMessage();
+        assertTrue(message != null && message.contains("Not enough room"), "told why: " + message);
+    }
+
+    @Test
+    void aDoubleYBlockIsAskedAboutItsUpperBlock() {
+        Block ground = world.getBlockAt(74, 64, 0);
+        ground.setType(Material.DIRT);
+        Block lower = ground.getRelative(BlockFace.UP);
+        Block upper = lower.getRelative(BlockFace.UP);
+        FakeGaffer.allowed = location -> !location.equals(upper.getLocation());
+
+        rightClick("double", ground, BlockFace.UP);
+
+        assertEquals(Material.AIR, lower.getType(), "nothing placed");
+        assertEquals(Material.AIR, upper.getType(), "nothing placed");
+    }
+
+    // A guard: under a block, a DOUBLE_Y_BLOCK places only its lower block, as before, and asks only about that.
+    @Test
+    void aDoubleYBlockUnderABlockAsksOnlyAboutItsLowerBlock() {
+        Block ground = world.getBlockAt(76, 64, 0);
+        ground.setType(Material.DIRT);
+        Block lower = ground.getRelative(BlockFace.UP);
+        lower.getRelative(BlockFace.UP).setType(Material.STONE);
+
+        rightClick("double", ground, BlockFace.UP);
+
+        assertEquals(List.of(lower.getLocation()), FakeGaffer.asked);
+        assertEquals(Material.OAK_PLANKS, lower.getType(), "the lower block");
+        assertEquals(Material.STONE, lower.getRelative(BlockFace.UP).getType(), "the block above is kept");
+    }
+
+    // A guard: a single block that does not fit is refused silently, as before.
+    @Test
+    void aSingleBlockThatDoesNotFitStaysSilent() {
+        Block ground = world.getBlockAt(78, 64, 0);
+        ground.setType(Material.DIRT);
+        ground.getRelative(BlockFace.UP).setType(Material.STONE);
+
+        rightClick("stone", ground, BlockFace.UP);
+
+        assertEquals(List.of(), FakeGaffer.asked);
+        assertNull(player.nextMessage(), "nothing said");
+    }
+
+    // An invisible light block is empty space to a builder, and vanilla replaces it: a door under one is placed.
+    @Test
+    void aDoorUnderALightBlockIsPlaced() {
+        Block ground = world.getBlockAt(80, 64, 0);
+        ground.setType(Material.DIRT);
+        Block target = ground.getRelative(BlockFace.UP);
+        target.getRelative(BlockFace.UP).setType(Material.LIGHT);
+
+        rightClick("door", ground, BlockFace.UP);
+        server.getScheduler().performTicks(4); // doors are set a few ticks later
+
+        assertNotEquals(Material.AIR, target.getType(), "the door's lower half");
+        assertNotEquals(Material.LIGHT, target.getRelative(BlockFace.UP).getType(), "the upper half replaces the light");
+        assertNull(player.nextMessage(), "nothing said");
     }
 }

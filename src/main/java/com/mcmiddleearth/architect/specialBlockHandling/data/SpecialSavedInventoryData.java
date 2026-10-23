@@ -22,6 +22,7 @@ import com.mcmiddleearth.architect.specialBlockHandling.customInventories.Custom
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryCategory;
 import com.mcmiddleearth.architect.specialBlockHandling.customInventories.CustomInventoryState;
 import com.mcmiddleearth.pluginutil.FileUtil;
+import com.mcmiddleearth.util.PathSafety;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -165,6 +166,11 @@ public class SpecialSavedInventoryData {
         }
     }
     
+    /** Whether a player-given name can name a saved inventory: a file directly in its pack's folder. */
+    public static boolean isValidName(String categoryName) {
+        return PathSafety.isPlainName(configFolder, categoryName, "yml");
+    }
+
     public static boolean categoryExists(String categoryName, String rpName) {
         File folder = new File(configFolder,rpName);
         if(!folder.exists()) {

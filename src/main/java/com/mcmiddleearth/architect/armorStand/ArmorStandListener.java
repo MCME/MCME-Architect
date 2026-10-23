@@ -11,6 +11,7 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.armorStand.guard.ArmorStandGuard;
 import com.mcmiddleearth.pluginutil.EventUtil;
+import com.mcmiddleearth.util.TheGafferUtil;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -25,6 +26,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityPlaceEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
@@ -72,22 +74,14 @@ public class ArmorStandListener implements Listener {
         if(!event.hasBlock() || !EventUtil.isMainHandEvent(event)) {
             return;
         }
-        if(PluginData.isModuleEnabled(p.getWorld(),Modules.ARMOR_STAND_PROTECTION)
-                && p.getInventory().getItemInMainHand().getType().equals(Material.ARMOR_STAND)
-                && EventUtil.isMainHandEvent(event)
-                && event.getAction().equals(Action.RIGHT_CLICK_BLOCK)) {
-            if(!PluginData.checkBuildPermissions(p, event.getClickedBlock().getLocation(),
-                                            Permission.ARMOR_STAND_EDITOR)) {
-                event.setCancelled(true);
-            }
-        }
         ArmorStandEditorConfig config = ArmorStandEditorCommand.getPlayerConfig(p);
         if(PluginData.isModuleEnabled(p.getWorld(),Modules.ARMOR_STAND_EDITOR)
                 && config.getEditorMode().equals(ArmorStandEditorMode.PASTE)
                 && p.getInventory().getItemInHand().getType().equals(Material.STICK)
                 && EventUtil.isMainHandEvent(event)) {
-            if(!PluginData.checkBuildPermissions(p, event.getClickedBlock().getLocation(),
-                                         Permission.ARMOR_STAND_EDITOR)) {
+            // TheGaffer is asked where the stand would appear, in placeArmorStand.
+            if(!PluginData.hasPermission(p, Permission.ARMOR_STAND_EDITOR)) {
+                PluginData.getMessageUtil().sendNoPermissionError(p);
                 event.setCancelled(true);
                 return;
             }
@@ -102,7 +96,19 @@ public class ArmorStandListener implements Listener {
                 loc = event.getClickedBlock().getRelative(BlockFace.UP, 1).getLocation();
                 exact = false;
             }
-            config.placeArmorStand(loc, exact);
+            config.placeArmorStand(p, loc, exact);
+            event.setCancelled(true);
+        }
+    }
+
+    /** A vanilla armor stand is checked where it lands. */
+    @EventHandler(ignoreCancelled = true)
+    public void placeVanillaArmorStand(EntityPlaceEvent event) {
+        Player player = event.getPlayer();
+        if(event.getEntity() instanceof ArmorStand && player != null
+                && PluginData.isModuleEnabled(event.getEntity().getWorld(), Modules.ARMOR_STAND_PROTECTION)
+                && !PluginData.checkBuildPermissions(player, event.getEntity().getLocation(),
+                                                     Permission.ARMOR_STAND_EDITOR)) {
             event.setCancelled(true);
         }
     }
@@ -285,13 +291,13 @@ public class ArmorStandListener implements Listener {
                 armorStand.teleport(turn(armorStand.getLocation(),rightClick,stepInDegree));
                 break;
             case XMOVE:
-                armorStand.teleport(moveX(armorStand.getLocation(),rightClick,stepInDegree));
+                moveTo(armorStand, player, moveX(armorStand.getLocation(),rightClick,stepInDegree));
                 break;
             case YMOVE:
-                armorStand.teleport(moveY(armorStand.getLocation(),rightClick,stepInDegree));
+                moveTo(armorStand, player, moveY(armorStand.getLocation(),rightClick,stepInDegree));
                 break;
             case ZMOVE:
-                armorStand.teleport(moveZ(armorStand.getLocation(),rightClick,stepInDegree));
+                moveTo(armorStand, player, moveZ(armorStand.getLocation(),rightClick,stepInDegree));
                 break;
             case MOVE:
                 playerLoc = player.getLocation();
@@ -306,12 +312,12 @@ public class ArmorStandListener implements Listener {
                     if(yaw>135 && yaw<225) {
                         rightClick=!rightClick;
                     }
-                    armorStand.teleport(moveX(armorStand.getLocation(),rightClick,stepInDegree));
+                    moveTo(armorStand, player, moveX(armorStand.getLocation(),rightClick,stepInDegree));
                 } else {
                     if(!(yaw>45 && yaw<135)) {
                         rightClick=!rightClick;
                     }
-                    armorStand.teleport(moveZ(armorStand.getLocation(),rightClick,stepInDegree));
+                    moveTo(armorStand, player, moveZ(armorStand.getLocation(),rightClick,stepInDegree));
                 }
                 break;
             case SIZE:
@@ -426,6 +432,13 @@ public class ArmorStandListener implements Listener {
         }
         oldLoc.setYaw(oldLoc.getYaw()+step);
         return oldLoc;
+    }
+
+    /** Moves the stand only if TheGaffer allows its new position, so a move cannot take it out of the area. */
+    private static void moveTo(ArmorStand armorStand, Player player, Location target) {
+        if(TheGafferUtil.checkGafferPermission(player, target)) {
+            armorStand.teleport(target);
+        }
     }
 
     private Location moveX(Location location, boolean rightClick, int stepInDegree) {

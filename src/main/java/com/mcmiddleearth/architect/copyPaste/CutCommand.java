@@ -51,15 +51,15 @@ public class CutCommand extends AbstractArchitectCommand {
         int area = weRegion.getArea();
         int maxArea = CopyPasteManager.maxAllowedSize(player);
         if(area > maxArea && !(player.hasPermission(Permission.COPY_PASTE_UNLIMITED.getPermissionNode()))) {
-            PluginData.getMessageUtil().sendErrorMessage(cs, "Your selections is too large: "+area+" blocks."
-                                                             +"You are allowed to cut "+maxArea+" block only.");
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Your selection is too large: "+area+" blocks. "
+                                                             +"You are allowed to cut "+maxArea+" blocks only.");
             return true;
         }
         try {
             if(CopyPasteManager.cutToClipboard(player, (CuboidRegion) weRegion)) {
-                PluginData.getMessageUtil().sendInfoMessage(cs, "Your selection was copied to your clipboard.");
+                PluginData.getMessageUtil().sendInfoMessage(cs, "Your selection was cut to your clipboard.");
             } else {
-                PluginData.getMessageUtil().sendErrorMessage(cs, "There was an error. Your selection was not copied.");
+                PluginData.getMessageUtil().sendErrorMessage(cs, "There was an error. Your selection was not cut.");
             }
         } catch (CopyPasteException ex) {
             PluginData.getMessageUtil().sendErrorMessage(cs, ex.getMessage());

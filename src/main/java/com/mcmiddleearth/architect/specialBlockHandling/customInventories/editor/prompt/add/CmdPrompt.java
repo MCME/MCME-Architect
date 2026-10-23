@@ -46,6 +46,6 @@ public class CmdPrompt extends ValidatingPrompt {
 
     @Override
     protected @Nullable String getFailedValidationText(@NotNull ConversationContext context, @NotNull String invalidInput) {
-        return "You need to type in a not negative integer or '!skip'.";
+        return "You need to type in a non-negative integer or '!skip'.";
     }
 }

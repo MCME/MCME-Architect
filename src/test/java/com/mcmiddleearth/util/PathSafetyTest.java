@@ -53,4 +53,29 @@ class PathSafetyTest {
         File sibling = new File(base.getParentFile(), base.getName() + "bar");
         assertFalse(PathSafety.isInside(base, sibling));
     }
+
+    @Test void aFolderInsideTheBaseIsAccepted(@TempDir File base) {
+        // Blank means the base itself; sub-folders, a leading slash and either separator stay inside.
+        for (String folder : new String[] {null, "", " ", "/", "sub", "sub/deeper", "/sub", "sub\\deeper", "a..b"}) {
+            assertTrue(PathSafety.isInsideFolder(base, folder), String.valueOf(folder));
+        }
+    }
+
+    @Test void aFolderOutsideTheBaseIsRefused(@TempDir File base) {
+        // A backslash counts as a separator on every OS, so Linux and Windows give the same answer.
+        for (String folder : new String[] {"..", "../x", "a/../../b", "sub/../..", "..\\x", "a\\..\\..\\b"}) {
+            assertFalse(PathSafety.isInsideFolder(base, folder), folder);
+        }
+    }
+
+    @Test void aPlainNameIsAccepted(@TempDir File base) {
+        assertTrue(PathSafety.isPlainName(base, "tools", "yml"));
+        assertTrue(PathSafety.isPlainName(base, "a..b", "reg"));
+    }
+
+    @Test void aNameThatNamesAFolderOrNothingIsRefused(@TempDir File base) {
+        for (String name : new String[] {null, "", " ", ".", "..", "a/b", "a\\b", "../x", "..\\x", "/x"}) {
+            assertFalse(PathSafety.isPlainName(base, name, "yml"), String.valueOf(name));
+        }
+    }
 }

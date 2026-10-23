@@ -271,12 +271,30 @@ public class SpecialBlock {
         return state;
     }
 
+    /**
+     * The blocks a placement at blockPlace sets, on a click that is not a sneak-edit: blockPlace itself, unless the
+     * special block fills more than one space or another space. The listener asks TheGaffer about each of them before
+     * placeBlock runs, so nothing is set unless TheGaffer allows them all.
+     */
+    public List<Block> getBlocksToPlace(Block blockPlace) {
+        return List.of(blockPlace);
+    }
+
     public boolean canPlace(Block blockPlace) {
-        return blockPlace.isEmpty()
-                || blockPlace.getType().equals(Material.SHORT_GRASS)
-                || blockPlace.getType().equals(Material.FIRE)
-                || blockPlace.getType().equals(Material.LAVA)
-                || blockPlace.getType().equals(Material.WATER);
+        return isFree(blockPlace);
+    }
+
+    /**
+     * Whether a new block may go at block: air, an invisible light block (empty space to a builder, and replaced in
+     * vanilla), short grass, fire, lava or water.
+     */
+    protected static boolean isFree(Block block) {
+        return block.isEmpty()
+                || block.getType().equals(Material.LIGHT)
+                || block.getType().equals(Material.SHORT_GRASS)
+                || block.getType().equals(Material.FIRE)
+                || block.getType().equals(Material.LAVA)
+                || block.getType().equals(Material.WATER);
     }
 
     protected static Material matchMaterial(String identifier) {

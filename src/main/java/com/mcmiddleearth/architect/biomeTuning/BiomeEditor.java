@@ -891,7 +891,7 @@ public final class BiomeEditor implements Listener {
         logger.log(Level.WARNING, "biometune: an editor window failed", e);
         close(player);
         messages.sendErrorMessage(player, "That did not work" + (e.getMessage() == null ? ""
-                : " (" + e.getMessage() + ")") + "; see the server log.");
+                : " (" + e.getMessage() + ")") + "; see Architect's log.");
     }
 
     private void close(Player player) {

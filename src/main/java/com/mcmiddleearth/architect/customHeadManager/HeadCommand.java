@@ -78,6 +78,9 @@ public class HeadCommand extends AbstractArchitectCommand {
             } else {
                 messageArgs = Arrays.copyOfRange(args,1,args.length);
             }
+            if(!isListFolderAllowed(player, CustomHeadManagerData.getAcceptedHeadDir(), messageArgs)) {
+                return true;
+            }
             PluginData.getMessageUtil().sendFancyFileListMessage(player, 
                              new FancyMessage(MessageType.INFO,PluginData.getMessageUtil())
                                 .addSimple(PluginData.getMessageUtil().STRESSED+"Custom Head "
@@ -154,6 +157,9 @@ public class HeadCommand extends AbstractArchitectCommand {
                 messageArgs = new String[0];
             } else {
                 messageArgs = Arrays.copyOfRange(args,1,args.length);
+            }
+            if(!isListFolderAllowed(player, CustomHeadManagerData.getSubmittedHeadDir(), messageArgs)) {
+                return true;
             }
             PluginData.getMessageUtil().sendFancyFileListMessage(player, 
                          new FancyMessage(MessageType.INFO, PluginData.getMessageUtil())
@@ -264,7 +270,7 @@ public class HeadCommand extends AbstractArchitectCommand {
     }
 
     private void sendHeadAlreadyExists(Player player) {
-        PluginData.getMessageUtil().sendErrorMessage(player,"Head could not be added to Custom Head Collection. Already exists?");
+        PluginData.getMessageUtil().sendErrorMessage(player,"Head could not be saved under that name. Does it already exist?");
     }
 
     private void sendHeadRejected(Player player) {
@@ -280,7 +286,7 @@ public class HeadCommand extends AbstractArchitectCommand {
     }
 
     private void sendSubmittingHeadMessage(Player player) {
-        PluginData.getMessageUtil().sendInfoMessage(player,"Submitting your head . . . .");
+        PluginData.getMessageUtil().sendInfoMessage(player,"Submitting the head . . . .");
     }
     
     private void sendHeadsReloaded(Player player) {
@@ -311,8 +317,17 @@ public class HeadCommand extends AbstractArchitectCommand {
     protected void sendHelpMessage(Player player, int page) {
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"MCME Head Collection -";
         help = new String[][]{{"/chead warp","",": Teleports you to the MCME Head Collection."},
-                                       {"/chead list","",": Shows a clickable list of all heads."},
-                                       {"/chead submit ","[playername] <headName>",": Submits a head. ","If no [playername] is specified your own head will be submitted."}};
+                                       {"/chead list ","[folder] [page]",": Shows a clickable list of all heads."},
+                                       {"/chead submit ","[player|UUID|handitem] <headName>",": Submits a head. ","Without a player your own head is submitted; with handitem, the head in your main hand."},
+                                       {"/chead reviewList ","[folder] [page]",": Shows the submitted heads (managers)."},
+                                       {"/chead review ","<name>",": Gives you a submitted head to look at (managers)."},
+                                       {"/chead accept ","<name> <category/newName>",": Adds a submitted head to the collection (managers)."},
+                                       {"/chead reject ","<name>",": Deletes a submitted head (managers)."},
+                                       {"/chead rename ","<old> <new>",": Renames a head, or moves it to another category (managers)."},
+                                       {"/chead delete ","<name>",": Deletes a head from the collection (managers)."},
+                                       {"/chead setCollection","",": Builds the head gallery where you stand, or moves it there (managers)."},
+                                       {"/chead reload","",": Reloads the collection and builds the gallery again (managers)."},
+                                       {"/chead upload ","[file] [-r]",": Imports heads from a file on the web (managers)."," With -r they go to the review list."}};
         super.sendHelpMessage(player, page);
     }
 

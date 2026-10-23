@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.command;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -27,6 +28,7 @@ import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import com.mcmiddleearth.util.PathSafety;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -217,6 +219,13 @@ public class GetCommand extends AbstractArchitectCommand {
         if(headName.endsWith("/")) {
             headName = headName.substring(0,headName.length()-1);
         }
+        // A blank name stays the whole collection; anything else must stay inside it.
+        if(!PathSafety.isInsideFolder(CustomHeadManagerData.getAcceptedHeadDir(), headName)) {
+            Log.warn("Rejected unsafe head name '" + headName + "' outside "
+                    + CustomHeadManagerData.getAcceptedHeadDir());
+            PluginData.getMessageUtil().sendErrorMessage(p, "Invalid head or folder name.");
+            return;
+        }
         File file = new File(CustomHeadManagerData.getAcceptedHeadDir(),headName);
         if(!file.exists()) {
             headName = CustomHeadManagerData.getFullName(headName);
@@ -304,7 +313,7 @@ public class GetCommand extends AbstractArchitectCommand {
     }
 
     private void sendToManyPrivateSetsError(CommandSender cs) {
-        PluginData.getMessageUtil().sendErrorMessage(cs, "You already have too many private item sets (max. 10).");
+        PluginData.getMessageUtil().sendErrorMessage(cs, "You already have too many private item sets (max. 11).");
     }
 
     private void sendItemSetSavedMessage(CommandSender cs) {
@@ -349,13 +358,14 @@ public class GetCommand extends AbstractArchitectCommand {
                    //{"/get plants","",": Get placeable plants."},
                    //{"/get slabs"," [#data value]",": Get double slabs",". If no data value argument is specified you will get all double slabs."},
                    //{"/get misc","",": Get miscellaneous blocks",". Piston tables, burning furnaces,..."},
-                   {"/get list"," #page",": Shows a list of all item kits visible to you"," (public kits and your own private ones)"},
+                   {"/get list"," [page]",": Shows a list of all item kits visible to you"," (public kits and your own private ones)"},
                    {"/get head"," <head or folder name>",": Get heads"," from the MCME Head Collection. If a folder name is specified you will get all heads in that folder."},
                    {"/get armor"," <color>",": Get dyed leather armor",". Color must be hex RGB code. For example 'FF0000' for red and '000000' for black."},
-                   {"/get pcreate"," <kitName>",": Create a private item kit."," /get list shows this kit to you only. But everyone who knows it can use it. Each player may create 10 private kits. Private kits of a player are deleted when a player didn't log in for more than 100 days."},
-                   {"/get create"," <kitName>",": Create a public item kit"," shown to everyone with /get list."},
+                   {"/get pcreate"," <kitName> [description]",": Create a private item kit."," /get list shows this kit to you only. But everyone who knows it can use it. Each player may create 11 private kits. Private kits may be deleted when their owner has not logged in for a while."},
+                   {"/get create"," <kitName> [description]",": Create a public item kit"," shown to everyone with /get list."},
                    {"/get publish"," <kitName>",": Make an item kit public."},
-                   {"/get unpublish"," <kitName>",": Make an item kit public."}};
+                   {"/get unpublish"," <kitName>",": Make an item kit private."},
+                   {"/get delete"," <kitName>",": Delete an item kit."}};
         super.sendHelpMessage(player, page);
     }
     

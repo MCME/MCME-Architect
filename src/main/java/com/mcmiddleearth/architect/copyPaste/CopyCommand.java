@@ -52,8 +52,8 @@ public class CopyCommand extends AbstractArchitectCommand {
         int area = weRegion.getArea();
         int maxArea = CopyPasteManager.maxAllowedSize(player);
         if(area > maxArea && !(player.hasPermission(Permission.COPY_PASTE_UNLIMITED.getPermissionNode()))) {
-            PluginData.getMessageUtil().sendErrorMessage(cs, "Your selections is too large: "+area+" blocks."
-                                                             +"You are allowed to copy "+maxArea+" block only.");
+            PluginData.getMessageUtil().sendErrorMessage(cs, "Your selection is too large: "+area+" blocks. "
+                                                             +"You are allowed to copy "+maxArea+" blocks only.");
             return true;
         }
         try{
