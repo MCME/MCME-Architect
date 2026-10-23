@@ -10,6 +10,7 @@ import org.mockbukkit.mockbukkit.MockBukkit;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -89,5 +90,29 @@ class PluginYmlPermissionsTest {
 
         assertNotNull(permission, "architect.invisibleBlocks is not declared");
         assertEquals(PermissionDefault.OP, permission.getDefault());
+    }
+
+    // Bukkit reads a permission's text only from description:. A misspelt key such as descriptions: is ignored
+    // without a warning, and the permission shows no description at all.
+    @Test void everyPermissionHasADescription() throws Exception {
+        List<String> missing = description().getPermissions().stream()
+                .filter(permission -> permission.getDescription() == null || permission.getDescription().isBlank())
+                .map(Permission::getName)
+                .sorted()
+                .toList();
+        assertEquals(List.of(), missing, "these permissions have no description:");
+    }
+
+    // An undeclared node still works, for ops only, but a permission plugin does not list it, so nobody finds it.
+    @Test void everyNodeTheCodeChecksIsDeclared() throws Exception {
+        Set<String> declared = description().getPermissions().stream()
+                .map(permission -> permission.getName().toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+        List<String> undeclared = Arrays.stream(com.mcmiddleearth.architect.Permission.values())
+                .map(com.mcmiddleearth.architect.Permission::getPermissionNode)
+                .filter(node -> !declared.contains(node.toLowerCase(Locale.ROOT)))
+                .sorted()
+                .toList();
+        assertEquals(List.of(), undeclared, "the code checks these nodes, but plugin.yml does not declare them:");
     }
 }
