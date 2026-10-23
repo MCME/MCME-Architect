@@ -121,7 +121,8 @@ dragon eggs under [Special placement](#special-placement); container access and 
    or from an item set (`/get`).
 2. Hold it in your main hand. The off hand does not place special blocks.
 3. Right-click a block. The new block goes where its type puts it, usually against the face you clicked. It only
-   replaces air, water, lava, fire or short grass; a `MULTI_FACE` block can also join a block of its own material.
+   replaces air, an invisible light block, water, lava, fire or short grass; a `MULTI_FACE` block can also join a block
+   of its own material.
    Clicking a flower pot never places anything.
 4. To place against a door, trapdoor, button, lever or fence gate, sneak while you click. Without sneaking you use that
    block instead, unless its state is on the world's `noInteraction` list.
@@ -138,9 +139,9 @@ world. Like every world switch, it is on by default (see [Per-world settings](#p
 
 - An item whose entry was renamed or removed answers `Special block data not found, item is probably outdated.` Take
   a new one from the build inventory.
-- Doors (including three- and four-block doors) and `UPSHIFT` blocks need empty spaces above the spot. Where one is
-  taken, they place nothing and say `Not enough room: every space this block fills must be empty.` `DOUBLE_Y_BLOCK`
-  places its upper block only where there is room.
+- Doors (including three- and four-block doors) and `UPSHIFT` blocks need empty spaces above the spot; an invisible
+  light block counts as empty. Where a space is taken, they place nothing and say `Not enough room: every space this
+  block fills must be empty.` `DOUBLE_Y_BLOCK` places its upper block only where there is room.
 - Placed special blocks count for your TheGaffer job statistics; sneak-click edits do not.
 
 #### Placement types
@@ -321,7 +322,8 @@ builders take from it.
 
 - In 3.2.1 every saved inventory is public: everyone who can use `/inv` can open it and take from it. The file says
   `isPrivate: true`, which Architect reads the other way round.
-- `/inv create` always answers `Inventory saved.`, even when saving failed; check the window.
+- A saved inventory's name may not contain `/` or `\`: such a name is refused with `Invalid name. A name may not
+  contain / or \.` Otherwise `/inv create` answers `Inventory saved.`, even when saving failed; check the window.
 - After a create or delete, ask staff to run `/inv reload`. Until then, players who opened the window before do not
   see a new tab, and after a delete the window may not open for them.
 - If your pack has no saved-inventory folder yet, the window shows the saved inventories of the `Human` pack. A pack's
@@ -437,7 +439,7 @@ full each chunk is (see [Map layers](#map-layers)).
 | `/itemblock glow off` | Stops the glow. Any word that is not a number works. | none |
 | `/itemblock remove <radius> [height]` | Removes every armor stand with a custom name around you, not only those of item blocks. | `architect.itemBlock.remove` |
 | `/itemblock list` | Lists the limit regions with their limits. | none |
-| `/itemblock create <name>` | Creates a limit region from your WorldEdit selection. | `architect.itemBlock.region.create` |
+| `/itemblock create <name>` | Creates a limit region from your WorldEdit selection. The name may not contain `/` or `\`, and no region file may have it yet. | `architect.itemBlock.region.create` |
 | `/itemblock delete <name>` | Deletes a limit region. | `architect.itemBlock.region.create` |
 | `/itemblock limit <name> <number>` | Sets a region's limit. | `architect.itemBlock.region.limit` |
 | `/itemblock limit -base <number>` | Sets the base limit of the world you are in. | `architect.itemBlock.region.limit` |
@@ -1738,7 +1740,8 @@ To make a region:
 1. Make a WorldEdit selection: a cuboid, polygon, cylinder or ellipsoid, because other shapes are lost at the next
    restart. A polygonal selection covers the full height of the world from Y 0 up; a cuboid covers only the heights
    you selected.
-2. Run `/rp create <name>`. Architect saves the region and opens the region editor in chat.
+2. Run `/rp create <name>`. The name may not contain `/` or `\`, and no region file may have it yet, loaded or not.
+   Architect saves the region and opens the region editor in chat.
 3. Type `rp <pack>` to set the pack, and `weight <n>` to set the weight.
 4. Type `quit`.
 
@@ -1761,7 +1764,7 @@ In the editor, type these words in chat, without a `/`. What you type there does
 | `addpoint <i> [x z]` | Inserts a polygon point as number `i`; a number past the end adds it at the end. Uses your own position if you leave `x z` out. |
 | `setpoint <i> [x z]` | Moves polygon point `i`. |
 | `removepoint <i>` | Deletes polygon point `i`. |
-| `name <newName>` | Renames the region. |
+| `name <newName>` | Renames the region. The new name follows the same rules as in `/rp create`. |
 | `quit` | Closes the editor. |
 
 Every change is saved at once and redrawn on the web map (see [Map layers](#map-layers)). The point and height commands
@@ -2605,7 +2608,8 @@ and each takes one of these values:
   `'TRUE'`; `BREWING`, `FURNACE`, `SMOKER` and `BLAST_FURNACE` are `BUILDER`; `BEACON`, `DISPENSER`, `DROPPER`,
   `ENCHANTING` and `HOPPER` are `EXCEPTION`. `SHULKER_BOX` is a section whose `default` is `'TRUE'`; Architect reads
   only `default`, not single colours.
-- A type missing from both files is added to `defaultWorldConfig.yml` as `'TRUE'` the first time someone opens one.
+- A type missing from both files is added to `defaultWorldConfig.yml` the first time someone opens one: `SMOKER` and
+  `BLAST_FURNACE` as `BUILDER`, any other type as `'TRUE'`.
 - Write the values in upper case, and quote `'TRUE'` and `'FALSE'`: unquoted, YAML reads them as true and false, which
   Architect cannot use.
 
