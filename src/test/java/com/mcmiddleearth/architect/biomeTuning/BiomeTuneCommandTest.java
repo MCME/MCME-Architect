@@ -21,6 +21,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.junit.jupiter.api.AfterAll;
@@ -659,6 +660,61 @@ class BiomeTuneCommandTest {
         List<String> offered = server.getCommandMap().getCommand("biometune").tabComplete(console, "biometune",
                 new String[] {"h"});
         assertEquals(List.of("here"), offered, "/biometune here opens the editor on the biome at your feet");
+    }
+
+    private static List<String> complete(CommandSender sender, String... args) {
+        return server.getCommandMap().getCommand("biometune").tabComplete(sender, "biometune", args);
+    }
+
+    // A player who is not an op and holds exactly these nodes (MockBukkit registers no plugin.yml permissions).
+    private static PlayerMock tuner(String name, String... nodes) {
+        PlayerMock player = server.addPlayer(name);
+        player.setOp(false);
+        for (String node : nodes) {
+            player.addAttachment(plugin, node, true);
+        }
+        return player;
+    }
+
+    // Tab completion offers only what the player may use. An empty list, not null: on null, Bukkit would offer the
+    // names of every online player.
+    @Test
+    void noSuggestionsWithoutTheBiomeTunePermission() {
+        useFake();
+        PlayerMock visitor = tuner("Visitor");
+
+        assertEquals(List.of(), complete(visitor, ""));
+        assertEquals(List.of(), complete(visitor, "cbc:"));
+        assertEquals(List.of(), complete(visitor, "preview", ""));
+    }
+
+    @Test
+    void aTunerSeesOnlyTheSubcommandsTheyMayUse() {
+        useFake();
+        PlayerMock tuner = tuner("Tuner", "architect.biomeTune");
+
+        assertEquals(List.of("edit", "info", "set", "unset", "copy", "undo", "revert", "status", "preview", "spares",
+                "claim", "label", "here"), complete(tuner, ""));
+        assertEquals(List.of("set", "status", "spares"), complete(tuner, "s"));
+        for (String[] args : new String[][] {{"preview", ""}, {"spares", ""}, {"save", ""}, {"publish", ""},
+                {"selftest", ""}, {"debug", ""}, {"debug", "refresh", ""}}) {
+            assertEquals(List.of(), complete(tuner, args), String.join(" ", args));
+        }
+    }
+
+    // A guard: each further node adds the subcommands it allows.
+    @Test
+    void eachExtraNodeAddsItsSubcommands() {
+        useFake();
+        assertEquals(List.of("save"),
+                complete(tuner("Saver", "architect.biomeTune", "architect.biomeTune.save"), "sa"));
+        PlayerMock publisher = tuner("Publisher", "architect.biomeTune", "architect.biomeTune.publish");
+        assertEquals(List.of("preview", "publish"), complete(publisher, "p"));
+        assertTrue(complete(publisher, "preview", "").contains("Publisher"), "player names for preview");
+        PlayerMock admin = tuner("TuneAdmin", "architect.biomeTune", "architect.biomeTune.admin");
+        assertEquals(List.of("set", "selftest"), complete(admin, "se"));
+        assertEquals(List.of("debug"), complete(admin, "de"));
+        assertEquals(List.of("add"), complete(admin, "spares", ""));
     }
 
     @Test
