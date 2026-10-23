@@ -585,4 +585,20 @@ class SpecialBlockGafferTest {
         assertEquals(List.of(), FakeGaffer.asked);
         assertNull(player.nextMessage(), "nothing said");
     }
+
+    // An invisible light block is empty space to a builder, and vanilla replaces it: a door under one is placed.
+    @Test
+    void aDoorUnderALightBlockIsPlaced() {
+        Block ground = world.getBlockAt(80, 64, 0);
+        ground.setType(Material.DIRT);
+        Block target = ground.getRelative(BlockFace.UP);
+        target.getRelative(BlockFace.UP).setType(Material.LIGHT);
+
+        rightClick("door", ground, BlockFace.UP);
+        server.getScheduler().performTicks(4); // doors are set a few ticks later
+
+        assertNotEquals(Material.AIR, target.getType(), "the door's lower half");
+        assertNotEquals(Material.LIGHT, target.getRelative(BlockFace.UP).getType(), "the upper half replaces the light");
+        assertNull(player.nextMessage(), "nothing said");
+    }
 }

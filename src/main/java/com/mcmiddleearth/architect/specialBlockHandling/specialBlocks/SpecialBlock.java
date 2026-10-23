@@ -284,9 +284,13 @@ public class SpecialBlock {
         return isFree(blockPlace);
     }
 
-    /** Whether a new block may go at block: air, short grass, fire, lava or water. */
+    /**
+     * Whether a new block may go at block: air, an invisible light block (empty space to a builder, and replaced in
+     * vanilla), short grass, fire, lava or water.
+     */
     protected static boolean isFree(Block block) {
         return block.isEmpty()
+                || block.getType().equals(Material.LIGHT)
                 || block.getType().equals(Material.SHORT_GRASS)
                 || block.getType().equals(Material.FIRE)
                 || block.getType().equals(Material.LAVA)
