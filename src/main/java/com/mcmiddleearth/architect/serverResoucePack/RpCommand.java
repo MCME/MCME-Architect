@@ -333,6 +333,14 @@ public class RpCommand extends AbstractArchitectCommand {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "A rp region with that name already exists.");
                         return true;
                     }
+                    if(!RpManager.isValidRegionName(args[1])) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "Invalid name. A name may not contain / or \\.");
+                        return true;
+                    }
+                    if(RpManager.regionFileExists(args[1])) {
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "A rp region with that name already exists.");
+                        return true;
+                    }
                     if (!WorldEditGuard.require(cs)) return true;
                     Region weRegion = WEUtil.getSelection((Player)cs);
                     if(weRegion==null) {

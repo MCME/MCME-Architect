@@ -183,6 +183,10 @@ public class InvCommand extends AbstractArchitectCommand {
                 PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
                 return true;
             }
+            if(!SpecialSavedInventoryData.isValidName(args[adaptIndex(1,rpIndex)])) {
+                sendInvalidNameError(p);
+                return true;
+            }
             if(SpecialSavedInventoryData.categoryExists(args[adaptIndex(1,rpIndex)], rpName)) {
                 sendInventoryAlreadyExistsError(p);
                 return true;
@@ -198,6 +202,10 @@ public class InvCommand extends AbstractArchitectCommand {
             }
             if(args.length<=adaptIndex(1,rpIndex)) {
                 PluginData.getMessageUtil().sendNotEnoughArgumentsError(cs);
+                return true;
+            }
+            if(!SpecialSavedInventoryData.isValidName(args[adaptIndex(1,rpIndex)])) {
+                sendInvalidNameError(p);
                 return true;
             }
             if(!SpecialSavedInventoryData.categoryExists(args[adaptIndex(1,rpIndex)], rpName)) {
@@ -369,6 +377,10 @@ public class InvCommand extends AbstractArchitectCommand {
     
     private void sendInventoryAlreadyExistsError(Player p) {
         PluginData.getMessageUtil().sendErrorMessage(p,"An inventory with that name already exists."); 
+    }
+
+    private void sendInvalidNameError(Player p) {
+        PluginData.getMessageUtil().sendErrorMessage(p, "Invalid name. A name may not contain / or \\.");
     }
 
     private void sendInventoryNotFoundError(Player p) {
