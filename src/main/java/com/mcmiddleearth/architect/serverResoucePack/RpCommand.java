@@ -88,7 +88,7 @@ public class RpCommand extends AbstractArchitectCommand {
                             "Variant " + variant + " of " + rpName + " was not set for MC " + args[3]
                             + " and keeps its url and sha: " + reason));
                     if (result.failed().isEmpty()) {
-                        PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + args[1]
+                        PluginData.getMessageUtil().sendInfoMessage(cs, "Server resource pack " + rpName
                                 + " set to version: " + args[2] + " for MC: "+ args[3]);
                     } else if (result.done().isEmpty()) {
                         PluginData.getMessageUtil().sendErrorMessage(cs, "Server resource pack " + rpName
@@ -246,7 +246,7 @@ public class RpCommand extends AbstractArchitectCommand {
                         return true;
                     }
                     if (args[1].startsWith("xxx_") || !RpManager.searchRpKey(args[1])) {
-                        PluginData.getMessageUtil().sendErrorMessage(cs, "That variant is not available. Try 'light' or 'dark'.");
+                        PluginData.getMessageUtil().sendErrorMessage(cs, "That variant is not available. Try 'light' or 'footprints'.");
                         return true;
                     }
                     if (data.getVariant().equals(args[1])) {
@@ -256,7 +256,7 @@ public class RpCommand extends AbstractArchitectCommand {
                     data.setVariant(args[1]);
                     RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()), (Player) cs, true);
                     PluginData.getMessageUtil().sendInfoMessage(cs, "RP variant set to "
-                            + ccStressed + args[1] + ccInfo + ". If this variant is not available for a RP you'll see default variant.");
+                            + ccStressed + args[1] + ccInfo + ". If a RP lacks this variant, you get the first variant it lists.");
                 }
                 case "client" -> {
                     if (args.length < 2) {
@@ -274,7 +274,7 @@ public class RpCommand extends AbstractArchitectCommand {
                     data.setClient(args[1]);
                     RpManager.setRp(RpManager.getRpForUrl(data.getCurrentRpUrl()), (Player) cs, true);
                     PluginData.getMessageUtil().sendInfoMessage(cs, "client type set to "
-                            + ccStressed + args[1] + ccInfo + ". If there is no rp for this client type available you'll get the rp for vanilla clients.");
+                            + ccStressed + args[1] + ccInfo + ". If a RP lacks this client type, you get the first client type it lists.");
                 }
             }
             RpManager.savePlayerData((Player)cs);
@@ -505,7 +505,7 @@ public class RpCommand extends AbstractArchitectCommand {
     }
 
     private void sendNotActivatedMessage(CommandSender cs) {
-        PluginData.getMessageUtil().sendErrorMessage(cs, "Resouce pack switcher is not activated for this world.");
+        PluginData.getMessageUtil().sendErrorMessage(cs, "Resource pack switcher is not activated for this world.");
     }
  
     @Override
@@ -532,12 +532,27 @@ public class RpCommand extends AbstractArchitectCommand {
     @Override
     protected void sendHelpMessage(Player player, int page) {
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"Resource Pack Switcher -";
-        help = new String[][]{         {"/rp r","",": Rohan"},
+        help = new String[][]{         {"/rp ","<pack> [-force]",": Loads a resource pack."," Any start of its name works; -force sends it again even if you have it."},
+                                       {"/rp r","",": Rohan"},
                                        {"/rp h","",": Human (merged Gondor/Eriador)"},
                                        {"/rp l","",": Lothlorien"},
                                        {"/rp p","",": Paths of the Dead"},
                                        {"/rp d","",": Dwarven (Moria)"},
-                                       {"/rp m","",": Mordor"}};
+                                       {"/rp m","",": Mordor"},
+                                       {"/rp check","",": Tells you which RP your location uses."},
+                                       {"/rp auto ","[off]",": Switches automatic RP switching on, or off."},
+                                       {"/rp reset","",": Switches automatic RP switching on and loads the RP of your region."},
+                                       {"/rp client ","<type>",": Sets your client type, such as vanilla, sodium or lite."},
+                                       {"/rp variant ","<name>",": Sets your variant, such as light or footprints."},
+                                       {"/rp list ","[filter]",": Lists the RP regions (admins)."},
+                                       {"/rp create ","<region>",": Makes an RP region from your WE selection (admins)."},
+                                       {"/rp edit ","<region>",": Opens the editor of an RP region (admins)."},
+                                       {"/rp remove ","<region>",": Deletes an RP region (admins)."},
+                                       {"/rp server ","<pack> <tag> <mcVersion>",": Puts a release live for a Minecraft version (admins)."},
+                                       {"/rp server remove ","<pack> <mcVersion>",": Removes a Minecraft version's slots (admins)."},
+                                       {"/rp calcsha ","<pack> [all]",": Hashes the pack files again (admins)."},
+                                       {"/rp release ","<pack> <tag> <title>",": Runs the pack's release script (admins)."},
+                                       {"/rp dropdb ","[confirm]",": Deletes every player's pack settings (admins)."}};
         super.sendHelpMessage(player, page);
         PluginData.getMessageUtil().sendNoPrefixInfoMessage(player, "Enable server textures to use this command: Disconnect > Edit MCME Server > Server Resource Packs: enabled");
     }

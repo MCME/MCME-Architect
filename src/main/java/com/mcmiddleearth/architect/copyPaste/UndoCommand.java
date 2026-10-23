@@ -49,7 +49,7 @@ public class UndoCommand extends AbstractArchitectCommand {
         int undid;
         try {
             undid = CopyPasteManager.undoEdits(player, undos);
-            PluginData.getMessageUtil().sendInfoMessage(cs, "Successuly reverted "+undid+" edit"+(undid!=1?"s":"")+".");
+            PluginData.getMessageUtil().sendInfoMessage(cs, "Successfully reverted "+undid+" edit"+(undid!=1?"s":"")+".");
         } catch (CopyPasteException ex) {
             PluginData.getMessageUtil().sendErrorMessage(cs, ex.getMessage());
         }

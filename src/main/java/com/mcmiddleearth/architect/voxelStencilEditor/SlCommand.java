@@ -304,7 +304,7 @@ public class SlCommand extends AbstractArchitectCommand implements Confirmationa
 
     @Override
     public String getUsageDescription() {
-        return ": Create new stencil lists. Add and remove stencils from exsiting stencil lists. \n "
+        return ": Create new stencil lists. Add and remove stencils from existing stencil lists. \n "
                 +ChatColor.WHITE+"Click for detailed help.";
     }
     
@@ -320,7 +320,7 @@ public class SlCommand extends AbstractArchitectCommand implements Confirmationa
                                        {"/sl load"," <listName>",": Loads a stencil list."},
                                        {"/sl add ","<stencilName>",": Adds a stencil to list."},
                                        {"/sl remove ","<stencilName>",": Removes a stencil from list."},
-                                       {"/sl save ","<listName>",": Saves stencil list."},
+                                       {"/sl save","",": Saves the stencil list under its name."},
                                        {"/sl show","",": Shows stencils in current list."}};
         super.sendHelpMessage(player, page);
     }

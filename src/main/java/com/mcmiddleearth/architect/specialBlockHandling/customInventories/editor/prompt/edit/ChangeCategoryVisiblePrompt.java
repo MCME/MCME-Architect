@@ -22,7 +22,7 @@ public class ChangeCategoryVisiblePrompt extends CategoryVisiblePrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Should the inventory item be listed directly in the category of it's collection? "+formatFixedSet();
+        return "Should the inventory item be listed directly in the category of its collection? "+formatFixedSet();
     }
 
     private static String[] getFixedSet() {

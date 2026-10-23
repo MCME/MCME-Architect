@@ -91,7 +91,7 @@ public class SignCommand extends AbstractArchitectCommand {
     }
 
     private void sendNoSignSelected(Player player) {
-        PluginData.getMessageUtil().sendErrorMessage(player, "Right-click a sign with a stick to select it first.");
+        PluginData.getMessageUtil().sendErrorMessage(player, "Left-click a sign with a stick to select it first.");
     }
 
     private void sendInvalidGlowArgument(Player player) {
@@ -112,7 +112,7 @@ public class SignCommand extends AbstractArchitectCommand {
     }
 
     private void sendLineTooLong(CommandSender sender) {
-        PluginData.getMessageUtil().sendErrorMessage(sender,"You typed in many characters. Line might get truncated depending on letter width.");
+        PluginData.getMessageUtil().sendErrorMessage(sender,"You typed in too many characters. Line might get truncated depending on letter width.");
     }
 
     private void sendWrongLineNumberMessage(Player player) {
@@ -131,7 +131,7 @@ public class SignCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return " <#line>: Edits a line of a sign. You need to right-click the sign with a stick first.";
+        return " <1-4> <text> | glow true|false: Edits a line of the sign you selected, or switches its glowing text. Left-click a sign with a stick to select it.";
     }
 
     

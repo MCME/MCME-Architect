@@ -9,110 +9,126 @@ api-version: 26.2
 
 commands:
    parrot:
-      description: Removes parrots
+      description: Removes the parrots from your shoulders.
       usage: /parrot
    get:
-      description: Gives user special blocks with changed place behaviour
-      usage: /get doors|logs|plants|food|head|slabs|armor|misc
+      description: Kits (saved hotbars), dyed leather armor and heads.
+      usage: >-
+        /get [help [page]] | list [page] | <set> [-o] | pcreate|create <set> [description] |
+        publish|unpublish|delete <set> | armor <RRGGBB> | head <head or category>
    fbt:
-      description: Toggle full brightness on/off.
+      description: Switches endless night vision on or off.
       usage: /fbt
       aliases: [fullbright, nightvision]
    vv:
-      description: List content in the VoxelSniper plugin directory.
-      usage: /vv stenicl|list|delete [subdir] [#pagennumber]
+      description: Lists VoxelSniper stencil lists and stencils, and deletes them.
+      usage: /vv [list [folder] [page]] | stencil [folder] [page] | delete <file> | help [page]
    schlist:
-      description: List WorlEdit schematics and subdirectories.
-      usage: /schlist <subdir>
+      description: Lists the WorldEdit schematics on the server.
+      usage: /schlist [folder] [page]
    sl:
-      description: StencilList generator command.
-      usage: /sl create | add | remove |save | show
+      description: Builds VoxelSniper stencil lists.
+      usage: /sl create|load <list> | add|remove <stencil or pattern> | save | show | help [page]
    random:
-      description: Field randomiser command.
-      usage: /random [radius #|range # #|probs [#] |material [names]| show | allow | deny | help]
+      description: Gives blocks around you random values of one block state, such as crop age.
+      usage: >-
+        /random [radius <r> | range <min> <max> | prob <p1> [p2 ...] | material <material:Attribute> ... |
+        show | showAllowed | allow|deny <material:Attribute> ... | help [page]]
    banner:
-      description: Edit banners command
-      usage: see /banner help
+      description: Banner editor; saves and loads banner designs.
+      usage: /banner help
    armor:
-      description: Edit armor stands command
-      usage: see /armor help
+      description: Armor stand editor; copies, saves and loads armor stands.
+      usage: /armor help
    rp:
-      description: Switch resource packs by command
-      usage: /rp Human|Lothlorien|Rohan|Moria|Mordor
+      description: Switches your resource pack and your pack settings.
+      usage: >-
+        /rp <pack> [-force] | check | auto [off] | reset | client <type> | variant <name> | help [page];
+        admins also server | calcsha | release | dropdb | list | create | edit | remove
    itemblock:
-      description: Remove all item block armor stands in a radius
-      usage: /itemblock remove <radius>
+      description: Item block counts, glow and clean-up, and item block limit regions.
+      usage: >-
+        /itemblock help | stats <radius> [height] | glow <radius>|off | remove <radius> [height] | list |
+        create <name> | delete <name> | limit <name>|-base <n>
    inv:
-      description: Open special build inventory
-      usage: /inv b[lock] | i[tem] 
+      description: Opens Architect's build inventories, and manages saved inventories.
+      usage: >-
+        /inv [help [page]] | b [rp:<pack>] [s:<text>] | h [s:<text>] | c [rp:<pack>] |
+        create|delete [rp:<pack>] <name> | reload | download <pack> | upload <pack> <description>
    nophy:
-      description: Manage no phyics list
-      usage: /nophy list | add | remove
+      description: Shows and edits the no-physics list, and manages its exception areas.
+      usage: >-
+        /nophy list <world|-default> | add|remove <world|-default> <block> |
+        exception redstone|water|delete <name> | exception list [page] | help [page]
    architect:
-      description: Manage architect plugin
-      usage: /architect version | world | weather | reload | dev | maplayers refresh
+      description: Architect's help, version, reload and admin tools.
+      usage: >-
+        /architect [help [page]] | version | reload | reloaddata | world | blockdata | dev | checkNBT | weather |
+        eLog | placeAllBlockStates | maplayers refresh
    chunkupdate:
-      description: Updates chunks around a player
-      usage: /chunkupdate <radius>
+      description: Switches automatic block resends (the radius form does nothing in this version).
+      usage: /chunkupdate [radius] | auto <world|-default> [true]
    chead:
-      description: Manage custom heads
-      usage: /chead list | reviewlist | submit | accept | reject | rename | delete | reload
+      description: Custom heads, the head collection and its gallery.
+      usage: >-
+        /chead [help [page]] | warp | list [folder] [page] | submit [player|UUID|handitem] <name>;
+        managers also reviewList | review | accept | reject | delete | rename | setCollection | reload | upload
    sign:
-      description: Edit signs
-      usage: /sign <#line> <line text>
+      description: Edits the sign you selected with a stick.
+      usage: /sign <1-4> <text> | glow true|false
    copy:
-      description: copy area from cuboid WE selection to your clipboard
-      usage: /cp
+      description: Copies your cuboid WorldEdit selection to Architect's clipboard.
+      usage: /copy
       aliases: cp
    cut:
-      description: cut area from cuboid WE selection to your clipboard
-      usage: /ct
+      description: Copies your cuboid WorldEdit selection to Architect's clipboard, then clears it.
+      usage: /cut
       aliases: ct
    paste:
-      description: paste your clipboard
-      usage: /pst
+      description: Pastes Architect's clipboard; -a skips air, -b skips biomes.
+      usage: /paste [-a] [-b]
       aliases: [pst, ps]
    undo:
-      description: rolls back your last /paste command(s)
-      usage: /un <#steps>
+      description: Reverts your last pastes and cuts.
+      usage: /undo [n]
       aliases: [un, ud]
    redo:
-      description: restores a previously undone /paste command(s)
-      usage: /re <#steps>
+      description: Restores pastes and cuts you undid.
+      usage: /redo [n]
       aliases: [re, rd]
    flip:
-      description: flips your clipboard
-      usage: /flp [x|y|z]
+      description: Mirrors Architect's clipboard.
+      usage: /flip [x|y|z]
       aliases: [flp, fl]
    rot:
-      description: rotate your clipboard along y-axis
-      usage: /rt [90|180|270]
+      description: Turns Architect's clipboard around the vertical axis.
+      usage: /rot [90|180|270]
       aliases: rt
    viewdistance:
-      description: change your client side view distance
-      usage: /viewdistance [#viewdistance] | default
+      description: Sets the view distance Architect tells your client.
+      usage: /viewdistance <n>|default
       aliases: viewdist
    weselect:
-      description: selects we commands to use with block picker
-      usage: /weselect <we_command>
+      description: Sets the command that flint clicks put in your chat box.
+      usage: /weselect <command> | shift <command> | show | reset | help [page]
       aliases: [wes]
    switchstick:
-      description: disables the stick for block interaction
-      usage: /switchstick
+      description: Switches your stick's block-state editing on or off (it starts off).
+      usage: /switchstick [help]
       aliases: [swst,ss]
    biometune:
       description: Tune biome colours and atmosphere live.
       usage: >-
-        /biometune [edit] [biome] | info|set|unset|copy|undo|revert|save|status|preview|publish|spares|claim|label
+        /biometune [edit] [biome|here] | info|set|unset|copy|undo|revert|save|status|preview|publish|spares|claim|label
         ... (tab completes)
 permissions:
     architect.*:
-        description: Allows to use all features of Architect plugin
+        description: All of Architect's rank bundles (the Head Designer bundle and everything below it).
         default: op
         children:
             architect.ranks.headDesigner: true
     architect.ranks.headDesigner:
-        descriptions: Permission for MCME Head Designer
+        description: Bundle for MCME Head Designers, with everything the Designer bundle has.
         default: op
         children:
             architect.ranks.designer: true
@@ -137,8 +153,8 @@ permissions:
             architect.itemBlock.region.limit: true
             architect.itemBlock.region.ignore: true
             architect.itemBlock.region.create: true
-    architect.ranks.designer: 
-        descriptions: Permission for MCME Designers
+    architect.ranks.designer:
+        description: Bundle for MCME Designers, with everything the Artist bundle has.
         default: op
         children:
             architect.ranks.artist: true
@@ -151,8 +167,8 @@ permissions:
             architect.inventory.save: true
             architect.noPhysicsList.exception: true
             architect.copypaste: true
-    architect.ranks.artist: 
-        descriptions: Permission for MCME Artists
+    architect.ranks.artist:
+        description: Bundle for MCME Artists, with everything the Adventurer bundle has.
         default: op
         children:
             architect.ranks.adventurer: true
@@ -161,8 +177,8 @@ permissions:
             architect.chunkupdate: true
             architect.get.private: true
             architect.weselect: true
-    architect.ranks.adventurer: 
-        descriptions: Permission for MCME Adventurers
+    architect.ranks.adventurer:
+        description: Bundle for MCME Adventurers.
         default: op
         children:
             architect.hangingEntityEditor: true
@@ -190,7 +206,7 @@ permissions:
             architect.get.food: true
             architect.get.logs: true
             architect.getCommand: true
-            architect.customHeadManager.user: true  
+            architect.customHeadManager.user: true
             architect.inventory: true
             architect.inventory.open: true
             architect.help: true
@@ -199,217 +215,232 @@ permissions:
             architect.viewdistance: true
             architect.switchstick: true
     architect.copypaste:
-        description: Allows to use /copy /paste and /rot
+        description: >-
+            Use /copy, /cut, /paste, /undo, /redo, /flip and /rot. The copy size comes from
+            architect.copypaste.limit.<n> or architect.copypaste.unlimited; with neither, the limit is 0 blocks.
         default: op
-    architect.copypaste.unlimited: 
-        description: Allows to copy / paste unlimited amount of blocks dont crash the server
+    architect.copypaste.unlimited:
+        description: Copy and cut selections of any size.
         default: op
-    architect.info: 
-        descriptions: Allows to use command /architect version | world | dev
+    architect.info:
+        description: Use /architect blockdata, dev and world (/architect version needs architect.reload).
         default: op
     architect.inventory.open:
-        description: Allows to open inventories of dispensers, droppers, hoppers, brewing stands, beacons and anvils
+        description: Open containers whose inventoryAccess is BUILDER or EXCEPTION (with build permission).
         default: op
     architect.inventory:
-        description: Allows to open Architect's special build inventories
+        description: Use /inv to open the block, head and saved inventories.
         default: op
     architect.inventory.save:
-        description: Allows to create custom build inventories
+        description: Create saved inventories with /inv create, and delete your own with /inv delete.
         default: op
     architect.inventory.other:
-        description: Allows to delete custom build inventories created by other players
+        description: Delete other players' saved inventories.
         default: op
     architect.inventory.reload:
-      description: Allows to reload Architect's special build inventories from config files
-      default: op
+        description: Reload the build inventories with /inv reload.
+        default: op
     architect.inventory.upload:
-      description: Allows to upload Architect's special build inventories config files to GitHub
-      default: op
+        description: Upload a pack's build inventory files to GitHub with /inv upload.
+        default: op
     architect.inventory.download:
-      description: Allows to download Architect's special build inventories config files from GitHub
-      default: op
+        description: Download a pack's build inventory files from GitHub with /inv download.
+        default: op
     architect.chunkupdate:
-        description: Allows to use comand /chunkupdate
+        description: >-
+            Use /chunkupdate (its radius form does nothing in this version). /chunkupdate auto also needs
+            architect.chunkupdate.auto.
+        default: op
+    architect.chunkupdate.auto:
+        description: Switch automatic block resends with /chunkupdate auto, together with architect.chunkupdate.
         default: op
     architect.help:
-        description: Allows to use comand /architect help
+        description: Use /architect help.
         default: true
-    architect.reload: 
-        descriptions: Allows to use command /architect reload
+    architect.reload:
+        description: Use /architect reload, version, reloaddata, eLog and placeAllBlockStates.
         default: op
-    architect.fullBrightness: 
-        descriptions: Allows to use command /fbt 
+    architect.fullBrightness:
+        description: Use /fbt (endless night vision).
         default: op
-    architect.resourcePackSwitcher: 
-        descriptions: Allows to use command /rp 
+    architect.resourcePackSwitcher:
+        description: Use /rp to switch your resource pack and your pack settings.
         default: op
-    architect.resourcePackAdmin: 
-        descriptions: Allows to manage resource packs using command /rp 
+    architect.resourcePackAdmin:
+        description: Manage resource packs with /rp server, calcsha, release, dropdb and the region commands.
         default: op
         children:
             architect.resourcePackSwitcher: true
-    architect.place.halfDoor: 
-        descriptions: Allows to place half doors
+    architect.place.halfDoor:
+        description: Place half doors from a door named Half...
         default: op
-    architect.place.halfBed: 
-        descriptions: Allows to place half beds
+    architect.place.halfBed:
+        description: Place half beds from a red bed named Half...
         default: op
-    architect.place.torch: 
-        descriptions: Allows to place redstone torches
+    architect.place.torch:
+        description: Place redstone torches from a torch named Unlit...
         default: op
-    architect.place.doubleSlab: 
-        descriptions: Allows to place double slabs
+    architect.place.doubleSlab:
+        description: Not used in this version.
         default: op
-    architect.place.plant: 
-        descriptions: Allows to place special plants
+    architect.place.plant:
+        description: Place plants named Placeable... on any block.
         default: op
-    architect.place.burningFurnace: 
-        descriptions: Allows to place and interact with burning furnaces
+    architect.place.burningFurnace:
+        description: Place a lit furnace from a furnace named Burning...
         default: op
-    architect.place.pistonExtension: 
-        descriptions: Allows to place piston extensions
+    architect.place.pistonExtension:
+        description: Place piston heads from a piston named Table... or Wheel...
         default: op
-    architect.place.sixSidedLog: 
-        descriptions: Allows to place six sided logs
+    architect.place.sixSidedLog:
+        description: Not used in this version.
         default: op
-    architect.interactDragonEgg: 
-        descriptions: Allows to interact (teleport) dragon egg; doesn't make sense to give to anyone
+    architect.interactDragonEgg:
+        description: Break a dragon egg in creative mode where the dragon egg switch is on (with build permission).
         default: false
     architect.itemTexture:
-        description: Allows to change durability of item in hand to use alternative texture
+        description: Not used in this version.
+        default: op
+    architect.itemTexture.manager:
+        description: Not used in this version.
         default: op
     architect.itemBlock.remove:
-        description: Allows to remove item block armor stands in a radius
+        description: Remove the armor stands around you with /itemblock remove.
         default: op
     architect.itemBlock:
-        description: Allows to use command /itemblock
+        description: Use /itemblock (every subcommand needs it).
         default: op
     architect.itemBlock.region.limit:
-        description: Allows to change limit of an item block region
+        description: Set item block limits with /itemblock limit, for regions and for the world's base limit.
         default: op
     architect.itemBlock.region.create:
-        description: Allows to create new item block limit regions
+        description: Create and delete item block limit regions with /itemblock create and delete.
         default: op
     architect.itemBlock.region.ignore:
-        description: Allows to ignore itemblock limit of a region
+        description: Place item blocks in a chunk that has reached its limit.
         default: op
     architect.get.armor:
-        descriptions: Allows to get coloured leather armor
+        description: Get dyed leather armor with /get armor.
         default: op
-    architect.get.logs: 
-        descriptions: Allows to get six sided logs
+    architect.get.logs:
+        description: Not used in this version.
         default: op
-    architect.get.doors: 
-        descriptions: Allows to get half doors
+    architect.get.doors:
+        description: Not used in this version.
         default: op
-    architect.get.plants: 
-        descriptions: Allows to get plants
+    architect.get.plants:
+        description: Not used in this version.
         default: op
-    architect.get.misc: 
-        descriptions: Allows to get miscellanious items
+    architect.get.misc:
+        description: Not used in this version.
         default: op
-    architect.get.food: 
-        descriptions: Allows to get food items
+    architect.get.food:
+        description: Not used in this version.
         default: op
-    architect.get.slabs: 
-        descriptions: Allows to get double slabs
+    architect.get.slabs:
+        description: Not used in this version.
         default: op
-    architect.get.head: 
-        descriptions: Allows to get players head
+    architect.get.head:
+        description: Get heads from the head collection with /get head.
         default: op
-    architect.get.public: 
-        descriptions: Allows to create public item sets for /get command
+    architect.get.public:
+        description: Create public kits with /get create, and publish or unpublish kits.
         default: op
-    architect.get.private: 
-        descriptions: Allows to create private item sets for /get command
+    architect.get.private:
+        description: Create private kits with /get pcreate.
         default: op
-    architect.get.other: 
-        descriptions: Allows to delete/publish/unpublish item sets created by other players
+    architect.get.other:
+        description: Publish, unpublish and delete other players' kits.
         default: op
-    architect.getCommand: 
-        descriptions: Allows to use command /get
+    architect.getCommand:
+        description: Use /get to list and take kits.
         default: op
-    architect.noPhysicsList.edit: 
-        descriptions: Allows to edit the no-physics list
+    architect.noPhysicsList.edit:
+        description: Edit the no-physics list with /nophy add and remove.
         default: op
         children:
             architect.noPhysicsList.view: true
-    architect.noPhysicsList.exception: 
-        descriptions: Allows to manage no-physics exception areas
+    architect.noPhysicsList.exception:
+        description: Manage no-physics exception areas with /nophy exception (also needs architect.noPhysicsList.view).
         default: op
-    architect.noPhysicsList.view: 
-        descriptions: Allows to view the no-physics list
+    architect.noPhysicsList.view:
+        description: View the no-physics list with /nophy list.
         default: op
-    architect.weSchemViewer: 
-        descriptions: Allows to use command /schlist
+    architect.weSchemViewer:
+        description: List the WorldEdit schematics with /schlist.
         default: op
-    architect.voxel.viewer: 
-        descriptions: Allows to use command /vv list | stencil
+    architect.voxel.viewer:
+        description: List VoxelSniper stencils and stencil lists with /vv list and /vv stencil.
         default: op
-    architect.voxel.delete: 
-        descriptions: Allows to use command /vv delete
+    architect.voxel.delete:
+        description: Delete VoxelSniper stencils and stencil lists with /vv delete.
         default: op
         children:
             architect.voxel.viewer: true
-    architect.voxel.stencilListEditor: 
-        descriptions: Allows to use command /sl
+    architect.voxel.stencilListEditor:
+        description: Build VoxelSniper stencil lists with /sl.
         default: op
-    architect.bannerEditor: 
-        descriptions: Allows to use Banner Editor (except save command)
+    architect.bannerEditor:
+        description: Use /banner and edit banners with a stick (with build permission); delete your own banner files.
         default: op
-    architect.bannerEditor.save: 
-        descriptions: Allows to save Banner Editor files and delete own banner files
+    architect.bannerEditor.save:
+        description: Save banner designs with /banner save.
         default: op
         children:
             architect.bannerEditor: true
-    architect.bannerEditor.delete: 
-        descriptions: Allows to delete Banner Editor files saved by other players
+    architect.bannerEditor.delete:
+        description: Delete other players' banner files.
         default: op
-    architect.paintingEditor: 
-        descriptions: Allows to use Painting Editor
+    architect.paintingEditor:
+        description: Change a painting's motif with a stick (with build permission).
         default: op
-    architect.cycleBlocks: 
-        descriptions: Allows to cycle plant growth stages by clicking with stick
+    architect.cycleBlocks:
+        description: Edit block states with a stick, and step through item block models (with build permission).
         default: op
-    architect.hangingEntityEditor: 
-        descriptions: Allows to edit hanging Entities
+    architect.hangingEntityEditor:
+        description: >-
+            Break paintings and item frames (with build permission); where hanging entity protection is on, also
+            place them and use item frames.
         default: op
-    architect.signEditor: 
-        descriptions: Allows to use Sign Stand Editor
+    architect.signEditor:
+        description: Use /sign, and select a sign by left-clicking it with a stick (with build permission).
         default: op
     architect.lecternEditor:
-        description: Allows to take books from lecterns
+        description: Take a lectern's book and put books on lecterns without build permission.
         default: op
-    architect.armorStandEditor: 
-        descriptions: Allows to use Armor Stand Editor (except storing and deleting files)
+    architect.armorStandEditor:
+        description: Use /armor and edit armor stands with a stick; copy, paste and load saved stands.
         default: op
-    architect.armorStandEditor.trusted: 
-        descriptions: Allows to store Armor Stand Editor files and delete own files
+    architect.armorStandEditor.trusted:
+        description: Save armor stands to files, and rename and delete your own files.
         default: op
         children:
             architect.armorStandEditor: true
-    architect.armorStandEditor.delete: 
-        descriptions: Allows to delete Armor Stand Editor files created by other players
+    architect.armorStandEditor.delete:
+        description: Rename and delete other players' saved armor stands.
         default: op
-    architect.randomiser.allowMaterials: 
-        descriptions: Allows to change allowed materials for command /random
+    architect.armorStandRollback:
+        description: Use /armor rollback, which is unfinished in this version.
+        default: op
+    architect.randomiser.allowMaterials:
+        description: Change the block states /random may set, with /random allow and deny.
         default: op
         children:
             architect.randomiser.user: true
-    architect.randomiser.user: 
-        descriptions: Allows to use command /random (except of /random allow | deny)
+    architect.randomiser.user:
+        description: Use /random, except allow and deny.
         default: op
-    architect.customHeadManager.user: 
-        descriptions: Allows to use command /chead list | submit
+    architect.customHeadManager.user:
+        description: Use /chead help, warp, list and submit, and take a copy of a head by clicking it with a stick.
         default: op
-    architect.customHeadManager.manager: 
-        descriptions: Allows to use all subcommands of command /chead 
+    architect.customHeadManager.manager:
+        description: Review and manage custom heads with /chead (also needs architect.customHeadManager.user).
         default: op
-    architect.weather: 
-        descriptions: Allows to change server weather 
+    architect.weather:
+        description: Change the weather with /architect weather.
         default: op
     architect.checknbt:
-        descriptions: Allows to check item NBTs
+        description: Use /architect checkNBT.
         default: op
     architect.maplayers:
         description: Allows to redraw Architect's web-map layers with /architect maplayers refresh
@@ -440,13 +471,13 @@ permissions:
         description: Allows placing barrier, light and structure void blocks, which are invisible
         default: op
     architect.inventory.ignoreProtection:
-      descriptions: Allows to edit inventory content without build permission
-      default: op
+        description: Change a container's contents without build permission where chest protection is on.
+        default: op
     architect.inventory.edit:
-      descriptions: Allows to edit custom inventory
-      default: op
+        description: Use the in-game build inventory editor (Shift+right-click in a block inventory).
+        default: op
     architect.viewdistance:
-        descriptions: Allows to change client view distance
+        description: Use /viewdistance.
         default: op
     architect.biomeTune:
         description: Use the biome editor and the tuning commands, and refresh your own view.
@@ -461,8 +492,8 @@ permissions:
         description: Refresh other players after tuning (publish, and preview for someone else).
         default: op
     architect.weselect:
-        description: Allows to use command /weselect
+        description: Use /weselect.
         default: op
     architect.switchstick:
-        description: Allows to use command /switchstick
+        description: Use /switchstick.
         default: op

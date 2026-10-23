@@ -73,7 +73,7 @@ public class PasteCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return ": Paste your clipboard to your current location.";
+        return " [-a] [-b]: Paste your clipboard at the same offset from you as when you copied it. -a skips air, -b skips biomes.";
     }
     
     @Override

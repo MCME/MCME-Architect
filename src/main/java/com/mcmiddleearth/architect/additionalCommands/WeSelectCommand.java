@@ -158,7 +158,7 @@ public class WeSelectCommand extends AbstractArchitectCommand {
                 {"/weselect show","",": Shows the currently set commands."},
                 {"/weselect reset","",": Resets the commands to nothing."},
                 {"/weselect ","<command>",": Sets the command for normal left click."},
-                {"/weselect shift ","<command>",": Sets the command for shift left lick."}};
+                {"/weselect shift ","<command>",": Sets the command for shift left click."}};
         helpList.addAll(Arrays.asList(help));
         help = helpList.toArray(help);
         super.sendHelpMessage(player,page);

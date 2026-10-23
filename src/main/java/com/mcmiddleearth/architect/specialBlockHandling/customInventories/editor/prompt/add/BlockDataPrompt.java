@@ -34,12 +34,12 @@ public class BlockDataPrompt extends ValidatingPrompt implements Listener {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Left-click a block to use for blockData"+blockStateKeys[0]+". You may also type in valid block data.";
+        return "Left-click a block with a prismarine shard to use for blockData"+blockStateKeys[0]+". You may also type in valid block data.";
     }
 
     @Override
     protected @Nullable String getFailedValidationText(@NotNull ConversationContext context, @NotNull String invalidInput) {
-        return "You need to left-click a block or type in valid block data!";
+        return "You need to left-click a block with a prismarine shard or type in valid block data!";
     }
 
     @Override

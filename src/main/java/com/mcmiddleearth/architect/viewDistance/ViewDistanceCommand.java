@@ -5,7 +5,6 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
 import com.mcmiddleearth.pluginutil.NumericUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -34,12 +33,12 @@ public class ViewDistanceCommand extends AbstractArchitectCommand {
             return true;
         }
         if(args.length == 0 ) {
-            PluginData.getMessageUtil().sendErrorMessage(player, "You need to specify a view distance (e.g. '/viewdistance 32' or '/viewdistance default'.");
+            PluginData.getMessageUtil().sendErrorMessage(player, "You need to specify a view distance (e.g. '/viewdistance 32' or '/viewdistance default').");
         }
         else if(args[0].equalsIgnoreCase("default")) {
             ViewDistanceManager.unsetViewDistance(player);
-            PluginData.getMessageUtil().sendInfoMessage(player,"Setting your client view distance to server view distance ("
-                     + Bukkit.getViewDistance()+").");
+            PluginData.getMessageUtil().sendInfoMessage(player,"Setting your client view distance to this world's view distance ("
+                     + ViewDistanceManager.getViewDistance(player)+").");
         } else if(NumericUtil.isInt(args[0])) {
             ViewDistanceManager.setViewDistance(player,Math.min(500,NumericUtil.getInt(args[0])));
             PluginData.getMessageUtil().sendInfoMessage(player,"Setting your client view distance to "
@@ -57,12 +56,12 @@ public class ViewDistanceCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return ": Change your client side view distance to prevent chunks from unloading.";
+        return " <distance> | default: Sets the view distance Architect tells your client, up to 500, so chunks stay in sight; 'default' goes back to this world's value.";
     }
 
     @Override
     public String getHelpCommand() {
-        return "/viewdistance [#distance] | default";
+        return null;
     }
 
     @Override
