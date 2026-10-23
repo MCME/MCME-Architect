@@ -67,19 +67,19 @@ public class SwitchStickCommand extends AbstractArchitectCommand {
 
     @Override
     public String getShortDescription(){
-        return ": Stick-Sticks Command.";
+        return ": Switch the block-state stick on or off.";
     }
 
     @Override
     public String getUsageDescription(){
-        return ": Set command to disable the stick for block interaction. Block interaction is allowed by default.";
+        return " [help]: Switches your stick's block-state editing on or off. The stick is off until you first run this.";
     }
 
     @Override
     protected void sendHelpMessage(Player player, int page){
         List<String[]> helpList = new ArrayList<>();
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"SwitchStick Command -";
-        help = new String[][]{{"weselect ","",": Disables the stick for block interaction."}};
+        help = new String[][]{{"/switchstick","",": Switches the stick's block-state editing on or off."," The stick is off until you first run this."}};
         helpList.addAll(Arrays.asList(help));
         help = helpList.toArray(help);
         super.sendHelpMessage(player,page);

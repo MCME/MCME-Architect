@@ -11,8 +11,8 @@ public class ChangeDisplayPrompt extends DisplayPrompt {
 
     @Override
     public @NotNull String getPromptText(@NotNull ConversationContext conversationContext) {
-        return "Current description is "+conversationContext.getSessionData("display")
-                +". Type in new description for the custom inventory or type '!skip'.";
+        return "Current display name is "+conversationContext.getSessionData("display")
+                +". Type in a new display name or type '!skip'.";
     }
 
     @Override

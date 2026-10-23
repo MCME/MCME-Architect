@@ -214,7 +214,7 @@ public class BannerEditorCommand extends AbstractArchitectCommand {
     }
 
     private void sendFileExistsMessage(CommandSender cs) {
-        PluginData.getMessageUtil().sendErrorMessage(cs, "File already exists. Delete first.");
+        PluginData.getMessageUtil().sendErrorMessage(cs, "File already exists, or the file name is not allowed.");
     }
 
     private void sendGotBanner(Player p) {
@@ -245,7 +245,7 @@ public class BannerEditorCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return ": A banner consists of a base which has only a color but no texture and up to 6 different patterns which have a texture and a color each. \n " 
+        return ": A banner consists of a base which has only a color but no texture, and patterns which have a texture and a color each. \n " 
                 + "The banner editor features a number of commands to select properties of a banner you want to change. The changes are applied to a banner by clicking at it with a stick in hand. \n "
                 + ChatColor.WHITE+"Click for detailed help.";
     }

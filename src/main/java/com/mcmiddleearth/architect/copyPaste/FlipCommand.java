@@ -45,7 +45,7 @@ public class FlipCommand extends AbstractArchitectCommand {
         //if(true) return true;
         if(args.length>0) {
             if(!CopyPasteManager.isAxis(args[0])) {
-                PluginData.getMessageUtil().sendErrorMessage(cs, "Possible axis are x, y and z.");
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Possible axes are x, y and z.");
                 return true;
             }
             axis = args[0].charAt(0);
@@ -79,7 +79,7 @@ public class FlipCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return " [axis]: Flip your clipboard along x- y- or z-axis.";
+        return " [x|y|z]: Flip your clipboard along the x-, y- or z-axis; without an axis, along the direction you look.";
     }
     
     @Override

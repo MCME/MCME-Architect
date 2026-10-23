@@ -80,7 +80,7 @@ public class SchListCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return " [#page]: Lists all WE schematics, you can click at folder names to navigate into them.";
+        return " [folder] [page]: Lists all WE schematics, you can click at folder names to navigate into them.";
     }
     
     @Override

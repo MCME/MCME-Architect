@@ -60,12 +60,12 @@ public class RotateCommand extends AbstractArchitectCommand {
 
     @Override
     public String getUsageDescription() {
-        return " [degree]: Rotate your clipboard in steps of 90 degree.";
+        return " [degrees]: Turns your clipboard clockwise, seen from above, in steps of 90 degrees (default 90).";
     }
     
     @Override
     public String getHelpCommand() {
-        return "/rotate";
+        return null;
     }
     
     @Override

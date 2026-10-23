@@ -81,7 +81,7 @@ public class RpListener implements Listener {
         devUtil.log(2,"Bukkit Protocol Version: "+snapshot + version);
         devUtil.log(2,"Client Protocol Version: "+RpManager.getClientProtocolVersion(player));
         devUtil.log(2,"Sodium client: "+RpManager.isSodiumClient(player));
-        devUtil.log(2,"Incomming plugin channels:");
+        devUtil.log(2,"Incoming plugin channels:");
         Bukkit.getMessenger().getIncomingChannels().forEach(channel->devUtil.log(2,channel));
         if(event.getReason().equals(PlayerConnectEvent.ConnectReason.JOIN_PROXY)) {
             UUID uuid = player.getUniqueId();
@@ -153,7 +153,7 @@ public class RpListener implements Listener {
                                                 + ChatColor.AQUA + "you need to" + ChatColor.GREEN +ChatColor.BOLD+ " disable mip-mapping"
                                                 + ChatColor.AQUA + ". Also please notice that "
                                                 + ChatColor.GREEN+ChatColor.BOLD+"Optifine Shaders do not work"
-                                                + ChatColor.AQUA + "with our resource packs.")
+                                                + ChatColor.AQUA + " with our resource packs.")
                                         .addClickable("Click here to get a " + ChatColor.GREEN + ChatColor.BOLD + "Guide to Shaders on MCME.", "/helper shaders").setRunDirect()
                                         .send(player);
                             }

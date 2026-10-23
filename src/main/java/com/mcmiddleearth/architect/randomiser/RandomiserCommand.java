@@ -300,7 +300,7 @@ public class RandomiserCommand extends AbstractArchitectCommand {
     }
 
     private void sendRadiusSetMessage(CommandSender cs) {
-        PluginData.getMessageUtil().sendInfoMessage(cs,"Radius set (max is 150).");
+        PluginData.getMessageUtil().sendInfoMessage(cs,"Radius set (1 to 150; other values are ignored).");
     }
 
     private void sendProbsSetMessage(CommandSender cs) {
@@ -320,7 +320,7 @@ public class RandomiserCommand extends AbstractArchitectCommand {
     }
 
     private void sendNotActivatedMessage(CommandSender cs) {
-        PluginData.getMessageUtil().sendErrorMessage(cs, "Field randomizer is not enabled for this world.");
+        PluginData.getMessageUtil().sendErrorMessage(cs, "Field randomiser is not enabled for this world.");
     }
 
     private void sendIllegalProbMessage(CommandSender cs) {
@@ -353,13 +353,13 @@ public class RandomiserCommand extends AbstractArchitectCommand {
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"Block Data Value Randomiser -";
         help = new String[][]{{"/random","",": Randomises your surroundings"," with current settings."},
                                        {"/random radius ","<radius>",": Sets affected radius."},
-                                       {"/random range ","<min> <max>",": Sets placed data values",". Previously set probabilties are cleared. All data values will be used in equal amounts."},
-                                       {"/random material ","<material> [material] ... ",": Sets affected materials",". You may use material names or block IDs. Blocks with all data values will be affected."},
-                                       {"/random prob ","<prob> [prob] ... ",": Sets probabilities",". \n If more arguments for probabilities are specified than used data values surplus arguments are ignored. \n If too few arguments are specified remaining probabilities will be zero. \n If the sum of given probabilities is not 100% last probability will be adjusted."},
+                                       {"/random range ","<min> <max>",": Sets placed data values",". Previously set probabilities are cleared. All data values will be used in equal amounts."},
+                                       {"/random material ","<entry> [entry] ... ",": Sets affected materials",". Each entry is a block and a property, as in wheat:Age, and must be on the allowed list (/random showAllowed)."},
+                                       {"/random prob ","<prob> [prob] ... ",": Sets probabilities",". \n Give one probability in percent for each data value of the range. \n If they do not add up to 100%, the last probabilities are adjusted."},
                                        {"/random show","",": Shows settings."},
                                        {"/random showAllowed","",": Shows allowed materials."},
-                                       {"/random allow "," <material> [material] ... ",": Allowes a material"," to be randomised. Don't allow stairs ;)"},
-                                       {"/random deny"," <material> [material] ... ",": Denies a material", " to be randomised."}};
+                                       {"/random allow ","<entry> [entry] ... ",": Allows a material"," to be randomised. Each entry is a block and a property, as in wheat:Age. Don't allow stairs ;)"},
+                                       {"/random deny"," <entry> [entry] ... ",": Denies a material", " to be randomised."}};
         super.sendHelpMessage(player, page);
     }
     

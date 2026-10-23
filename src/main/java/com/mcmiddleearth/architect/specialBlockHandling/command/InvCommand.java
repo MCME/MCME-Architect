@@ -58,7 +58,7 @@ public class InvCommand extends AbstractArchitectCommand {
                 return true;
             }
             if(args.length<3) {
-                PluginData.getMessageUtil().sendErrorMessage(cs, "Not enough arguments: /rp upload <rpName> <Describe your changes>");
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Not enough arguments: /inv upload <rpName> <Describe your changes>");
             } else {
                 String rpName = RpManager.matchRpName(args[1]);
                 if(rpName.equals("")) {
@@ -84,7 +84,7 @@ public class InvCommand extends AbstractArchitectCommand {
                 return true;
             }
             if(args.length<2) {
-                PluginData.getMessageUtil().sendErrorMessage(cs, "Not enough arguments: /rp download <rpName>");
+                PluginData.getMessageUtil().sendErrorMessage(cs, "Not enough arguments: /inv download <rpName>");
             } else {
                 String rpName = RpManager.matchRpName(args[1]);
                 if(rpName.equals("")) {
@@ -386,7 +386,7 @@ public class InvCommand extends AbstractArchitectCommand {
     }
     @Override
     public String getUsageDescription() {
-        return ": Opens block, item and head inventories. Creates and manages custom block inventories.\n "
+        return ": Opens block, head and custom block inventories. Creates and manages custom block inventories.\n "
                 +ChatColor.WHITE+"Click for detailed help.";
     }
     
@@ -399,13 +399,15 @@ public class InvCommand extends AbstractArchitectCommand {
     protected void sendHelpMessage(Player player, int page) {
         helpHeader = "Help for "+PluginData.getMessageUtil().STRESSED+"command /inv ... -";
         help = new String[][]{
-                   {"/inv b"," [rp:<rpName>] [s:<search>]",": Open MCME block inventory.","Without optional parameter [rp:<rpName>] that inventory is opened which matches to the resource region you are in. Optional parameter [s:<search>] opens an inventory with all blocks which names contain <search>."},
+                   {"/inv b"," [rp:<rpName>] [s:<search>]",": Open MCME block inventory."," Without optional parameter [rp:<rpName>] the inventory of your current resource pack is opened. Optional parameter [s:<search>] opens an inventory with all blocks which names contain <search>."},
                    //{"/inv i"," [rp:<rpName>] [s:<search>]",": Open MCME item inventory.","Without optional parameter [rp:<rpName>] that inventory is opened which matches to the resource region you are in. Optional parameter [s:<search>] opens an inventory with all items which names contain <search>."},
-                   {"/inv c"," [rp:<rpName>]",": Open custom block inventory.","Without optional parameter [rp:<rpName>] that inventory is opened which matches to the resource region you are in. If you are not in a resource region (plotworld, Themed-builds) inventory for Gondor pack opens."},
+                   {"/inv c"," [rp:<rpName>]",": Open custom block inventory."," Without optional parameter [rp:<rpName>] the inventory of your current resource pack is opened. If that pack has no custom block inventories, those of the Human pack open."},
                    {"/inv h"," [s:<search>]",": Open MCME head inventory."," Heads don't depend on resource packs, so no additional resource pack parameter here. Optional parameter [s:<search>] opens an inventory with all heads which names contain <search>."},
                    {"/inv create"," [rp:<rpName>] <name>",": Saves your inventory"," as a new custom block inventory. This is meant for Project leaders for example to create inventories with all blocks needed for a plot build."},
-                   {"/get delete"," [rp:<rpName>] <name>",": Deletes a previously created (with /inv create) customized inventory."},
-                   {"/get reload"," [rp:<rpName1>] [rp:<rpName2>] [...]",": Reloads all inventories from config files."},
+                   {"/inv delete"," [rp:<rpName>] <name>",": Deletes a previously created (with /inv create) customized inventory."},
+                   {"/inv reload","",": Reloads all inventories from config files."},
+                   {"/inv upload"," <rpName> <description>",": Pushes a pack's block files to GitHub."},
+                   {"/inv download"," <rpName>",": Pulls a pack's block files from GitHub"," and reloads all inventories."},
                 };
         super.sendHelpMessage(player, page);
     }

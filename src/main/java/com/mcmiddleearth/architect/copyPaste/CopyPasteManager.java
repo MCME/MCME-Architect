@@ -164,7 +164,7 @@ public class CopyPasteManager {
                 UndoData data = list.get(list.size()-1);
                 saveRedoData(player,data);
                 if(!data.undo()) {
-                    throw new CopyPasteException("Error while undoing edits (reverted "+count+" edits before the error occured.");
+                    throw new CopyPasteException("Error while undoing edits (reverted "+count+" edits before the error occurred).");
                 }
                 list.remove(list.size()-1);
                 count++;
@@ -183,7 +183,7 @@ public class CopyPasteManager {
                 UndoData data = list.get(list.size()-1);
                 saveUndoData(player,data);
                 if(!data.undo()) {
-                    throw new CopyPasteException("Error while redoing edits (redone "+count+" edits before the error occured.");
+                    throw new CopyPasteException("Error while redoing edits (redone "+count+" edits before the error occurred).");
                 }
                 list.remove(list.size()-1);
                 count++;

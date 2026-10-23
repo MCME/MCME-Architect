@@ -37,7 +37,7 @@ public final class WorldEditGuard {
     public static boolean require(CommandSender cs) {
         if (isAvailable()) return true;
         PluginData.getMessageUtil().sendErrorMessage(cs,
-            "This feature needs WorldEdit, which isn't available on this server version yet.");
+            "This feature needs WorldEdit, which is not installed on this server.");
         return false;
     }
 }

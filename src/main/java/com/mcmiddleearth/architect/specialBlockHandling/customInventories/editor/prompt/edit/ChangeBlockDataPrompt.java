@@ -21,7 +21,7 @@ public class ChangeBlockDataPrompt extends BlockDataPrompt {
         Map<String,String> blockData = (Map<String,String>) conversationContext.getSessionData("blockData");
         assert blockData != null;
         return "Current blockData"+getBlockStateKeys()[0]+" is "
-                +blockData.get(getBlockStateKeys()[0])+". Left-click a block to use for blockData"+getBlockStateKeys()[0]
+                +blockData.get(getBlockStateKeys()[0])+". Left-click a block with a prismarine shard to use for blockData"+getBlockStateKeys()[0]
                 +". Or type '!skip'. You may also type in valid block data.";
     }
 
