@@ -124,13 +124,17 @@ public class BannerEditorCommand extends AbstractArchitectCommand {
                     sendGotBanner(p);
                     return true;
                 } else if(args[0].equalsIgnoreCase("files")) {
+                    String[] listArgs = Arrays.copyOfRange(args, 1, args.length);
+                    if(!isListFolderAllowed(p, BannerEditorConfig.getDataDir(), listArgs)) {
+                        return true;
+                    }
                     PluginData.getMessageUtil().sendFancyFileListMessage(p,
                                     new FancyMessage(MessageType.INFO,PluginData.getMessageUtil())
                                             .addSimple(PluginData.getMessageUtil().STRESSED+"Banner "
                                                     +PluginData.getMessageUtil().INFO+"files /"),
                                     BannerEditorConfig.getDataDir(),
                                     FileUtil.getFileExtFilter(BannerEditorConfig.getFileExtension()),
-                                    Arrays.copyOfRange(args, 1, args.length), 
+                                    listArgs,
                                     "/banner files", 
                                     "/banner load", true);
                     return true;

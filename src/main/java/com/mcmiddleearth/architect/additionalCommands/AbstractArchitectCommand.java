@@ -16,9 +16,12 @@
  */
 package com.mcmiddleearth.architect.additionalCommands;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import com.mcmiddleearth.util.PathSafety;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.ChatColor;
@@ -77,4 +80,18 @@ public abstract class AbstractArchitectCommand implements TabExecutor{
                                                          getHelpCommand(), page);
     }
     
+    /**
+     * Whether the folder a player named for a file list stays inside the list's base folder. The file list
+     * reads that folder from {@code listArgs[0]}; a lone page number resolves inside the base. If the folder
+     * is outside, the player is told, the refusal is logged and false is returned.
+     */
+    protected static boolean isListFolderAllowed(CommandSender sender, File baseDir, String[] listArgs) {
+        if (listArgs.length == 0 || PathSafety.isInsideFolder(baseDir, listArgs[0])) {
+            return true;
+        }
+        Log.warn("Rejected unsafe folder name '" + listArgs[0] + "' outside " + baseDir);
+        PluginData.getMessageUtil().sendErrorMessage(sender, "Invalid folder name. Pick a folder from the list.");
+        return false;
+    }
+
 }

@@ -16,6 +16,7 @@
  */
 package com.mcmiddleearth.architect.specialBlockHandling.command;
 
+import com.mcmiddleearth.architect.Log;
 import com.mcmiddleearth.architect.Modules;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
@@ -27,6 +28,7 @@ import com.mcmiddleearth.pluginutil.FileUtil;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
+import com.mcmiddleearth.util.PathSafety;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -216,6 +218,13 @@ public class GetCommand extends AbstractArchitectCommand {
         }
         if(headName.endsWith("/")) {
             headName = headName.substring(0,headName.length()-1);
+        }
+        // A blank name stays the whole collection; anything else must stay inside it.
+        if(!PathSafety.isInsideFolder(CustomHeadManagerData.getAcceptedHeadDir(), headName)) {
+            Log.warn("Rejected unsafe head name '" + headName + "' outside "
+                    + CustomHeadManagerData.getAcceptedHeadDir());
+            PluginData.getMessageUtil().sendErrorMessage(p, "Invalid head or folder name.");
+            return;
         }
         File file = new File(CustomHeadManagerData.getAcceptedHeadDir(),headName);
         if(!file.exists()) {
