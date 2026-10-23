@@ -694,8 +694,10 @@ folder names must match that form.
 
 **Good to know**
 
-- Keep the description to one word. The bundled upload script passes it unquoted, so a longer description commits
-  nothing, yet the command reports success.
+- The description may hold letters, digits, spaces and `. , : ; ! ' ( ) / _ -`; no word may start with `-`. Anything
+  else is refused. The bundled upload script passes the description to git quoted, as one message. A copy of the
+  script from before 3.2.1 passes it unquoted, and then a description of more than one word commits nothing, yet the
+  command reports success: quote `$2` in that copy as the bundled script does.
 - A failure inside a script can still be reported as success, because only the script's last line sets the exit code.
   Check Architect's log.
 - `git commit -a` does not add new files: add a new tab file to the repository by hand once.

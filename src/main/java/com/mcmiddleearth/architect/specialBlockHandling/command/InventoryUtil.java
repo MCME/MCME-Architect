@@ -7,10 +7,24 @@ import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
+import java.util.regex.Pattern;
 
 public class InventoryUtil {
+
+    // Letters, digits, spaces and simple punctuation. A hyphen may sit inside a word, as in oak-log.
+    private static final Pattern DESCRIPTION = Pattern.compile("[\\p{L}\\p{N} .,:;!'()/_-]+");
+
+    /**
+     * Whether a description may go to the upload script as its commit message: letters, digits, spaces and
+     * . , : ; ! ' ( ) / _ - only, and no word that starts with a dash, so git never reads a word as an option.
+     */
+    static boolean isAllowedDescription(String description) {
+        return description != null && !description.isBlank() && DESCRIPTION.matcher(description).matches()
+                && Arrays.stream(description.split(" ")).noneMatch(word -> word.startsWith("-"));
+    }
 
     public static void downloadInventory(String rpName, BiConsumer<Boolean, Integer> callback) {
         executeScript("inventoryDownload", rpName, "", callback);

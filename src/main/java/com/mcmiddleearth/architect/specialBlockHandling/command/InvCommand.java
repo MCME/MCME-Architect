@@ -66,6 +66,11 @@ public class InvCommand extends AbstractArchitectCommand {
                     return true;
                 }
                 String description = Joiner.on(" ").join(Arrays.copyOfRange(args,2, args.length));
+                if(!InventoryUtil.isAllowedDescription(description)) {
+                    PluginData.getMessageUtil().sendErrorMessage(cs, "Invalid description. Use letters, digits, spaces"
+                            + " and . , : ; ! ' ( ) / _ - only, and do not start a word with -.");
+                    return true;
+                }
                 InventoryUtil.uploadInventory(rpName, description, (exit, exitCode) -> {
                     if (exit && exitCode == 0) {
                         PluginData.getMessageUtil().sendInfoMessage(cs,
