@@ -3,7 +3,10 @@ package com.mcmiddleearth.architect.mapLayers.customBiomes;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -14,12 +17,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.zip.InflaterInputStream;
 
 import static com.mcmiddleearth.architect.mapLayers.customBiomes.RegionFixtures.BYTE;
 import static com.mcmiddleearth.architect.mapLayers.customBiomes.RegionFixtures.SECTOR;
@@ -612,6 +617,70 @@ class RegionFileReaderTest {
 
         assertEquals(Map.of("LZ4 is not supported", true, "unknown compression 9", true, ChunkNbt.OLD_LAYOUT, true,
                 "unreadable: IOException", false, "moved while being read", false), lasting);
+    }
+
+    // The record takes paint from both readers: a loaded chunk's from ChunkPaintReader, which asks the game about one
+    // block of each cell, and a saved chunk's from here. They must agree on a chunk that did not change, or its saved
+    // copy would differ from what the live reads found, as if it had changed. A sampler that answers from the fixture
+    // chunk's own palettes stands in for the game.
+    @Test
+    void theLiveReaderAgreesWithThisOnEveryChunkOfTheFixture() throws IOException {
+        Set<String> ids = Set.of(CBC, QUAY);
+        Map<Long, ChunkPaint> saved = readFixture(ids);
+        Map<Long, byte[]> nbt = fixtureNbt();
+        assertEquals(saved.keySet(), nbt.keySet());
+
+        for (Map.Entry<Long, byte[]> chunk : nbt.entrySet()) {
+            Map<Integer, ChunkNbt.Section> sections = new HashMap<>();
+            for (ChunkNbt.Section section : ChunkNbt.parse(chunk.getValue()).sections()) {
+                sections.put(section.y(), section);
+            }
+            ChunkPaint live = ChunkPaintReader.read((x, y, z) -> biomeAt(sections, x, y, z, ids), -64, 320);
+
+            assertFalse(live.isEmpty(), "each chunk of the fixture is painted, so that each comparison counts");
+            assertEquals(saved.get(chunk.getKey()), live,
+                    "chunk " + PaintRecord.keyX(chunk.getKey()) + ", " + PaintRecord.keyZ(chunk.getKey()));
+        }
+    }
+
+    /** The NBT of each chunk the fixture stores, by key, uncompressed as the format says: all of it is zlib. */
+    private static Map<Long, byte[]> fixtureNbt() throws IOException {
+        byte[] file = Files.readAllBytes(fixture());
+        ByteBuffer bytes = ByteBuffer.wrap(file);
+        Map<Long, byte[]> nbt = new HashMap<>();
+        for (int index = 0; index < 1024; index++) {
+            int location = bytes.getInt(index * 4);
+            int start = (location >>> 8) * SECTOR;
+            if (start < 2 * SECTOR || (location & 0xFF) == 0) {
+                continue;
+            }
+            assertEquals(2, file[start + 4], "zlib");
+            try (InputStream in = new InflaterInputStream(
+                    new ByteArrayInputStream(file, start + 5, bytes.getInt(start) - 1))) {
+                nbt.put(PaintRecord.chunkKey(-32 + index % 32, -32 + index / 32), in.readAllBytes());
+            }
+        }
+        return nbt;
+    }
+
+    /**
+     * The custom biome at a block, as the game answers about a loaded chunk: the one the cell holds, by the section's
+     * palette, or null for a vanilla or an unknown id.
+     */
+    private static String biomeAt(Map<Integer, ChunkNbt.Section> sections, int x, int y, int z, Set<String> ids) {
+        ChunkNbt.Section section = sections.get(Math.floorDiv(y, 16));
+        if (section == null || section.palette().isEmpty()) {
+            return null;
+        }
+        int[] cells;
+        try {
+            cells = ChunkNbt.cells(section.palette(), section.data());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        int cell = Math.floorMod(y, 16) / 4 * 16 + z / 4 * 4 + x / 4;
+        String id = section.palette().get(cells == null ? 0 : cells[cell]);
+        return ids.contains(id) ? id : null;
     }
 
     @Test
