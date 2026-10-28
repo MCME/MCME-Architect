@@ -66,7 +66,9 @@ import java.util.logging.Level;
  * <p>
  * A chunk is read only if it is loaded when its turn comes, not when it was queued: the game answers about an unloaded
  * chunk with the biomes its generator would make, which would write a wrong entry. The check at unload runs inside
- * the event, while the chunk is still loaded.
+ * the event, while the chunk is still loaded. A watched chunk that the world reports unloaded already inside the
+ * event cannot be read: those are counted, and logged once a minute like the ones past the allowance, as they would
+ * mean that the reads at unload come to nothing on this server.
  * <p>
  * Main thread only.
  */
@@ -135,6 +137,11 @@ public final class PaintTracker implements Listener {
     private final Map<ChunkBox, Long> watchedBoxes = new HashMap<>();
     /** The chunks that unloaded unread because the tick's allowance was spent, by world, since the last log line. */
     private final Map<String, Integer> skippedUnloads = new TreeMap<>();
+    /**
+     * The watched chunks that the world had unloaded already when their unload event came, so that there was nothing
+     * to read, by world, since the last log line.
+     */
+    private final Map<String, Integer> unloadedFirst = new TreeMap<>();
     /** Selections to queue, the soonest first. */
     private final Queue<DueRead> dueReads = new PriorityQueue<>(Comparator.comparingLong(DueRead::tick));
     private BukkitTask task;
@@ -218,6 +225,7 @@ public final class PaintTracker implements Listener {
         builderMarks.clear();
         watchedBoxes.clear();
         skippedUnloads.clear();
+        unloadedFirst.clear();
         dueReads.clear();
     }
 
@@ -432,7 +440,9 @@ public final class PaintTracker implements Listener {
     /**
      * A watched chunk is read at once, outside the queue's budget, as long as this tick's allowance for such reads has
      * not run out. After that it unloads unread, and is counted. A chunk near a builder is watched no more once it
-     * has unloaded; one in a selection is watched until the selection runs out.
+     * has unloaded; one in a selection is watched until the selection runs out. A watched chunk that the world has
+     * unloaded already cannot be read, and is counted apart: on a server that unloads chunks before their event, every
+     * read here would come to nothing.
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onChunkUnload(ChunkUnloadEvent event) {
@@ -444,6 +454,10 @@ public final class PaintTracker implements Listener {
         Long markedUntil = builderMarks.remove(ref);
         boolean watchedNow = (markedUntil != null && markedUntil > tick) || inWatchedBox(ref);
         if (!watchedNow || recordOf.apply(ref.world()) == null) {
+            return;
+        }
+        if (!chunk.getWorld().isChunkLoaded(ref.x(), ref.z())) {
+            unloadedFirst.merge(ref.world(), 1, Integer::sum);
             return;
         }
         if (unloadSpent >= UNLOAD_BUDGET_NANOS) {
@@ -461,6 +475,8 @@ public final class PaintTracker implements Listener {
         watchedBoxes.values().removeIf(until -> until <= tick);
         skippedUnloads.forEach((world, count) -> plugin.getLogger().info(skippedMessage(world, count)));
         skippedUnloads.clear();
+        unloadedFirst.forEach((world, count) -> plugin.getLogger().info(unloadedFirstMessage(world, count)));
+        unloadedFirst.clear();
     }
 
     private static String skippedMessage(String world, int count) {
@@ -468,6 +484,15 @@ public final class PaintTracker implements Listener {
         return count == 1
                 ? "Custom biomes layer: 1 chunk unloaded before it could be read" + scan + "it."
                 : "Custom biomes layer: " + count + " chunks unloaded before they could be read" + scan + "them.";
+    }
+
+    private static String unloadedFirstMessage(String world, int count) {
+        String scan = "; /architect maplayers scan " + world + " catches ";
+        return count == 1
+                ? "Custom biomes layer: 1 chunk was already unloaded when its unload was handled, so it was not read"
+                        + scan + "it."
+                : "Custom biomes layer: " + count + " chunks were already unloaded when their unload was handled, so"
+                        + " they were not read" + scan + "them.";
     }
 
     /** For tests: the selections now watched, the ones that have run out included until the next housekeeping. */

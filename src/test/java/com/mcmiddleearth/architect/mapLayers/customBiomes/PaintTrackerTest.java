@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.mapLayers.customBiomes;
 
 import com.mcmiddleearth.architect.mapLayers.customBiomes.SelectionSource.ChunkBox;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -699,6 +700,44 @@ class PaintTrackerTest {
                 + "/architect maplayers scan other catches them."), told.get(0));
         assertTrue(told.get(1).endsWith("Custom biomes layer: 2 chunks unloaded before they could be read; "
                 + "/architect maplayers scan world catches them."), told.get(1));
+    }
+
+    // The read at unload counts on the chunk being still loaded inside its unload event, as on Paper. On a server that
+    // unloads it first, every such read would do nothing, unseen: a watched chunk found unloaded already is counted
+    // and told once a minute, and a chunk read as it unloads is not.
+    @Test
+    void aWatchedChunkFoundUnloadedAlreadyAtItsUnloadIsCountedAndToldOnceAMinute() {
+        builder = false;
+        Logged logged = capture();
+        selection = new ChunkBox("world", 0, 0, 2, 0);
+        load(0, 0, 2, 0);
+        tracker.start();
+        ticks(10);
+        command("//setbiome cbc:a");
+        forgetReads();
+
+        unloading(0, 0); // still loaded inside its event: read
+        unloadedFirst(1, 0);
+        unloadedFirst(2, 0);
+        assertEquals(List.of(new Spot("world", 0, 0)), readLog, "the chunks found unloaded are not read");
+        ticks(1_200); // tick 1,210: the housekeeping of tick 1,200 has run
+        unloadedFirst(1, 0);
+        ticks(1_200); // tick 2,410
+        ticks(1_200); // tick 3,610: nothing new to say
+
+        List<String> told = logged.messages(Level.INFO);
+        assertEquals(2, told.size(), told.toString());
+        assertTrue(told.get(0).endsWith("Custom biomes layer: 2 chunks were already unloaded when their unload was "
+                + "handled, so they were not read; /architect maplayers scan world catches them."), told.get(0));
+        assertTrue(told.get(1).endsWith("Custom biomes layer: 1 chunk was already unloaded when its unload was "
+                + "handled, so it was not read; /architect maplayers scan world catches it."), told.get(1));
+    }
+
+    /** The unload event of a chunk that the world has unloaded already. */
+    private void unloadedFirst(int x, int z) {
+        Chunk chunk = world.getChunkAt(x, z);
+        world.unloadChunk(x, z);
+        server.getPluginManager().callEvent(new ChunkUnloadEvent(chunk, true));
     }
 
     @Test
