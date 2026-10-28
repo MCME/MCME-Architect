@@ -2304,9 +2304,11 @@ When a watched chunk unloads, Architect reads its saved copy a few seconds later
 the chunk as it unloads: at that moment the server answers with the biomes its world generator would make, not the
 painted ones. The server writes a chunk that changed as it unloads, a moment later, so Architect takes only a copy
 written after the unload, and looks again for about a minute until one comes. A chunk that did not change is not
-written again: its older copy agrees with the record, which keeps what it holds. When no newer copy comes in time and
-the older one differs from the record, or there is no copy at all, the chunk keeps its old record until it is loaded and
-read again, or until the next scan, and the log says how many such chunks there were, once a minute (see below).
+written again: its older copy agrees with the record, which keeps what it holds. While the world's first read is under
+way, the record holds nothing yet from the region files that read has still to reach, and it puts the older copy when
+it gets there. When no newer copy comes in time and the older one differs from the record, or there is no copy at all,
+the chunk keeps its old record until it is loaded and read again, or until the next scan, and the log says how many such
+chunks there were, once a minute (see below).
 
 **What the map shows.** An area is a stretch of ground where the same custom biomes lie in every 4 x 4 block column; its
 outline follows the 4-block grid that the game stores biomes on.

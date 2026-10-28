@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -855,6 +856,73 @@ class PaintScanTest {
         assertEquals(List.of("world", "other", "world"), changes, "the saved copy before the fill's second file");
         assertEquals(saved(-3, -4), other.get(-3, -4));
         assertTrue(store.record("world").fillDone());
+    }
+
+    // While a world's fill runs, the record holds nothing yet from the region files it has still to read. An unchanged
+    // chunk of such a file that unloads keeps its older copy, which differs from that empty record, though nothing was
+    // missed: the fill puts that copy when it gets to the file. It is not counted. The fill here goes one file at a
+    // time, and each look at the copy comes between two of its files; the chunk lies in the last of six.
+    @Test
+    void anUnchangedChunkWhoseFileTheFillHasNotReadIsNotCounted() throws IOException {
+        String[] names = {"r.0.0.mca", "r.1.0.mca", "r.2.0.mca", "r.3.0.mca", "r.4.0.mca", "r.5.0.mca"};
+        regionFiles("world", names);
+        // the fixture's chunk (-3, -4), as it lies in r.5.0.mca, saved long before it unloads
+        RegionFixtures.savedAt(regionFolder("world").resolve("r.5.0.mca"), RegionFixtures.indexOf(189, 28),
+                UNLOADED - 600);
+        PaintRecord record = store.turnOn("world", key -> false);
+        Steps steps = new Steps();
+        scan = scan(0.1, steps);
+        scan.start(world);
+        steps.awaitReached(); // the first file is read, and the fill waits out its pace
+
+        scan.unloaded("world", 189, 28, UNLOADED);
+        for (long wait : LOOKS) {
+            later(wait); // the next look comes due
+            steps.step(); // and is made before the fill's next file
+            steps.awaitReached();
+            ticks(1);
+        }
+        scan.logLate();
+
+        assertEquals(List.of(), logged.messages(Level.INFO).stream()
+                .filter(line -> line.contains("not written in time")).toList(), "not counted while the fill runs");
+        steps.releaseAll();
+        awaitIdle();
+        ticks(1);
+        assertEquals(fixturePaints(6, 1).get(PaintRecord.chunkKey(189, 28)), record.get(189, 28),
+                "the fill put the copy");
+        assertTrue(record.fillDone());
+    }
+
+    /** Holds the scan at every sleep until the test lets it go on, one sleep at a time, or all of them. */
+    private static final class Steps implements PaintScan.Sleeper {
+
+        private final Semaphore reached = new Semaphore(0);
+        private final Semaphore allowed = new Semaphore(0);
+
+        @Override
+        public void sleep(long millis) throws InterruptedException {
+            reached.release();
+            allowed.acquire();
+        }
+
+        /** Waits until the scan sleeps again. */
+        void awaitReached() {
+            try {
+                assertTrue(reached.tryAcquire(WAIT.toSeconds(), TimeUnit.SECONDS), "the scan reached a sleep");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                fail(e);
+            }
+        }
+
+        void step() {
+            allowed.release();
+        }
+
+        void releaseAll() {
+            allowed.release(1_000);
+        }
     }
 
     /**

@@ -283,7 +283,8 @@ public final class PaintScan implements PaintTracker.SavedReads {
      * second in the region file's header. So the copy is first looked at 2 seconds from now. A copy stamped before
      * {@code since} is the one from before, and the chunk is looked at again, 2, 5, 15 and 30 seconds later. A copy
      * that never comes is counted, unless the record agrees with the older copy: the game does not write a chunk again
-     * that did not change, and then nothing was missed. A chunk loaded again by then is left to the live reads.
+     * that did not change, and then nothing was missed. Nor is it counted while the world's fill has still to read the
+     * chunk's region file, which puts that copy. A chunk loaded again by then is left to the live reads.
      */
     @Override
     public void unloaded(String world, int chunkX, int chunkZ, long since) {
@@ -781,7 +782,9 @@ public final class PaintScan implements PaintTracker.SavedReads {
      * live reads instead, as its copy may be older than what the game holds now, and the record is left as it is. A copy
      * written at the read's second or later goes in, an empty one taking the chunk out. An older copy, from a chunk's
      * last look, never goes in: the chunk is counted when the record differs from it, as then something may be missed,
-     * and not when they agree, as the game writes again only a chunk that changed. A chunk with no copy is counted.
+     * and not when they agree, as the game writes again only a chunk that changed. Nor while the world's fill has still
+     * to put the chunk's region file into the record, which holds nothing from it until then: the fill puts that copy.
+     * A chunk with no copy is counted.
      */
     private void mergeSaved(List<Found> found) {
         if (stopped) {
@@ -805,7 +808,8 @@ public final class PaintScan implements PaintTracker.SavedReads {
                     }
                 }
                 case OLDER -> {
-                    if (!read.record.get(one.x(), one.z()).equals(one.paint())) {
+                    if (!read.record.get(one.x(), one.z()).equals(one.paint())
+                            && !fillWillPut(read.world, one.x(), one.z())) {
                         late.merge(read.world, 1, Integer::sum);
                     }
                 }
@@ -816,6 +820,19 @@ public final class PaintScan implements PaintTracker.SavedReads {
             store.dirty(world);
             changed.accept(world);
         }
+    }
+
+    /**
+     * Main thread: whether the world's fill, waiting or being read, has the chunk's region file among its files and has
+     * not yet put it into the record.
+     */
+    private boolean fillWillPut(String world, int chunkX, int chunkZ) {
+        Fill fill = fills.get(world);
+        if (fill == null) {
+            return false;
+        }
+        String file = "r." + Math.floorDiv(chunkX, REGION) + "." + Math.floorDiv(chunkZ, REGION) + ".mca";
+        return fill.files.contains(file) && !fill.record.finishedFiles().contains(file);
     }
 
     /**
