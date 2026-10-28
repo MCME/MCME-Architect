@@ -1093,6 +1093,17 @@ The layer only reads: it never writes to a world.
   `BiomeShapes` draws a region once for each of its biomes, top biome first, in identical shapes (id
   `cb.<world>.<x>.<z>.<biome>`, with the region's first column in units of 4 blocks) that all carry one window
   (`BiomeWindow`), so stacked biomes mix their colours.
+- **The window.** `BiomeWindow` writes, for a spot, a count line where several biomes lie and then a block for each
+  biome: a header tinted in the biome's map colour (`BiomeShapes` hands the colour over in the `Section`), a note for
+  unsaved or unreadable settings, a table with a row for each setting (the settings under the `Climate` heading share
+  one row) and the `/biometune edit` line. dynmap keeps a marker's description through an OWASP sanitiser (formatting,
+  blocks, images, links, styles, tables and old tags), and that one keeps no attribute but `style` (on table cells it
+  drops `colspan`, so a header cannot be a cell spanning the table: it is a `div`) and no CSS property it does not know
+  (`display` and `float` go). So the window uses only `div`, `table`, `b`, `code` and `span`, with inline styles of
+  plain CSS, and `BiomeWindowTest` checks that. The sanitiser also rewrites what it keeps (entities become characters,
+  `tbody` is added), without changing the look. A window keeps the colour it was built with, so
+  `BiomeShapes.recolour` marks the world of an area it restyled, and `factsChanged()` says so until the world is built
+  again.
 - **Seams with hidden borders.** A map area cannot have a hole, so `PaintRegions` joins each hole to the outline with a
   seam: a cut out to the hole and back along one line. A seam would show as a line, so a region with holes is drawn with
   the line opacity `BiomeShapes.SEAM_OPACITY` (0.01, because LiveAtlas draws 0 as 1): its border is hidden.

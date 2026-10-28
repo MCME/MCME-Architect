@@ -243,12 +243,33 @@ class BiomeShapesTest {
             assertEquals("world", area.world());
         }
         assertEquals(areas.get(0).description(), areas.get(1).description());
-        assertEquals(BiomeWindow.html(List.of(new Section("cbc:forest", null, 0, 319, 1, 1, null),
-                new Section("cbc:fireflies", null, 60, 80, 1, 1, null))), areas.get(0).description());
+        assertEquals(BiomeWindow.html(List.of(new Section("cbc:forest", null, 0, 319, 1, 1, null,
+                        PALETTE[index("cbc:forest")]),
+                new Section("cbc:fireflies", null, 60, 80, 1, 1, null, PALETTE[index("cbc:fireflies")]))),
+                areas.get(0).description());
         assertNotEquals(areas.get(0).style().fillColor(), areas.get(1).style().fillColor(), "they touch");
         int forest = PALETTE[index("cbc:forest")];
         assertEquals(new MapShape.Style(forest, 0.6, 2, forest, 0.3), areas.get(0).style());
         assertEquals(1, redraws);
+    }
+
+    /** The colour as the window's header spells it. */
+    private static String hex(int rgb) {
+        return String.format("#%06x", rgb);
+    }
+
+    @Test
+    void eachHeaderOfTheWindowHasTheColourItsBiomeIsDrawnIn() {
+        shapes.rebuild("world", forestWithFireflies());
+
+        String window = areas().get(0).description();
+        String forest = "border-left:5px solid " + hex(areas().get(0).style().fillColor()) + ";";
+        String fireflies = "border-left:5px solid " + hex(areas().get(1).style().fillColor()) + ";";
+        assertEquals(hex(PALETTE[index("cbc:forest")]), hex(areas().get(0).style().fillColor()));
+        assertEquals(hex(PALETTE[index("cbc:fireflies")]), hex(areas().get(1).style().fillColor()));
+        assertTrue(window.contains(forest), window);
+        assertTrue(window.contains(fireflies), window);
+        assertTrue(window.indexOf(forest) < window.indexOf(fireflies), "top first: " + window);
     }
 
     @Test
@@ -260,7 +281,10 @@ class BiomeShapesTest {
         for (MapShape.Area area : areas()) {
             assertEquals("Old <forest> + cbc:fireflies", area.label(), "plain text: the marker is no markup");
         }
-        assertTrue(areas().get(0).description().startsWith("<b>Old &lt;forest&gt;</b>"), "the window escapes it");
+        String window = areas().get(0).description();
+        assertTrue(window.contains("<b>Old &lt;forest&gt;</b> <code style=\"color:#777\">cbc:forest</code>"),
+                "the window escapes it");
+        assertFalse(window.contains("Old <forest>"), "and only the label is plain text");
     }
 
     @Test
@@ -399,8 +423,10 @@ class BiomeShapesTest {
 
         assertFalse(shapes.factsChanged(), "failing again is no change");
         assertEquals("Old forest + cbc:fireflies", areas().get(0).label());
-        assertEquals(BiomeWindow.html(List.of(new Section("cbc:forest", "Old forest", 0, 319, 1, 1, null),
-                new Section("cbc:fireflies", null, 60, 80, 1, 1, null))), areas().get(0).description());
+        assertEquals(BiomeWindow.html(List.of(new Section("cbc:forest", "Old forest", 0, 319, 1, 1, null,
+                        PALETTE[index("cbc:forest")]),
+                new Section("cbc:fireflies", null, 60, 80, 1, 1, null, PALETTE[index("cbc:fireflies")]))),
+                areas().get(0).description());
         assertEquals(List.of("Custom biomes layer: biome tuning could not tell the name and settings of "
                 + "cbc:fireflies, so its window shows its id and no settings."), messages(Level.WARNING));
         assertInstanceOf(UncheckedIOException.class, logged.stream()
@@ -584,6 +610,75 @@ class BiomeShapesTest {
         assertEquals(q, area("cb.b.0.0.cbc:q").style().fillColor());
         assertEquals(PALETTE[1], area("cb.b.1.0.cbc:r").style().fillColor());
         assertEquals(redrawsBefore + 1, redraws);
+    }
+
+    // A window's header has the colour its area is drawn in. When another world's rebuild gives a biome another colour,
+    // the areas change colour at once, but their windows, built earlier, still show the old one. Like a changed name,
+    // that makes the windows behind: the next facts check draws every world again.
+    @Test
+    void aColourChangeLeavesTheOtherWorldsWindowsBehindUntilTheyAreDrawnAgain() throws IOException {
+        keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
+        Map<Long, ChunkPaint> a = new Paint().add("cbc:q", 0, 0).chunks();
+        shapes.rebuild("a", a);
+        assertTrue(area("cb.a.0.0.cbc:q").description().contains("solid " + hex(PALETTE[1]) + ";"));
+        assertFalse(shapes.factsChanged());
+
+        // in b, q touches r, which had colour 1 first, so q takes another
+        shapes.rebuild("b", new Paint().add("cbc:q", 0, 0).add("cbc:r", 1, 0).chunks());
+
+        int q = PALETTE[index("cbc:q")];
+        assertNotEquals(PALETTE[1], q);
+        assertEquals(q, area("cb.a.0.0.cbc:q").style().fillColor(), "the area has the new colour at once");
+        assertTrue(area("cb.a.0.0.cbc:q").description().contains("solid " + hex(PALETTE[1]) + ";"), "its window not");
+        assertTrue(area("cb.b.0.0.cbc:q").description().contains("solid " + hex(q) + ";"), "b was built with it");
+        assertTrue(shapes.factsChanged(), "so a is to be drawn again");
+
+        shapes.rebuild("a", a);
+
+        assertTrue(area("cb.a.0.0.cbc:q").description().contains("solid " + hex(q) + ";"));
+        assertEquals(q, area("cb.a.0.0.cbc:q").style().fillColor());
+        assertFalse(shapes.factsChanged());
+    }
+
+    // The same, inside one build: the background thread may colour again after a world's windows are built and before
+    // the main thread keeps them, and the areas just kept take the newer colours at once.
+    @Test
+    void windowsBuiltBeforeAnotherWorldsRebuildChangedTheColoursAreBehindToo() throws IOException {
+        keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
+        Held background = new Held();
+        Held mainThread = new Held();
+        shapes = shapes(background, mainThread);
+        // a has a new biome, so its build changes the colours held; b recolours q, which a holds too
+        shapes.rebuild("a", new Paint().add("cbc:q", 0, 0).add("cbc:x", 5, 5).chunks());
+        shapes.rebuild("b", new Paint().add("cbc:q", 0, 0).add("cbc:r", 1, 0).chunks());
+
+        background.runAll();
+        mainThread.runAll();
+
+        int q = PALETTE[index("cbc:q")];
+        assertNotEquals(PALETTE[1], q);
+        assertEquals(q, area("cb.a.0.0.cbc:q").style().fillColor());
+        assertTrue(area("cb.a.0.0.cbc:q").description().contains("solid " + hex(PALETTE[1]) + ";"), "built before");
+        assertTrue(shapes.factsChanged());
+
+        shapes.rebuild("a", new Paint().add("cbc:q", 0, 0).add("cbc:x", 5, 5).chunks());
+        background.runAll();
+        mainThread.runAll();
+
+        assertTrue(area("cb.a.0.0.cbc:q").description().contains("solid " + hex(q) + ";"));
+        assertFalse(shapes.factsChanged());
+    }
+
+    @Test
+    void aWorldTakenOffTheMapIsNoLongerBehind() throws IOException {
+        keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
+        shapes.rebuild("a", new Paint().add("cbc:q", 0, 0).chunks());
+        shapes.rebuild("b", new Paint().add("cbc:q", 0, 0).add("cbc:r", 1, 0).chunks());
+        assertTrue(shapes.factsChanged());
+
+        shapes.forget("a");
+
+        assertFalse(shapes.factsChanged());
     }
 
     @Test

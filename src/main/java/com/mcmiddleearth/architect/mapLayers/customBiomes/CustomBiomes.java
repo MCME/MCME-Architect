@@ -350,7 +350,10 @@ public final class CustomBiomes implements MapLayer {
         pending.clear();
     }
 
-    /** A biome's name or settings changed in biome tuning: its windows are behind, so every world is drawn again. */
+    /**
+     * A biome's name or settings changed in biome tuning, or a colour changed after a window was built: the windows
+     * are behind, so every world is drawn again.
+     */
     private void drawAllIfFactsChanged() {
         if (shapes.factsChanged()) {
             drawAll();

@@ -29,9 +29,10 @@ import java.util.logging.Logger;
  * asked there. The regions, the colours, the windows and the size are worked out on {@code background}, and the result
  * comes back on {@code mainThread}, where the shapes are kept. Which thread owns what:
  * <ul>
- *     <li><b>The main thread</b> owns the shapes kept for each world, the worlds held back, and the facts each world's
- *     latest rebuild read. It also counts each world's rebuilds and forgets, in a map that the background thread
- *     reads, to skip a rebuild that a newer one or a forget has replaced.</li>
+ *     <li><b>The main thread</b> owns the shapes kept for each world, the worlds held back, the facts each world's
+ *     latest rebuild read, and the worlds whose windows show a colour that has changed since. It also counts each
+ *     world's rebuilds and forgets, in a map that the background thread reads, to skip a rebuild that a newer one or a
+ *     forget has replaced.</li>
  *     <li><b>The background thread</b> owns each world's biomes and touches as its newest rebuild found them, and it
  *     alone changes the colours: one rebuild at a time, each starting from the colours the one before left, and over
  *     the biomes and touches of every world at once. That needs {@code background} to be one thread that runs what it
@@ -83,6 +84,11 @@ public final class BiomeShapes {
     private final Map<String, Map<String, Facts>> factsRead = new HashMap<>();
     /** Main thread: the biomes whose facts failed to read at the last ask, each logged once until it reads again. */
     private final Set<String> unreadable = new HashSet<>();
+    /**
+     * Main thread: the worlds with an area that took a new colour after its window was built. The header of a window
+     * has its biome's colour, so such a window still shows the old one until the world is built again.
+     */
+    private final Set<String> behindInColour = new HashSet<>();
     /** Background thread: what each world's newest rebuild found, for the colours. */
     private final Map<String, Painted> painted = new HashMap<>();
 
@@ -137,6 +143,7 @@ public final class BiomeShapes {
         drawn.remove(world);
         oversize.remove(world);
         factsRead.remove(world);
+        behindInColour.remove(world);
         // on the background thread, which runs it after any rebuild of the world it was given before
         background.execute(() -> painted.merge(world, new Painted(generation, Set.of(), Set.of()),
                 BiomeShapes::newer));
@@ -160,10 +167,14 @@ public final class BiomeShapes {
 
     /**
      * Whether a biome of a world on the layer now has another name or other settings than its world's latest rebuild
-     * read, so that its windows are behind. A world held back counts too, since its size changes with them. Main
-     * thread only: it reads them.
+     * read, or an area of a world has taken a new colour since its window was built, so that its windows are behind. A
+     * world held back counts too for a name or settings, since its size changes with them. Main thread only: it reads
+     * them.
      */
     boolean factsChanged() {
+        if (!behindInColour.isEmpty()) {
+            return true;
+        }
         Map<String, Facts> now = new HashMap<>();
         for (Map<String, Facts> read : factsRead.values()) {
             for (Map.Entry<String, Facts> entry : read.entrySet()) {
@@ -252,7 +263,8 @@ public final class BiomeShapes {
                 Facts fact = facts.getOrDefault(biome, NO_FACTS);
                 int[] range = heights.get(biome);
                 sections.add(new BiomeWindow.Section(biome, fact.label(), range[0], range[1],
-                        geometry.places().get(biome), geometry.chunks().get(biome), fact.settings()));
+                        geometry.places().get(biome), geometry.chunks().get(biome), fact.settings(),
+                        BiomeColours.PALETTE[next.get(biome).index()]));
                 names.add(fact.label() != null && !fact.label().isBlank() ? fact.label() : biome);
             }
             // plain text, as the marker is made without markup
@@ -278,6 +290,7 @@ public final class BiomeShapes {
     private void finish(String world, long generation, List<Shown> shown, int bytes, boolean recoloured) {
         boolean changed = false;
         if (latest(world, generation)) {
+            behindInColour.remove(world); // its windows are new, and a colour that changed since is dealt with below
             long kb = Math.round(bytes / 1000.0);
             if (bytes > MarkerSize.TARGET) {
                 drawn.remove(world);
@@ -304,12 +317,14 @@ public final class BiomeShapes {
     /**
      * Gives every area kept its biome's colour now, where that changed, and keeps all else, the line opacity included.
      * The areas just kept are among them, since the background thread may have coloured again after building them.
-     * Says whether any changed.
+     * Says whether any changed. The window of such an area keeps the colour it was built with, so its world is marked
+     * as behind, and {@link #factsChanged} says so until the world is built again.
      */
     private boolean recolour() {
         Map<String, Assignment> now = colours.current();
         boolean any = false;
-        for (List<Shown> shown : drawn.values()) {
+        for (Map.Entry<String, List<Shown>> world : drawn.entrySet()) {
+            List<Shown> shown = world.getValue();
             for (int i = 0; i < shown.size(); i++) {
                 Shown one = shown.get(i);
                 Assignment colour = now.get(one.biome());
@@ -323,6 +338,7 @@ public final class BiomeShapes {
                     shown.set(i, new Shown(one.biome(), new MapShape.Area(area.id(), area.label(),
                             area.description(), new MapShape.Style(rgb, style.lineOpacity(), style.lineWidth(), rgb,
                             style.fillOpacity()), area.world(), area.x(), area.z())));
+                    behindInColour.add(world.getKey());
                     any = true;
                 }
             }
