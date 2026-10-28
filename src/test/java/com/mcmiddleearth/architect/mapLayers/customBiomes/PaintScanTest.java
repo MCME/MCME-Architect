@@ -151,9 +151,39 @@ class PaintScanTest {
         assertEquals(List.of("world", "world"), changes, "the map hears of each file");
         assertEquals(new PaintScan.Status(false, false, 0, 0), scan.status("world"));
         List<String> told = logged.messages(Level.INFO);
-        assertEquals(1, told.size(), told.toString());
-        assertTrue(told.get(0).endsWith("Custom biomes layer: read world's saved files: 72 chunks, 72 with custom "
-                + "biomes."), told.get(0));
+        assertEquals(2, told.size(), told.toString());
+        assertTrue(told.get(0).endsWith("Custom biomes layer: reading world's saved files: 1 of 2 region files."),
+                told.get(0));
+        assertTrue(told.get(1).endsWith("Custom biomes layer: read world's saved files: 72 chunks, 72 with custom "
+                + "biomes."), told.get(1));
+    }
+
+    // A big world takes a long while to read, so the log tells how far its fill is at each tenth of its region files,
+    // and the end once. Of twelve files, the first and the seventh reach no new tenth.
+    @Test
+    void theLogTellsHowFarAFillIsAtEachTenthOfItsFiles() throws IOException {
+        String[] names = new String[12];
+        for (int i = 0; i < names.length; i++) {
+            names[i] = "r." + i + ".0.mca";
+        }
+        regionFiles("world", names);
+        store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.start(world);
+        awaitIdle();
+        ticks(1);
+
+        List<String> expected = new ArrayList<>();
+        for (int done : new int[] {2, 3, 4, 5, 6, 8, 9, 10, 11}) {
+            expected.add("Custom biomes layer: reading world's saved files: " + done + " of 12 region files.");
+        }
+        expected.add("Custom biomes layer: read world's saved files: 432 chunks, 432 with custom biomes.");
+        List<String> told = logged.messages(Level.INFO);
+        assertEquals(expected.size(), told.size(), told.toString());
+        for (int i = 0; i < expected.size(); i++) {
+            assertTrue(told.get(i).endsWith(expected.get(i)), told.get(i));
+        }
     }
 
     // The end of a fill comes after the pace that follows its last file, so a save may fall in between. The end
@@ -399,10 +429,12 @@ class PaintScanTest {
         ticks(1);
 
         List<String> told = logged.messages(Level.INFO);
-        assertEquals(1, told.size(), told.toString());
-        assertTrue(told.get(0).contains("Custom biomes layer: read world's saved files: 2 chunks, 0 with custom "
-                + "biomes. Skipped: LZ4 is not supported 2, unreadable region file: "), told.get(0));
-        assertTrue(told.get(0).endsWith(" 1"), told.get(0));
+        assertEquals(2, told.size(), told.toString());
+        assertTrue(told.get(0).endsWith("Custom biomes layer: reading world's saved files: 1 of 2 region files."),
+                told.get(0));
+        assertTrue(told.get(1).contains("Custom biomes layer: read world's saved files: 2 chunks, 0 with custom "
+                + "biomes. Skipped: LZ4 is not supported 2, unreadable region file: "), told.get(1));
+        assertTrue(told.get(1).endsWith(" 1"), told.get(1));
         assertTrue(store.record("world").fillDone());
         assertEquals(Set.of(SECOND), store.record("world").finishedFiles(), "a file that was not read is not finished");
     }

@@ -2264,6 +2264,8 @@ on the map as the files are read.
 - It survives a restart. The record remembers which region files are done. After a restart or `/architect reload`, the
   read goes on with the others a moment after Architect has started, once the worlds are loaded. A world that is not
   loaded then waits for `scan <world>`.
+- While it runs, Architect's log says how far it is each time another tenth of the world's region files is read, with
+  a line such as `Custom biomes layer: reading world's saved files: 120 of 1200 region files.`
 - When it ends, Architect's log has a line such as
   `Custom biomes layer: read world's saved files: 5000 chunks, 120 with custom biomes.`, followed by `Skipped:` and the
   reasons if some chunks could not be read. A damaged chunk is skipped and counted; it does not stop the read.
@@ -2337,6 +2339,7 @@ setting.
 
 | Line | Meaning |
 |---|---|
+| `Custom biomes layer: reading <world>'s saved files: <n> of <total> region files.` | How far the first read of the world is. Said at each tenth of its region files. |
 | `Custom biomes layer: <world> is not drawn: its markers would add <n> KB to every map visit, over the 512 KB target.` | The world is over the size limit. Said once. |
 | `Custom biomes layer: <world> is drawn again: its markers add <n> KB.` | The world fits again. |
 | `Custom biomes layer: <n> chunks unloaded before they could be read; /architect maplayers scan <world> catches them.` | Paint in these chunks was missed. At most once a minute; run the scan again. |

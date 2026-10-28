@@ -42,7 +42,8 @@ import java.util.regex.Pattern;
  *     while the fill is on and the world's record is the one the fill started with: a fill whose world was switched
  *     off, or off and on again, is stopped there instead.</li>
  *     <li><b>The scan thread</b> reads the files and hands what it read to the main thread through the scheduler, one
- *     task a file and one at the end. It never touches a record.</li>
+ *     task a file, one for each tenth of the files read, which the log tells, and one at the end. It never touches a
+ *     record.</li>
  *     <li><b>Both</b> use the queue of waiting fills, the fill being read and the stop flag, under this object's lock.
  *     A cancel interrupts the thread only while the fill it ends is the one being read, and the thread clears any
  *     interrupt before it takes the next fill, so a cancel never cuts another world's fill short.</li>
@@ -355,11 +356,15 @@ public final class PaintScan {
         return current;
     }
 
-    /** Reads the fill's files, each handed to the main thread and paced, then hands over the end. Scan thread. */
+    /**
+     * Reads the fill's files, each handed to the main thread and paced, then hands over the end. Each tenth of the
+     * world's files that is reached, but the last, is handed over as a line for the log. Scan thread.
+     */
     private void read(Fill fill) throws InterruptedException {
         long started = System.nanoTime();
         long bytes = 0;
         Totals totals = new Totals();
+        int tenthsTold = tenths(fill.done, fill.total); // a fill that a restart stopped told the ones before
         for (String name : fill.files) {
             if (fill.cancelled || stopped) {
                 return;
@@ -384,10 +389,23 @@ public final class PaintScan {
                 }
             }
             fill.done++;
+            int tenths = tenths(fill.done, fill.total);
+            if (tenths > tenthsTold && fill.done < fill.total) {
+                tenthsTold = tenths;
+                int done = fill.done;
+                if (!handOver(() -> progress(fill, done))) {
+                    return;
+                }
+            }
             pace(started, bytes);
         }
         String summary = totals.summary(fill.world);
         handOver(() -> finish(fill, summary));
+    }
+
+    /** How many whole tenths of the files are read. */
+    private static int tenths(int done, int total) {
+        return total == 0 ? 0 : (int) (10L * done / total);
     }
 
     /** Sleeps until the bytes read since the fill started, over the time since then, come to at most the rate. */
@@ -443,6 +461,14 @@ public final class PaintScan {
         fill.record.finished(file);
         store.dirty(fill.world);
         changed.accept(fill.world);
+    }
+
+    /** Main thread: the log says how far the fill is, while it is still on. */
+    private void progress(Fill fill, int done) {
+        if (stillOn(fill)) {
+            plugin.getLogger().info("Custom biomes layer: reading " + fill.world + "'s saved files: " + done + " of "
+                    + fill.total + " region files.");
+        }
     }
 
     /** Main thread: the fill has read every file. */
