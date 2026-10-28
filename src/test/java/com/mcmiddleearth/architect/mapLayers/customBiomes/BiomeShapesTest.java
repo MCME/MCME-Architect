@@ -300,6 +300,20 @@ class BiomeShapesTest {
         assertTrue(shapes.oversize().containsKey("world"));
     }
 
+    // While a world is read for the first time, its markers grow file by file. Once they pass the target, its areas
+    // drawn so far leave the map, so that they do not slow down every map visit.
+    @Test
+    void aDrawnWorldThatGrowsPastTheTargetIsTakenOffTheMap() {
+        shapes.rebuild("world", new Paint().add("cbc:a", 0, 0).chunks());
+        assertEquals(List.of("cb.world.0.0.cbc:a"), ids());
+
+        shapes.rebuild("world", crowded());
+
+        assertEquals(List.of(), areas("world"), "its areas left the map");
+        assertEquals(Set.of("world"), shapes.oversize().keySet());
+        assertEquals(1, messages(Level.WARNING).size(), messages(Level.WARNING).toString());
+    }
+
     @Test
     void aWorldBackUnderTheTargetIsDrawnAgain() {
         shapes.rebuild("world", crowded());
