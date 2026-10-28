@@ -1096,15 +1096,16 @@ The layer only reads: it never writes to a world.
 - **The window.** `BiomeWindow` writes, for a spot, a count line where several biomes lie and then a block for each
   biome: a header tinted in the biome's map colour (`BiomeShapes` hands the colour over in the `Section`), a note for
   unsaved or unreadable settings, a table with a row for each setting (the settings under the `Climate` heading share
-  one row) and the `/biometune edit` line. dynmap keeps a marker's description through an OWASP sanitiser (formatting,
-  blocks, images, links, styles, tables and old tags), and that one keeps no attribute but `style` (on table cells it
-  drops `colspan`, so a header cannot be a cell spanning the table: it is a `div`) and no CSS property it does not know
-  (`display` and `float` go). So the window uses only `div`, `table`, `b`, `code` and `span`, with inline styles of
-  plain CSS, and `BiomeWindowTest` checks that. The sanitiser also rewrites what it keeps (entities become characters,
-  `tbody` is added), without changing the look. A window keeps the colour it was built with, so
-  `BiomeShapes.recolour` marks the world of an area it restyled, and `factsChanged()` says so until a rebuild of that
-  world starts, as it does for a changed name or settings: a build that fails or runs long delivers no finish, and must
-  not make every check draw every world again.
+  one row) and the `/biometune edit` line. The first name of each table gives the column of names its width, 112 px,
+  so that the values of every block start at the same place. dynmap keeps a marker's description through an OWASP
+  sanitiser (formatting, blocks, images, links, styles, tables and old tags), and that one keeps no attribute but
+  `style` (on table cells it drops `colspan`, so a header cannot be a cell spanning the table: it is a `div`) and no
+  CSS property it does not know (`display` and `float` go). So the window uses only `div`, `table`, `b`, `code` and
+  `span`, with inline styles of plain CSS, and `BiomeWindowTest` checks that. The sanitiser also rewrites what it keeps
+  (entities become characters, `tbody` is added), without changing the look. A window keeps the colour it was built
+  with, so `BiomeShapes.recolour` marks the world of an area it restyled, and `factsChanged()` says so until a rebuild
+  of that world starts, as it does for a changed name or settings: a build that fails or runs long delivers no finish,
+  and must not make every check draw every world again.
 - **Seams with hidden borders.** A map area cannot have a hole, so `PaintRegions` joins each hole to the outline with a
   seam: a cut out to the hole and back along one line. A seam would show as a line, so a region with holes is drawn with
   the line opacity `BiomeShapes.SEAM_OPACITY` (0.01, because LiveAtlas draws 0 as 1): its border is hidden.

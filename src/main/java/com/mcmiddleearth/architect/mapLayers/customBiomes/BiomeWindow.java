@@ -1,5 +1,6 @@
 package com.mcmiddleearth.architect.mapLayers.customBiomes;
 
+import com.mcmiddleearth.architect.biomeTuning.ColourMath;
 import com.mcmiddleearth.architect.mapLayers.MapShape;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,10 +25,11 @@ public final class BiomeWindow {
             + "color:#222;width:100%\">";
     /**
      * The width of the column of names, in pixels. Each biome's settings are a table of their own, so this fits the
-     * longest names, and the values of every biome start at the same place. A name that is longer still pushes its
-     * own table's values to the right, and no more.
+     * longest names (Firefly bush sounds takes about 104 in 12 px Arial, and a wider font takes more), and the values
+     * of every biome start at the same place. A name that is longer still pushes its own table's values to the right,
+     * and no more. Only the first name of a table carries it: in an automatic table layout one cell sets its column.
      */
-    private static final int NAME_WIDTH = 100;
+    private static final int NAME_WIDTH = 112;
     /** The heading whose settings share one row. */
     private static final String CLIMATE = "Climate";
     /** The namespace of the game's own ids, which the window leaves out. */
@@ -81,7 +83,7 @@ public final class BiomeWindow {
         boolean named = section.label() != null && !section.label().isBlank()
                 && !section.label().equals(section.biome());
         html.append("<div style=\"background:").append(tint(section.rgb())).append(";border-left:5px solid ")
-                .append(hex(section.rgb())).append(";padding:4px 7px\"><b>")
+                .append(ColourMath.hex(section.rgb())).append(";padding:4px 7px\"><b>")
                 .append(named ? MapShape.html(section.label()) : id).append("</b> ");
         if (named) {
             html.append("<code style=\"color:#777\">").append(id).append("</code> ");
@@ -119,7 +121,7 @@ public final class BiomeWindow {
      * The rows of one heading's settings, in order: the settings of {@value #CLIMATE} share one row, any other setting
      * has a row of its own. The headings are not shown, so a heading the window does not know hides nothing.
      */
-    private static void rows(StringBuilder html, String heading, List<BiomeFacts.Setting> settings) {
+    private static void rows(StringBuilder table, String heading, List<BiomeFacts.Setting> settings) {
         if (settings.isEmpty()) {
             return;
         }
@@ -128,26 +130,33 @@ public final class BiomeWindow {
             for (BiomeFacts.Setting setting : settings) {
                 items.add(MapShape.html(setting.name()) + " " + value(setting));
             }
-            row(html, CLIMATE, String.join(" &middot; ", items));
+            row(table, CLIMATE, String.join(" &middot; ", items));
             return;
         }
         for (BiomeFacts.Setting setting : settings) {
-            row(html, MapShape.html(capitalised(setting.name())), value(setting));
+            row(table, MapShape.html(capitalised(setting.name())), value(setting));
         }
     }
 
-    /** A row of the table of settings; the label and the value are HTML already. */
-    private static void row(StringBuilder html, String label, String value) {
-        html.append("<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;vertical-align:top;width:")
-                .append(NAME_WIDTH).append("px\">").append(label).append("</td><td>").append(value)
-                .append("</td></tr>");
+    /**
+     * A row for the table of settings, whose rows so far are in {@code table}; the label and the value are HTML
+     * already. The first row's name cell carries the width of the column of names, and the others take it from there.
+     */
+    private static void row(StringBuilder table, String label, String value) {
+        boolean first = table.length() == 0;
+        table.append("<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;vertical-align:top");
+        if (first) {
+            table.append(";width:").append(NAME_WIDTH).append("px");
+        }
+        table.append("\">").append(label).append("</td><td>").append(value).append("</td></tr>");
     }
 
     /** A setting's value: its text without the {@code minecraft:} namespace, after a swatch for a colour. */
     private static String value(BiomeFacts.Setting setting) {
         String text = MapShape.html(withoutMinecraft(setting.text()));
         // the swatch is built from the number alone, never from text, so nothing typed can reach the style
-        return setting.rgb() == null ? text : "<span style=\"color:" + hex(setting.rgb()) + "\">&#9632;</span> " + text;
+        return setting.rgb() == null ? text
+                : "<span style=\"color:" + ColourMath.hex(setting.rgb()) + "\">&#9632;</span> " + text;
     }
 
     /** The name with a capital first letter. */
@@ -193,12 +202,7 @@ public final class BiomeWindow {
             // 255 - round((255 - channel) * 0.15), in whole numbers, so that a half always rounds up
             mixed = (mixed << 8) | (255 - ((255 - channel) * TINT_PERCENT + 50) / 100);
         }
-        return hex(mixed);
-    }
-
-    /** The low 24 bits of a colour as {@code #rrggbb}, in lower case. */
-    private static String hex(int rgb) {
-        return "#" + Integer.toHexString(0x1000000 | (rgb & 0xffffff)).substring(1);
+        return ColourMath.hex(mixed);
     }
 
     /** A height, with a minus sign for one below zero. */

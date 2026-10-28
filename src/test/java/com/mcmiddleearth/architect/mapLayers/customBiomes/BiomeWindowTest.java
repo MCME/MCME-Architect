@@ -79,9 +79,16 @@ class BiomeWindowTest {
                 + String.join("", settings) + "</table>";
     }
 
+    /** A row of a table of settings after the first. */
     private static String setting(String label, String value) {
+        return "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;vertical-align:top\">" + label
+                + "</td><td>" + value + "</td></tr>";
+    }
+
+    /** The first row of a table of settings: its name cell sets the width of the column of names. */
+    private static String firstSetting(String label, String value) {
         return "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;vertical-align:top;"
-                + "width:100px\">" + label + "</td><td>" + value + "</td></tr>";
+                + "width:112px\">" + label + "</td><td>" + value + "</td></tr>";
     }
 
     private static String swatch(String colour) {
@@ -116,18 +123,18 @@ class BiomeWindowTest {
                 + "~180 chunks</span></div>"
                 + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
-                + "vertical-align:top;width:100px\">Sky</td>"
+                + "vertical-align:top;width:112px\">Sky</td>"
                 + "<td><span style=\"color:#2040ff\">&#9632;</span> #2040ff</td></tr>"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
-                + "vertical-align:top;width:100px\">Fog</td>"
+                + "vertical-align:top\">Fog</td>"
                 + "<td><span style=\"color:#ffaa00\">&#9632;</span> #ffaa00</td></tr>"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
-                + "vertical-align:top;width:100px\">Climate"
+                + "vertical-align:top\">Climate"
                 + "</td><td>temperature 0.7 &middot; downfall 0.8 &middot; rain on</td></tr>"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
-                + "vertical-align:top;width:100px\">Music</td>"
+                + "vertical-align:top\">Music</td>"
                 + "<td>music.nether.basalt_deltas, every 600 to 1200 s</td></tr>"
-                + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;vertical-align:top;width:100px\">"
+                + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;vertical-align:top\">"
                 + "Ambient particles</td><td>crimson_spore 2.5%</td></tr>"
                 + "</table>"
                 + "<div style=\"padding:3px 7px 0;font:11px monospace;color:#666\">"
@@ -155,10 +162,10 @@ class BiomeWindowTest {
                 + "&middot; 8 places &middot; ~1574 chunks</span></div>"
                 + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
-                + "vertical-align:top;width:100px\">Sky</td>"
+                + "vertical-align:top;width:112px\">Sky</td>"
                 + "<td><span style=\"color:#2040ff\">&#9632;</span> #2040ff</td></tr>"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
-                + "vertical-align:top;width:100px\">Climate"
+                + "vertical-align:top\">Climate"
                 + "</td><td>temperature 0.7 &middot; downfall 0.8 &middot; rain on</td></tr>"
                 + "</table>"
                 + "<div style=\"padding:3px 7px 8px;font:11px monospace;color:#666\">"
@@ -169,7 +176,7 @@ class BiomeWindowTest {
                 + "&middot; 1 place &middot; ~2 chunks</span></div>"
                 + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
-                + "vertical-align:top;width:100px\">Sky</td>"
+                + "vertical-align:top;width:112px\">Sky</td>"
                 + "<td><span style=\"color:#78a7ff\">&#9632;</span> #78a7ff</td></tr>"
                 + "</table>"
                 + "<div style=\"padding:3px 7px 8px;font:11px monospace;color:#666\">"
@@ -180,7 +187,7 @@ class BiomeWindowTest {
                 + "&middot; 2 places &middot; ~6 chunks</span></div>"
                 + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
-                + "vertical-align:top;width:100px\">Water"
+                + "vertical-align:top;width:112px\">Water"
                 + "</td><td><span style=\"color:#3f76e4\">&#9632;</span> #3f76e4</td></tr>"
                 + "</table>"
                 + "<div style=\"padding:3px 7px 0;font:11px monospace;color:#666\">"
@@ -213,6 +220,30 @@ class BiomeWindowTest {
         assertTrue(html.indexOf("padding:3px 7px 0;") > html.indexOf("<b>C</b>"), html);
     }
 
+    // A note belongs to its own biome: in a stacked spot it stands under that biome's header, between the blocks of the
+    // biomes above and below it, and the neighbours say nothing of it
+    @Test
+    void aNoteInAStackedSpotStandsUnderItsOwnBiomesHeader() {
+        Settings unsaved = settings(true, group("Climate", item("rain", "on")));
+        Settings plain = settings(false, group("Sky and fog", colour("sky", 0x78a7ff)));
+
+        String html = BiomeWindow.html(List.of(
+                new Section("cbc:a", null, 100, 200, 1, 2, unsaved, RED),
+                new Section("cbc:b", null, 50, 99, 1, 1, null, GREEN),
+                new Section("cbc:c", null, 0, 49, 2, 3, plain, YELLOW)));
+
+        assertEquals(window(
+                "<div style=\"padding:0 0 6px;font-size:11px;color:#777\">3 custom biomes here, top first</div>",
+                header("#fbdce4", "#e6194b", "cbc:a", "", "Y 100&ndash;200 &middot; 1 place &middot; ~2 chunks"),
+                "<div style=\"padding:2px 7px 0;color:#b26a00\">Changed in game, not saved yet</div>",
+                rows(firstSetting("Climate", "rain on")), edit("cbc:a", false),
+                header("#e2f4e4", "#3cb44b", "cbc:b", "", "Y 50&ndash;99 &middot; 1 place &middot; ~1 chunk"),
+                "<div style=\"padding:2px 7px 0;color:#888\">Its settings cannot be read here.</div>",
+                edit("cbc:b", false),
+                header("#fffadc", "#ffe119", "cbc:c", "", "Y 0&ndash;49 &middot; 2 places &middot; ~3 chunks"),
+                rows(firstSetting("Sky", swatch("#78a7ff"))), edit("cbc:c", true)), html);
+    }
+
     @Test
     void noSectionsGiveNoHtml() {
         assertEquals("", BiomeWindow.html(List.of()));
@@ -231,7 +262,7 @@ class BiomeWindowTest {
 
         assertEquals(window(HARBOUR,
                 "<div style=\"padding:2px 7px 0;color:#b26a00\">Changed in game, not saved yet</div>",
-                rows(setting("Climate", "rain on")), edit("cbc:111g380-5p", true)),
+                rows(firstSetting("Climate", "rain on")), edit("cbc:111g380-5p", true)),
                 BiomeWindow.html(List.of(harbour(unsaved))));
     }
 
@@ -338,9 +369,9 @@ class BiomeWindowTest {
         Settings colours = settings(false, group("Sky and fog", colour("sky", 0xab), colour("sky light", 0xABCDEF),
                 colour("fog", 0)));
 
-        assertEquals(window(HARBOUR, rows(setting("Sky", swatch("#0000ab")), setting("Sky light", swatch("#abcdef")),
-                setting("Fog", swatch("#000000"))), edit("cbc:111g380-5p", true)),
-                BiomeWindow.html(List.of(harbour(colours))));
+        assertEquals(window(HARBOUR, rows(firstSetting("Sky", swatch("#0000ab")),
+                setting("Sky light", swatch("#abcdef")), setting("Fog", swatch("#000000"))),
+                edit("cbc:111g380-5p", true)), BiomeWindow.html(List.of(harbour(colours))));
     }
 
     @Test
@@ -349,7 +380,7 @@ class BiomeWindowTest {
         Settings argb = settings(false, group("Sky and fog", new Setting("sunrise", "#80ff8040", 0x80ff8040)));
 
         assertEquals(window(HARBOUR,
-                rows(setting("Sunrise", "<span style=\"color:#ff8040\">&#9632;</span> #80ff8040")),
+                rows(firstSetting("Sunrise", "<span style=\"color:#ff8040\">&#9632;</span> #80ff8040")),
                 edit("cbc:111g380-5p", true)), BiomeWindow.html(List.of(harbour(argb))));
     }
 
@@ -361,14 +392,14 @@ class BiomeWindowTest {
                 group("Climate", item("temperature", "0.8"), item("rain", "on")),
                 group("Sound and particles", item("music volume", "0.5")));
 
-        assertEquals(window(HARBOUR, rows(setting("Fog start", "8"),
+        assertEquals(window(HARBOUR, rows(firstSetting("Fog start", "8"),
                 setting("Climate", "temperature 0.8 &middot; rain on"), setting("Music volume", "0.5")),
                 edit("cbc:111g380-5p", true)), BiomeWindow.html(List.of(harbour(groups))));
     }
 
     @Test
     void aSingleClimateSettingIsAClimateRowToo() {
-        assertEquals(window(HARBOUR, rows(setting("Climate", "rain off")), edit("cbc:111g380-5p", true)),
+        assertEquals(window(HARBOUR, rows(firstSetting("Climate", "rain off")), edit("cbc:111g380-5p", true)),
                 BiomeWindow.html(List.of(harbour(settings(false, group("Climate", item("rain", "off")))))));
     }
 
@@ -381,7 +412,7 @@ class BiomeWindowTest {
                         item("ambient sounds", "loop ambient.cave"), item("ambient particles", "none"),
                         item("firefly bush sounds", "off")));
 
-        assertEquals(window(HARBOUR, rows(setting("Sky light", swatch("#ffaa00")), setting("Fog start", "8"),
+        assertEquals(window(HARBOUR, rows(firstSetting("Sky light", swatch("#ffaa00")), setting("Fog start", "8"),
                 setting("Grass modifier", "swamp"), setting("Music", "music.overworld.forest, every 600 to 1200 s"),
                 setting("Ambient sounds", "loop ambient.cave"), setting("Ambient particles", "none"),
                 setting("Firefly bush sounds", "off")), edit("cbc:111g380-5p", true)),
@@ -393,7 +424,7 @@ class BiomeWindowTest {
         Settings odd = settings(false, group("Sky and fog", item("Sky", "a"), item("9 lives", "b"), item("", "c"),
                 item("x", "d")));
 
-        assertEquals(window(HARBOUR, rows(setting("Sky", "a"), setting("9 lives", "b"), setting("", "c"),
+        assertEquals(window(HARBOUR, rows(firstSetting("Sky", "a"), setting("9 lives", "b"), setting("", "c"),
                 setting("X", "d")), edit("cbc:111g380-5p", true)), BiomeWindow.html(List.of(harbour(odd))));
     }
 
@@ -406,7 +437,7 @@ class BiomeWindowTest {
 
         String html = BiomeWindow.html(List.of(harbour(groups)));
 
-        assertEquals(window(HARBOUR, rows(setting("Thunder", "on"), setting("Fog start", "8")),
+        assertEquals(window(HARBOUR, rows(firstSetting("Thunder", "on"), setting("Fog start", "8")),
                 edit("cbc:111g380-5p", true)), html);
         assertFalse(html.contains("Weather"), html);
         assertFalse(html.contains("Sky and fog"), html);
@@ -417,7 +448,7 @@ class BiomeWindowTest {
         Settings groups = settings(false, group("Sky and fog"), group("Climate"), group("Water and plants",
                 item("grass modifier", "none")));
 
-        assertEquals(window(HARBOUR, rows(setting("Grass modifier", "none")), edit("cbc:111g380-5p", true)),
+        assertEquals(window(HARBOUR, rows(firstSetting("Grass modifier", "none")), edit("cbc:111g380-5p", true)),
                 BiomeWindow.html(List.of(harbour(groups))));
     }
 
@@ -432,7 +463,7 @@ class BiomeWindowTest {
                 item("sky", "minecraft")),
                 group("Climate", item("temperature modifier", "minecraft:frozen")));
 
-        assertEquals(window(HARBOUR, rows(setting("Music", "music.nether.basalt_deltas, every 600 to 1200 s"),
+        assertEquals(window(HARBOUR, rows(firstSetting("Music", "music.nether.basalt_deltas, every 600 to 1200 s"),
                 setting("Ambient sounds", "loop ambient.loop, mood rohan:ambient.mood, extra ambient.additions"),
                 setting("Ambient particles", "crimson_spore 2.5%, mcme:ember 1%"),
                 setting("Dripstone particle", "notminecraft:drip, dripping_dripstone_water"),
@@ -463,7 +494,7 @@ class BiomeWindowTest {
         assertEquals(window(header("#fbdce4", "#e6194b", "&lt;b&gt;Fen &amp; &quot;Marsh&quot;&lt;/b&gt;",
                         "<code style=\"color:#777\">cbc:&lt;x&gt;&amp;&quot;y&quot;</code> ",
                         "Y 0&ndash;63 &middot; 1 place &middot; ~1 chunk"),
-                rows(setting("A&lt;b", "x&amp;y&quot;z")), edit("cbc:&lt;x&gt;&amp;&quot;y&quot;", true)), html);
+                rows(firstSetting("A&lt;b", "x&amp;y&quot;z")), edit("cbc:&lt;x&gt;&amp;&quot;y&quot;", true)), html);
         assertFalse(html.contains("Fen & "), html);
     }
 
@@ -486,7 +517,7 @@ class BiomeWindowTest {
 
         assertEquals(window(header("#fbdce4", "#e6194b", "L", "<code style=\"color:#777\">cbc:&lt;x&gt;</code> ",
                         "Y 0&ndash;63 &middot; 1 place &middot; ~1 chunk"),
-                rows(setting("A&lt;b", "x&amp;y&quot;z"),
+                rows(firstSetting("A&lt;b", "x&amp;y&quot;z"),
                         setting("C&gt;d", "<span style=\"color:#123456\">&#9632;</span> &lt;i&gt;e&lt;/i&gt;"),
                         setting("Climate", "t&lt; &quot;hot&quot; &amp; &lt;dry&gt; &middot; rain &lt;on&gt;")),
                 edit("cbc:&lt;x&gt;", true)), html);

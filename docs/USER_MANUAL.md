@@ -2328,16 +2328,17 @@ down. Where there are several, the window starts with `<n> custom biomes here, t
 
 - a header, tinted in the biome's map colour and with a bar of that colour at its left edge. It names the biome:
   its label, if biome tuning has one for it (`/biometune label`), with its id in grey beside it, else the id alone. In
-  smaller grey type it gives the biome's heights there (such as `Y 40-120`, with a minus sign for a height below
+  smaller grey type it gives the biome's heights there (such as `Y 40–120`, with a minus sign for a height below
   zero), in how many places on the world it is painted (`2 places`), and in about how many chunks (`~180 chunks`);
 - under the header, `Changed in game, not saved yet` in orange, when biome tuning holds unsaved edits of the biome;
 - or `Its settings cannot be read here.` in grey, when biome tuning is off or cannot read the biome's file: a biome in
   a zip pack, in no datapack folder, or in two;
 - a row for each setting its definition sets, and only those. The setting's name is at the left (`Sky`, `Sky light`,
   `Fog`, `Water`, `Water fog`, `Grass`, `Music`, `Ambient sounds`, `Ambient particles` and so on) and its value at the
-  right. A colour shows a swatch and its `#rrggbb` value. The climate settings share one row, `Climate`, such as
-  `temperature 0.7`, `downfall 0.8` and `rain on` divided by dots. A sound or particle of the game's own is written
-  without `minecraft:`; an id of any other namespace keeps its namespace;
+  right. A colour shows a swatch and its value as `#rrggbb`; the two colours that have an alpha, `Sunrise` and `Cloud`,
+  show `#aarrggbb`. The climate settings share one row, `Climate`, such as `temperature 0.7`, `downfall 0.8` and
+  `rain on` divided by dots. A sound or particle of the game's own is written without `minecraft:`; an id of any other
+  namespace keeps its namespace;
 - the command `/biometune edit <id>` in small type at the bottom, to change the biome.
 
 The settings are live, from biome tuning and not from the saved file. A change reaches the window within about 10
