@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -1012,6 +1013,56 @@ class PaintScanTest {
 
         assertEquals(2, warnings().size(), "told again once it had read well: " + warnings());
         assertEquals(List.of(), late());
+    }
+
+    // A chunk that cannot be read is told once while it lasts, like a file. A look that opens the chunk's region file
+    // but reads none of its chunks, as the first four looks at a copy older than its unload do, has not read it again,
+    // so it must not end it. Here chunks the game saved as LZ4, and does not write again, unload every 10 seconds for
+    // five minutes, each look at its own second. Once a look has read a chunk of that file, an LZ4 chunk there is told
+    // again.
+    @Test
+    void aChunkThatCannotBeReadIsToldOnceThoughLooksOpenItsFileWithoutReadingAChunk() throws IOException {
+        Path file = Files.createDirectories(regionFolder("world")).resolve(SECOND);
+        RegionFixtures.region(file, Map.of(0, cbcChunkAt(0, 0), 1, cbcChunkAt(1, 0), 2, cbcChunkAt(2, 0),
+                3, cbcChunkAt(3, 0)), 2, UNLOADED - 1_000);
+        for (int index = 0; index < 3; index++) {
+            RegionFixtures.compressionOf(file, index, 4); // LZ4, which is not read
+        }
+        store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        for (int second = 0; second <= 360; second++) {
+            clock.set(second * 1_000_000_000L);
+            if (second % 10 == 0 && second < 300) {
+                scan.unloaded("world", second / 10 % 3, 0, UNLOADED); // its looks: 2, 4, 9, 24 and 54 seconds on
+            }
+            look();
+        }
+        assertEquals(1, warnings().size(), "told once in five minutes: " + warnings());
+
+        RegionFixtures.savedAt(file, 3, UNLOADED + 1_000); // the game wrote chunk (3, 0), which reads well
+        for (int second = 361; second <= 420; second++) {
+            clock.set(second * 1_000_000_000L);
+            if (second == 361) {
+                scan.unloaded("world", 3, 0, UNLOADED); // read at 363 seconds
+            }
+            if (second == 364) {
+                scan.unloaded("world", 0, 0, UNLOADED); // LZ4 again, met at its last look, at 418 seconds
+            }
+            look();
+        }
+
+        assertEquals(2, warnings().size(), "told again once a chunk of the file had read well: " + warnings());
+        assertEquals(List.of(), late());
+    }
+
+    /** A chunk of a vanilla-height world at its place, painted with cbc:111g380-5p from the floor to the ceiling. */
+    private static byte[] cbcChunkAt(int chunkX, int chunkZ) {
+        Map<Integer, List<String>> sections = new TreeMap<>();
+        for (int y = -4; y < 20; y++) {
+            sections.put(y, Collections.nCopies(64, CBC));
+        }
+        return RegionFixtures.chunkAt(chunkX, chunkZ, 4903, "minecraft:full", sections);
     }
 
     // A chunk saved in a form that is not read, here LZ4, stays unreadable until the game saves it anew: it is given

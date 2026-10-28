@@ -224,6 +224,10 @@ public final class PaintScan implements PaintTracker.SavedReads {
     private record Step(List<SavedRead> due, Fill fill) {
     }
 
+    /** Why a look could not read something: a region file as a whole, or, if {@code chunk}, a chunk of it. */
+    private record Reason(String text, boolean chunk) {
+    }
+
     private final Plugin plugin;
     private final PaintStore store;
     private final Function<World, Path> regionFolder;
@@ -247,10 +251,12 @@ public final class PaintScan implements PaintTracker.SavedReads {
     private RegionFileReader savedReader;
     /**
      * Scan thread: what the looks at saved copies could not read, as told in the log: by world, each reason with the
-     * region files it was met in. A reason is told once while it lasts. It ends for a file at a later look that reads
-     * that file without meeting it, and with the last of its files; looks at the world's other files leave it be.
+     * region files it was met in. A reason is told once while it lasts. It ends for a file at a later look that really
+     * read that file without meeting it: a file's reason at a look that read the file's header, a chunk's only at a
+     * look that read one of the file's chunks. It ends with the last of its files; looks at the world's other files
+     * leave it be.
      */
-    private final Map<String, Map<String, Set<Path>>> told = new HashMap<>();
+    private final Map<String, Map<Reason, Set<Path>>> told = new HashMap<>();
     /** Under the lock: the fills waiting, in turn. */
     private final Deque<Fill> queue = new ArrayDeque<>();
     /** Under the lock: the saved reads waiting for their next look, the soonest first. */
@@ -682,7 +688,7 @@ public final class PaintScan implements PaintTracker.SavedReads {
      * copy is handed over as such. What cannot be read is not late, and is not handed over: a region file that fails to
      * read is looked at again, and a chunk that cannot be read too, unless it stays so until the game saves it anew.
      * Both are given up at the last look, and told in the log once a world and reason, while it lasts: until each file
-     * it was met in reads again without it.
+     * it was met in is read again without it, which for a chunk's reason takes a look that reads a chunk of that file.
      */
     private void look(List<SavedRead> due) {
         Map<Path, List<SavedRead>> byFile = new TreeMap<>();
@@ -696,8 +702,11 @@ public final class PaintScan implements PaintTracker.SavedReads {
         Set<SavedRead> waiting = new HashSet<>();
         // the reads whose region file failed to read at this look, and what this look could not read, by file
         Set<SavedRead> failed = new HashSet<>();
-        Map<Path, Set<String>> met = new HashMap<>();
+        Map<Path, Set<Reason>> met = new HashMap<>();
+        // the files this look tried to read; of them, those whose header it read, and those it read a chunk of
         Set<Path> looked = new HashSet<>();
+        Set<Path> headerRead = new HashSet<>();
+        Set<Path> chunkRead = new HashSet<>();
         for (Map.Entry<Path, List<SavedRead>> file : byFile.entrySet()) {
             if (stopped) {
                 return;
@@ -719,6 +728,9 @@ public final class PaintScan implements PaintTracker.SavedReads {
                     }
                     return wanted;
                 }, (x, z, savedAt, paint, skipped) -> {
+                    if (paint != null) {
+                        chunkRead.add(file.getKey());
+                    }
                     for (SavedRead read : reads) {
                         if (!read.wants(x, z)) {
                             continue;
@@ -726,10 +738,10 @@ public final class PaintScan implements PaintTracker.SavedReads {
                         if (paint == null) {
                             if (RegionFileReader.lasting(skipped) || read.lastLook()) {
                                 read.taken.add(PaintRecord.chunkKey(x, z)); // given up, and not late
-                                tell(world, file.getKey(), skipped, met, null, () -> "Custom biomes layer: the saved"
-                                        + " copy of chunk " + x + ", " + z + " of " + world + " cannot be read ("
-                                        + skipped + "), so the chunk is not brought up to date from it. This is logged"
-                                        + " once while it lasts.");
+                                tell(world, file.getKey(), new Reason(skipped, true), met, null, () -> "Custom biomes"
+                                        + " layer: the saved copy of chunk " + x + ", " + z + " of " + world + " cannot"
+                                        + " be read (" + skipped + "), so the chunk is not brought up to date from it."
+                                        + " This is logged once while it lasts.");
                             } else {
                                 waiting.add(read); // the game may be writing it
                             }
@@ -740,6 +752,7 @@ public final class PaintScan implements PaintTracker.SavedReads {
                     }
                 });
                 looked.add(file.getKey());
+                headerRead.add(file.getKey());
             } catch (NoSuchFileException e) {
                 // the file is not there: it holds no copy
             } catch (IOException | RuntimeException e) {
@@ -749,17 +762,19 @@ public final class PaintScan implements PaintTracker.SavedReads {
                 looked.add(file.getKey());
                 failed.addAll(reads);
                 waiting.addAll(reads); // looked at again
-                tell(world, file.getKey(), e.getClass().getSimpleName(), met, e, () -> "Custom biomes layer: could not"
-                        + " read the saved chunks of " + world + " in " + file.getKey().getFileName() + ", so they are"
-                        + " not brought up to date from it. This is logged once while it lasts.");
+                tell(world, file.getKey(), new Reason(e.getClass().getSimpleName(), false), met, e, () -> "Custom"
+                        + " biomes layer: could not read the saved chunks of " + world + " in "
+                        + file.getKey().getFileName() + ", so they are not brought up to date from it. This is logged"
+                        + " once while it lasts.");
             }
             if (!found.isEmpty() && !handOver(() -> mergeSaved(found))) {
                 return;
             }
         }
-        // a reason ends for a file that a look read without meeting it, and is told again should it come back
+        // a reason ends for a file that a look really read without meeting it, and is told again should it come back
         for (Path file : looked) {
-            endsIn(byFile.get(file).get(0).world, file, met.getOrDefault(file, Set.of()));
+            endsIn(byFile.get(file).get(0).world, file, met.getOrDefault(file, Set.of()), headerRead.contains(file),
+                    chunkRead.contains(file));
         }
         List<SavedRead> again = new ArrayList<>();
         List<Found> none = new ArrayList<>();
@@ -803,7 +818,7 @@ public final class PaintScan implements PaintTracker.SavedReads {
      * Scan thread: notes that a look could not read something in a region file of the world, for the reason given, and
      * logs the message as a warning unless the reason is told for the world already.
      */
-    private void tell(String world, Path file, String reason, Map<Path, Set<String>> met, Throwable thrown,
+    private void tell(String world, Path file, Reason reason, Map<Path, Set<Reason>> met, Throwable thrown,
                       Supplier<String> message) {
         met.computeIfAbsent(file, key -> new HashSet<>()).add(reason);
         Set<Path> files = told.computeIfAbsent(world, key -> new HashMap<>())
@@ -815,17 +830,22 @@ public final class PaintScan implements PaintTracker.SavedReads {
     }
 
     /**
-     * Scan thread: a look read the world's region file, meeting only these reasons there. Any other reason told for
-     * the world ends for that file, and a reason with no file left ends.
+     * Scan thread: a look tried to read the world's region file, and met only these reasons there. It read the file's
+     * header without failing if {@code headerRead}, and read at least one of its chunks if {@code chunkRead}. Any other
+     * reason told for the world ends for that file when the look really read what it is about: a file's reason when it
+     * read the header, a chunk's only when it read a chunk, since a look that reads no chunk has not looked at the one
+     * that failed. A reason with no file left ends.
      */
-    private void endsIn(String world, Path file, Set<String> metThere) {
-        Map<String, Set<Path>> reasons = told.get(world);
+    private void endsIn(String world, Path file, Set<Reason> metThere, boolean headerRead, boolean chunkRead) {
+        Map<Reason, Set<Path>> reasons = told.get(world);
         if (reasons == null) {
             return;
         }
-        for (Iterator<Map.Entry<String, Set<Path>>> each = reasons.entrySet().iterator(); each.hasNext(); ) {
-            Map.Entry<String, Set<Path>> reason = each.next();
-            if (!metThere.contains(reason.getKey()) && reason.getValue().remove(file) && reason.getValue().isEmpty()) {
+        for (Iterator<Map.Entry<Reason, Set<Path>>> each = reasons.entrySet().iterator(); each.hasNext(); ) {
+            Map.Entry<Reason, Set<Path>> reason = each.next();
+            boolean readAgain = reason.getKey().chunk() ? chunkRead : headerRead;
+            if (readAgain && !metThere.contains(reason.getKey()) && reason.getValue().remove(file)
+                    && reason.getValue().isEmpty()) {
                 each.remove();
             }
         }

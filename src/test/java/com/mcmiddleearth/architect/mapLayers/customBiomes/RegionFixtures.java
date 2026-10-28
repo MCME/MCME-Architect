@@ -279,6 +279,17 @@ final class RegionFixtures {
         Files.write(file, bytes);
     }
 
+    /**
+     * Sets the compression type a region file says its chunk at {@code index} is stored with: the byte after the
+     * chunk's length, where its sectors start. Its data is left as it is.
+     */
+    static void compressionOf(Path file, int index, int type) throws IOException {
+        byte[] bytes = Files.readAllBytes(file);
+        int sector = ByteBuffer.wrap(bytes).getInt(index * 4) >>> 8;
+        bytes[sector * SECTOR + 4] = (byte) type;
+        Files.write(file, bytes);
+    }
+
     /** The place of a chunk in its region file: {@code x + z * 32}, with x and z counted inside the region. */
     static int indexOf(int chunkX, int chunkZ) {
         return Math.floorMod(chunkX, 32) + Math.floorMod(chunkZ, 32) * 32;

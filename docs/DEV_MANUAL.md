@@ -1139,9 +1139,10 @@ The layer only reads: it never writes to a world.
   differ, and not while the world's fill has still to put the chunk's region file into the record, which holds nothing
   from it until then. A region file that fails to read, or a chunk that cannot be read (for good, such as LZ4, or still
   at its last look), is not counted either: it is warned about once for the world and the reason, while it lasts,
-  which is until each file it was met in reads again without it. The second read of a selection hands its box to
-  `PaintScan.selected` with the command's second; an older copy there is never counted, as most WorldEdit commands
-  change nothing.
+  which is until each file it was met in is read again without it. For a file's reason a look that reads the file's
+  header will do; a chunk's reason takes a look that reads a chunk of that file, as most looks read none. The second
+  read of a selection hands its box to `PaintScan.selected` with the command's second; an older copy there is never
+  counted, as most WorldEdit commands change nothing.
 - **Tests.** The package-private `CustomBiomes` constructor takes the parts that need a server: the chunk reader, the
   selections, the facts and the shapes executor, where `null` means the server's own, made at each start; and the custom
   ids, the scan's sleeper, the region folder, the builder test, and the clock that times the live reads' budget and the
