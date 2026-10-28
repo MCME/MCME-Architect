@@ -2221,7 +2221,7 @@ where custom biomes are painted. Every layer starts hidden: switch it on in the 
 | `itemBlockLimit` | Item-block limit regions, in red. | Name, item blocks allowed per chunk, and heights. |
 | `No-physics exceptions` | No-physics exception areas: redstone areas in orange, water areas in blue. | Name, kind of area, heights, and which blocks keep their physics there. |
 | `Item-block budget` | Chunks filling up against their item-block limit: yellow from 50 %, orange from 80 %, red when full. | The armor stands, item frames and paintings in the chunk against its limit, where the limit comes from, and when the count last changed. |
-| `Custom biomes` | Where each custom biome is painted, on the worlds an admin switched on; one colour per biome, and biomes that touch never share one. | Every custom biome painted at that spot, from the highest down: name, id, heights there, how many places and chunks hold it, its settings, and the commands to change it or paint more. |
+| `Custom biomes` | Where each custom biome is painted, on the worlds an admin switched on; one colour per biome, and biomes that touch never share one. | Every custom biome painted at that spot, from the highest down: name, id, heights there, how many places and chunks hold it, its settings, and the command to change the biome. |
 
 The map draws areas flat; the popup gives their heights. Polygons follow their points, cylinders and ellipsoids show
 as ellipses, and anything else as a box.
