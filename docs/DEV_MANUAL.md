@@ -88,6 +88,7 @@ All main code is under `src/main/java/com/mcmiddleearth/`. Package names below a
 | `entityLogging` | Entity counts per chunk, with a dynmap layer (`/architect eLog`) | `EntityLogger`, `ELogDynmapUtil` |
 | `gamemodeSwitcher` | The F3+F4 game-mode switcher for builders, and the invisible-blocks gate | `GamemodeSwitcher`, `GamemodeSwitcherProtocol`, `InvisibleBlockListener` |
 | `mapLayers` | Architect's layers on the dynmap web map | `MapLayers`, `ArchitectLayers`, `DynmapBackend`, `ItemBlockBudget` |
+| `mapLayers.customBiomes` | The Custom biomes layer: where each custom biome is painted, read from saved region files and from loaded chunks | `CustomBiomes`, `PaintStore`, `PaintScan`, `PaintTracker`, `PaintRegions`, `BiomeShapes`, `BiomeColours`, `BiomeWindow`, `TuningFacts` |
 | `noPhysicsEditor` | The no-physics list, exception areas, the redstone freeze (`/nophy`) | `NoPhysicsListener`, `NoPhysicsData`, `NoPhysicsCommand` |
 | `randomiser` | `/random` | `RandomiserCommand`, `RandomiserConfig` |
 | `serverResoucePack` (sic) (+ `RegionEditConversation`) | Resource packs: `/rp`, regions, player settings, releases | `RpManager`, `RpCommand`, `RpListener`, `RPSwitchTask`, `RpDatabaseConnector`, `RpReleaseUtil` |
@@ -129,7 +130,10 @@ The other files in `src/main/resources` are **not** in the jar, and the plugin d
 
 `src/test/java/com/mcmiddleearth/` mirrors the main packages, with shared helpers in `architect.testsupport`.
 `src/test/resources/rp-release/` holds nine captured outputs of ResourcePackScripts' release scripts (its README says
-how they were made), which `RpReleaseReportTest` reads.
+how they were made), which `RpReleaseReportTest` reads. `src/test/resources/customBiomes/r.-1.-1.mca` holds 36 chunks
+cut from a 26.2 test world's region file, with custom biomes painted in them; `RegionFileReaderTest`, `PaintScanTest`
+and `CustomBiomesTest` read it, and `RegionFixtures` writes the other chunks and region files they need, from the game's
+format.
 
 ### Top-level files
 
@@ -417,6 +421,7 @@ listeners when they start:
 | `BiomeTuning.setLegacyLoginProbe(true)`, from `/biometune debug legacylogin on` | the debug-only `LegacyLoginProbe` |
 | `GamemodeSwitcher` | itself |
 | `MapLayers.start` | its `ServerWatch` (dynmap enabled or disabled, worlds loaded), and `ItemBlockBudget` |
+| `CustomBiomes.start`, through `PaintTracker.start` | `PaintTracker`, for `PlayerCommandPreprocessEvent` (WorldEdit commands) and `ChunkUnloadEvent`, both at `MONITOR` |
 | `EntityLogger.start` | `ELogListener`, while entity logging runs |
 | `CustomInventory`, `SearchInventory` | each instance, for its own windows; `destroy()` unregisters it |
 
@@ -437,6 +442,8 @@ Three listener classes are never registered: `AfkListener` and `TestListener` (c
 | RP and item-block region loaders | `RpManager.init`, `ItemBlockManager.init` | 200 ticks after a load, then each second until the region's world exists, at most ten times |
 | Kit save | `GetData.load` | once, 2000 ticks after a load |
 | Map-layer redraws; budget counting and saving | `MapLayers`, `ItemBlockBudget` | redraws on the tick after a change; budget recounts each second and saves each minute |
+| Custom biomes: live reads | `PaintTracker.start`, from `CustomBiomes.start` | every tick, within about 0.5 ms (at least one chunk); a look at the builders every 200 ticks; a slow pass every 2400; housekeeping every 1200 |
+| Custom biomes: reports, saves, windows, first fill | `CustomBiomes.start` | a report each second (a redraw at most every 10 seconds); changed records saved every 1200 ticks; names and settings compared every 200; an unfinished fill resumed once, on the first tick |
 | Entity-log dumps | `EntityLogger.start` (`/architect eLog true`) | after 500 ticks, then every 2000 |
 
 ### The world generator
@@ -449,9 +456,10 @@ or `MCME-Architect:<name>_<size>`. `load: STARTUP` lets Architect supply the gen
 ### onDisable
 
 In this order: `GamemodeSwitcher.stopRunning()` (non-op builders get op level 0 back), `MapLayers.stop()` (the budget
-saves its counts), `BiomeTuning.disable()` (logs unsaved live edits), cancel `RPSwitchTask`, disconnect the RP
-database, stop the glow task, `EntityLogger.stop()`, and `LogFileManager.uninstall(this)` last. The steps have no
-try/catch, so a failing step skips the ones after it; the first two are first for that reason, as their comments say.
+saves its counts, and the Custom biomes layer saves its records and ends its threads), `BiomeTuning.disable()` (logs
+unsaved live edits), cancel `RPSwitchTask`, disconnect the RP database, stop the glow task, `EntityLogger.stop()`, and
+`LogFileManager.uninstall(this)` last. The steps have no try/catch, so a failing step skips the ones after it; the first
+two are first for that reason, as their comments say.
 
 ### What /architect reload does
 
@@ -615,6 +623,8 @@ The data folder is `plugins/MCME-Architect/`; the plugin's name is the Maven `ar
 | `randomiser.yml` | `RandomiserCommand` | by `/random allow` and `/random deny` |
 | `entityLog.dat` | `EntityLogger` | while entity logging runs |
 | `mapLayers/itemBlockBudget.yml` | `ItemBlockBudget` | each minute when changed, and at stop |
+| `mapLayers/customBiomes/<world>.dat`, with `.dat.tmp` while writing, `.dat.bak` when unreadable and `.dat.off` when the world is off | `PaintStore`, `PaintRecord` | a copy of each changed record every minute, and of every record at stop, on the writer thread; `.bak` at start; `.off` when the world is taken off |
+| `mapLayers/customBiomes/colours.txt` | `BiomeColours` | when a rebuild changes a colour, on the shapes thread, through a `.tmp` file |
 | `biomeTuning/backups/` | `BiomeDocument` | at each biome save |
 
 Outside the data folder, Architect reads and writes `plugins/VoxelSniper/stencils/` and `stencilLists/` (`/vv`,
@@ -698,6 +708,9 @@ The server needs WorldEdit 7.4, but `plugin.yml` lists it in neither `depend` no
 - RP regions and item-block regions are WorldEdit `Region` objects, and `loadData()` loads their files, so start-up
   touches WorldEdit classes. In tests, build regions on `NullWorld` (see [MockBukkit lessons](#mockbukkit-lessons)).
 - The comment in `WorldEditGuard` still says no 26.x WorldEdit exists. That is out of date.
+- The Custom biomes layer reads a player's selection in `WorldEditSelections`, the only class of its package that names
+  WorldEdit's types. WorldEdit and FastAsyncWorldEdit share that API, and the layer works with either or neither. It
+  looks the plugin up at the first WorldEdit command, because Architect enables before both.
 
 ### ProtocolLib
 
@@ -784,12 +797,26 @@ in a MySQL table that every server shares.
   tasks, and hand their results back with `Bukkit.getScheduler().runTask(...)`; chat is always sent from the main
   thread. Two older paths do not follow this, so do not copy them: `/chead upload` (`HttpTextInputHandler`) reads its
   download on the main thread, and `CopyPasteManager.loadClipboard` writes its plain `HashMap` from an async task.
-- Biome tuning and map layers are main-thread only, by design, codec decoding and file writes included.
+- Biome tuning and map layers are main-thread only, by design, codec decoding and file writes included. The Custom
+  biomes layer is the exception: it has three threads of its own, below.
 - Packet handlers run on network threads: hand their work to the main thread (see [ProtocolLib](#protocollib)).
   `ViewDistanceListener` is an exception that still reads `PluginData`, `WorldConfig` and `ViewDistanceManager` on the
   network thread; do not copy it.
 - State that async code shares is concurrent (`RpManager`'s maps) or guarded (`synchronized` methods in the database
   connector and in `RpReleaseReport`, which a reader thread feeds).
+
+The Custom biomes layer works on the main thread and three threads of its own. They are daemon threads at the lowest
+priority, and `CustomBiomes.stop` ends each and waits for it, for a few seconds at most:
+
+| Where | What runs there |
+|---|---|
+| The main thread, `PaintTracker` | Reads of loaded chunks (Bukkit's API is main-thread only), every tick: the queue until about 0.5 ms are spent but at least one chunk (`TICK_BUDGET_NANOS`), and up to 2 ms for chunks that unload (`UNLOAD_BUDGET_NANOS`). It also owns the records, the shapes drawn, and everything that asks biome tuning |
+| `Architect custom biomes`, the shapes executor | `BiomeShapes` builds: regions, colours, windows and the size, one world at a time in the order asked. The result goes back to the main thread |
+| `Architect custom biomes writer` | `PaintStore`'s saves of record files and the move of a file set aside, in the order asked, so two writes of one file never overlap |
+| `Architect biome scan` | `PaintScan` reads region files, one world at a time, paced at `scanMegabytesPerSecond`. It hands each file's result to the main thread with `runTask`, and never touches a record |
+
+Other threads get copies (`PaintRecord.copy`, `copyOfChunks`) and plain data: `BiomeShapes.rebuild` reads the biomes'
+names and settings on the main thread before the build starts.
 
 ## Subsystems
 
@@ -1020,9 +1047,10 @@ In tests, package-private overloads of `BiomeTuning.enable` (`plugin, bridge, da
 
 ### Map layers
 
-Architect draws four layers of its own data on the dynmap web map: RP regions (`RpRegionLayer`), item-block limit
-regions (`ItemBlockRegionLayer`), no-physics exception areas (`NoPhysicsLayer`), and an item-block budget heat map
-(`ItemBlockBudgetLayer`, fed by `ItemBlockBudget`). Everything runs on the main thread.
+Architect draws five layers of its own data on the dynmap web map: RP regions (`RpRegionLayer`), item-block limit
+regions (`ItemBlockRegionLayer`), no-physics exception areas (`NoPhysicsLayer`), an item-block budget heat map
+(`ItemBlockBudgetLayer`, fed by `ItemBlockBudget`), and where custom biomes are painted (`CustomBiomes`). Everything
+runs on the main thread, except the three threads of the Custom biomes layer (see [Threading rules](#threading-rules)).
 - `MapLayer` is the interface of a layer: a marker-set id, a label, hidden or not by default, `shapes()`, and optional
   `start`, `stop` and `refresh`. `MapShape` is plain data (areas, circles, styles); `RegionShapes` turns WorldEdit
   regions into shapes.
@@ -1040,12 +1068,52 @@ regions (`ItemBlockRegionLayer`), no-physics exception areas (`NoPhysicsLayer`),
   `/architect maplayers refresh`, or until dynmap or Architect starts again.
 - `ItemBlockBudget` counts armor stands, item frames and paintings per chunk as chunks' entities load and unload,
   recounts marked chunks each second, and saves high counts to `mapLayers/itemBlockBudget.yml`, even without dynmap.
+- `CustomBiomes` has the marker set `architect.debug.biomes`, the name `Custom biomes`, and the key
+  `mapLayers.customBiomes` (on and hidden by default). It draws only the worlds that an admin put on it with
+  `/architect maplayers scan <world>`; `ArchitectCommand` hands that command to `CustomBiomes.active()`, which is empty
+  while the layer is off. Like the budget, it starts without dynmap and keeps its records.
 
 To add a layer, implement `MapLayer`, build it in `ArchitectLayers` with its settings read through `MapLayerConfig`,
 and call `MapLayers.changed(id)` wherever its data changes. Do not name dynmap types (see [dynmap](#dynmap)).
 
 The entity logger keeps its own, older dynmap layer, through `ELogDynmapUtil`. `/architect maplayers refresh` does not
 touch it.
+
+#### The Custom biomes layer
+
+A **record** (`PaintRecord`, one per world on the layer) holds a `ChunkPaint` for each chunk that has a custom biome:
+its 16 columns of 4 x 4 blocks, the grid biomes are stored on, each with the height spans of its biomes. Custom means
+every biome id outside `minecraft:` that this server's registry defines. Saved region files feed the record once per
+scan (`PaintScan`, with `RegionFileReader` and `ChunkNbt`, which read the files without loading a chunk), and loaded
+chunks feed it all the time (`PaintTracker`, with `ChunkPaintReader`); `PaintStore` keeps the records and their files.
+The layer only reads: it never writes to a world.
+
+- **Regions.** `PaintRegions` groups the columns into regions. A region is a 4-neighbour connected run of columns that
+  hold exactly the same set of custom biomes, outlined on the 4-block grid as one ring. Regions never overlap.
+  `BiomeShapes` draws a region once for each of its biomes, top biome first, in identical shapes (id
+  `cb.<world>.<x>.<z>.<biome>`, with the region's first column in units of 4 blocks) that all carry one window
+  (`BiomeWindow`), so stacked biomes mix their colours.
+- **Seams with hidden borders.** A map area cannot have a hole, so `PaintRegions` joins each hole to the outline with a
+  seam: a cut out to the hole and back along one line. A seam would show as a line, so a region with holes is drawn with
+  the line opacity `BiomeShapes.SEAM_OPACITY` (0.01, because LiveAtlas draws 0 as 1): its border is hidden.
+- **The size guard.** Each visit to the map downloads a world's marker file, hidden layers included, gzipped at level 1.
+  `MarkerSize` writes the layer's areas as JSON in the shape of dynmap's marker file and gzips them at level 1. A world
+  over `MarkerSize.TARGET` (512,000 bytes) is not drawn: `BiomeShapes.oversize()` lists it for `scan`, and the log says
+  so once, and again when it fits. `BiomeWindowTest` pins the window's markup byte for byte, because the estimate counts
+  it.
+- **Colours.** `BiomeColours` gives each biome one of 16 colours, different from the biomes it touches, and keeps them
+  in `colours.txt`. `assign` and `update` go together, on the shapes thread, one build at a time.
+- **Live facts.** `TuningFacts` reads names and settings from biome tuning, which is main-thread only, so
+  `BiomeShapes.rebuild` reads them first and builds afterwards. Every 10 seconds `factsChanged()` compares them with the
+  last rebuild's, and a change redraws every world. A look-up that failed is not repeated for a minute.
+- **Redraw pacing.** `ChangeReporter` applies the `ItemBlockBudget` rule: a change after a quiet spell is drawn within a
+  second, and after that at most once every 10 seconds, since each changed marker makes dynmap rewrite its world's
+  marker file.
+- **Start-up.** Architect enables before the worlds and before WorldEdit, so `CustomBiomes.start` resumes an unfinished
+  fill one tick later, and `FirstUseSelections` looks WorldEdit up at the first WorldEdit command.
+- **Tests.** The package-private `CustomBiomes` constructor takes the parts that need a server: the chunk reader, the
+  selections, the facts and the shapes executor, where `null` means the server's own, made at each start; and the custom
+  ids, the scan's sleeper, the region folder and the builder test.
 
 ### Copy and paste
 

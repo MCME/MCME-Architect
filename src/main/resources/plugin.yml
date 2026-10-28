@@ -64,7 +64,7 @@ commands:
       description: Architect's help, version, reload and admin tools.
       usage: >-
         /architect [help [page]] | version | reload | reloaddata | world | blockdata | dev | checkNBT | weather |
-        eLog | placeAllBlockStates | maplayers refresh
+        eLog | placeAllBlockStates | maplayers refresh|scan
    chunkupdate:
       description: Switches automatic block resends (the radius form does nothing in this version).
       usage: /chunkupdate [radius] | auto <world|-default> [true]

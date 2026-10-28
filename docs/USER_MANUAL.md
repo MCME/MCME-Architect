@@ -2212,8 +2212,8 @@ editor says "see Architect's log", look in that file.
 
 ## Map layers
 
-Architect draws four layers of its own on the dynmap web map, so staff can see where its invisible rules apply. Every
-layer starts hidden: switch it on in the map's layer list.
+Architect draws five layers of its own on the dynmap web map, so staff can see where its invisible rules apply and
+where custom biomes are painted. Every layer starts hidden: switch it on in the map's layer list.
 
 | Layer in the list | What it shows | Its popup |
 |---|---|---|
@@ -2221,6 +2221,7 @@ layer starts hidden: switch it on in the map's layer list.
 | `itemBlockLimit` | Item-block limit regions, in red. | Name, item blocks allowed per chunk, and heights. |
 | `No-physics exceptions` | No-physics exception areas: redstone areas in orange, water areas in blue. | Name, kind of area, heights, and which blocks keep their physics there. |
 | `Item-block budget` | Chunks filling up against their item-block limit: yellow from 50 %, orange from 80 %, red when full. | The armor stands, item frames and paintings in the chunk against its limit, where the limit comes from, and when the count last changed. |
+| `Custom biomes` | Where each custom biome is painted, on the worlds an admin switched on; one colour per biome, and biomes that touch never share one. | Every custom biome painted at that spot, from the highest down: name, id, heights there, how many places and chunks hold it, its settings, and the commands to change it or paint more. |
 
 The map draws areas flat; the popup gives their heights. Polygons follow their points, cylinders and ellipsoids show
 as ellipses, and anything else as a box.
@@ -2230,19 +2231,137 @@ Architect's item blocks. A chunk's limit is read at its centre: the highest limi
 spot, at any height, or else the world's base limit. Changes reach the map within about 10 seconds. The counts are kept
 in `plugins/MCME-Architect/mapLayers/itemBlockBudget.yml`.
 
+### Custom biomes
+
+The `Custom biomes` layer shows where each custom biome is painted. A custom biome is any biome whose id is outside the
+`minecraft:` namespace, such as a spare biome (`mcme:custom_001`) or a biome from your own datapack; an id that the
+server does not define is skipped. The layer draws only the worlds that an admin has put on it.
+
+**Putting a world on the layer.** A world is on from `/architect maplayers scan <world>` until
+`/architect maplayers scan <world> off`. While it is on, Architect keeps a record of the world: for each chunk that
+holds custom biomes, which biomes lie there and between which heights. The layer draws from that record. A world that is
+not on is not drawn, however much custom biome paint it holds.
+
+- `/architect maplayers scan` lists the worlds that are on, one line each, such as
+  `world: 118 chunks with custom biomes, up to date`. The state is `reading 3 of 12 region files`,
+  `waiting to be read`, `up to date`, or `not drawn: its markers would add 703 KB, over the 512 KB target`. With no
+  world on, it says so and shows how to start one.
+- `/architect maplayers scan <world>` puts the world on and starts its first read. It answers that the world's saved
+  files are being read in the background, with their number of region files. A world that is being read already says
+  how far it is, and one that waits behind another world's read says so.
+- `/architect maplayers scan <world> off` takes the world off: its areas leave the map, a read in progress stops, and
+  its record is set aside as `<world>.dat.off`. A world that is not on says so.
+- A name that is no loaded world gets `No loaded world is named <world>.` While `mapLayers.customBiomes` is switched
+  off, or Architect's map layers are not running, the command says that the layer is not running.
+
+**The first read.** `scan <world>` starts reading the world's saved files. Architect reads its region files
+(`r.X.Z.mca`, in the world's `region` folder) in the background, on a thread of its own, one world at a time; a second
+world waits for its turn. It only reads: it loads no chunk into the game and writes nothing to the world. Areas appear
+on the map as the files are read.
+
+- The read is paced. After each region file it waits as long as it takes to keep the average at or below
+  `scanMegabytesPerSecond` megabytes a second (20 by default), so the disk is not hogged.
+- It survives a restart. The record remembers which region files are done. After a restart or `/architect reload`, the
+  read goes on with the others a moment after Architect has started, once the worlds are loaded. A world that is not
+  loaded then waits for `scan <world>`.
+- When it ends, Architect's log has a line such as
+  `Custom biomes layer: read world's saved files: 5000 chunks, 120 with custom biomes.`, followed by `Skipped:` and the
+  reasons if some chunks could not be read. A damaged chunk is skipped and counted; it does not stop the read.
+- `scan <world>` for a world that is on reads it again from the start. It keeps the chunks that are loaded at that
+  moment, which the live reads below keep current. Do this when paint reached the world without the server seeing it,
+  for example from a tool that edits the world files.
+
+**Keeping it current.** Besides the first read, the layer reads the chunks that are loaded, in the worlds that are on:
+
+| When | Which chunks |
+|---|---|
+| Every 10 seconds | Those within 2 chunks of each builder: a player who may use biome tuning (`architect.biomeTune`). |
+| 2 seconds and 30 seconds after a WorldEdit or FastAsyncWorldEdit command | Those in that player's selection. |
+| Every 2 minutes | All of them: the slow pass. |
+| As a chunk unloads | That chunk, if in the last 10 minutes it was within 4 chunks of a builder or in a selection. |
+
+All of this shares a small budget on the main thread: about half a millisecond a tick (and at least one chunk a tick),
+plus up to 2 milliseconds a tick for chunks that unload. Paint made with WorldEdit or FastAsyncWorldEdit shows within
+about 10 seconds. Other paint shows within a few minutes, as long as its chunks stay loaded. The layer is drawn again at
+most once every 10 seconds, and the first change after a quiet spell within a second. Architect finds WorldEdit or
+FastAsyncWorldEdit when the first WorldEdit command is typed, and says in its log which one it reads selections through.
+
+A chunk that unloads without being read keeps its old record until it is loaded and read again, or until the next scan.
+The reads at unload have an allowance of their own: when more watched chunks unload in one tick than it covers, as after
+a long teleport, the rest go unread, and the log says how many, once a minute (see below).
+
+**What the map shows.** An area is a stretch of ground where the same custom biomes lie in every 4 x 4 block column; its
+outline follows the 4-block grid that the game stores biomes on.
+
+- **Colours.** The layer has 16 colours. A biome gets its own while there are colours left, and biomes that touch, side
+  by side or one above the other, never share one (a biome that touches biomes of all 16 colours is the one exception).
+  A biome keeps its colour from one redraw to the next and across restarts, because the colours are kept in
+  `colours.txt`, for all worlds together.
+- **Stacked biomes.** Where custom biomes lie one above the other, the area is drawn once for each biome, in that
+  biome's colour over the same outline, so the colours mix. One window lists every biome there, from the highest down.
+  The area's label names the biomes, joined by plus signs.
+- **Holes.** A map area cannot have a hole, so an area with another biome in the middle is drawn with the hole joined to
+  its outline by a seam. Its border is hidden, so that no seam line shows. A click in the hole reaches the biome there.
+
+**The window.** A click on an area opens a window with a section for each custom biome there, from the highest down:
+
+- the biome's name, if biome tuning has a label for it (`/biometune label`), else its id; and its id;
+- its heights there, in how many places on the world it is painted, and in about how many chunks;
+- its settings, only those its definition sets, under the headings `Sky and fog`, `Water and plants`, `Climate` and
+  `Sound and particles`. A colour shows with a swatch and its `#rrggbb` value;
+- `Changed in game, not saved yet`, when biome tuning holds unsaved edits of the biome;
+- `Its settings cannot be read here.`, when biome tuning is off or cannot read the biome's file: a biome in a zip pack,
+  in no datapack folder, or in two;
+- the commands `/biometune edit <id>` and `//setbiome <id>`, to change the biome or paint more of it.
+
+The settings are live, from biome tuning and not from the saved file. A change reaches the window within about 10
+seconds.
+
+**The size limit.** Every visit to the web map downloads the markers of the world it shows, hidden layers included. A
+world whose Custom biomes markers would add more than 512 KB to that download, measured as the web server sends it
+(gzipped at level 1), is not drawn at all. `scan` then says `not drawn` with the size, and the log says so once. The
+world stays on, and is drawn again, with a line in the log, as soon as its markers fit. The 512 KB is fixed; it is not a
+setting.
+
+**Files.** Under `plugins/MCME-Architect/mapLayers/customBiomes/`:
+
+| File | What it holds |
+|---|---|
+| `<world>.dat` | The world's record, in a binary format. It is written when it changed, at most once a minute, and when Architect stops. `<world>.dat.tmp` is there while it is written. |
+| `<world>.dat.bak` | A record that could not be read, set aside at the start with a warning in the log. The world is read again from the start. |
+| `<world>.dat.off` | The record of a world taken off with `scan <world> off`. Architect does not read it again: keep it or delete it. |
+| `colours.txt` | Each biome's colour: one `<biome id>;<colour number>;<order>` line per biome. Delete it, with the server stopped, to colour the biomes again. |
+
+**What the log says.** Among the lines in Architect's log (see [Logs and debugging](#logs-and-debugging)) are:
+
+| Line | Meaning |
+|---|---|
+| `Custom biomes layer: <world> is not drawn: its markers would add <n> KB to every map visit, over the 512 KB target.` | The world is over the size limit. Said once. |
+| `Custom biomes layer: <world> is drawn again: its markers add <n> KB.` | The world fits again. |
+| `Custom biomes layer: <n> chunks unloaded before they could be read; /architect maplayers scan <world> catches them.` | Paint in these chunks was missed. At most once a minute; run the scan again. |
+
+**Good to know**
+
+- To show a biome's settings, the layer asks biome tuning for the biome, which loads its file as `/biometune info`
+  does. If you change that file by hand afterwards, `/biometune save` refuses until `/biometune revert <biome>` loads
+  the new version; see [Live, saved and published](#live-saved-and-published).
+- `/architect reload` and a restart stop the layer, which saves every record first, and start it again. A read that was
+  under way goes on with the files it had not finished.
+
 ### Refreshing the layers
 
 The layers redraw by themselves when their data changes, at `/architect reload`, when dynmap starts again, and when a
-world is loaded.
+world is loaded. Two commands, both under `/architect maplayers`, act by hand:
 
 | Command | What it does |
 |---|---|
-| `/architect maplayers refresh` | Gathers every layer's data again, recounts the loaded chunks, looks up dynmap afresh and redraws every layer. |
+| `/architect maplayers refresh` | Gathers every layer's data again, recounts the loaded chunks, looks up dynmap afresh and redraws every layer. The Custom biomes layer reads every loaded chunk of its worlds again, but not their saved files: `scan` does that. |
+| `/architect maplayers scan [<world> [off]]` | Lists the worlds on the Custom biomes layer; with a world, puts it on the layer and reads its saved files; with `off`, takes it off. See [Custom biomes](#custom-biomes). |
 
-**Permission:** `architect.maplayers` (Head Designer bundle), or the console.
+**Permission:** `architect.maplayers` (Head Designer bundle), or the console, for both.
 
-It answers `Architect's map layers are drawn again, and loaded chunks recounted.`, or says that dynmap is not enabled
-or that the map layers are not running.
+`refresh` answers `Architect's map layers are drawn again, and loaded chunks recounted.`, or says that dynmap is
+not enabled or that the map layers are not running.
 
 ### Map layer settings
 
@@ -2256,15 +2375,21 @@ written `'#rrggbb'`.
 | `mapLayers.itemBlockLimit` | The same keys, with `color: '#ff0000'`. |
 | `mapLayers.noPhysics` | `enabled: true`, `hidden: true`, `redstoneColor: '#ff8c00'`, `waterColor: '#1e64ff'`, `borderWidth: 2`, `borderOpacity: 0.3`, `areaOpacity: 0.2` |
 | `mapLayers.itemBlockBudget` | `enabled: true`, `hidden: true`, `warnPercent: 50`, `highPercent: 80`, `warnColor: '#ffd700'`, `highColor: '#ff8c00'`, `fullColor: '#ff0000'`, `areaOpacity: 0.35` |
+| `mapLayers.customBiomes` | `enabled: true`, `hidden: true`, `borderWidth: 2`, `borderOpacity: 0.6`, `areaOpacity: 0.3`, `scanMegabytesPerSecond: 20` |
 
 `enabled` draws the layer. `hidden` keeps it switched off in the layer list until a viewer turns it on. `borderWidth`,
 `borderOpacity` and `areaOpacity` (0 to 1) style the lines and the fill. A chunk shows on the budget layer from
 `warnPercent` of its limit (1 to 100), and turns orange from `highPercent`.
 
+The Custom biomes layer has no colour keys: it colours its biomes itself, and draws nothing until an admin puts a world
+on it (see [Custom biomes](#custom-biomes)). `scanMegabytesPerSecond` is the most that the first read of a world's saved
+files takes from the disk, in megabytes a second on average. A value of 0 or less is replaced by 20, with a warning in
+Architect's log.
+
 **The older `dynmap` section.** Until `rpRegions` or `itemBlockLimit` has an entry of its own under `mapLayers`, that
 layer reads the `dynmap` section instead: `dynmap.enabled` (off unless `true`), `dynmap.hide` (default `true`),
 `dynmap.borderColor` and `dynmap.areaColor` (Bukkit colour objects), `dynmap.borderWidth`, `dynmap.borderOpacity` and
-`dynmap.areaOpacity`. The other two layers never read it.
+`dynmap.areaOpacity`. The other three layers never read it.
 
 `/architect reload` applies changes to both sections.
 
@@ -2272,13 +2397,15 @@ layer reads the `dynmap` section instead: `dynmap.enabled` (off unless `true`), 
 
 dynmap is optional. Without it, Architect starts as normal, draws nothing, and logs
 `dynmap is not enabled, so Architect's map layers are not drawn.` The budget layer still counts entities and saves its
-file; on a server without a web map, `itemBlockBudget: false` under `mapLayers` saves that work. If drawing fails, Architect switches all its
+file; on a server without a web map, `itemBlockBudget: false` under `mapLayers` saves that work. The Custom biomes layer
+likewise goes on reading chunks and saving its records for the worlds that are on, so on such a server put no world on
+it, or set `customBiomes: false`. If drawing fails, Architect switches all its
 layers off with one warning, until `/architect maplayers refresh`, or until dynmap or Architect starts again.
 
 **Good to know**
 
 - `dynmap.enabled` is not a master switch. It covers only the resource pack region and item-block limit layers; the
-  other two are on by default.
+  other three are on by default.
 - A `config.yml` with no `dynmap` section, and no `mapLayers` entries for those two layers, leaves them off.
 - The budget tiles are a guide. The limit is read at the chunk's centre, while placing checks the exact spot, and
   players with `architect.itemBlock.region.ignore` can place in a full chunk.
@@ -2389,7 +2516,7 @@ its layout (such as the indentation) can change.
 | `ServerResourcePacks` | The server resource packs: per pack, client type, resolution and variant, a download address and SHA-1 for each Minecraft version. | [Resource packs](#resource-packs) |
 | `rpSettingsDatabase` | The MySQL database for players' pack settings: `user`, `password`, `dbName`, `ip`, `port`. The placeholder `xxx` means no database. | [Resource packs](#resource-packs) |
 | `gitHubRpReleases` | Per pack: the GitHub `owner` and `repo`, and the release `script`, its folder `path` and `timeoutMinutes`, for `/rp release` and `/rp server`. | [Resource packs](#resource-packs) |
-| `mapLayers` | Switches and styles of the four map layers. Commented out in the bundled file: every key is optional. | [Map layers](#map-layers) |
+| `mapLayers` | Switches and styles of the five map layers. Commented out in the bundled file: every key is optional. | [Map layers](#map-layers) |
 | `dynmap` | The older switch and style of two map layers (below). | [Map layers](#map-layers) |
 | `entityLogger` | The entity logger's map markers (below). | [Logs and debugging](#logs-and-debugging) |
 | `headGalleryLocation` | Where the custom head gallery stands (below). | [Custom heads](#custom-heads) |
@@ -2691,6 +2818,8 @@ Architect keeps its files in `plugins/MCME-Architect/`. Back up the whole folder
 | `itemSets.yml` | `/get` | Kits. |
 | `itemBlockRegions/<name>.reg` | `/itemblock` | Item block limit regions. |
 | `mapLayers/itemBlockBudget.yml` | map layers | Item block counts per chunk. |
+| `mapLayers/customBiomes/<world>.dat` | Custom biomes layer | One file per world on the layer, in a binary format: the custom biomes of each chunk, and how far the first read has come. A `.tmp` file appears while saving, a `.bak` copy when a file could not be read, and a `.off` copy when the world was taken off. See [Custom biomes](#custom-biomes). |
+| `mapLayers/customBiomes/colours.txt` | Custom biomes layer | The map colour of each biome, one `<biome id>;<colour number>;<order>` line per biome. |
 | `NoPhyExceptionAreas.txt` | `/nophy exception` | One line per exception area. A `.tmp` file appears while saving, and a `.bak` copy is kept when a load had to skip a broken line. |
 | `customHeads/accepted/`, `customHeads/submitted/` | `/chead` | The head collection (folders are categories) and the heads waiting for review. |
 | `clipboards/<player UUID>.cbd` | copy and paste | Each player's clipboard, in a binary format. |
@@ -2831,7 +2960,8 @@ without a restart leaves live biome edits in the game while Architect forgets th
 
 ### The `/architect` command
 
-`/architect` is Architect's admin command. Subcommand names are not case-sensitive. It offers no tab completion.
+`/architect` is Architect's admin command. Subcommand names are not case-sensitive. Only `maplayers` offers tab
+completion: `refresh` and `scan`, then the loaded worlds and `off`.
 
 | Syntax | Who may use it | What it does |
 |---|---|---|
@@ -2845,12 +2975,13 @@ without a restart leaves live biome edits in the game while Architect forgets th
 | `/architect checkNBT [player]` | the console, `architect.checknbt` | Shows the stored data of the item in your main hand, or of every item an online player carries. From the console, name a player. |
 | `/architect weather clear\|rain\|thunder` | players with `architect.weather` | Changes the weather in your world once, past `weatherBlocking`. In 3.2.1 `thunder` gives rain only. |
 | `/architect maplayers refresh` | the console, `architect.maplayers` | Draws Architect's map layers again and recounts the loaded chunks; see [Map layers](#map-layers). |
+| `/architect maplayers scan [<world> [off]]` | the console, `architect.maplayers` | Lists the worlds on the Custom biomes layer; with a world, puts it on the layer and reads its saved files; with `off`, takes it off. See [Custom biomes](#custom-biomes). |
 | `/architect eLog true`, `/architect eLog` | the console, `architect.reload` | Starts or stops the entity logger; see [Logs and debugging](#logs-and-debugging). |
 | `/architect placeAllBlockStates [file]` | players with `architect.reload` | A developer tool. Places every state of every block type in a large grid next to you, with no undo: never use it in a build world. With `file`, it places nothing and writes the list to `blockList.txt` in the server's main folder. |
 
 - `architect.reload` allows everything that `architect.info` allows.
 - Senders that are neither the console nor a player, such as command blocks and RCON, can use only `checkNBT`, and
-  `maplayers refresh` if they hold `architect.maplayers`.
+  `maplayers refresh` and `maplayers scan` if they hold `architect.maplayers`.
 
 ---
 
@@ -2864,7 +2995,7 @@ for example `/mcme-architect:undo`, which helps when another plugin has a comman
 |---|---|---|---|---|
 | `/architect` | `/architect [help [page]]` | Lists the Architect commands you may use. | `architect.help` (everyone by default) | [Running Architect](#the-architect-command) |
 | `/architect` (admin) | `/architect version`, `reload`, `reloaddata`, `world`, `blockdata`, `dev [true\|false\|<level>\|-r]`, `checkNBT [player]`, `weather clear\|rain\|thunder`, `eLog [true]`, `placeAllBlockStates [file]` | Version, reloading, worlds, block data, debug output, item data, weather, entity logger. | `architect.info`, `architect.reload`, `architect.checknbt` or `architect.weather`; see [The /architect command](#the-architect-command) | [Running Architect](#the-architect-command) |
-| `/architect maplayers` | `/architect maplayers refresh` | Draws the map layers again. | `architect.maplayers` | [Map layers](#map-layers) |
+| `/architect maplayers` | `/architect maplayers refresh`, `/architect maplayers scan [<world> [off]]` | Draws the map layers again; lists the worlds on the Custom biomes layer, puts a world on it and reads its saved files, or takes it off. | `architect.maplayers` | [Map layers](#map-layers) |
 | `/get` | `/get [help [page]]`, `/get list [page]`, `/get <set> [-o]` | Lists kits and gives one; with `-o`, into the same hotbar slots. | `architect.getCommand` | [Blocks and inventories](#blocks-and-inventories) |
 | `/get` (kits) | `/get pcreate <set> [description]`, `/get create <set> [description]`, `/get publish <set>`, `/get unpublish <set>`, `/get delete <set>` | Saves your hotbar as a private or public kit; publishes, unpublishes or deletes a kit. | `architect.getCommand`, plus `architect.get.private` for `pcreate`, `architect.get.public` for `create`, `publish` and `unpublish`, and `architect.get.other` for another player's kit | [Blocks and inventories](#blocks-and-inventories) |
 | `/get armor` | `/get armor <RRGGBB>` | Gives leather armor dyed that colour. | `architect.getCommand`, `architect.get.armor` | [Blocks and inventories](#blocks-and-inventories) |
@@ -3006,7 +3137,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.itemTexture` | op | — | No effect in 3.2.1. |
 | `architect.itemTexture.manager` | op | — | No effect in 3.2.1. |
 | `architect.lecternEditor` | op | — | Taking a lectern's book (not a copy) and putting books on lecterns, without build permission. |
-| `architect.maplayers` | op | head designer | `/architect maplayers refresh`. |
+| `architect.maplayers` | op | head designer | `/architect maplayers refresh` and `/architect maplayers scan`. |
 | `architect.noPhysicsList.edit` | op | head designer | `/nophy add` and `/nophy remove`. Includes `architect.noPhysicsList.view`. |
 | `architect.noPhysicsList.exception` | op | designer | `/nophy exception`. Needs `architect.noPhysicsList.view` as well. |
 | `architect.noPhysicsList.view` | op | adventurer | `/nophy`, `/nophy list` and `/nophy help`. |
@@ -3152,3 +3283,10 @@ Each entry gives the symptom, the cause and the fix.
   item-block-limit layers off; or a drawing error switched all layers off. Fix: check Architect's log. After
   changing the `dynmap` or `mapLayers` sections, run `/architect reload`; after a drawing error, run
   `/architect maplayers refresh`.
+- **The Custom biomes layer is empty, or lacks some paint.** Cause: no world is on the layer
+  (`/architect maplayers scan` lists the worlds that are on); or the first read has not got to the paint yet (the state
+  says `reading 3 of 12 region files`); or the world is `not drawn`, because its markers are over the size limit;
+  or the paint is in chunks that unloaded before they were read. Fix: put the world on with
+  `/architect maplayers scan <world>`, and wait for `up to date`. The same command reads a world that is on again from
+  the start, which catches missed paint. A world that is `not drawn` comes back by itself when its markers fit; see
+  [Custom biomes](#custom-biomes).

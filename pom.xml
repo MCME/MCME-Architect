@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mcmiddleearth</groupId>
     <artifactId>MCME-Architect</artifactId>
-    <version>3.2.1</version>
+    <version>3.3.0</version>
     <packaging>jar</packaging>
     <properties>
         <!-- Build kind for the jar name: RELEASE | SNAPSHOT | DEV. Override with -Dbuild.type=DEV. -->
@@ -218,8 +218,8 @@
             <version>3.0.1</version>
             <scope>provided</scope>
         </dependency>
-        <!-- 7.4.5, the WorldEdit the test server and the production servers run. 7.3.0 took lin-bus, its NBT
-             library, as a 0.1.0-SNAPSHOT. -->
+        <!-- 7.4.5's API. The test servers run WorldEdit 7.4.5; production runs FastAsyncWorldEdit 2.15.4, which offers
+             the same API. 7.3.0 took lin-bus, its NBT library, as a 0.1.0-SNAPSHOT. -->
         <dependency>
             <groupId>com.sk89q.worldedit</groupId>
             <artifactId>worldedit-core</artifactId>
