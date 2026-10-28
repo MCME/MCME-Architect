@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 // A biome's colour must differ from the colours of the biomes it touches, and must not change from one redraw or one
 // restart to the next, or the map flickers. So what is chosen is kept, and only the later of two clashing biomes moves.
+// Within that, the colours are spread over the palette: each biome gets a colour of its own while there are any left.
 class BiomeColoursTest {
 
     /** A touch of two biomes, named in whichever order. */
@@ -50,6 +52,20 @@ class BiomeColoursTest {
 
     private static int index(Map<String, Assignment> colours, String biome) {
         return colours.get(biome).index();
+    }
+
+    /** Just the colour of each biome. */
+    private static Map<String, Integer> indexes(Map<String, Assignment> colours) {
+        Map<String, Integer> indexes = new TreeMap<>();
+        colours.forEach((biome, assignment) -> indexes.put(biome, assignment.index()));
+        return indexes;
+    }
+
+    /** How many biomes have each colour. */
+    private static int[] uses(Map<String, Assignment> colours) {
+        int[] uses = new int[PALETTE.length];
+        colours.values().forEach(assignment -> uses[assignment.index()]++);
+        return uses;
     }
 
     /** Biomes cbc:b00 and up, every one touching every other. */
@@ -80,28 +96,91 @@ class BiomeColoursTest {
         assertEquals(1, index(colours, "cbc:b"));
     }
 
+    // Each biome gets a colour of its own while the palette lasts. Sharing one with a biome that is not a neighbour
+    // would be allowed, but it is what turns a map of many biomes into a map of a few colours.
     @Test
-    void biomesThatDoNotTouchMayShareAColour() {
+    void aBiomeThatTouchesOnlyOneOtherStillGetsAColourOfItsOwn() {
         Map<String, Assignment> colours = assign(Map.of(), Set.of("cbc:a", "cbc:b", "cbc:c"),
                 touches("cbc:a", "cbc:b", "cbc:b", "cbc:c"));
 
         assertEquals(0, index(colours, "cbc:a"));
         assertEquals(1, index(colours, "cbc:b"));
-        assertEquals(0, index(colours, "cbc:c"), "c touches only b");
+        assertEquals(2, index(colours, "cbc:c"), "c could share a's colour 0, but nobody holds 2");
     }
 
     @Test
-    void aNewBiomeTakesTheLowestColourItsNeighboursLack() {
+    void sevenBiomesThatDoNotTouchGetSevenColours() {
+        Set<String> biomes = new TreeSet<>(List.of("cbc:a", "cbc:b", "cbc:c", "cbc:d", "cbc:e", "cbc:f", "cbc:g"));
+
+        Map<String, Assignment> colours = assign(Map.of(), biomes, Set.of());
+
+        int colour = 0;
+        for (String biome : biomes) {
+            assertEquals(colour++, index(colours, biome), biome);
+        }
+    }
+
+    // A forest with a coast, a dusk and four more biomes around it, some of which touch each other.
+    @Test
+    void aTypicalNeighbourhoodOfSevenBiomesGetsSevenColours() {
+        Set<Touch> touching = touches("cbc:coast", "cbc:forest", "cbc:dusk", "cbc:forest", "cbc:fireflies",
+                "cbc:forest", "cbc:mist", "cbc:forest", "cbc:wind", "cbc:forest", "cbc:smoke", "cbc:forest",
+                "cbc:fireflies", "cbc:mist", "cbc:fireflies", "cbc:wind", "cbc:mist", "cbc:smoke", "cbc:wind",
+                "cbc:smoke");
+        Set<String> biomes = Set.of("cbc:coast", "cbc:dusk", "cbc:fireflies", "cbc:forest", "cbc:mist", "cbc:smoke",
+                "cbc:wind");
+
+        Map<String, Assignment> colours = assign(Map.of(), biomes, touching);
+
+        assertEquals(Map.of("cbc:coast", 0, "cbc:dusk", 1, "cbc:fireflies", 2, "cbc:forest", 3, "cbc:mist", 4,
+                "cbc:smoke", 5, "cbc:wind", 6), indexes(colours));
+    }
+
+    @Test
+    void aNewBiomeTakesAColourNoNeighbourHasThatFewBiomesHold() {
         Map<String, Assignment> current = Map.of("cbc:a", new Assignment(0, 1), "cbc:b", new Assignment(1, 2),
                 "cbc:c", new Assignment(3, 3), "cbc:d", new Assignment(2, 4));
+        Set<String> biomes = Set.of("cbc:a", "cbc:b", "cbc:c", "cbc:d", "cbc:z");
 
-        Map<String, Assignment> all = assign(current, Set.of("cbc:a", "cbc:b", "cbc:c", "cbc:d", "cbc:z"),
+        Map<String, Assignment> all = assign(current, biomes,
                 touches("cbc:a", "cbc:z", "cbc:b", "cbc:z", "cbc:c", "cbc:z"));
-        Map<String, Assignment> some = assign(current, Set.of("cbc:a", "cbc:b", "cbc:c", "cbc:d", "cbc:z"),
-                touches("cbc:b", "cbc:z", "cbc:c", "cbc:z"));
+        Map<String, Assignment> some = assign(current, biomes, touches("cbc:b", "cbc:z", "cbc:c", "cbc:z"));
 
-        assertEquals(2, index(all, "cbc:z"), "0, 1 and 3 are taken; d, which z does not touch, has 2");
-        assertEquals(0, index(some, "cbc:z"), "not the colour after the highest, but the lowest that is free");
+        assertEquals(4, index(all, "cbc:z"), "z could take 2, which only d holds, but nobody holds 4");
+        assertEquals(4, index(some, "cbc:z"), "and 0, which a holds, though a is not a neighbour");
+    }
+
+    // The colours of the biomes it touches come first, and how many biomes hold a colour only second.
+    @Test
+    void aColourNoNeighbourHasWinsOverOneThatFewerBiomesHold() {
+        Map<String, Assignment> current = new HashMap<>();
+        Set<String> biomes = new HashSet<>(Set.of("cbc:x"));
+        Set<Touch> touching = new HashSet<>();
+        for (int i = 0; i < 15; i++) { // the neighbours n00 to n14 hold the colours 0 to 14, one each
+            String neighbour = String.format("cbc:n%02d", i);
+            current.put(neighbour, new Assignment(i, i + 1));
+            biomes.add(neighbour);
+            touching.add(touch(neighbour, "cbc:x"));
+        }
+        for (int i = 0; i < 3; i++) { // three biomes that x does not touch hold colour 15
+            current.put("cbc:far" + i, new Assignment(15, 16 + i));
+            biomes.add("cbc:far" + i);
+        }
+
+        Map<String, Assignment> next = assign(current, biomes, touching);
+
+        assertEquals(15, index(next, "cbc:x"), "no neighbour has 15, though it is the colour most biomes hold");
+    }
+
+    // Colours are shared by the whole server, so the biomes of other worlds count, though only one world is given.
+    @Test
+    void aNewBiomeAvoidsTheColoursOfBiomesOutsideTheGivenSetToo() {
+        Map<String, Assignment> current = Map.of("cbc:a", new Assignment(0, 1), "cbc:b", new Assignment(1, 2),
+                "cbc:c", new Assignment(2, 3));
+
+        Map<String, Assignment> next = assign(current, Set.of("cbc:d"), Set.of());
+
+        assertEquals(new Assignment(3, 4), next.get("cbc:d"), "the other biomes hold 0, 1 and 2");
     }
 
     @Test
@@ -229,6 +308,65 @@ class BiomeColoursTest {
         current.forEach((biome, assignment) -> assertEquals(assignment, next.get(biome), biome + " stays"));
     }
 
+    // When the neighbours hold every colour alike, the colour that fewer biomes hold goes first, and only then the
+    // lowest.
+    @Test
+    void whenEveryColourIsTakenByNeighboursTheOneFewerBiomesHoldIsTaken() {
+        Map<String, Assignment> current = new HashMap<>();
+        Set<String> biomes = new HashSet<>(Set.of("cbc:x"));
+        Set<Touch> touching = new HashSet<>();
+        for (int i = 0; i < 16; i++) { // the neighbours n00 to n15 hold each colour once
+            String neighbour = String.format("cbc:n%02d", i);
+            current.put(neighbour, new Assignment(i, i + 1));
+            biomes.add(neighbour);
+            touching.add(touch(neighbour, "cbc:x"));
+        }
+        for (int i = 0; i < 4; i++) { // four biomes that x does not touch hold the colours 0 to 3 as well
+            current.put("cbc:far" + i, new Assignment(i, 17 + i));
+            biomes.add("cbc:far" + i);
+        }
+
+        Map<String, Assignment> next = assign(current, biomes, touching);
+
+        assertEquals(4, index(next, "cbc:x"), "every neighbour colour is as bad as the next; 0 to 3 are held twice");
+    }
+
+    @Test
+    void aBiomeColouredAgainTakesAColourFewBiomesHold() {
+        Map<String, Assignment> current = Map.of("cbc:a", new Assignment(0, 1), "cbc:b", new Assignment(0, 2),
+                "cbc:d", new Assignment(1, 3));
+
+        Map<String, Assignment> next = assign(current, Set.of("cbc:a", "cbc:b", "cbc:d"), touches("cbc:a", "cbc:b"));
+
+        assertEquals(new Assignment(2, 2), next.get("cbc:b"), "not 1, which d holds, though d does not touch b");
+    }
+
+    // The biome that is coloured again is one of those that hold its old colour. It must not count there, or it would
+    // always be pushed off the colour it has.
+    @Test
+    void aBiomeColouredAgainDoesNotCountItself() {
+        Map<String, Assignment> current = new HashMap<>();
+        Set<String> biomes = new HashSet<>(Set.of("cbc:x"));
+        Set<Touch> touching = new HashSet<>();
+        for (int i = 0; i < 16; i++) { // the neighbours n00 to n15 hold each colour once
+            String neighbour = String.format("cbc:n%02d", i);
+            current.put(neighbour, new Assignment(i, i + 1));
+            biomes.add(neighbour);
+            touching.add(touch(neighbour, "cbc:x"));
+        }
+        current.put("cbc:x", new Assignment(3, 17)); // the colour of n03, which is older
+        for (int colour = 0; colour < 16; colour++) { // all colours but 3 and 7 are held by one more biome
+            if (colour != 3 && colour != 7) {
+                current.put("cbc:far" + colour, new Assignment(colour, 18 + colour));
+                biomes.add("cbc:far" + colour);
+            }
+        }
+
+        Map<String, Assignment> next = assign(current, biomes, touching);
+
+        assertEquals(new Assignment(3, 17), next.get("cbc:x"), "3 and 7 are held once, and 3 is the lower");
+    }
+
     @Test
     void withMoreTouchingBiomesThanColoursTheColoursAreSharedEvenly() {
         Set<Touch> touching = new HashSet<>();
@@ -236,16 +374,53 @@ class BiomeColoursTest {
 
         Map<String, Assignment> colours = assign(Map.of(), new HashSet<>(ids), touching);
 
-        int[] uses = new int[PALETTE.length];
-        colours.values().forEach(assignment -> uses[assignment.index()]++);
-        for (int colour = 0; colour < uses.length; colour++) {
-            int times = uses[colour];
+        int[] used = uses(colours);
+        for (int colour = 0; colour < used.length; colour++) {
+            int times = used[colour];
             assertTrue(times == 2 || times == 3, "colour " + colour + " is used " + times + " times");
         }
         for (int i = 0; i < PALETTE.length; i++) {
             assertEquals(i, index(colours, ids.get(i)), "the first sixteen take one colour each, in id order");
         }
         assertEquals(colours, assign(colours, new HashSet<>(ids), touching), "nothing moves when worked out again");
+    }
+
+    @Test
+    void thirtyBiomesThatDoNotTouchUseEveryColourBeforeAnyIsUsedAThirdTime() {
+        Set<String> biomes = new TreeSet<>();
+        for (int i = 0; i < 30; i++) {
+            biomes.add(String.format("cbc:b%02d", i));
+        }
+
+        int[] used = uses(assign(Map.of(), biomes, Set.of()));
+
+        for (int colour = 0; colour < used.length; colour++) {
+            assertEquals(colour < 14 ? 2 : 1, used[colour], "uses of colour " + colour);
+        }
+    }
+
+    // In a chain each biome touches the one before. The colours still go round the whole palette before they repeat.
+    @Test
+    void aChainOfTwentyFourBiomesUsesEveryColourBeforeAnyIsUsedAThirdTime() {
+        Set<Touch> touching = new HashSet<>();
+        List<String> ids = new ArrayList<>();
+        for (int i = 0; i < 24; i++) {
+            String id = String.format("cbc:b%02d", i);
+            if (i > 0) {
+                touching.add(touch(ids.get(i - 1), id));
+            }
+            ids.add(id);
+        }
+
+        Map<String, Assignment> colours = assign(Map.of(), new HashSet<>(ids), touching);
+
+        int[] used = uses(colours);
+        for (int colour = 0; colour < used.length; colour++) {
+            assertEquals(colour < 8 ? 2 : 1, used[colour], "uses of colour " + colour);
+        }
+        for (Touch touch : touching) {
+            assertNotEquals(index(colours, touch.a()), index(colours, touch.b()), touch.toString());
+        }
     }
 
     @Test
@@ -424,6 +599,36 @@ class BiomeColoursTest {
         }
     }
 
+    // Whatever touches what, a biome takes a colour that nobody holds while there is one: such a colour is held by no
+    // neighbour either. So the first sixteen biomes get sixteen different colours, and no colour is left out after.
+    @Test
+    void everyBiomeGetsAColourOfItsOwnWhileThePaletteLastsWhateverTouchesWhat() {
+        Random random = new Random(16);
+        for (int round = 0; round < 300; round++) {
+            int number = round;
+            int count = 1 + random.nextInt(32);
+            double density = random.nextDouble();
+            List<String> ids = new ArrayList<>();
+            for (int i = 0; i < count; i++) {
+                ids.add(String.format("cbc:b%02d", i));
+            }
+            Set<Touch> touching = new HashSet<>();
+            for (int i = 0; i < count; i++) {
+                for (int j = i + 1; j < count; j++) {
+                    if (random.nextDouble() < density) {
+                        touching.add(touch(ids.get(i), ids.get(j)));
+                    }
+                }
+            }
+
+            Map<String, Assignment> colours = assign(Map.of(), new HashSet<>(ids), touching);
+
+            long different = colours.values().stream().mapToInt(Assignment::index).distinct().count();
+            assertEquals(Math.min(count, PALETTE.length), different,
+                    () -> "round " + number + ": " + count + " biomes");
+        }
+    }
+
     // ---- the palette and Assignment ----
 
     // A colour is saved as its place in the palette, so the palette is part of the file format.
@@ -486,7 +691,7 @@ class BiomeColoursTest {
 
         assertEquals(PALETTE[0], restarted.rgb("cbc:a"));
         assertEquals(PALETTE[1], restarted.rgb("cbc:b"), "not the colour of a biome nobody knows");
-        assertEquals(PALETTE[0], restarted.rgb("cbc:c"));
+        assertEquals(PALETTE[2], restarted.rgb("cbc:c"));
         assertEquals(colours.current(), restarted.current(), "orders too");
     }
 
@@ -524,8 +729,9 @@ class BiomeColoursTest {
         assertTrue(before.isEmpty(), "what current() gave earlier does not change under the reader");
     }
 
-    // A result worked out from an older copy of current() can arrive after another one. It must not make the colours
-    // of the other one forgotten, or they would be chosen again, perhaps differently.
+    // A biome that a result leaves out keeps its colour. (That is all the protection there is: a result must have been
+    // worked out from the colours held when it is applied, with assign and update going one after the other. One worked
+    // out from an older copy writes that copy's colours back over newer ones.)
     @Test
     void anUpdateDoesNotForgetColoursItIsNotGiven(@TempDir Path dir) {
         BiomeColours colours = new BiomeColours(dir.resolve("colours.txt"));

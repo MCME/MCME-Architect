@@ -20,13 +20,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The automatic map colour of each custom biome. A biome gets one of sixteen {@link #PALETTE colours}, different from
- * those of the biomes it touches where the palette allows, and keeps it from one redraw to the next and across
- * restarts, because the colours are kept in a small file.
+ * The automatic map colour of each custom biome. A biome gets one of sixteen {@link #PALETTE colours}: different from
+ * those of the biomes it touches where the palette allows and, within that, one that few biomes have, so that the
+ * colours are spread over the palette and each biome has a colour of its own while there are any left. It keeps its
+ * colour from one redraw to the next and across restarts, because the colours are kept in a small file.
  * <p>
- * {@link #assign} decides the colours and touches nothing else, so a background thread can run it on a copy of
- * {@link #current()}, and the main thread then applies the result with {@link #update}. The colours can be read from
- * any thread at any time.
+ * {@link #assign} decides the colours and touches nothing else, and {@link #update} then takes its result over. They go
+ * together, one build at a time: a result must be worked out from the colours held when it is applied, so
+ * {@code assign} runs on {@link #current()} and {@code update} follows it, before the next {@code assign}. The colours
+ * can be read from any thread at any time.
  * <p>
  * The file holds a line {@code biome;index;order} for each biome, in id order. A line that cannot be read is skipped,
  * and a missing file means no colours yet.
@@ -76,15 +78,18 @@ public final class BiomeColours {
      * <ul>
      *     <li>A biome in {@code current} keeps its colour and its order, even when it is not in {@code biomes}:
      *     another world may use it.</li>
-     *     <li>A biome in {@code biomes} that {@code current} lacks is coloured in id order. It takes the lowest colour
-     *     that none of the biomes it touches has; when they have every colour, the colour the fewest have, the lowest
-     *     on a tie. Its order is one more than the highest so far.</li>
+     *     <li>A biome in {@code biomes} that {@code current} lacks is coloured in id order. It takes a colour that none
+     *     of the biomes it touches has or, when they have every colour, one that the fewest of them have. Of those
+     *     colours it takes the one that the fewest biomes have in all, those outside {@code biomes} included, and then
+     *     the lowest. Its order is one more than the highest so far.</li>
      *     <li>Where two touching biomes have the same colour, the one with the higher order (on equal orders, the
-     *     higher id) is coloured again by the rule above, and keeps its order. The biomes are taken oldest first, so a
-     *     clash moves as few as it can. This repeats until nothing changes, at most once for each biome.</li>
+     *     higher id) is coloured again by the rule above, which does not count the biome itself, and keeps its order.
+     *     The biomes are taken oldest first, so a clash moves as few as it can. This repeats until nothing changes, at
+     *     most once for each biome.</li>
      * </ul>
-     * A biome that touches biomes of every colour can still share one. The result depends only on what the arguments
-     * hold, not on the order of their elements.
+     * So touching biomes differ in colour, and the others are spread: a biome has a colour of its own while there are
+     * colours left. A biome that touches biomes of every colour can still share one. The result depends only on what
+     * the arguments hold, not on the order of their elements.
      *
      * @param current  the colours so far, which is not changed
      * @param biomes   the biomes that need a colour
@@ -102,7 +107,7 @@ public final class BiomeColours {
         }
         for (String biome : new TreeSet<>(biomes)) {
             if (!next.containsKey(biome)) {
-                next.put(biome, new Assignment(leastUsed(biome, next, neighbours), ++highest));
+                next.put(biome, new Assignment(colourFor(biome, next, neighbours), ++highest));
             }
         }
         recolourClashes(next, neighbours);
@@ -119,21 +124,29 @@ public final class BiomeColours {
     }
 
     /**
-     * The colour a biome takes among its neighbours' colours: the lowest that none of them has or, when they have every
-     * colour, the lowest that the fewest have. Both come to the lowest colour with the smallest count.
+     * The colour for a biome. The colours that the fewest of its neighbours have come first: none of them, where there
+     * is a colour that no neighbour has. Of those it takes the colour that the fewest other biomes have, which spreads
+     * the colours over the palette, and then the lowest. The biome itself is not counted, since it may be coloured
+     * already.
      */
-    private static int leastUsed(String biome, Map<String, Assignment> colours,
+    private static int colourFor(String biome, Map<String, Assignment> colours,
                                  Map<String, List<String>> neighbours) {
-        int[] taken = new int[PALETTE.length];
+        int[] near = new int[PALETTE.length];
+        int[] held = new int[PALETTE.length];
+        for (Map.Entry<String, Assignment> entry : colours.entrySet()) {
+            if (!entry.getKey().equals(biome)) {
+                held[entry.getValue().index()]++;
+            }
+        }
         for (String neighbour : neighbours.getOrDefault(biome, List.of())) {
             Assignment assignment = colours.get(neighbour);
             if (assignment != null) {
-                taken[assignment.index()]++;
+                near[assignment.index()]++;
             }
         }
         int best = 0;
-        for (int index = 1; index < taken.length; index++) {
-            if (taken[index] < taken[best]) {
+        for (int index = 1; index < near.length; index++) {
+            if (near[index] < near[best] || near[index] == near[best] && held[index] < held[best]) {
                 best = index;
             }
         }
@@ -153,7 +166,7 @@ public final class BiomeColours {
             for (String biome : oldestFirst) {
                 Assignment mine = colours.get(biome);
                 if (clashesWithAnOlderOne(biome, mine, colours, neighbours)) {
-                    int index = leastUsed(biome, colours, neighbours);
+                    int index = colourFor(biome, colours, neighbours);
                     if (index != mine.index()) {
                         colours.put(biome, new Assignment(index, mine.order()));
                         changed = true;
@@ -188,10 +201,12 @@ public final class BiomeColours {
     }
 
     /**
-     * Takes the colours in {@code next} over the ones held, saves them when that changed anything, and says whether
-     * it did. A biome that {@code next} leaves out keeps its colour, so a result worked out from an older copy of
-     * {@link #current()} cannot make the colours of another result forgotten. When a save fails, the colours are held
-     * anyway, and the next update saves them.
+     * Takes the colours in {@code next} over the ones held, saves them when that changed anything, and says whether it
+     * did. A biome that {@code next} leaves out keeps its colour. That is all the protection there is: {@code next}
+     * must have been worked out from the colours held when it is applied, so call {@link #assign} on
+     * {@link #current()} and then {@code update}, one after the other. A result worked out from an older copy writes
+     * that copy's colours back over newer ones. When a save fails, the colours are held anyway, and the next update
+     * saves them.
      */
     public synchronized boolean update(Map<String, Assignment> next) {
         Map<String, Assignment> merged = new TreeMap<>(colours);
