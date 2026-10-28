@@ -431,6 +431,48 @@ class BiomeShapesTest {
         assertEquals("Old forest + cbc:fireflies", areas().get(0).label());
     }
 
+    // A stop interrupts the shapes thread. A build that finds itself interrupted gives up before it takes the colours
+    // over and saves them, where an interruptible write would fail with a warning: the next start builds the world
+    // again.
+    @Test
+    void aBuildInterruptedByAStopLeavesTheColoursAlone() {
+        Logger coloursLog = Logger.getLogger(BiomeColours.class.getName());
+        List<LogRecord> warned = new ArrayList<>();
+        Handler catcher = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                warned.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        coloursLog.addHandler(catcher);
+        shapes = shapes(task -> {
+            Thread.currentThread().interrupt(); // as the stop's shutdownNow() does
+            try {
+                task.run();
+            } finally {
+                Thread.interrupted();
+            }
+        }, Runnable::run);
+        try {
+            shapes.rebuild("world", new Paint().add("cbc:a", 0, 0).chunks());
+        } finally {
+            coloursLog.removeHandler(catcher);
+        }
+
+        assertEquals(Map.of(), colours.current(), "no colour taken");
+        assertFalse(Files.exists(dir.resolve("colours.txt")), "nothing written");
+        assertEquals(List.of(), warned);
+        assertEquals(List.of(), ids(), "nothing drawn: the layer is stopping");
+    }
+
     @Test
     void theBorderAndFillComeFromTheConfig() {
         YamlConfiguration config = new YamlConfiguration();

@@ -212,6 +212,9 @@ public final class BiomeShapes {
         try {
             Geometry geometry = PaintRegions.of(chunks);
             Map<String, Assignment> next = colour(world, generation, geometry);
+            if (Thread.currentThread().isInterrupted()) {
+                return; // the layer is stopping: the colours stay as saved, and the next start builds the world again
+            }
             boolean recoloured = colours.update(next);
             List<Shown> shown = shown(world, geometry, facts, next);
             int bytes = MarkerSize.gzipLevel1(shown.stream().map(Shown::area).toList());
