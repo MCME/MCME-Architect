@@ -5,6 +5,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -363,7 +364,8 @@ class PaintRecordTest {
     }
 
     private static void gzipped(Path file, Body body) throws IOException {
-        try (DataOutputStream out = new DataOutputStream(new GZIPOutputStream(Files.newOutputStream(file)))) {
+        try (OutputStream raw = Files.newOutputStream(file);
+             DataOutputStream out = new DataOutputStream(new GZIPOutputStream(raw))) {
             body.write(out);
         }
     }

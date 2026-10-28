@@ -6,6 +6,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -160,8 +162,11 @@ public final class PaintRecord {
         for (String id : ids) {
             biomeIndex.put(id, biomeIndex.size());
         }
-        try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
-                new GZIPOutputStream(Files.newOutputStream(temp), BUFFER), BUFFER))) {
+        // The file is a resource of its own: GZIPOutputStream writes its header in its constructor, and when that
+        // fails it does not close the stream it was given.
+        try (OutputStream raw = Files.newOutputStream(temp);
+             DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
+                     new GZIPOutputStream(raw, BUFFER), BUFFER))) {
             out.writeInt(MAGIC);
             out.writeShort(VERSION);
             out.writeBoolean(fillDone);
@@ -198,8 +203,11 @@ public final class PaintRecord {
      * @throws IOException when the file cannot be read, is not a record of this version, ends early, or is damaged
      */
     public static PaintRecord load(Path file) throws IOException {
-        try (DataInputStream in = new DataInputStream(new BufferedInputStream(
-                new GZIPInputStream(Files.newInputStream(file), BUFFER), BUFFER))) {
+        // The file is a resource of its own: GZIPInputStream reads its header in its constructor, and when that
+        // fails it does not close the stream it was given.
+        try (InputStream raw = Files.newInputStream(file);
+             DataInputStream in = new DataInputStream(new BufferedInputStream(
+                     new GZIPInputStream(raw, BUFFER), BUFFER))) {
             return read(in, file);
         } catch (EOFException e) {
             throw new IOException(file.getFileName() + " ends too early", e);
