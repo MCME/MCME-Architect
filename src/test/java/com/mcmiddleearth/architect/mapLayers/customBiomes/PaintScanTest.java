@@ -865,34 +865,84 @@ class PaintScanTest {
     // time, and each look at the copy comes between two of its files; the chunk lies in the last of six.
     @Test
     void anUnchangedChunkWhoseFileTheFillHasNotReadIsNotCounted() throws IOException {
-        String[] names = {"r.0.0.mca", "r.1.0.mca", "r.2.0.mca", "r.3.0.mca", "r.4.0.mca", "r.5.0.mca"};
-        regionFiles("world", names);
+        Steps steps = sixFileFill();
+        PaintRecord record = store.record("world");
         // the fixture's chunk (-3, -4), as it lies in r.5.0.mca, saved long before it unloads
         RegionFixtures.savedAt(regionFolder("world").resolve("r.5.0.mca"), RegionFixtures.indexOf(189, 28),
                 UNLOADED - 600);
-        PaintRecord record = store.turnOn("world", key -> false);
-        Steps steps = new Steps();
-        scan = scan(0.1, steps);
-        scan.start(world);
-        steps.awaitReached(); // the first file is read, and the fill waits out its pace
 
         scan.unloaded("world", 189, 28, UNLOADED);
-        for (long wait : LOOKS) {
-            later(wait); // the next look comes due
-            steps.step(); // and is made before the fill's next file
-            steps.awaitReached();
-            ticks(1);
-        }
+        looksBetweenFiles(steps);
         scan.logLate();
 
-        assertEquals(List.of(), logged.messages(Level.INFO).stream()
-                .filter(line -> line.contains("not written in time")).toList(), "not counted while the fill runs");
+        assertEquals(List.of(), late(), "not counted while the fill runs");
         steps.releaseAll();
         awaitIdle();
         ticks(1);
         assertEquals(fixturePaints(6, 1).get(PaintRecord.chunkKey(189, 28)), record.get(189, 28),
                 "the fill put the copy");
         assertTrue(record.fillDone());
+    }
+
+    // The fill's exception holds only for a region file that the fill has still to put into the record. Once it has
+    // put a file, an older copy there that differs from the record, as from a live read whose save never came, is
+    // counted again, while the fill goes on with its other files.
+    @Test
+    void aChunkOfAFileTheFillHasPutIsCountedWhileTheFillRuns() throws IOException {
+        Steps steps = sixFileFill();
+        PaintRecord record = store.record("world");
+        ticks(1); // r.0.0.mca, read first, reaches the record
+        record.put(29, 28, paint("cbc:live")); // the fixture's chunk (-3, -4) there, as a live read found it
+        RegionFixtures.savedAt(regionFolder("world").resolve("r.0.0.mca"), RegionFixtures.indexOf(29, 28),
+                UNLOADED - 600);
+
+        scan.unloaded("world", 29, 28, UNLOADED);
+        looksBetweenFiles(steps);
+        scan.logLate();
+
+        assertTrue(scan.status("world").running(), "the fill still runs");
+        assertEquals(1, late().size(), "counted: the fill has put that file already");
+    }
+
+    // Nor does it hold for a region file that came after the fill started: it is not among the files the fill reads.
+    @Test
+    void aChunkOfARegionFileNewerThanTheFillIsCounted() throws IOException {
+        Steps steps = sixFileFill();
+        regionFiles("world", "r.9.9.mca");
+        // the fixture's chunk (-3, -4), as it lies in r.9.9.mca, saved long before it unloads
+        RegionFixtures.savedAt(regionFolder("world").resolve("r.9.9.mca"), RegionFixtures.indexOf(317, 316),
+                UNLOADED - 600);
+
+        scan.unloaded("world", 317, 316, UNLOADED);
+        looksBetweenFiles(steps);
+        scan.logLate();
+
+        assertTrue(scan.status("world").running(), "the fill still runs");
+        assertEquals(1, late().size(), "counted: the fill does not read that file");
+    }
+
+    /**
+     * Puts the world on, and starts its fill of six region files, the fixture under each name, which the fill reads
+     * one at a time as {@link Steps} lets it: it has read r.0.0.mca and waits.
+     */
+    private Steps sixFileFill() throws IOException {
+        regionFiles("world", "r.0.0.mca", "r.1.0.mca", "r.2.0.mca", "r.3.0.mca", "r.4.0.mca", "r.5.0.mca");
+        store.turnOn("world", key -> false);
+        Steps steps = new Steps();
+        scan = scan(0.1, steps);
+        scan.start(world);
+        steps.awaitReached(); // the first file is read, and the fill waits out its pace
+        return steps;
+    }
+
+    /** Each look at a saved read comes due in turn, and is made before the held fill's next file. */
+    private void looksBetweenFiles(Steps steps) {
+        for (long wait : LOOKS) {
+            later(wait);
+            steps.step();
+            steps.awaitReached();
+            ticks(1);
+        }
     }
 
     // A region file that cannot be read, here a folder where the file belongs, is told once in the log with the error,
