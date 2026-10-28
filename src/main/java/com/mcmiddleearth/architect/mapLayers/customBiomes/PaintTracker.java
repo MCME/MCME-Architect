@@ -40,26 +40,29 @@ import java.util.logging.Level;
  *     <li>every 10 seconds, the chunks within 2 of each builder (a player passing {@code isBuilder});</li>
  *     <li>2 seconds and again 30 seconds after a WorldEdit command, the loaded chunks of the player's selection;</li>
  *     <li>once every 2 minutes, every loaded chunk: the slow pass;</li>
- *     <li>as it unloads, a watched chunk: one that was within 4 of a builder at a builder check, or in a selection at a
- *     WorldEdit command, in the last 10 minutes.</li>
+ *     <li>soon, ahead of the slow pass, a chunk handed to {@link #readSoon}: one whose record may be behind it, such as
+ *     a chunk that was loaded while the first fill read its saved copy;</li>
+ *     <li>as it unloads, a watched chunk: one that was within 4 of a builder at a builder check, in a selection at a
+ *     WorldEdit command, or handed to {@code readSoon}, in the last 10 minutes.</li>
  * </ul>
  * Only watched chunks are checked as they unload. Reading biomes costs about 0.1 to 0.3 ms a chunk, and a server
  * unloads many chunks a tick. Paint elsewhere is still found by the slow pass while its chunk stays loaded, and always
  * by a new scan.
  * <p>
- * Each tick reads queued chunks, those of builders, selections and refreshes before those of the slow pass, until
- * {@link #TICK_BUDGET_NANOS} have passed on the clock, but at least one chunk if any is queued. The slow pass starts a
- * new round only when the last one is done and 2 minutes have passed since it began, so an idle server spends nothing.
+ * Each tick reads queued chunks, those of builders, selections, refreshes and hand-overs before those of the slow
+ * pass, until {@link #TICK_BUDGET_NANOS} have passed on the clock, but at least one chunk if any is queued. The slow
+ * pass starts a new round only when the last one is done and 2 minutes have passed since it began, so an idle server
+ * spends nothing.
  * <p>
  * Reads at unload have an allowance of their own, {@link #UNLOAD_BUDGET_NANOS} a tick, because unloads come in
  * bursts: a builder who teleports lets go of dozens of watched chunks at once, and the end of a big edit of thousands.
  * Past the allowance a watched chunk unloads unread. Those are counted, and logged once a minute with the world that
  * a scan catches them in.
  * <p>
- * A selection is watched as a box, however big, and a builder's chunks one by one. Both are watched for
- * {@link #WATCH_TICKS} from the command or the builder check that set them, and the ones that have run out are
- * dropped at least once a minute. A chunk near a builder is watched until it unloads; a chunk in a selection is read
- * each time it unloads for as long as the selection is watched.
+ * A selection is watched as a box, however big, and a builder's chunks and the chunks handed over one by one. All are
+ * watched for {@link #WATCH_TICKS} from the command, the builder check or the hand-over that set them, and the ones
+ * that have run out are dropped at least once a minute. A chunk near a builder or handed over is watched until it
+ * unloads; a chunk in a selection is read each time it unloads for as long as the selection is watched.
  * <p>
  * A chunk is read only if it is loaded when its turn comes, not when it was queued: the game answers about an unloaded
  * chunk with the biomes its generator would make, which would write a wrong entry. The check at unload runs inside
@@ -119,11 +122,14 @@ public final class PaintTracker implements Listener {
     private final Consumer<String> changed;
     private final LongSupplier nanoClock;
 
-    /** Builders', selections' and refreshed chunks, in the order they were queued. Read before the slow pass. */
+    /**
+     * Builders', selections', refreshed and handed-over chunks, in the order they were queued. Read before the slow
+     * pass.
+     */
     private final Set<ChunkRef> priority = new LinkedHashSet<>();
     /** The chunks the running slow pass has still to read. */
     private final Deque<ChunkRef> pass = new ArrayDeque<>();
-    /** Chunks near builders to read as they unload, each watched until the tick it maps to. */
+    /** Chunks near builders, and chunks handed over, to read as they unload, each watched until the tick it maps to. */
     private final Map<ChunkRef, Long> builderMarks = new HashMap<>();
     /** Selections whose chunks are read as they unload, each watched until the tick it maps to. */
     private final Map<ChunkBox, Long> watchedBoxes = new HashMap<>();
@@ -218,6 +224,17 @@ public final class PaintTracker implements Listener {
     /** Queues every loaded chunk of the worlds that are on, ahead of the slow pass. */
     public void readLoadedNow() {
         forEachLoadedChunkOfWorldsThatAreOn(priority::add);
+    }
+
+    /**
+     * Queues the chunk ahead of the slow pass, and watches it for {@link #WATCH_TICKS}, as a chunk near a builder is,
+     * so that it is read as it unloads if that comes before its turn. For a chunk whose record may be behind it, such
+     * as one that was loaded while the first fill read its saved copy. A chunk queued already keeps its place.
+     */
+    public void readSoon(String world, int chunkX, int chunkZ) {
+        ChunkRef ref = new ChunkRef(world, chunkX, chunkZ);
+        priority.add(ref);
+        builderMarks.put(ref, tick + WATCH_TICKS);
     }
 
     private void everyTick() {

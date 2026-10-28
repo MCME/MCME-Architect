@@ -36,8 +36,9 @@ import java.util.regex.Pattern;
  * Which thread owns what:
  * <ul>
  *     <li><b>The main thread</b> owns the records, as the store does, and the fills that are waiting or being read, by
- *     world. Every public method runs there. What a file held goes into the record there, except for the chunks that
- *     are loaded at that moment, which are newer than their saved copy and left to the live checks. It goes in only
+ *     world. Every public method runs there. What a file held goes into the record there. A chunk that is loaded at
+ *     that moment may be newer than its saved copy, so the copy goes in only where the record holds nothing for it,
+ *     and the chunk is handed to the live checks, which read it soon, or as it unloads. What a file held goes in only
  *     while the fill is on and the world's record is the one the fill started with: a fill whose world was switched
  *     off, or off and on again, is stopped there instead.</li>
  *     <li><b>The scan thread</b> reads the files and hands what it read to the main thread through the scheduler, one
@@ -55,6 +56,12 @@ public final class PaintScan {
     @FunctionalInterface
     public interface Sleeper {
         void sleep(long millis) throws InterruptedException;
+    }
+
+    /** Has a loaded chunk read live soon, and as it unloads if that comes first: {@link PaintTracker#readSoon}. */
+    @FunctionalInterface
+    public interface LiveReads {
+        void readSoon(String world, int chunkX, int chunkZ);
     }
 
     /** What {@link #start} did: started the world's fill, queued it behind another world's, or found it being read. */
@@ -114,6 +121,7 @@ public final class PaintScan {
     private final Function<World, Path> regionFolder;
     private final Supplier<Set<String>> customIds;
     private final Consumer<String> changed;
+    private final LiveReads liveReads;
     private final double bytesPerSecond;
     private final Sleeper sleeper;
 
@@ -132,12 +140,14 @@ public final class PaintScan {
      * @param regionFolder       the folder of a world's region files
      * @param customIds          the custom biome ids the server defines; asked on the main thread, once a fill
      * @param changed            hears, on the main thread, the name of a world whose record took in a file
+     * @param liveReads          is handed, on the main thread, each chunk of a file that is loaded when the file goes
+     *                           into the record
      * @param megabytesPerSecond the most the fills read on average, in millions of bytes a second
      * @param sleeper            sleeps on the scan thread: {@code Thread::sleep}
      */
     public PaintScan(Plugin plugin, PaintStore store, Function<World, Path> regionFolder,
-                     Supplier<Set<String>> customIds, Consumer<String> changed, double megabytesPerSecond,
-                     Sleeper sleeper) {
+                     Supplier<Set<String>> customIds, Consumer<String> changed, LiveReads liveReads,
+                     double megabytesPerSecond, Sleeper sleeper) {
         if (!(megabytesPerSecond > 0)) {
             throw new IllegalArgumentException("The scan's megabytes a second must be above 0, not "
                     + megabytesPerSecond);
@@ -147,6 +157,7 @@ public final class PaintScan {
         this.regionFolder = regionFolder;
         this.customIds = customIds;
         this.changed = changed;
+        this.liveReads = liveReads;
         this.bytesPerSecond = megabytesPerSecond * 1_000_000;
         this.sleeper = sleeper;
     }
@@ -409,7 +420,11 @@ public final class PaintScan {
         }
     }
 
-    /** Main thread: what a file held goes into the record, but for the chunks loaded now. */
+    /**
+     * Main thread: what a file held goes into the record. A chunk loaded now may be newer than its saved copy: the copy
+     * goes in only where the record holds nothing for the chunk, so that it never overwrites a live read, and the
+     * chunk is handed to the live reads.
+     */
     private void merge(Fill fill, String file, List<Read> reads) {
         if (!stillOn(fill)) {
             return;
@@ -418,7 +433,12 @@ public final class PaintScan {
         for (Read read : reads) {
             if (world == null || !world.isChunkLoaded(read.x(), read.z())) {
                 fill.record.put(read.x(), read.z(), read.paint());
+                continue;
             }
+            if (!fill.record.chunks().containsKey(PaintRecord.chunkKey(read.x(), read.z()))) {
+                fill.record.put(read.x(), read.z(), read.paint());
+            }
+            liveReads.readSoon(fill.world, read.x(), read.z());
         }
         fill.record.finished(file);
         store.dirty(fill.world);

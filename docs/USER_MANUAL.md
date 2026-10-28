@@ -2278,7 +2278,8 @@ on the map as the files are read.
 | Every 10 seconds | Those within 2 chunks of each builder: a player who may use biome tuning (`architect.biomeTune`). |
 | 2 seconds and 30 seconds after a WorldEdit or FastAsyncWorldEdit command | Those in that player's selection. |
 | Every 2 minutes | All of them: the slow pass. |
-| As a chunk unloads | That chunk, if in the last 10 minutes it was within 4 chunks of a builder or in a selection. |
+| Soon after `scan <world>`, and as the first read goes on | Those loaded when the command is given, and those loaded when the read reaches their region file: what that file holds may be older. Until it is read, such a chunk keeps what the record holds for it, or else its saved copy. |
+| As a chunk unloads | That chunk, if in the last 10 minutes it was within 4 chunks of a builder, in a selection, or among the chunks of the row above. |
 
 All of this shares a small budget on the main thread: about half a millisecond a tick (and at least one chunk a tick),
 plus up to 2 milliseconds a tick for chunks that unload. Paint made with WorldEdit or FastAsyncWorldEdit shows within

@@ -57,7 +57,12 @@ class PaintScanTest {
     private PaintStore store;
     private PaintScan scan;
     private final List<String> changes = new ArrayList<>();
+    /** The chunks handed to the live reads, in order. */
+    private final List<Handed> handed = new ArrayList<>();
     private final Logged logged = new Logged();
+
+    /** A chunk the fill handed to the live reads. */
+    private record Handed(String world, int x, int z) {}
 
     @BeforeEach
     void setUp() {
@@ -79,7 +84,7 @@ class PaintScanTest {
 
     private PaintScan scan(double megabytesPerSecond, PaintScan.Sleeper sleeper) {
         return new PaintScan(plugin, store, w -> regionFolder(w.getName()), () -> IDS, changes::add,
-                megabytesPerSecond, sleeper);
+                (worldName, x, z) -> handed.add(new Handed(worldName, x, z)), megabytesPerSecond, sleeper);
     }
 
     private Path regionFolder(String worldName) {
@@ -175,9 +180,11 @@ class PaintScanTest {
         assertEquals(fixturePaints(0, 0), PaintRecord.load(saved).chunks());
     }
 
-    // A loaded chunk is newer than its saved copy, so the fill leaves it to the live checks.
+    // A loaded chunk may be newer than its saved copy, so the fill hands it to the live reads, which read it soon, or as
+    // it unloads. Until then the record keeps what it holds for it: a live read's paint stays, and a chunk the record
+    // holds nothing for takes its saved copy, so it is not missing should the live read never come.
     @Test
-    void loadedChunksAreLeftToTheLiveChecks() throws IOException {
+    void aChunkLoadedAtMergeIsHandedToTheLiveReadsAndKeepsItsDiskCopyUntilThen() throws IOException {
         regionFiles("world", FIRST);
         world.getChunkAt(-3, -4);
         world.getChunkAt(-1, -1);
@@ -191,11 +198,14 @@ class PaintScanTest {
         ticks(1);
 
         assertEquals(live, record.get(-3, -4), "what the live check read stays");
-        assertEquals(ChunkPaint.EMPTY, record.get(-1, -1), "a loaded chunk is not filled from its saved copy");
         Map<Long, ChunkPaint> expected = fixturePaints(0, 0);
+        assertEquals(expected.get(PaintRecord.chunkKey(-1, -1)), record.get(-1, -1),
+                "a loaded chunk the record held nothing for has its saved copy");
         expected.put(PaintRecord.chunkKey(-3, -4), live);
-        expected.remove(PaintRecord.chunkKey(-1, -1));
         assertEquals(expected, record.chunks());
+        assertEquals(Set.of(new Handed("world", -3, -4), new Handed("world", -1, -1)), Set.copyOf(handed),
+                "both loaded chunks are read live");
+        assertEquals(2, handed.size(), "and only they: " + handed);
         assertTrue(record.fillDone());
     }
 

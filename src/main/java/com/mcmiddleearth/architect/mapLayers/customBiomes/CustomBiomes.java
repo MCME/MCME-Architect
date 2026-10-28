@@ -6,6 +6,7 @@ import com.mcmiddleearth.architect.mapLayers.MapLayer;
 import com.mcmiddleearth.architect.mapLayers.MapLayerConfig;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.architect.mapLayers.MapShape;
+import org.bukkit.Chunk;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.command.CommandSender;
@@ -205,7 +206,8 @@ public final class CustomBiomes implements MapLayer {
         SelectionSource selections = givenSelections != null ? givenSelections : new FirstUseSelections(plugin);
         tracker = new PaintTracker(plugin, store::record, reader, selections,
                 PaintTracker.worldEditCommands(plugin.getServer()), isBuilder, this::dirty, System::nanoTime);
-        scan = new PaintScan(plugin, store, regionFolder, customIds, this::dirty, megabytesPerSecond(), sleeper);
+        scan = new PaintScan(plugin, store, regionFolder, customIds, this::dirty, tracker::readSoon,
+                megabytesPerSecond(), sleeper);
         timers.add(scheduler.runTaskTimer(plugin, reporter::everySecond, SECOND_TICKS, SECOND_TICKS));
         timers.add(scheduler.runTaskTimer(plugin, store::saveDirty, PaintStore.SAVE_TICKS, PaintStore.SAVE_TICKS));
         timers.add(scheduler.runTaskTimer(plugin, this::drawAllIfFactsChanged, FACTS_TICKS, FACTS_TICKS));
@@ -416,7 +418,10 @@ public final class CustomBiomes implements MapLayer {
             return;
         }
         store.turnOn(name, key -> world.isChunkLoaded(PaintRecord.keyX(key), PaintRecord.keyZ(key)));
-        tracker.readLoadedNow(); // the fill leaves the loaded chunks to the live checks
+        // the record keeps what it holds for the loaded chunks: each is read again soon, or as it unloads
+        for (Chunk chunk : world.getLoadedChunks()) {
+            tracker.readSoon(name, chunk.getX(), chunk.getZ());
+        }
         PaintScan.Start started = scan.start(world);
         PaintScan.Status now = scan.status(name);
         info(sender, switch (started) {

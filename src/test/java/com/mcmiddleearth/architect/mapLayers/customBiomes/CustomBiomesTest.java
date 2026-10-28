@@ -4,10 +4,12 @@ import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.mapLayers.MapLayerConfig;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
 import com.mcmiddleearth.architect.mapLayers.MapShape;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -386,6 +388,30 @@ class CustomBiomesTest {
         ticks(22);
 
         assertEquals(idsOf("live", Map.of(PaintRecord.chunkKey(1, 1), paint("cbc:live"))), ids());
+    }
+
+    // A builder walking while a world is read keeps the chunks around them loaded for a minute or so. A chunk that is
+    // loaded when its saved file reaches the record, and that unloads before the tracker gets to it and before any slow
+    // pass, is read as it unloads, and so it is in the record.
+    @Test
+    void aChunkLoadedDuringTheFillAndUnloadedBeforeAnyPassEndsUpInTheRecord() throws IOException {
+        WorldMock walked = server.addSimpleWorld("walked");
+        regionFiles("walked", FIRST);
+        layer(NO_SLEEP).start(plugin);
+        ticks(1); // the first slow pass, while the world is off: the next is two minutes away
+        scan("walked");
+        assertTrue(layer.awaitScanIdle(WAIT), "the file is read, and waits for the main thread");
+        Chunk passing = walked.getChunkAt(-3, -4); // a builder comes by
+        paints.put(new Spot("walked", -3, -4), paint("cbc:live"));
+
+        ticks(1); // the file reaches the record
+        server.getPluginManager().callEvent(new ChunkUnloadEvent(passing, true)); // and the builder walks on
+        walked.unloadChunk(-3, -4);
+        ticks(30); // the change is reported within a second, and the shapes come back a tick later
+
+        Map<Long, ChunkPaint> expected = fixturePaints(0, 0);
+        expected.put(PaintRecord.chunkKey(-3, -4), paint("cbc:live"));
+        assertEquals(idsOf("walked", expected), ids(), "the chunk as it was when it unloaded");
     }
 
     @Test

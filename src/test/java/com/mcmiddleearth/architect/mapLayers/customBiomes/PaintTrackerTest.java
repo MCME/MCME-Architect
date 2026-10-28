@@ -843,6 +843,33 @@ class PaintTrackerTest {
         assertEquals(15, chunksRead(0, 0, 3, 3), "the other chunks of the 4 x 4 are read");
     }
 
+    // A chunk handed over, such as one that was loaded while the first fill read its saved file, is read at the next
+    // tick, ahead of the slow pass. One that unloads before its turn is read as it unloads, as a builder's chunk is.
+    @Test
+    void aChunkHandedOverIsReadAtOnceOrAsItUnloads() {
+        builder = false;
+        tracker.start();
+        ticks(1); // the first slow pass, over no chunks: the next is two minutes away
+        load(0, 0, 1, 1);
+        paints.put(new Spot("world", 0, 0), paint("cbc:a"));
+        paints.put(new Spot("world", 1, 1), paint("cbc:b"));
+
+        tracker.readSoon("world", 0, 0);
+        tracker.readSoon("world", 0, 0);
+        ticks(1);
+        assertEquals(1, reads(0, 0), "read at the next tick, once");
+        assertEquals(paint("cbc:a"), records.get("world").get(0, 0));
+
+        tracker.readSoon("world", 1, 1);
+        unloading(1, 1); // before its turn
+        world.unloadChunk(1, 1);
+        ticks(1);
+
+        assertEquals(1, reads(1, 1), "read once, as it unloaded");
+        assertEquals(paint("cbc:b"), records.get("world").get(1, 1));
+        assertEquals(2, readLog.size(), "and no other chunk: " + readLog);
+    }
+
     @Test
     void aRefreshReadsEveryLoadedChunkAgain() {
         builder = false;
