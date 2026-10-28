@@ -2345,6 +2345,7 @@ setting.
 | `Custom biomes layer: reading the saved files of <world> failed, so its read stopped; /architect maplayers scan <world> reads it again from the start.` | A warning, with the error below it: something such as running out of memory stopped the world's first read. What was read so far stays, and the next world's read still runs. |
 | `Custom biomes layer: <world> is not drawn: its markers would add <n> KB to every map visit, over the 512 KB target.` | The world is over the size limit. Said once. |
 | `Custom biomes layer: <world> is drawn again: its markers add <n> KB.` | The world fits again. |
+| `Custom biomes layer: biome tuning could not tell the name and settings of <biome>, so its window shows its id and no settings.` | A warning, with the error below it, such as a datapack folder that cannot be listed. The other biomes are still drawn with theirs. Said once while it lasts. |
 | `Custom biomes layer: <n> chunks unloaded before they could be read; /architect maplayers scan <world> catches them.` | Paint in these chunks was missed. At most once a minute; run the scan again. |
 | `Custom biomes layer: <n> chunks were already unloaded when their unload was handled, so they were not read; /architect maplayers scan <world> catches them.` | The server had unloaded these watched chunks before Architect could read them, so their paint was missed. At most once a minute; run the scan again. If it comes after every unload, the reads at unload do not work on this server. |
 

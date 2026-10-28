@@ -81,6 +81,8 @@ public final class BiomeShapes {
     private final Map<String, Integer> oversize = new TreeMap<>();
     /** Main thread: the facts each world's latest rebuild read, by biome. */
     private final Map<String, Map<String, Facts>> factsRead = new HashMap<>();
+    /** Main thread: the biomes whose facts failed to read at the last ask, each logged once until it reads again. */
+    private final Set<String> unreadable = new HashSet<>();
     /** Background thread: what each world's newest rebuild found, for the colours. */
     private final Map<String, Painted> painted = new HashMap<>();
 
@@ -173,8 +175,23 @@ public final class BiomeShapes {
         return false;
     }
 
+    /**
+     * The biome's name and settings, or none when biome tuning fails to read them with an unchecked exception, such as
+     * a datapack folder that cannot be listed: a failure must not stop the drawing of every other biome. It is logged
+     * once while it lasts, not at every redraw.
+     */
     private Facts factsOf(String biome) {
-        return new Facts(facts.label(biome), facts.settings(biome));
+        try {
+            Facts read = new Facts(facts.label(biome), facts.settings(biome));
+            unreadable.remove(biome);
+            return read;
+        } catch (RuntimeException e) {
+            if (unreadable.add(biome)) {
+                logger.log(Level.WARNING, "Custom biomes layer: biome tuning could not tell the name and settings of "
+                        + biome + ", so its window shows its id and no settings.", e);
+            }
+            return NO_FACTS;
+        }
     }
 
     /** Whether no newer rebuild and no forget of the world came since this rebuild started. Any thread. */

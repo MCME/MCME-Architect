@@ -12,12 +12,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -41,11 +43,16 @@ class BiomeShapesTest {
 
     private final Map<String, String> labels = new HashMap<>();
     private final Map<String, Settings> settings = new HashMap<>();
+    /** The biomes whose facts biome tuning fails to read, with an unchecked exception. */
+    private final Set<String> failing = new HashSet<>();
     private int factReads;
     private final BiomeFacts facts = new BiomeFacts() {
         @Override
         public String label(String biome) {
             factReads++;
+            if (failing.contains(biome)) {
+                throw new UncheckedIOException(new IOException("the datapacks folder cannot be listed"));
+            }
             return labels.get(biome);
         }
 
@@ -377,6 +384,34 @@ class BiomeShapesTest {
         settings.put("cbc:fireflies", new Settings(Map.of("Climate", List.of(new Setting("rain", "on", null))), true));
 
         assertTrue(shapes.factsChanged());
+    }
+
+    // Biome tuning may fail with an unchecked exception, such as a datapack folder that cannot be listed. The biome it
+    // fails for is drawn with its id and no settings, the others with their facts, and the failure is said once, not
+    // at every redraw: again only once the biome has been read and fails anew.
+    @Test
+    void aBiomeWhoseFactsFailToReadIsDrawnWithoutThemAndSaidOnce() {
+        labels.put("cbc:forest", "Old forest");
+        failing.add("cbc:fireflies");
+
+        shapes.rebuild("world", forestWithFireflies());
+        shapes.rebuild("world", forestWithFireflies());
+
+        assertFalse(shapes.factsChanged(), "failing again is no change");
+        assertEquals("Old forest + cbc:fireflies", areas().get(0).label());
+        assertEquals(BiomeWindow.html(List.of(new Section("cbc:forest", "Old forest", 0, 319, 1, 1, null),
+                new Section("cbc:fireflies", null, 60, 80, 1, 1, null))), areas().get(0).description());
+        assertEquals(List.of("Custom biomes layer: biome tuning could not tell the name and settings of "
+                + "cbc:fireflies, so its window shows its id and no settings."), messages(Level.WARNING));
+        assertInstanceOf(UncheckedIOException.class, logged.stream()
+                .filter(record -> record.getLevel() == Level.WARNING).findFirst().orElseThrow().getThrown());
+
+        failing.clear();
+        shapes.rebuild("world", forestWithFireflies());
+        failing.add("cbc:fireflies");
+        shapes.rebuild("world", forestWithFireflies());
+
+        assertEquals(2, messages(Level.WARNING).size(), "a new failure is said again");
     }
 
     // Biome tuning may only be asked on the main thread, so the facts are read where a rebuild starts
