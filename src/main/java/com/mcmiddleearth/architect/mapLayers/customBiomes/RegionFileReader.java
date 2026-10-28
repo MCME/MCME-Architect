@@ -55,6 +55,8 @@ public final class RegionFileReader {
 
     private static final String PAST_THE_END = "past the end of the file";
     private static final String BAD_BIOME_DATA = "biome data of unexpected length";
+    /** Why a chunk is skipped that says it is another chunk of its file: see {@link #namesAnotherSlot}. */
+    private static final String MOVED = "moved while being read";
 
     /**
      * What a read found.
@@ -121,7 +123,9 @@ public final class RegionFileReader {
      * The file's name, {@code r.X.Z.mca}, gives the chunks' coordinates.
      * <p>
      * A chunk is parsed only when its NBT holds one of the custom namespaces followed by a colon, such as
-     * {@code cbc:}. So the chunks of a world without custom biomes cost a decompression, and no more.
+     * {@code cbc:}. So the chunks of a world without custom biomes cost a decompression, and no more. A parsed chunk
+     * that says it is another chunk of the file is skipped and counted: the server wrote it there while the file was
+     * read.
      *
      * @throws IOException when the file is not named like a region file, cannot be opened or fails to read. A chunk
      *                     whose data is damaged, or in a form this does not read, is skipped and counted instead
@@ -186,7 +190,7 @@ public final class RegionFileReader {
                 byte[] outside = Files.readAllBytes(regionFile.resolveSibling("c." + chunkX + "." + chunkZ + ".mcc"));
                 nbt = inflate(type, outside, 0, outside.length);
             }
-            return paintFromNbt(nbt, tally);
+            return paintFromNbt(nbt, chunkX, chunkZ, tally);
         } catch (IOException | RuntimeException e) {
             return skipped(tally, reasonOf(e));
         }
@@ -215,17 +219,35 @@ public final class RegionFileReader {
         }
     }
 
-    private ChunkPaint paintFromNbt(byte[] nbt, Tally tally) throws IOException {
+    private ChunkPaint paintFromNbt(byte[] nbt, int chunkX, int chunkZ, Tally tally) throws IOException {
         if (!mentionsACustomNamespace(nbt)) {
             return ChunkPaint.EMPTY;
         }
         ChunkNbt.Chunk chunk = ChunkNbt.parse(nbt);
+        if (namesAnotherSlot(chunk, chunkX, chunkZ)) {
+            return skipped(tally, MOVED);
+        }
         tally.parsed++;
         ChunkPaint paint = paintOf(chunk, tally);
         if (!paint.isEmpty()) {
             tally.painted++;
         }
         return paint;
+    }
+
+    /**
+     * Whether the chunk says it lies in another slot of its region than the one it was found in. The file's table is
+     * read first and the chunks after it, and the server may save in between: a chunk that outgrew its sectors moves,
+     * and another chunk of the file may be written where it was. What is found there then names that other chunk, and
+     * its paint is not this chunk's. Only the place within the region is compared. A chunk that names the same slot of
+     * another region, as in a region file copied from elsewhere, is loaded by the game where it lies, and so it is read
+     * there; one that names no place is read where it lies too.
+     */
+    private static boolean namesAnotherSlot(ChunkNbt.Chunk chunk, int chunkX, int chunkZ) {
+        if (chunk.xPos() == null || chunk.zPos() == null) {
+            return false;
+        }
+        return Math.floorMod(chunk.xPos() - chunkX, SIDE) != 0 || Math.floorMod(chunk.zPos() - chunkZ, SIDE) != 0;
     }
 
     private boolean mentionsACustomNamespace(byte[] nbt) {

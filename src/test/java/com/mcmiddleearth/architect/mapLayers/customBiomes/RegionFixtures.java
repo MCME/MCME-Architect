@@ -77,13 +77,29 @@ final class RegionFixtures {
         return chunkOf(dataVersion, status, bodies);
     }
 
+    /** Like {@link #chunk}, with the chunk's place saved in it as the game saves it: {@code xPos} and {@code zPos}. */
+    static byte[] chunkAt(int chunkX, int chunkZ, int dataVersion, String status, Map<Integer, List<String>> sections) {
+        List<Body> bodies = new ArrayList<>();
+        new TreeMap<>(sections).forEach((y, ids) -> bodies.add(out -> section(out, y, ids)));
+        return chunkOf(new int[] {chunkX, chunkZ}, dataVersion, status, bodies);
+    }
+
     /** Like {@link #chunk}, with the tags inside each section written by a body. */
     static byte[] chunkOf(int dataVersion, String status, List<Body> sections) {
+        return chunkOf(null, dataVersion, status, sections);
+    }
+
+    /** A chunk whose {@code place} is its x and z, or null for one that names no place: an {@code xPos} of 0 alone. */
+    private static byte[] chunkOf(int[] place, int dataVersion, String status, List<Body> sections) {
         return nbt(out -> {
             out.writeByte(COMPOUND);
             out.writeUTF("");
             tag(out, INT, "xPos");
-            out.writeInt(0);
+            out.writeInt(place == null ? 0 : place[0]);
+            if (place != null) {
+                tag(out, INT, "zPos");
+                out.writeInt(place[1]);
+            }
             tag(out, LIST, "block_ticks");
             out.writeByte(END);
             out.writeInt(0);

@@ -9,9 +9,9 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Takes what the custom biome layer needs out of a chunk's NBT: its DataVersion and Status, and each section's Y and
- * biomes. Every other tag is stepped over by its size, which is far quicker than building the whole tree, and most of a
- * chunk is block data.
+ * Takes what the custom biome layer needs out of a chunk's NBT: its DataVersion and Status, its place, and each
+ * section's Y and biomes. Every other tag is stepped over by its size, which is far quicker than building the whole
+ * tree, and most of a chunk is block data.
  * <p>
  * A reader over a byte array with an index. It reads the layout the game has saved since 1.18, and refuses the one of
  * 2020 that keeps everything in a {@code Level} tag.
@@ -50,8 +50,11 @@ final class ChunkNbt {
     record Section(int y, List<String> palette, long[] data) {
     }
 
-    /** The parts of a chunk that are read. A tag the chunk lacks gives null; no sections give an empty list. */
-    record Chunk(Integer dataVersion, String status, List<Section> sections) {
+    /**
+     * The parts of a chunk that are read: {@code xPos} and {@code zPos} are the chunk's place as it was saved. A tag the
+     * chunk lacks gives null; no sections give an empty list.
+     */
+    record Chunk(Integer dataVersion, String status, Integer xPos, Integer zPos, List<Section> sections) {
     }
 
     private record Biomes(List<String> palette, long[] data) {
@@ -122,15 +125,21 @@ final class ChunkNbt {
         jump(rootNameLength);
         Integer dataVersion = null;
         String status = null;
+        Integer xPos = null;
+        Integer zPos = null;
         List<Section> sections = List.of();
         while (true) {
             int tag = u8();
             if (tag == TAG_END) {
-                return new Chunk(dataVersion, status, sections);
+                return new Chunk(dataVersion, status, xPos, zPos, sections);
             }
             String name = string();
             if (tag == TAG_INT && name.equals("DataVersion")) {
                 dataVersion = i32();
+            } else if (tag == TAG_INT && name.equals("xPos")) {
+                xPos = i32();
+            } else if (tag == TAG_INT && name.equals("zPos")) {
+                zPos = i32();
             } else if (tag == TAG_STRING && name.equals("Status")) {
                 status = string();
             } else if (tag == TAG_LIST && name.equals("sections")) {

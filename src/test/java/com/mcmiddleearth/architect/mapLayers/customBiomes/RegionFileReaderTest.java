@@ -85,6 +85,15 @@ class RegionFileReaderTest {
         return RegionFixtures.chunk(dataVersion, "minecraft:full", sections);
     }
 
+    /** Like {@link #paintedChunk}, with the chunk's place saved in it, as the game saves it. */
+    private static byte[] paintedChunkAt(int chunkX, int chunkZ, String id) {
+        Map<Integer, List<String>> sections = new TreeMap<>();
+        for (int y = -4; y < 20; y++) {
+            sections.put(y, uniform(id));
+        }
+        return RegionFixtures.chunkAt(chunkX, chunkZ, 4903, "minecraft:full", sections);
+    }
+
     /** Changes four bytes of the region file at the given place. */
     private static void patch(Path file, int at, int value) throws IOException {
         byte[] bytes = Files.readAllBytes(file);
@@ -448,6 +457,26 @@ class RegionFileReaderTest {
         assertEquals(Set.of(PaintRecord.chunkKey(96, -64), PaintRecord.chunkKey(127, -64),
                 PaintRecord.chunkKey(96, -63), PaintRecord.chunkKey(101, -57), PaintRecord.chunkKey(127, -33)),
                 result.paints().keySet());
+    }
+
+    // The server may save a chunk again while its file is read: a chunk that outgrew its sectors moves, and another
+    // chunk of the file may be written where it was. The file's table, read first, still points there, so what is
+    // found there says it is another chunk of the file: it is skipped, and counted. A chunk that names the same slot
+    // in another region, as in a region file copied from elsewhere, is read where it lies, as the game loads it there.
+    @Test
+    void aChunkThatSaysItIsAnotherChunkOfItsFileIsSkippedAndCounted(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("r.1.0.mca"); // chunks x 32 to 63, z 0 to 31
+        RegionFixtures.region(file, Map.of(
+                5, paintedChunkAt(39, 3, A), // in the slot of chunk (37, 0)
+                6, paintedChunkAt(38, 0, A),
+                7, paintedChunkAt(7, 32, A)), 2); // the slot of (39, 0), in another region
+
+        Result result = read(file, Set.of(A));
+
+        assertEquals(ChunkPaint.EMPTY, result.at(37, 0), "not taken for chunk 37, 0");
+        assertEquals(A_EVERYWHERE, result.at(38, 0).column(0, 0));
+        assertEquals(A_EVERYWHERE, result.at(39, 0).column(0, 0), "a chunk of a copied file reads where it lies");
+        assertEquals(new RegionFileReader.Stats(3, 2, 2, Map.of("moved while being read", 1)), result.stats());
     }
 
     // As in the game, a start inside the header, or a run of no sectors, is no chunk at all: not read, and not counted.

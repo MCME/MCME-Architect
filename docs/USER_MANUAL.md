@@ -2268,7 +2268,9 @@ on the map as the files are read.
   a line such as `Custom biomes layer: reading world's saved files: 120 of 1200 region files.`
 - When it ends, Architect's log has a line such as
   `Custom biomes layer: read world's saved files: 5000 chunks, 120 with custom biomes.`, followed by `Skipped:` and the
-  reasons if some chunks could not be read. A damaged chunk is skipped and counted; it does not stop the read.
+  reasons if some chunks could not be read. A damaged chunk is skipped and counted; it does not stop the read. So is a
+  chunk that the server saved again while its file was read, as `moved while being read`: what was found in its place
+  belongs to another chunk. The live reads pick it up while it is loaded, and the next scan in any case.
 - `scan <world>` for a world that is on reads it again from the start. It keeps the chunks that are loaded at that
   moment, which the live reads below keep current. Do this when paint reached the world without the server seeing it,
   for example from a tool that edits the world files.
