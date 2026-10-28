@@ -2342,6 +2342,7 @@ setting.
 | Line | Meaning |
 |---|---|
 | `Custom biomes layer: reading <world>'s saved files: <n> of <total> region files.` | How far the first read of the world is. Said at each tenth of its region files. |
+| `Custom biomes layer: reading the saved files of <world> failed, so its read stopped; /architect maplayers scan <world> reads it again from the start.` | A warning, with the error below it: something such as running out of memory stopped the world's first read. What was read so far stays, and the next world's read still runs. |
 | `Custom biomes layer: <world> is not drawn: its markers would add <n> KB to every map visit, over the 512 KB target.` | The world is over the size limit. Said once. |
 | `Custom biomes layer: <world> is drawn again: its markers add <n> KB.` | The world fits again. |
 | `Custom biomes layer: <n> chunks unloaded before they could be read; /architect maplayers scan <world> catches them.` | Paint in these chunks was missed. At most once a minute; run the scan again. |

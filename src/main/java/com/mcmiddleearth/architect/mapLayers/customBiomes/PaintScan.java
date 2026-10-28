@@ -43,7 +43,8 @@ import java.util.regex.Pattern;
  *     off, or off and on again, is stopped there instead.</li>
  *     <li><b>The scan thread</b> reads the files and hands what it read to the main thread through the scheduler, one
  *     task a file, one for each tenth of the files read, which the log tells, and one at the end. It never touches a
- *     record.</li>
+ *     record. A fill that fails there with an Error, such as running out of memory, is logged with its stack trace and
+ *     dropped on the main thread, and the next fill runs.</li>
  *     <li><b>Both</b> use the queue of waiting fills, the fill being read and the stop flag, under this object's lock.
  *     A cancel interrupts the thread only while the fill it ends is the one being read, and the thread clears any
  *     interrupt before it takes the next fill, so a cancel never cuts another world's fill short.</li>
@@ -132,7 +133,7 @@ public final class PaintScan {
     private final Deque<Fill> queue = new ArrayDeque<>();
     /** Under the lock: the fill being read. */
     private Fill current;
-    /** Under the lock: made at the first start. */
+    /** Under the lock: made at the first start, and made again by a start that finds it dead. */
     private Thread thread;
     /** Set under the lock, read also without it. */
     private volatile boolean stopped;
@@ -197,7 +198,7 @@ public final class PaintScan {
             boolean behind = (current != null && !current.cancelled) || !queue.isEmpty();
             queue.add(fill);
             fills.put(name, fill);
-            if (thread == null) {
+            if (thread == null || !thread.isAlive()) { // made at the first start, and again if it ever died
                 thread = new Thread(this::work, THREAD_NAME);
                 thread.setDaemon(true);
                 thread.setPriority(Thread.MIN_PRIORITY);
@@ -327,6 +328,9 @@ public final class PaintScan {
                     read(fill);
                 } catch (InterruptedException e) {
                     // cancelled or stopped: what was handed over stays, and the rest waits for another fill
+                } catch (Throwable e) {
+                    // an Error such as running out of memory: this fill stops, and the next one still runs
+                    failed(fill, e);
                 }
             }
         } finally {
@@ -335,6 +339,22 @@ public final class PaintScan {
                 notifyAll();
             }
         }
+    }
+
+    /**
+     * Scan thread: says why the fill stopped, with the stack trace, and drops it on the main thread, so that its world
+     * is not left reading. What was handed over stays, and the record is not done.
+     */
+    private void failed(Fill fill, Throwable e) {
+        plugin.getLogger().log(Level.WARNING, "Custom biomes layer: reading the saved files of " + fill.world
+                + " failed, so its read stopped; /architect maplayers scan " + fill.world + " reads it again from the"
+                + " start.", e);
+        handOver(() -> drop(fill));
+    }
+
+    /** Main thread: forgets the fill, unless a newer one of its world has taken its place. */
+    private void drop(Fill fill) {
+        fills.remove(fill.world, fill);
     }
 
     /** Waits for the next fill and makes it the one being read; null once the scan has stopped. */

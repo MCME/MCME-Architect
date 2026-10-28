@@ -24,8 +24,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -439,6 +441,92 @@ class PaintScanTest {
         assertEquals(Set.of(SECOND), store.record("world").finishedFiles(), "a file that was not read is not finished");
     }
 
+    // An Error on the scan thread, such as running out of memory over a region file, must not end the fills for good.
+    // The fill it struck stops with a warning and is dropped, so that its world is not left reading, and the next
+    // world's fill still runs. The Error comes from the sleeper, which the fill calls on the scan thread between files,
+    // as it calls the reader.
+    @Test
+    void aFillThatFailsWithAnErrorIsDroppedAndTheNextFillStillRuns() throws IOException {
+        WorldMock other = server.addSimpleWorld("other");
+        regionFiles("world", FIRST, SECOND);
+        regionFiles("other", FIRST);
+        PaintRecord failing = store.turnOn("world", key -> false);
+        store.turnOn("other", key -> false);
+        AtomicBoolean thrown = new AtomicBoolean();
+        scan = scan(0.1, millis -> {
+            if (thrown.compareAndSet(false, true)) {
+                throw new OutOfMemoryError("thrown by the test");
+            }
+        });
+
+        assertEquals(PaintScan.Start.STARTED, scan.start(world));
+        assertEquals(PaintScan.Start.QUEUED, scan.start(other));
+        awaitIdle();
+        ticks(1);
+
+        assertTrue(store.record("other").fillDone(), "the next fill ran");
+        assertEquals(fixturePaints(0, 0), store.record("other").chunks());
+        assertEquals(new PaintScan.Status(false, false, 0, 0), scan.status("world"), "not left reading");
+        assertEquals(Set.of(FIRST), failing.finishedFiles(), "what reached the record stays");
+        assertFalse(failing.fillDone());
+        List<LogRecord> warnings = logged.records(Level.WARNING);
+        assertEquals(1, warnings.size(), warnings.toString());
+        assertTrue(warnings.get(0).getMessage().endsWith("Custom biomes layer: reading the saved files of world "
+                + "failed, so its read stopped; /architect maplayers scan world reads it again from the start."),
+                warnings.get(0).getMessage());
+        assertInstanceOf(OutOfMemoryError.class, warnings.get(0).getThrown(), "with the stack trace");
+
+        assertEquals(PaintScan.Start.STARTED, scan.start(world), "the world can be read again");
+        awaitIdle();
+        ticks(1);
+        assertTrue(failing.fillDone());
+    }
+
+    // Should the scan thread die all the same, as when an Error strikes again while the first one is logged, the next
+    // start makes a new one, so that later fills do not wait for a reload.
+    @Test
+    void aStartAfterTheScanThreadDiedMakesANewOne() throws IOException, InterruptedException {
+        WorldMock other = server.addSimpleWorld("other");
+        regionFiles("world", FIRST, SECOND);
+        regionFiles("other", FIRST);
+        store.turnOn("world", key -> false);
+        store.turnOn("other", key -> false);
+        Handler failingAgain = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getLevel() == Level.WARNING) {
+                    throw new OutOfMemoryError("thrown by the test, while the first one is logged");
+                }
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        plugin.getLogger().addHandler(failingAgain);
+        AtomicReference<Thread> first = new AtomicReference<>();
+        scan = scan(0.1, millis -> {
+            if (first.compareAndSet(null, Thread.currentThread())) {
+                throw new OutOfMemoryError("thrown by the test");
+            }
+        });
+        scan.start(world);
+        awaitIdle();
+        first.get().join(WAIT.toMillis());
+        plugin.getLogger().removeHandler(failingAgain);
+        assertFalse(first.get().isAlive(), "the scan thread died");
+
+        assertEquals(PaintScan.Start.STARTED, scan.start(other));
+        awaitIdle();
+        ticks(1);
+
+        assertTrue(store.record("other").fillDone(), "a new thread read it");
+    }
+
     /**
      * Holds the scan at its first sleep until released, and lets every later one pass. An interrupt ends the wait: it
      * throws, as {@code Thread.sleep} does, or with {@code ignoresInterrupts} it returns as if the time had passed.
@@ -500,9 +588,13 @@ class PaintScanTest {
 
         /** The messages logged at exactly that level, with the plugin's name in front, as the server shows them. */
         List<String> messages(Level level) {
+            return records(level).stream().map(LogRecord::getMessage).toList();
+        }
+
+        /** What was logged at exactly that level. */
+        List<LogRecord> records(Level level) {
             synchronized (seen) {
-                return seen.stream().filter(record -> record.getLevel().equals(level)).map(LogRecord::getMessage)
-                        .toList();
+                return seen.stream().filter(record -> record.getLevel().equals(level)).toList();
             }
         }
     }
