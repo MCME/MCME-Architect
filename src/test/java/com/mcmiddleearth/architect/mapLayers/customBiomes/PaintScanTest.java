@@ -1015,6 +1015,48 @@ class PaintScanTest {
         assertEquals(List.of(), late());
     }
 
+    // A reason met in several region files of a world is told once for the world, and lasts while any of them still
+    // meets it: one reading well does not end it while another still fails. Once each has read well, a new failure is
+    // told again.
+    @Test
+    void aReasonMetInTwoFilesIsToldOnceAndLastsUntilBothReadWell() throws IOException {
+        Path a = Files.createDirectories(regionFolder("world").resolve(SECOND)); // r.0.0.mca: a folder
+        Path b = Files.createDirectories(regionFolder("world").resolve("r.1.0.mca")); // and r.1.0.mca
+        store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", 0, 0, UNLOADED); // in a: looked at 2, 4, 9, 24 and 54 seconds from now
+        scan.unloaded("world", 32, 0, UNLOADED); // in b: at the same times
+        at(2_000);
+        assertEquals(1, warnings().size(), "told once for both files: " + warnings());
+
+        readable(a);
+        at(4_000); // a reads well, b still fails
+        unreadable(a);
+        at(9_000); // a fails again
+        assertEquals(1, warnings().size(), "it lasted, as b still failed: " + warnings());
+
+        readable(a);
+        readable(b);
+        at(24_000); // both read well
+        unreadable(a);
+        at(54_000); // a fails again
+
+        assertEquals(2, warnings().size(), "told again once both had read well: " + warnings());
+    }
+
+    /** Puts a region file that reads well, the fixture, where a folder stood. */
+    private static void readable(Path file) throws IOException {
+        Files.delete(file);
+        Files.copy(fixture(), file);
+    }
+
+    /** Puts a folder where a region file stood: it cannot be read as one. */
+    private static void unreadable(Path file) throws IOException {
+        Files.delete(file);
+        Files.createDirectories(file);
+    }
+
     // A chunk that cannot be read is told once while it lasts, like a file. A look that opens the chunk's region file
     // but reads none of its chunks, as the first four looks at a copy older than its unload do, has not read it again,
     // so it must not end it. Here chunks the game saved as LZ4, and does not write again, unload every 10 seconds for
