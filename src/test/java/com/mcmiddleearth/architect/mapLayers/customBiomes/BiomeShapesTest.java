@@ -642,26 +642,6 @@ class BiomeShapesTest {
 
     // The same, inside one build: the background thread may colour again after a world's windows are built and before
     // the main thread keeps them, and the areas just kept take the newer colours at once.
-    // A colour change can leave the windows of several worlds behind. Drawing one of them again, as the report does for
-    // a world whose record changed, ends that world's mark only: the other stays behind until it is drawn again too.
-    @Test
-    void rebuildingOneWorldLeavesAnotherWorldsMarkAlone() throws IOException {
-        keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
-        Map<Long, ChunkPaint> a = new Paint().add("cbc:q", 0, 0).chunks();
-        Map<Long, ChunkPaint> c = new Paint().add("cbc:q", 4, 4).chunks();
-        shapes.rebuild("a", a);
-        shapes.rebuild("c", c);
-        // in b, q touches r, which had colour 1 first, so q takes another: the windows of a and c are behind
-        shapes.rebuild("b", new Paint().add("cbc:q", 0, 0).add("cbc:r", 1, 0).chunks());
-        assertTrue(shapes.factsChanged());
-
-        shapes.rebuild("a", a);
-
-        assertTrue(shapes.factsChanged(), "c is still behind");
-        shapes.rebuild("c", c);
-        assertFalse(shapes.factsChanged());
-    }
-
     @Test
     void windowsBuiltBeforeAnotherWorldsRebuildChangedTheColoursAreBehindToo() throws IOException {
         keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
@@ -686,6 +666,26 @@ class BiomeShapesTest {
         mainThread.runAll();
 
         assertTrue(area("cb.a.0.0.cbc:q").description().contains("solid " + hex(q) + ";"));
+        assertFalse(shapes.factsChanged());
+    }
+
+    // A colour change can leave the windows of several worlds behind. Drawing one of them again, as the report does for
+    // a world whose record changed, ends that world's mark only: the other stays behind until it is drawn again too.
+    @Test
+    void rebuildingOneWorldLeavesAnotherWorldsMarkAlone() throws IOException {
+        keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
+        Map<Long, ChunkPaint> a = new Paint().add("cbc:q", 0, 0).chunks();
+        Map<Long, ChunkPaint> c = new Paint().add("cbc:q", 4, 4).chunks();
+        shapes.rebuild("a", a);
+        shapes.rebuild("c", c);
+        // in b, q touches r, which had colour 1 first, so q takes another: the windows of a and c are behind
+        shapes.rebuild("b", new Paint().add("cbc:q", 0, 0).add("cbc:r", 1, 0).chunks());
+        assertTrue(shapes.factsChanged());
+
+        shapes.rebuild("a", a);
+
+        assertTrue(shapes.factsChanged(), "c is still behind");
+        shapes.rebuild("c", c);
         assertFalse(shapes.factsChanged());
     }
 
