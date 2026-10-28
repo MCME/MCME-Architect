@@ -104,6 +104,12 @@ class PaintScanTest {
         clock.addAndGet(millis * 1_000_000);
     }
 
+    /** Sets the clock of the looks to so many milliseconds from the test's start, and makes the looks due then. */
+    private void at(long millis) {
+        clock.set(millis * 1_000_000);
+        look();
+    }
+
     /** Waits for the scan thread to make the looks that are due, and lets the main thread take what they found. */
     private void look() {
         awaitIdle();
@@ -965,6 +971,46 @@ class PaintScanTest {
                 + "world in r.0.0.mca, so they are not brought up to date from it. This is logged once while it "
                 + "lasts."), warnings.get(0).getMessage());
         assertNotNull(warnings.get(0).getThrown(), "with the error");
+        assertEquals(List.of(), late());
+    }
+
+    // A region file that cannot be read is told once while it lasts. With builders about, the looks of a world come at
+    // its files in turn, and looks at its other files, which read well, must not end it: the warning, with its stack
+    // trace, would come back at every look at the bad file. Only a look that reads that file again without failing ends
+    // it, and a failure after that is told again.
+    @Test
+    void aFileThatCannotBeReadIsToldOnceThoughLooksAtTheWorldsOtherFilesComeBetween() throws IOException {
+        regionFiles("world", FIRST); // reads well
+        savedAt("world", -3, -4, UNLOADED + 1);
+        savedAt("world", -2, -4, UNLOADED + 1);
+        Path bad = Files.createDirectories(regionFolder("world").resolve(SECOND)); // r.0.0.mca: a folder
+        store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", 0, 0, UNLOADED); // looked at 2, 4, 9, 24 and 54 seconds from now
+        at(2_000);
+        assertEquals(1, warnings().size(), "told at its first look: " + warnings());
+        at(2_500);
+        scan.unloaded("world", -3, -4, UNLOADED); // a chunk of the other file, looked at at 4.5 seconds
+        at(4_000); // the bad file again
+        at(4_500); // the other file, alone
+        scan.unloaded("world", -2, -4, UNLOADED); // looked at at 6.5 seconds
+        at(6_500); // the other file, alone
+        at(9_000); // the bad file
+        at(24_000); // the bad file
+        at(54_000); // the bad file's last look
+        assertEquals(1, warnings().size(), "not told again: " + warnings());
+
+        Files.delete(bad);
+        Files.copy(fixture(), bad); // it can be read now
+        scan.unloaded("world", 29, 28, UNLOADED);
+        at(56_000); // a look reads it without failing
+        Files.delete(bad);
+        Files.createDirectories(bad); // and it fails again
+        scan.unloaded("world", 1, 0, UNLOADED);
+        at(58_000);
+
+        assertEquals(2, warnings().size(), "told again once it had read well: " + warnings());
         assertEquals(List.of(), late());
     }
 
