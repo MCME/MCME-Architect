@@ -443,7 +443,7 @@ permissions:
         description: Use /architect checkNBT.
         default: op
     architect.maplayers:
-        description: Allows to redraw Architect's web-map layers with /architect maplayers refresh
+        description: Allows to redraw Architect's web-map layers with /architect maplayers refresh, and to choose the worlds of the Custom biomes layer with /architect maplayers scan
         default: op
     architect.gamemodeSwitcher:
         description: Allows to switch to every game mode with the F3+F4 switcher, without op
