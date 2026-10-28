@@ -12,6 +12,7 @@ import org.mockbukkit.mockbukkit.world.WorldMock;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -892,6 +893,79 @@ class PaintScanTest {
         assertEquals(fixturePaints(6, 1).get(PaintRecord.chunkKey(189, 28)), record.get(189, 28),
                 "the fill put the copy");
         assertTrue(record.fillDone());
+    }
+
+    // A region file that cannot be read, here a folder where the file belongs, is told once in the log with the error,
+    // while it lasts, however many of its chunks are looked at how often. Its chunks are not counted as copies not
+    // written in time: they are not late, and a scan could not read them either.
+    @Test
+    void aRegionFileThatCannotBeReadIsWarnedOnceAndNotCounted() throws IOException {
+        Files.createDirectories(regionFolder("world").resolve(SECOND));
+        store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", 0, 0, UNLOADED);
+        scan.unloaded("world", 1, 0, UNLOADED);
+        allLooks();
+        scan.logLate();
+
+        List<LogRecord> warnings = logged.records(Level.WARNING);
+        assertEquals(1, warnings.size(), warnings.toString());
+        assertTrue(warnings.get(0).getMessage().endsWith("Custom biomes layer: could not read the saved chunks of "
+                + "world in r.0.0.mca, so they are not brought up to date from it. This is logged once while it "
+                + "lasts."), warnings.get(0).getMessage());
+        assertNotNull(warnings.get(0).getThrown(), "with the error");
+        assertEquals(List.of(), late());
+    }
+
+    // A chunk saved in a form that is not read, here LZ4, stays unreadable until the game saves it anew: it is given
+    // up at once, and told once a world and reason. One that cannot be read for another reason may be mid-write, so
+    // it is looked at again, and told only if it still cannot be read at its last look. Neither is counted as late.
+    @Test
+    void aSavedChunkThatCannotBeReadIsToldOnceAndNotCounted() throws IOException {
+        Path folder = Files.createDirectories(regionFolder("world"));
+        byte[] anything = {1, 2, 3};
+        RegionFixtures.region(folder.resolve(SECOND), Map.of(0, anything, 1, anything), 4, UNLOADED + 1);
+        RegionFixtures.region(folder.resolve("r.1.0.mca"),
+                Map.of(0, "cbc: this is no NBT".getBytes(StandardCharsets.UTF_8)), 2, UNLOADED + 1);
+        PaintRecord record = store.turnOn("world", key -> false);
+        record.put(0, 0, paint("cbc:before"));
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", 0, 0, UNLOADED);
+        scan.unloaded("world", 1, 0, UNLOADED);
+        scan.unloaded("world", 32, 0, UNLOADED);
+        later(LOOKS[0]);
+        look();
+        assertEquals(1, warnings().size(), "told once for both chunks of that form: " + warnings());
+        assertTrue(warnings().get(0).endsWith("Custom biomes layer: the saved copy of chunk 0, 0 of world cannot be read"
+                + " (LZ4 is not supported), so the chunk is not brought up to date from it. This is logged once while it"
+                + " lasts."), warnings().get(0));
+        for (int i = 1; i < LOOKS.length - 1; i++) {
+            later(LOOKS[i]);
+            look();
+        }
+        assertEquals(1, warnings().size(), "the other chunk is not told before its last look");
+        later(LOOKS[LOOKS.length - 1]);
+        look();
+        scan.logLate();
+
+        assertEquals(2, warnings().size(), warnings().toString());
+        assertTrue(warnings().get(1).endsWith("Custom biomes layer: the saved copy of chunk 32, 0 of world cannot be "
+                + "read (unreadable: IOException), so the chunk is not brought up to date from it. This is logged once "
+                + "while it lasts."), warnings().get(1));
+        assertEquals(List.of(), late());
+        assertEquals(paint("cbc:before"), record.get(0, 0), "the record keeps what it holds");
+    }
+
+    /** The log's lines about saved copies not written in time. */
+    private List<String> late() {
+        return logged.messages(Level.INFO).stream().filter(line -> line.contains("not written in time")).toList();
+    }
+
+    /** The log's warnings, as they read. */
+    private List<String> warnings() {
+        return logged.messages(Level.WARNING);
     }
 
     /** Holds the scan at every sleep until the test lets it go on, one sleep at a time, or all of them. */

@@ -547,7 +547,7 @@ class RegionFileReaderTest {
 
     // A read of saved copies is offered each chunk the file stores, with the second its header says the game last
     // saved it at, and reads only the chunks it chooses. A chunk that cannot be read, or that says it is another chunk
-    // of the file, reaches the sink as null, not as a chunk without paint: the game may be writing it.
+    // of the file, reaches the sink as null, not as a chunk without paint, with the reason: the game may be writing it.
     @Test
     void aSavedReadSeesWhenEachChunkWasSavedAndReadsOnlyTheChosenOnes(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("r.1.2.mca"); // chunks x 32 to 63, z 64 to 95
@@ -561,14 +561,19 @@ class RegionFileReaderTest {
         RegionFixtures.savedAt(file, 1, 1_700_000_000L);
         Map<Long, Long> offered = new LinkedHashMap<>();
         Map<Long, ChunkPaint> read = new LinkedHashMap<>();
+        Map<Long, String> skipped = new LinkedHashMap<>();
 
         new RegionFileReader(Set.of(A)).readSaved(file, (x, z, savedAt) -> {
             offered.put(PaintRecord.chunkKey(x, z), savedAt);
             return savedAt >= 1_800_000_000L;
-        }, (x, z, savedAt, paint) -> {
+        }, (x, z, savedAt, paint, why) -> {
             assertEquals(1_800_000_000L, savedAt);
             assertFalse(read.containsKey(PaintRecord.chunkKey(x, z)), "chunk " + x + ", " + z + " read twice");
+            assertTrue(paint == null ^ why == null, "a paint or a reason: " + paint + ", " + why);
             read.put(PaintRecord.chunkKey(x, z), paint);
+            if (why != null) {
+                skipped.put(PaintRecord.chunkKey(x, z), why);
+            }
         });
 
         assertEquals(Map.of(PaintRecord.chunkKey(32, 64), 1_800_000_000L, PaintRecord.chunkKey(33, 64), 1_700_000_000L,
@@ -580,11 +585,38 @@ class RegionFileReaderTest {
         assertNull(read.get(PaintRecord.chunkKey(34, 64)), "a chunk that cannot be read");
         assertEquals(ChunkPaint.EMPTY, read.get(PaintRecord.chunkKey(35, 64)), "a chunk without custom biomes");
         assertNull(read.get(PaintRecord.chunkKey(36, 64)), "a chunk that says it is another of the file");
+        assertEquals(Map.of(PaintRecord.chunkKey(34, 64), "unreadable: IOException",
+                PaintRecord.chunkKey(36, 64), "moved while being read"), skipped);
+    }
+
+    // A chunk skipped for a form this does not read, or for the layout of before 1.18, stays so at every read until the
+    // game saves it anew. One skipped for anything else may read at the next look: the game may have been writing it.
+    @Test
+    void aSavedReadTellsTheSkipsThatLastFromThoseThatMayPass(@TempDir Path dir) throws IOException {
+        byte[] rubbish = "cbc: this is no NBT".getBytes(StandardCharsets.UTF_8);
+        RegionFixtures.region(dir.resolve("r.0.0.mca"), Map.of(0, paintedChunk(4903, A)), 4, 0); // LZ4
+        RegionFixtures.region(dir.resolve("r.1.0.mca"), Map.of(0, paintedChunk(4903, A)), 9, 0); // no such type
+        RegionFixtures.region(dir.resolve("r.2.0.mca"), Map.of(
+                0, RegionFixtures.levelChunk(),
+                1, rubbish,
+                2, paintedChunkAt(64, 0, A)), 2, 0); // in the slot of chunk (66, 0)
+        Map<String, Boolean> lasting = new TreeMap<>();
+        RegionFileReader reader = new RegionFileReader(Set.of(A));
+
+        for (String name : List.of("r.0.0.mca", "r.1.0.mca", "r.2.0.mca")) {
+            reader.readSaved(dir.resolve(name), (x, z, savedAt) -> true, (x, z, savedAt, paint, why) -> {
+                assertNull(paint, "chunk " + x + ", " + z + " is skipped");
+                lasting.put(why, RegionFileReader.lasting(why));
+            });
+        }
+
+        assertEquals(Map.of("LZ4 is not supported", true, "unknown compression 9", true, ChunkNbt.OLD_LAYOUT, true,
+                "unreadable: IOException", false, "moved while being read", false), lasting);
     }
 
     @Test
     void aSavedReadOfAFileThatIsNotThereFails(@TempDir Path dir) {
         assertThrows(NoSuchFileException.class, () -> new RegionFileReader(Set.of(A))
-                .readSaved(dir.resolve("r.0.0.mca"), (x, z, savedAt) -> true, (x, z, savedAt, paint) -> { }));
+                .readSaved(dir.resolve("r.0.0.mca"), (x, z, savedAt) -> true, (x, z, savedAt, paint, why) -> { }));
     }
 }

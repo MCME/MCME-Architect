@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayDeque;
@@ -233,6 +234,11 @@ public final class PaintScan implements PaintTracker.SavedReads {
     private final Map<String, Integer> late = new TreeMap<>();
     /** Main thread: reads the saved copies, made at the first saved read with the server's custom biome ids. */
     private RegionFileReader savedReader;
+    /**
+     * Scan thread: what the looks at saved copies could not read, by world, as told in the log. A reason is told once
+     * while it lasts: until a look at that world's files does not meet it.
+     */
+    private final Map<String, Set<String>> told = new HashMap<>();
     /** Under the lock: the fills waiting, in turn. */
     private final Deque<Fill> queue = new ArrayDeque<>();
     /** Under the lock: the saved reads waiting for their next look, the soonest first. */
@@ -645,7 +651,10 @@ public final class PaintScan implements PaintTracker.SavedReads {
      * Scan thread: one look at each saved read that is due. A region file is opened once a look, however many of its
      * chunks are asked for: a teleport unloads hundreds at once. What the look found goes to the main thread in one
      * hand-over. A read that still waits for a copy is looked at again, until its last look: then a chunk that unloaded
-     * and has only an older copy is handed over with it, and one with no copy that can be read is handed over as such.
+     * and has only an older copy is handed over with it, and one whose region file holds no copy is handed over as
+     * such. What cannot be read is not late, and is not handed over: a region file that fails to read is looked at
+     * again, and a chunk that cannot be read too, unless it stays so until the game saves it anew. Both are told in the
+     * log, once a world and reason while it lasts, and given up at the last look.
      */
     private void look(List<SavedRead> due) {
         Map<Path, List<SavedRead>> byFile = new TreeMap<>();
@@ -658,14 +667,16 @@ public final class PaintScan implements PaintTracker.SavedReads {
         List<Found> found = new ArrayList<>();
         // the reads with a chunk in a region file whose copy has not come, or could not be read
         Set<SavedRead> waiting = new HashSet<>();
+        // the reads whose region file failed to read at this look, and what this look could not read, by world
+        Set<SavedRead> failed = new HashSet<>();
+        Map<String, Set<String>> met = new HashMap<>();
+        Set<String> looked = new HashSet<>();
         for (Map.Entry<Path, List<SavedRead>> file : byFile.entrySet()) {
             if (stopped) {
                 return;
             }
             List<SavedRead> reads = file.getValue();
-            if (!Files.isRegularFile(file.getKey())) {
-                continue;
-            }
+            String world = reads.get(0).world; // a folder is one world's
             try {
                 reads.get(0).reader.readSaved(file.getKey(), (x, z, savedAt) -> {
                     boolean wanted = false;
@@ -679,25 +690,48 @@ public final class PaintScan implements PaintTracker.SavedReads {
                         }
                     }
                     return wanted;
-                }, (x, z, savedAt, paint) -> {
+                }, (x, z, savedAt, paint, skipped) -> {
                     for (SavedRead read : reads) {
                         if (!read.wants(x, z)) {
                             continue;
                         }
                         if (paint == null) {
-                            waiting.add(read); // the game may be writing it
+                            if (RegionFileReader.lasting(skipped) || read.lastLook()) {
+                                read.taken.add(PaintRecord.chunkKey(x, z)); // given up, and not late
+                                tell(world, skipped, met, null, () -> "Custom biomes layer: the saved copy of chunk " + x
+                                        + ", " + z + " of " + world + " cannot be read (" + skipped + "), so the chunk"
+                                        + " is not brought up to date from it. This is logged once while it lasts.");
+                            } else {
+                                waiting.add(read); // the game may be writing it
+                            }
                         } else if (savedAt >= read.since || read.takesOlder()) {
                             read.taken.add(PaintRecord.chunkKey(x, z));
                             found.add(new Found(read, x, z, paint, savedAt >= read.since ? Copy.NEW : Copy.OLDER));
                         }
                     }
                 });
+                looked.add(world);
+            } catch (NoSuchFileException e) {
+                // the file is not there: it holds no copy
             } catch (IOException | RuntimeException e) {
                 if (stopped) {
                     return; // the interrupt of the stop closed the file
                 }
-                waiting.addAll(reads); // looked at again, as a copy that has not come
+                looked.add(world);
+                failed.addAll(reads);
+                waiting.addAll(reads); // looked at again
+                tell(world, e.getClass().getSimpleName(), met, e, () -> "Custom biomes layer: could not read the saved"
+                        + " chunks of " + world + " in " + file.getKey().getFileName() + ", so they are not brought up"
+                        + " to date from it. This is logged once while it lasts.");
             }
+        }
+        // a reason no longer met at a look of its world is told again when it comes back
+        for (String world : looked) {
+            Set<String> now = met.getOrDefault(world, Set.of());
+            told.computeIfPresent(world, (key, reasons) -> {
+                reasons.retainAll(now);
+                return reasons.isEmpty() ? null : reasons;
+            });
         }
         List<SavedRead> again = new ArrayList<>();
         for (SavedRead read : due) {
@@ -706,6 +740,9 @@ public final class PaintScan implements PaintTracker.SavedReads {
                     continue;
                 }
                 if (read.lastLook()) {
+                    if (failed.contains(read)) {
+                        continue; // told, and not late
+                    }
                     found.add(new Found(read, read.box.minX(), read.box.minZ(), null, Copy.NONE));
                 } else {
                     again.add(read);
@@ -727,6 +764,18 @@ public final class PaintScan implements PaintTracker.SavedReads {
                 read.dueNanos = now + LOOK_MILLIS[read.looks] * 1_000_000;
                 savedReads.add(read);
             }
+        }
+    }
+
+    /**
+     * Scan thread: notes that a look could not read something of the world, for the reason given, and logs the
+     * message as a warning if the reason was not told already while it lasts.
+     */
+    private void tell(String world, String reason, Map<String, Set<String>> met, Throwable thrown,
+                      Supplier<String> message) {
+        met.computeIfAbsent(world, key -> new HashSet<>()).add(reason);
+        if (told.computeIfAbsent(world, key -> new HashSet<>()).add(reason)) {
+            plugin.getLogger().log(Level.WARNING, message.get(), thrown);
         }
     }
 

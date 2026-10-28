@@ -55,6 +55,8 @@ public final class RegionFileReader {
 
     private static final String PAST_THE_END = "past the end of the file";
     private static final String BAD_BIOME_DATA = "biome data of unexpected length";
+    private static final String LZ4_NOT_READ = "LZ4 is not supported";
+    private static final String UNKNOWN_COMPRESSION = "unknown compression ";
     /** Why a chunk is skipped that says it is another chunk of its file: see {@link #namesAnotherSlot}. */
     private static final String MOVED = "moved while being read";
 
@@ -92,8 +94,20 @@ public final class RegionFileReader {
     @FunctionalInterface
     public interface SavedSink {
 
-        /** The chunk's paint, or null when it could not be read: the game may be writing it. */
-        void accept(int chunkX, int chunkZ, long savedAt, ChunkPaint paint);
+        /**
+         * The chunk's paint; or, when it could not be read, null and why it was skipped, which {@link #lasting} tells
+         * apart from what may pass, as the game may be writing the chunk.
+         */
+        void accept(int chunkX, int chunkZ, long savedAt, ChunkPaint paint, String skipped);
+    }
+
+    /**
+     * Whether a chunk skipped for this reason stays so whenever it is read, until the game saves it anew: a
+     * compression this does not read, or the layout of before 1.18.
+     */
+    public static boolean lasting(String reason) {
+        return LZ4_NOT_READ.equals(reason) || ChunkNbt.OLD_LAYOUT.equals(reason)
+                || (reason != null && reason.startsWith(UNKNOWN_COMPRESSION));
     }
 
     /** Counts while a file is read. */
@@ -102,6 +116,8 @@ public final class RegionFileReader {
         int parsed;
         int painted;
         final Map<String, Integer> skipped = new TreeMap<>();
+        /** Why the last chunk skipped as a whole was skipped. */
+        String lastSkip;
 
         void skip(String reason) {
             skipped.merge(reason, 1, Integer::sum);
@@ -174,7 +190,8 @@ public final class RegionFileReader {
      * Reads the chunks of a region file that {@code wanted} chooses, by their place and the second the game last saved
      * each at: the header's second table, which the game sets at every save of a chunk, as seconds since 1970. Only a
      * chunk the file stores is offered. A chosen chunk that cannot be read, or that says it is another chunk of the
-     * file, reaches the sink as null, not as a chunk without paint: the server may be writing it. Nothing is counted.
+     * file, reaches the sink as null, not as a chunk without paint, with the reason: the server may be writing it, or,
+     * for a {@link #lasting} reason, it stays so until the game saves it anew. Nothing is counted.
      *
      * @throws IOException when the file is not named like a region file, cannot be opened or fails to read
      */
@@ -195,8 +212,8 @@ public final class RegionFileReader {
                 int chunkX = first[0] + index % SIDE;
                 int chunkZ = first[1] + index / SIDE;
                 if (wanted.wants(chunkX, chunkZ, savedAt)) {
-                    sink.accept(chunkX, chunkZ, savedAt,
-                            readChunk(channel, sector, sectors, chunkX, chunkZ, regionFile, untold));
+                    ChunkPaint paint = readChunk(channel, sector, sectors, chunkX, chunkZ, regionFile, untold);
+                    sink.accept(chunkX, chunkZ, savedAt, paint, paint == null ? untold.lastSkip : null);
                 }
             }
         }
@@ -232,10 +249,10 @@ public final class RegionFileReader {
             int compression = stored.get(4) & 0xFF;
             int type = compression & ~EXTERNAL;
             if (type == LZ4) {
-                return skipped(tally, "LZ4 is not supported");
+                return skipped(tally, LZ4_NOT_READ);
             }
             if (type != GZIP && type != ZLIB && type != NONE) {
-                return skipped(tally, "unknown compression " + type);
+                return skipped(tally, UNKNOWN_COMPRESSION + type);
             }
             byte[] nbt;
             if ((compression & EXTERNAL) == 0) {
@@ -400,9 +417,10 @@ public final class RegionFileReader {
         return "unreadable: " + e.getClass().getSimpleName();
     }
 
-    /** Counts a chunk skipped as a whole, which has no paint: null. */
+    /** Counts a chunk skipped as a whole, and tells why to a saved read: it has no paint, null. */
     private static ChunkPaint skipped(Tally tally, String reason) {
         tally.skip(reason);
+        tally.lastSkip = reason;
         return null;
     }
 }
