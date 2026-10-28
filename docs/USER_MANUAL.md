@@ -2244,8 +2244,10 @@ not on is not drawn, however much custom biome paint it holds.
 
 - `/architect maplayers scan` lists the worlds that are on, one line each, such as
   `world: 118 chunks with custom biomes, up to date`. The state is `reading 3 of 12 region files`,
-  `waiting to be read`, `up to date`, or `not drawn: its markers would add 703 KB, over the 512 KB target`. With no
-  world on, it says so and shows how to start one.
+  `waiting to be read`, `up to date`, or `not drawn: its markers would add 703 KB, over the 512 KB target`. A world is
+  `waiting to be read` while another world's read goes first, or when its read stopped and has not gone on, as for a
+  world that was not loaded when Architect started (see below). With no world on, it says so and shows how to start
+  one.
 - `/architect maplayers scan <world>` puts the world on and starts its first read. It answers that the world's saved
   files are being read in the background, with their number of region files. A world that is being read already says
   how far it is, and one that waits behind another world's read says so.
@@ -2263,7 +2265,8 @@ on the map as the files are read.
   `scanMegabytesPerSecond` megabytes a second (20 by default), so the disk is not hogged.
 - It survives a restart. The record remembers which region files are done. After a restart or `/architect reload`, the
   read goes on with the others a moment after Architect has started, once the worlds are loaded. A world that is not
-  loaded then waits for `scan <world>`.
+  loaded then is not read: it stays `waiting to be read` until a later restart or reload finds it loaded. `scan <world>`
+  starts its read again, but from the beginning, not from where it stopped (see the last point).
 - While it runs, Architect's log says how far it is each time another tenth of the world's region files is read, with
   a line such as `Custom biomes layer: reading world's saved files: 120 of 1200 region files.`
 - When it ends, Architect's log has a line such as
@@ -2271,9 +2274,11 @@ on the map as the files are read.
   reasons if some chunks could not be read. A damaged chunk is skipped and counted; it does not stop the read. So is a
   chunk that the server saved again while its file was read, as `moved while being read`: what was found in its place
   belongs to another chunk. The live reads pick it up while it is loaded, and the next scan in any case.
-- `scan <world>` for a world that is on reads it again from the start. It keeps the chunks that are loaded at that
-  moment, which the live reads below keep current. Do this when paint reached the world without the server seeing it,
-  for example from a tool that edits the world files.
+- `scan <world>` for a world that is on reads it again from the start, unless its read is under way or waits behind
+  another world's. That includes a world whose read stopped, such as one that was not loaded when Architect started.
+  The record keeps only the chunks that are loaded at that moment, which the live reads below keep current, so the rest
+  of the world leaves the map and comes back as its files are read again. Do this when paint reached the world without
+  the server seeing it, for example from a tool that edits the world files.
 
 **Keeping it current.** Besides the first read, the layer reads the chunks that are loaded, in the worlds that are on:
 
@@ -2286,9 +2291,11 @@ on the map as the files are read.
 | As a chunk unloads | That chunk, if in the last 10 minutes it was within 4 chunks of a builder, in a selection, or among the chunks of the row above. |
 
 All of this shares a small budget on the main thread: about half a millisecond a tick (and at least one chunk a tick),
-plus up to 2 milliseconds a tick for chunks that unload. Paint made with WorldEdit or FastAsyncWorldEdit shows within
-about 10 seconds. Other paint shows within a few minutes, as long as its chunks stay loaded. The layer is drawn again at
-most once every 10 seconds, and the first change after a quiet spell within a second. Architect finds WorldEdit or
+plus up to 2 milliseconds a tick for chunks that unload. Paint made with WorldEdit or FastAsyncWorldEdit over a
+selection of a few dozen chunks shows within about 10 seconds. A bigger selection takes longer, as its chunks share that
+budget, and an edit still running 2 seconds after the command shows once the second read, 30 seconds after it, has
+reached its chunks. Other paint shows within a few minutes, as long as its chunks stay loaded. The layer is drawn again
+at most once every 10 seconds, and the first change after a quiet spell within a second. Architect finds WorldEdit or
 FastAsyncWorldEdit when the first WorldEdit command is typed, and says in its log which one it reads selections through.
 
 A chunk that unloads without being read keeps its old record until it is loaded and read again, or until the next scan.
