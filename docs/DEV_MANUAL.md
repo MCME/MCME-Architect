@@ -1105,7 +1105,10 @@ The layer only reads: it never writes to a world.
   in `colours.txt`. `assign` and `update` go together, on the shapes thread, one build at a time.
 - **Live facts.** `TuningFacts` reads names and settings from biome tuning, which is main-thread only, so
   `BiomeShapes.rebuild` reads them first and builds afterwards. Every 10 seconds `factsChanged()` compares them with the
-  last rebuild's, and a change redraws every world. A look-up that failed is not repeated for a minute.
+  last rebuild's, and a change redraws every world. A look-up that biome tuning refuses with a `BiomeTuningException`,
+  such as for a biome no datapack defines, is not repeated for a minute. One that fails in another way, such as with an
+  `UncheckedIOException`, is tried again at the next rebuild: `BiomeShapes.factsOf` catches it, draws that biome without
+  its name and settings, and warns once while it lasts.
 - **Redraw pacing.** `ChangeReporter` applies the `ItemBlockBudget` rule: a change after a quiet spell is drawn within a
   second, and after that at most once every 10 seconds, since each changed marker makes dynmap rewrite its world's
   marker file.

@@ -2294,10 +2294,11 @@ The reads of loaded chunks share a small budget on the main thread: about half a
 chunk a tick). Saved copies are read off the main thread. Paint made with WorldEdit or FastAsyncWorldEdit over a
 selection of a few dozen chunks shows within about 10 seconds. A bigger selection takes longer, as its chunks share that
 budget, and an edit still running 2 seconds after the command shows once the second read, 30 seconds after it, has
-reached its chunks, or a few seconds after its chunks unload. Other paint shows within a few minutes, as long as its
-chunks stay loaded. The layer is drawn again at most once every 10 seconds, and the first change after a quiet spell
-within a second. Architect finds WorldEdit or FastAsyncWorldEdit when the first WorldEdit command is typed, and says in
-its log which one it reads selections through.
+reached its chunks, or a few seconds after its chunks unload. While a world's first read is under way, WorldEdit paint
+can take longer to show: the loaded chunks that the read hands over wait in the same queue. Other paint shows within a
+few minutes, as long as its chunks stay loaded. The layer is drawn again at most once every 10 seconds, and the first
+change after a quiet spell within a second. Architect finds WorldEdit or FastAsyncWorldEdit when the first WorldEdit
+command is typed, and says in its log which one it reads selections through.
 
 When a watched chunk unloads, Architect reads its saved copy a few seconds later, off the main thread. It does not read
 the chunk as it unloads: at that moment the server answers with the biomes its world generator would make, not the

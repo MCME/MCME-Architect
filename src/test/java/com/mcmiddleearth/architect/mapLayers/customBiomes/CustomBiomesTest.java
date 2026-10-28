@@ -80,6 +80,8 @@ class CustomBiomesTest {
     private CustomBiomes layer;
     private Logged logged;
     private final Map<Spot, ChunkPaint> paints = new HashMap<>();
+    /** How often the fake reader was asked about each chunk. */
+    private final Map<Spot, Integer> readCounts = new HashMap<>();
     /** The clock of the live reads' budget and of the looks at saved copies, in nanoseconds: moved on by tests. */
     private final AtomicLong clock = new AtomicLong();
     private final Map<String, String> labels = new HashMap<>();
@@ -149,7 +151,9 @@ class CustomBiomesTest {
     }
 
     private ChunkPaint read(World readWorld, int x, int z) {
-        return paints.getOrDefault(new Spot(readWorld.getName(), x, z), ChunkPaint.EMPTY);
+        Spot spot = new Spot(readWorld.getName(), x, z);
+        readCounts.merge(spot, 1, Integer::sum);
+        return paints.getOrDefault(spot, ChunkPaint.EMPTY);
     }
 
     /** Lets the scan thread make every look at a saved copy, from 2 seconds after its request to a minute after. */
@@ -431,6 +435,32 @@ class CustomBiomesTest {
         Map<Long, ChunkPaint> expected = fixturePaints(0, 0);
         expected.put(PaintRecord.chunkKey(-3, -4), paint(QUAY));
         assertEquals(idsOf("walked", expected), ids(), "the chunk as it was when it unloaded");
+    }
+
+    // scan <world> hands the world's loaded chunks to the live reads, which read each soon, whatever the record holds
+    // for it. The loaded chunks of another world that is on are not handed over: their own reads keep them current.
+    @Test
+    void aScanReadsTheLoadedChunksOfItsWorldSoonAndLeavesOtherWorldsAlone() throws IOException {
+        WorldMock scanned = server.addSimpleWorld("handed");
+        WorldMock bystander = server.addSimpleWorld("bystander");
+        scanned.getChunkAt(40, 40);
+        bystander.getChunkAt(40, 40);
+        saved("bystander", recordOf(Map.of(), true)); // on the layer already
+        layer(NO_SLEEP).start(plugin);
+        ticks(1); // the first slow pass reads bystander's chunk, while handed is off: the next is two minutes away
+        readCounts.clear();
+        paints.put(new Spot("handed", 40, 40), paint("cbc:loaded"));
+
+        scan("handed");
+        assertTrue(layer.awaitScanIdle(WAIT), "handed has no saved files to read");
+        ticks(2);
+
+        assertEquals(1, readCounts.getOrDefault(new Spot("handed", 40, 40), 0), "read soon after the scan");
+        assertEquals(0, readCounts.getOrDefault(new Spot("bystander", 40, 40), 0), "not handed over");
+        replies();
+        scan();
+        List<String> lines = replies();
+        assertTrue(lines.contains("handed: 1 chunk with custom biomes, up to date"), lines.toString());
     }
 
     // The saved reads come to nothing when the layer looks for a world's region files where the game does not save
