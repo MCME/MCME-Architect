@@ -128,6 +128,8 @@ public final class PaintScan implements PaintTracker.SavedReads {
         final Path folder;
         /** The region files to read, in order. */
         final List<String> files;
+        /** The same files, to look one up by its name on the main thread: a big world has thousands. */
+        final Set<String> fileNames;
         final int total;
         /** Counted up by the scan thread. */
         volatile int done;
@@ -140,6 +142,7 @@ public final class PaintScan implements PaintTracker.SavedReads {
             this.reader = reader;
             this.folder = folder;
             this.files = List.copyOf(files);
+            this.fileNames = Set.copyOf(files);
             this.total = total;
             this.done = total - files.size();
         }
@@ -910,7 +913,7 @@ public final class PaintScan implements PaintTracker.SavedReads {
             return false;
         }
         String file = "r." + Math.floorDiv(chunkX, REGION) + "." + Math.floorDiv(chunkZ, REGION) + ".mca";
-        return fill.files.contains(file) && !fill.record.finishedFiles().contains(file);
+        return fill.fileNames.contains(file) && !fill.record.finishedFiles().contains(file);
     }
 
     /**
