@@ -242,9 +242,9 @@ public final class PaintTracker implements Listener {
 
     /**
      * Queues the chunk ahead of the slow pass, and watches it for {@link #WATCH_TICKS}, as a chunk near a builder is,
-     * so that its saved copy is read as it unloads if that comes before its turn. For a chunk whose record may be
-     * behind it, such as one that was loaded while the first fill read its saved copy. A chunk queued already keeps its
-     * place.
+     * so that its saved copy is read a few seconds after it unloads if that comes before its turn. For a chunk whose
+     * record may be behind it, such as one that was loaded while the first fill read its saved copy. A chunk queued
+     * already keeps its place.
      */
     public void readSoon(String world, int chunkX, int chunkZ) {
         ChunkRef ref = new ChunkRef(world, chunkX, chunkZ);
@@ -457,8 +457,8 @@ public final class PaintTracker implements Listener {
     }
 
     /**
-     * A watched chunk's saved copy is asked for, with the second it unloaded at. The chunk is not read here: inside this
-     * event the game answers about it with the biomes its generator would make, while the world still reports it
+     * A watched chunk's saved copy is asked for, with the second it unloaded at. The chunk is not read here: inside
+     * this event the game answers about it with the biomes its generator would make, while the world still reports it
      * loaded. A chunk near a builder is watched no more once it has unloaded; one in a selection is watched until the
      * selection runs out.
      */

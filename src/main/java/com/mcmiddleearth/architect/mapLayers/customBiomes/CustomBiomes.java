@@ -434,7 +434,8 @@ public final class CustomBiomes implements MapLayer {
             return;
         }
         store.turnOn(name, key -> world.isChunkLoaded(PaintRecord.keyX(key), PaintRecord.keyZ(key)));
-        // the record keeps what it holds for the loaded chunks: each is read again soon, or as it unloads
+        // the record keeps what it holds for the loaded chunks: each is read again soon, or its saved copy once it
+        // unloads
         for (Chunk chunk : world.getLoadedChunks()) {
             tracker.readSoon(name, chunk.getX(), chunk.getZ());
         }

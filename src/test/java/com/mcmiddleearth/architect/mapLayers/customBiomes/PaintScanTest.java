@@ -938,9 +938,9 @@ class PaintScanTest {
         later(LOOKS[0]);
         look();
         assertEquals(1, warnings().size(), "told once for both chunks of that form: " + warnings());
-        assertTrue(warnings().get(0).endsWith("Custom biomes layer: the saved copy of chunk 0, 0 of world cannot be read"
-                + " (LZ4 is not supported), so the chunk is not brought up to date from it. This is logged once while it"
-                + " lasts."), warnings().get(0));
+        assertTrue(warnings().get(0).endsWith("Custom biomes layer: the saved copy of chunk 0, 0 of world cannot be"
+                + " read (LZ4 is not supported), so the chunk is not brought up to date from it. This is logged once"
+                + " while it lasts."), warnings().get(0));
         for (int i = 1; i < LOOKS.length - 1; i++) {
             later(LOOKS[i]);
             look();
@@ -958,8 +958,9 @@ class PaintScanTest {
         assertEquals(paint("cbc:before"), record.get(0, 0), "the record keeps what it holds");
     }
 
-    // A cancel interrupts the thread while it reads a fill. Should the interrupt still be pending when the looks between
-    // two of its files come, it must not cut them short: the look reads the copy, and the interrupt is left for the fill.
+    // A cancel interrupts the thread while it reads a fill. Should the interrupt still be pending when the looks
+    // between two of its files come, it must not cut them short: the look reads the copy, and the interrupt is left
+    // for the fill.
     @Test
     void anInterruptLeftForTheFillDoesNotCutALookShort() throws IOException {
         server.addSimpleWorld("other");

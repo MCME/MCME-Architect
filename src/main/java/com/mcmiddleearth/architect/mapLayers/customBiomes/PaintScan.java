@@ -49,10 +49,10 @@ import java.util.regex.Pattern;
  *     <li><b>The main thread</b> owns the records, as the store does, and the fills that are waiting or being read, by
  *     world. Every public method runs there. What a file held goes into the record there. A chunk that is loaded at
  *     that moment may be newer than its saved copy, so the copy goes in only where the record holds nothing for it,
- *     and the chunk is handed to the live checks, which read it soon, or as it unloads. What a file held goes in only
- *     while the fill is on and the world's record is the one the fill started with: a fill whose world was switched
- *     off, or off and on again, is stopped there instead. What a look at saved copies found goes in there too, and the
- *     copies that were not written in time are counted there.</li>
+ *     and the chunk is handed to the live checks, which read it soon, or its saved copy a few seconds after it
+ *     unloads. What a file held goes in only while the fill is on and the world's record is the one the fill started
+ *     with: a fill whose world was switched off, or off and on again, is stopped there instead. What a look at saved
+ *     copies found goes in there too, and the copies that were not written in time are counted there.</li>
  *     <li><b>The scan thread</b> reads the files and the saved copies, and hands what it read to the main thread
  *     through the scheduler: one task a file, one for each tenth of the files read, which the log tells, one at the
  *     end, and one for each region file a round of looks at saved copies found copies in. It never touches a record. A
@@ -60,8 +60,9 @@ import java.util.regex.Pattern;
  *     on the main thread, and the next fill runs.</li>
  *     <li><b>Both</b> use the queue of waiting fills, the fill being read, the saved reads waiting for their next look
  *     and the stop flag, under this object's lock. A cancel interrupts the thread only while the fill it ends is the
- *     one being read and no saved copies are, and the thread clears any interrupt before it takes the next fill, so a
- *     cancel never cuts another world's fill short.</li>
+ *     one being read and no saved copies are. The looks between two files of a fill set a pending interrupt aside
+ *     while they read, and the thread clears any interrupt before it takes the next fill, so a cancel never cuts a look
+ *     or another world's fill short.</li>
  *     <li>Once {@link #stop} has begun, nothing more is handed to the main thread: the plugin may be disabled by then,
  *     and a disabled plugin cannot schedule tasks. What was handed over and has not run yet is dropped, and so are the
  *     saved reads waiting for a look.</li>
@@ -75,7 +76,10 @@ public final class PaintScan implements PaintTracker.SavedReads {
         void sleep(long millis) throws InterruptedException;
     }
 
-    /** Has a loaded chunk read live soon, and as it unloads if that comes first: {@link PaintTracker#readSoon}. */
+    /**
+     * Has a loaded chunk read live soon, or its saved copy a few seconds after it unloads if that comes first:
+     * {@link PaintTracker#readSoon}.
+     */
     @FunctionalInterface
     public interface LiveReads {
         void readSoon(String world, int chunkX, int chunkZ);
@@ -189,7 +193,9 @@ public final class PaintScan implements PaintTracker.SavedReads {
                     && !taken.contains(PaintRecord.chunkKey(chunkX, chunkZ));
         }
 
-        /** Whether an older copy is read too: at the last look of a chunk that unloaded, for the main thread to judge. */
+        /**
+         * Whether an older copy is read too: at the last look of a chunk that unloaded, for the main thread to judge.
+         */
         boolean takesOlder() {
             return unload && lastLook();
         }
@@ -255,11 +261,11 @@ public final class PaintScan implements PaintTracker.SavedReads {
 
     /**
      * @param regionFolder       the folder of a world's region files
-     * @param customIds          the custom biome ids the server defines; asked on the main thread, once a fill, and once
-     *                           for the reads of saved copies
+     * @param customIds          the custom biome ids the server defines; asked on the main thread, once a fill, and
+     *                           once for the reads of saved copies
      * @param changed            hears, on the main thread, the name of a world whose record took in a file
-     * @param liveReads          is handed, on the main thread, each chunk of a file, or of a look at saved copies, that is
-     *                           loaded when what was read goes into the record
+     * @param liveReads          is handed, on the main thread, each chunk of a file, or of a look at saved copies,
+     *                           that is loaded when what was read goes into the record
      * @param megabytesPerSecond the most the fills read on average, in millions of bytes a second
      * @param sleeper            sleeps on the scan thread: {@code Thread::sleep}
      * @param nanoClock          nanoseconds on a clock that never goes back, which times the looks at saved copies:
@@ -284,8 +290,8 @@ public final class PaintScan implements PaintTracker.SavedReads {
     }
 
     /**
-     * Main thread: reads the saved copy of a watched chunk that unloaded at {@code since}, once the game has written it.
-     * The game writes a chunk that changed as it unloads, a moment later and on a thread of its own, and stamps the
+     * Main thread: reads the saved copy of a watched chunk that unloaded at {@code since}, once the game has written
+     * it. The game writes a chunk that changed as it unloads, a moment later and on a thread of its own, and stamps the
      * second in the region file's header. So the copy is first looked at 2 seconds from now. A copy stamped before
      * {@code since} is the one from before, and the chunk is looked at again, 2, 5, 15 and 30 seconds later. A copy
      * that never comes is counted, unless the record agrees with the older copy: the game does not write a chunk again
@@ -605,7 +611,9 @@ public final class PaintScan implements PaintTracker.SavedReads {
         return !savedReads.isEmpty() && savedReads.peek().dueNanos - nanoClock.getAsLong() <= 0;
     }
 
-    /** Under the lock: how long to wait for the next look, at least a millisecond; 0, for as long as it takes, if none. */
+    /**
+     * Under the lock: how long to wait for the next look, at least a millisecond; 0, for as long as it takes, if none.
+     */
     private long millisToNextLook() {
         if (savedReads.isEmpty()) {
             return 0;
@@ -711,9 +719,10 @@ public final class PaintScan implements PaintTracker.SavedReads {
                         if (paint == null) {
                             if (RegionFileReader.lasting(skipped) || read.lastLook()) {
                                 read.taken.add(PaintRecord.chunkKey(x, z)); // given up, and not late
-                                tell(world, skipped, met, null, () -> "Custom biomes layer: the saved copy of chunk " + x
-                                        + ", " + z + " of " + world + " cannot be read (" + skipped + "), so the chunk"
-                                        + " is not brought up to date from it. This is logged once while it lasts.");
+                                tell(world, skipped, met, null, () -> "Custom biomes layer: the saved copy of chunk "
+                                        + x + ", " + z + " of " + world + " cannot be read (" + skipped + "), so the"
+                                        + " chunk is not brought up to date from it. This is logged once while it"
+                                        + " lasts.");
                             } else {
                                 waiting.add(read); // the game may be writing it
                             }
@@ -848,12 +857,12 @@ public final class PaintScan implements PaintTracker.SavedReads {
     /**
      * Main thread: what the looks found goes into the records, unless the scan has stopped, or the world is off, or on
      * with another record, or read again from the start since the read was asked for. A chunk loaded again goes to the
-     * live reads instead, as its copy may be older than what the game holds now, and the record is left as it is. A copy
-     * written at the read's second or later goes in, an empty one taking the chunk out. An older copy, from a chunk's
-     * last look, never goes in: the chunk is counted when the record differs from it, as then something may be missed,
-     * and not when they agree, as the game writes again only a chunk that changed. Nor while the world's fill has still
-     * to put the chunk's region file into the record, which holds nothing from it until then: the fill puts that copy.
-     * A chunk with no copy is counted.
+     * live reads instead, as its copy may be older than what the game holds now, and the record is left as it is. A
+     * copy written at the read's second or later goes in, an empty one taking the chunk out. An older copy, from a
+     * chunk's last look, never goes in: the chunk is counted when the record differs from it, as then something may be
+     * missed, and not when they agree, as the game writes again only a chunk that changed. Nor while the world's fill
+     * has still to put the chunk's region file into the record, which holds nothing from it until then: the fill puts
+     * that copy. A chunk with no copy is counted.
      */
     private void mergeSaved(List<Found> found) {
         if (stopped) {
