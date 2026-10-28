@@ -544,4 +544,47 @@ class RegionFileReaderTest {
         assertEquals(new RegionFileReader.Stats(1, 0, 0, Map.of()), result.stats());
         assertEquals(ChunkPaint.EMPTY, result.at(0, 0));
     }
+
+    // A read of saved copies is offered each chunk the file stores, with the second its header says the game last
+    // saved it at, and reads only the chunks it chooses. A chunk that cannot be read, or that says it is another chunk
+    // of the file, reaches the sink as null, not as a chunk without paint: the game may be writing it.
+    @Test
+    void aSavedReadSeesWhenEachChunkWasSavedAndReadsOnlyTheChosenOnes(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("r.1.2.mca"); // chunks x 32 to 63, z 64 to 95
+        byte[] rubbish = "cbc: this is no NBT".getBytes(StandardCharsets.UTF_8);
+        RegionFixtures.region(file, Map.of(
+                0, paintedChunk(4903, A),
+                1, paintedChunk(4903, A),
+                2, rubbish,
+                3, paintedChunk(4903, "minecraft:plains"),
+                4, paintedChunkAt(32, 64, A)), 2, 1_800_000_000L); // in the slot of chunk (36, 64)
+        RegionFixtures.savedAt(file, 1, 1_700_000_000L);
+        Map<Long, Long> offered = new LinkedHashMap<>();
+        Map<Long, ChunkPaint> read = new LinkedHashMap<>();
+
+        new RegionFileReader(Set.of(A)).readSaved(file, (x, z, savedAt) -> {
+            offered.put(PaintRecord.chunkKey(x, z), savedAt);
+            return savedAt >= 1_800_000_000L;
+        }, (x, z, savedAt, paint) -> {
+            assertEquals(1_800_000_000L, savedAt);
+            assertFalse(read.containsKey(PaintRecord.chunkKey(x, z)), "chunk " + x + ", " + z + " read twice");
+            read.put(PaintRecord.chunkKey(x, z), paint);
+        });
+
+        assertEquals(Map.of(PaintRecord.chunkKey(32, 64), 1_800_000_000L, PaintRecord.chunkKey(33, 64), 1_700_000_000L,
+                PaintRecord.chunkKey(34, 64), 1_800_000_000L, PaintRecord.chunkKey(35, 64), 1_800_000_000L,
+                PaintRecord.chunkKey(36, 64), 1_800_000_000L), offered);
+        assertEquals(Set.of(PaintRecord.chunkKey(32, 64), PaintRecord.chunkKey(34, 64), PaintRecord.chunkKey(35, 64),
+                PaintRecord.chunkKey(36, 64)), read.keySet(), "the chunk saved before the second chosen is not read");
+        assertEquals(A_EVERYWHERE, read.get(PaintRecord.chunkKey(32, 64)).column(0, 0));
+        assertNull(read.get(PaintRecord.chunkKey(34, 64)), "a chunk that cannot be read");
+        assertEquals(ChunkPaint.EMPTY, read.get(PaintRecord.chunkKey(35, 64)), "a chunk without custom biomes");
+        assertNull(read.get(PaintRecord.chunkKey(36, 64)), "a chunk that says it is another of the file");
+    }
+
+    @Test
+    void aSavedReadOfAFileThatIsNotThereFails(@TempDir Path dir) {
+        assertThrows(NoSuchFileException.class, () -> new RegionFileReader(Set.of(A))
+                .readSaved(dir.resolve("r.0.0.mca"), (x, z, savedAt) -> true, (x, z, savedAt, paint) -> { }));
+    }
 }

@@ -80,6 +80,22 @@ public final class RegionFileReader {
         void accept(int chunkX, int chunkZ, ChunkPaint paint);
     }
 
+    /** Chooses which stored chunks of a file {@link #readSaved} reads. */
+    @FunctionalInterface
+    public interface SavedFilter {
+
+        /** Whether to read the chunk, which the game last saved at {@code savedAt}, in epoch seconds. */
+        boolean wants(int chunkX, int chunkZ, long savedAt);
+    }
+
+    /** Takes the chunks {@link #readSaved} read, one call each, on the thread that reads. */
+    @FunctionalInterface
+    public interface SavedSink {
+
+        /** The chunk's paint, or null when it could not be read: the game may be writing it. */
+        void accept(int chunkX, int chunkZ, long savedAt, ChunkPaint paint);
+    }
+
     /** Counts while a file is read. */
     private static final class Tally {
         int chunks;
@@ -131,13 +147,7 @@ public final class RegionFileReader {
      *                     whose data is damaged, or in a form this does not read, is skipped and counted instead
      */
     public Stats read(Path regionFile, ChunkSink sink) throws IOException {
-        Matcher name = REGION_FILE.matcher(String.valueOf(regionFile.getFileName()));
-        if (!name.matches()) {
-            throw new IOException(regionFile.getFileName()
-                    + " is not named r.X.Z.mca, so where its chunks lie is unknown");
-        }
-        int firstChunkX = Integer.parseInt(name.group(1)) * SIDE;
-        int firstChunkZ = Integer.parseInt(name.group(2)) * SIDE;
+        int[] first = firstChunkOf(regionFile);
         Tally tally = new Tally();
         try (FileChannel channel = FileChannel.open(regionFile, StandardOpenOption.READ)) {
             ByteBuffer locations = ByteBuffer.allocate(SECTOR);
@@ -151,14 +161,58 @@ public final class RegionFileReader {
                     continue;
                 }
                 tally.chunks++;
-                int chunkX = firstChunkX + index % SIDE;
-                int chunkZ = firstChunkZ + index / SIDE;
-                sink.accept(chunkX, chunkZ, readChunk(channel, sector, sectors, chunkX, chunkZ, regionFile, tally));
+                int chunkX = first[0] + index % SIDE;
+                int chunkZ = first[1] + index / SIDE;
+                ChunkPaint paint = readChunk(channel, sector, sectors, chunkX, chunkZ, regionFile, tally);
+                sink.accept(chunkX, chunkZ, paint == null ? ChunkPaint.EMPTY : paint);
             }
         }
         return tally.stats();
     }
 
+    /**
+     * Reads the chunks of a region file that {@code wanted} chooses, by their place and the second the game last saved
+     * each at: the header's second table, which the game sets at every save of a chunk, as seconds since 1970. Only a
+     * chunk the file stores is offered. A chosen chunk that cannot be read, or that says it is another chunk of the
+     * file, reaches the sink as null, not as a chunk without paint: the server may be writing it. Nothing is counted.
+     *
+     * @throws IOException when the file is not named like a region file, cannot be opened or fails to read
+     */
+    public void readSaved(Path regionFile, SavedFilter wanted, SavedSink sink) throws IOException {
+        int[] first = firstChunkOf(regionFile);
+        Tally untold = new Tally();
+        try (FileChannel channel = FileChannel.open(regionFile, StandardOpenOption.READ)) {
+            ByteBuffer header = ByteBuffer.allocate(2 * SECTOR);
+            readAt(channel, header, 0); // a file shorter than this has no chunks where it ends
+            for (int index = 0; index < CHUNKS; index++) {
+                int location = header.getInt(index * 4);
+                int sector = location >>> 8;
+                int sectors = location & 0xFF;
+                if (sector < 2 || sectors == 0) {
+                    continue;
+                }
+                long savedAt = header.getInt(SECTOR + index * 4) & 0xFFFF_FFFFL;
+                int chunkX = first[0] + index % SIDE;
+                int chunkZ = first[1] + index / SIDE;
+                if (wanted.wants(chunkX, chunkZ, savedAt)) {
+                    sink.accept(chunkX, chunkZ, savedAt,
+                            readChunk(channel, sector, sectors, chunkX, chunkZ, regionFile, untold));
+                }
+            }
+        }
+    }
+
+    /** The first chunk of the region a file is named for, as x and z: the name {@code r.X.Z.mca} gives the region. */
+    private static int[] firstChunkOf(Path regionFile) throws IOException {
+        Matcher name = REGION_FILE.matcher(String.valueOf(regionFile.getFileName()));
+        if (!name.matches()) {
+            throw new IOException(regionFile.getFileName()
+                    + " is not named r.X.Z.mca, so where its chunks lie is unknown");
+        }
+        return new int[] {Integer.parseInt(name.group(1)) * SIDE, Integer.parseInt(name.group(2)) * SIDE};
+    }
+
+    /** The chunk's paint, or null when it is skipped as a whole: it cannot be read, or it is another chunk. */
     private ChunkPaint readChunk(FileChannel channel, int sector, int sectors, int chunkX, int chunkZ, Path regionFile,
                                  Tally tally) throws IOException {
         ByteBuffer stored = ByteBuffer.allocate(sectors * SECTOR);
@@ -346,9 +400,9 @@ public final class RegionFileReader {
         return "unreadable: " + e.getClass().getSimpleName();
     }
 
-    /** Counts a skipped chunk, and gives the paint it is handed on with. */
+    /** Counts a chunk skipped as a whole, which has no paint: null. */
     private static ChunkPaint skipped(Tally tally, String reason) {
         tally.skip(reason);
-        return ChunkPaint.EMPTY;
+        return null;
     }
 }

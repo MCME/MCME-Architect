@@ -256,11 +256,32 @@ final class RegionFixtures {
      * type never looks at the bytes. A chunk's place in the region is {@code x + z * 32}.
      */
     static void region(Path file, Map<Integer, byte[]> chunksByIndex, int compression) throws IOException {
+        region(file, chunksByIndex, compression, 0);
+    }
+
+    /**
+     * Like {@link #region(Path, Map, int)}, with each chunk saved at {@code savedAt}, in epoch seconds: the time the
+     * game writes into the header's second table at every save.
+     */
+    static void region(Path file, Map<Integer, byte[]> chunksByIndex, int compression, long savedAt)
+            throws IOException {
         Map<Integer, byte[]> stored = new TreeMap<>();
         for (Map.Entry<Integer, byte[]> chunk : chunksByIndex.entrySet()) {
             stored.put(chunk.getKey(), storedChunk(compress(chunk.getValue(), compression), compression));
         }
-        write(file, stored);
+        write(file, stored, savedAt);
+    }
+
+    /** Sets the time a region file says its chunk at {@code index} ({@code x + z * 32}) was saved, in epoch seconds. */
+    static void savedAt(Path file, int index, long epochSecond) throws IOException {
+        byte[] bytes = Files.readAllBytes(file);
+        ByteBuffer.wrap(bytes).putInt(SECTOR + index * 4, (int) epochSecond);
+        Files.write(file, bytes);
+    }
+
+    /** The place of a chunk in its region file: {@code x + z * 32}, with x and z counted inside the region. */
+    static int indexOf(int chunkX, int chunkZ) {
+        return Math.floorMod(chunkX, 32) + Math.floorMod(chunkZ, 32) * 32;
     }
 
     /**
@@ -272,7 +293,7 @@ final class RegionFixtures {
         int chunkX = Integer.parseInt(name[1]) * 32 + index % 32;
         int chunkZ = Integer.parseInt(name[2]) * 32 + index / 32;
         Files.write(file.resolveSibling("c." + chunkX + "." + chunkZ + ".mcc"), compress(nbt, 2));
-        write(file, Map.of(index, storedChunk(new byte[0], 0x80 | 2)));
+        write(file, Map.of(index, storedChunk(new byte[0], 0x80 | 2)), 0);
     }
 
     private static byte[] compress(byte[] nbt, int compression) throws IOException {
@@ -301,14 +322,18 @@ final class RegionFixtures {
         return stored.array();
     }
 
-    /** Writes the stored chunks one sector run after another behind a header that says where each one is. */
-    private static void write(Path file, Map<Integer, byte[]> storedByIndex) throws IOException {
+    /**
+     * Writes the stored chunks one sector run after another behind a header that says where each one is, and that each
+     * was saved at {@code savedAt}.
+     */
+    private static void write(Path file, Map<Integer, byte[]> storedByIndex, long savedAt) throws IOException {
         ByteBuffer header = ByteBuffer.allocate(2 * SECTOR);
         ByteArrayOutputStream body = new ByteArrayOutputStream();
         int sector = 2;
         for (Map.Entry<Integer, byte[]> chunk : new TreeMap<>(storedByIndex).entrySet()) {
             int sectors = chunk.getValue().length / SECTOR;
             header.putInt(chunk.getKey() * 4, sector << 8 | sectors);
+            header.putInt(SECTOR + chunk.getKey() * 4, (int) savedAt);
             body.writeBytes(chunk.getValue());
             sector += sectors;
         }

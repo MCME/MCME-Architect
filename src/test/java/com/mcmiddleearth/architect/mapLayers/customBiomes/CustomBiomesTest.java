@@ -39,10 +39,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -78,6 +80,8 @@ class CustomBiomesTest {
     private CustomBiomes layer;
     private Logged logged;
     private final Map<Spot, ChunkPaint> paints = new HashMap<>();
+    /** The clock of the live reads' budget and of the looks at saved copies, in nanoseconds: moved on by tests. */
+    private final AtomicLong clock = new AtomicLong();
     private final Map<String, String> labels = new HashMap<>();
     private final Set<Player> builders = new HashSet<>();
     private final BiomeFacts facts = new BiomeFacts() {
@@ -129,7 +133,7 @@ class CustomBiomesTest {
     private CustomBiomes layer(YamlConfiguration config, PaintScan.Sleeper sleeper, Executor background) {
         layer = new CustomBiomes(new MapLayerConfig(config).layer(CustomBiomes.KEY, false), dir.toFile(), this::read,
                 player -> Optional.empty(), () -> IDS, facts, sleeper, w -> regionFolder(w.getName()),
-                builders::contains, background);
+                builders::contains, background, clock::get);
         return layer;
     }
 
@@ -146,6 +150,15 @@ class CustomBiomesTest {
 
     private ChunkPaint read(World readWorld, int x, int z) {
         return paints.getOrDefault(new Spot(readWorld.getName(), x, z), ChunkPaint.EMPTY);
+    }
+
+    /** Lets the scan thread make every look at a saved copy, from 2 seconds after its request to a minute after. */
+    private void allLooks() {
+        for (long millis : new long[] {2_000, 2_000, 5_000, 15_000, 30_000}) {
+            clock.addAndGet(millis * 1_000_000);
+            assertTrue(layer.awaitScanIdle(WAIT), "the look was made");
+            ticks(1);
+        }
     }
 
     private Path regionFolder(String worldName) {
@@ -393,7 +406,8 @@ class CustomBiomesTest {
 
     // A builder walking while a world is read keeps the chunks around them loaded for a minute or so. A chunk that is
     // loaded when its saved file reaches the record, and that unloads before the tracker gets to it and before any slow
-    // pass, is read as it unloads, and so it is in the record.
+    // pass, has the copy the game wrote as it unloaded read a moment later, and so it is in the record as it was then.
+    // The live reader never sees its paint here: only the copy can bring it.
     @Test
     void aChunkLoadedDuringTheFillAndUnloadedBeforeAnyPassEndsUpInTheRecord() throws IOException {
         WorldMock walked = server.addSimpleWorld("walked");
@@ -403,16 +417,57 @@ class CustomBiomesTest {
         scan("walked");
         assertTrue(layer.awaitScanIdle(WAIT), "the file is read, and waits for the main thread");
         Chunk passing = walked.getChunkAt(-3, -4); // a builder comes by
-        paints.put(new Spot("walked", -3, -4), paint("cbc:live"));
 
         ticks(1); // the file reaches the record
         server.getPluginManager().callEvent(new ChunkUnloadEvent(passing, true)); // and the builder walks on
         walked.unloadChunk(-3, -4);
-        ticks(30); // the change is reported within a second, and the shapes come back a tick later
+        // the game writes the chunk as it unloads, with the paint the builder gave it, and stamps the second
+        RegionFixtures.region(regionFolder("walked").resolve(FIRST), Map.of(RegionFixtures.indexOf(-3, -4),
+                paintedChunkAt(-3, -4, QUAY)), 2, System.currentTimeMillis() / 1000 + 60);
+        clock.addAndGet(2_000_000_000L); // the look at its copy, 2 seconds after the unload
+        assertTrue(layer.awaitScanIdle(WAIT), "the copy is read, and waits for the main thread");
+        ticks(30); // it reaches the record, the change is reported within a second, and the shapes come a tick later
 
         Map<Long, ChunkPaint> expected = fixturePaints(0, 0);
-        expected.put(PaintRecord.chunkKey(-3, -4), paint("cbc:live"));
+        expected.put(PaintRecord.chunkKey(-3, -4), paint(QUAY));
         assertEquals(idsOf("walked", expected), ids(), "the chunk as it was when it unloaded");
+    }
+
+    // The saved reads come to nothing when the layer looks for a world's region files where the game does not save
+    // them. Every watched chunk that unloads is then counted, and the log says so once a minute, so that it is seen.
+    @Test
+    void savedCopiesThatNeverComeAreToldInTheLogOnceAMinute() {
+        WorldMock far = server.addSimpleWorld("far"); // no region files where the layer looks
+        Chunk loaded = far.getChunkAt(7, 7);
+        Logged log = capture();
+        layer(NO_SLEEP).start(plugin);
+        ticks(1);
+        scan("far"); // the loaded chunk is handed to the live reads, and watched
+        assertTrue(layer.awaitScanIdle(WAIT));
+        ticks(1);
+
+        server.getPluginManager().callEvent(new ChunkUnloadEvent(loaded, true));
+        far.unloadChunk(7, 7);
+        allLooks();
+        assertEquals(List.of(), late(log), "not before the minute's line");
+        ticks(1_200);
+
+        assertEquals(List.of("Custom biomes layer: 1 chunk unloaded, but its saved copy was not written in time to be "
+                + "read; /architect maplayers scan far catches it."), late(log));
+    }
+
+    /** The log's lines about saved copies not written in time. */
+    private static List<String> late(Logged log) {
+        return log.messages(Level.INFO).stream().filter(line -> line.contains("not written in time")).toList();
+    }
+
+    /** A chunk painted with one biome from the floor of a vanilla-height world to its ceiling, as the game saves it. */
+    private static byte[] paintedChunkAt(int chunkX, int chunkZ, String biome) {
+        Map<Integer, List<String>> sections = new TreeMap<>();
+        for (int y = -4; y < 20; y++) {
+            sections.put(y, Collections.nCopies(64, biome));
+        }
+        return RegionFixtures.chunkAt(chunkX, chunkZ, 4903, "minecraft:full", sections);
     }
 
     // Architect starts before biome tuning does, so the worlds are first drawn at the first tick, when biome tuning

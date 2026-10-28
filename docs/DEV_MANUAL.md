@@ -443,7 +443,7 @@ Three listener classes are never registered: `AfkListener` and `TestListener` (c
 | Kit save | `GetData.load` | once, 2000 ticks after a load |
 | Map-layer redraws; budget counting and saving | `MapLayers`, `ItemBlockBudget` | redraws on the tick after a change; budget recounts each second and saves each minute |
 | Custom biomes: live reads | `PaintTracker.start`, from `CustomBiomes.start` | every tick, within about 0.5 ms (at least one chunk); a look at the builders every 200 ticks; a slow pass every 2400; housekeeping every 1200 |
-| Custom biomes: reports, saves, windows, first fill | `CustomBiomes.start` | a report each second (a redraw at most every 10 seconds); changed records saved every 1200 ticks; names and settings compared every 200; an unfinished fill resumed and the worlds drawn once, on the first tick |
+| Custom biomes: reports, saves, windows, first fill | `CustomBiomes.start` | a report each second (a redraw at most every 10 seconds); changed records saved every 1200 ticks; saved copies not written in time logged every 1200 (`PaintScan.LATE_TICKS`); names and settings compared every 200; an unfinished fill resumed and the worlds drawn once, on the first tick |
 | Entity-log dumps | `EntityLogger.start` (`/architect eLog true`) | after 500 ticks, then every 2000 |
 
 ### The world generator
@@ -810,10 +810,10 @@ priority, and `CustomBiomes.stop` ends each and waits for it, for a few seconds 
 
 | Where | What runs there |
 |---|---|
-| The main thread, `PaintTracker` | Reads of loaded chunks (Bukkit's API is main-thread only), every tick: the queue until about 0.5 ms are spent but at least one chunk (`TICK_BUDGET_NANOS`), and up to 2 ms for chunks that unload (`UNLOAD_BUDGET_NANOS`). It also owns the records, the shapes drawn, and everything that asks biome tuning |
+| The main thread, `PaintTracker` | Reads of loaded chunks (Bukkit's API is main-thread only), every tick: the queue until about 0.5 ms are spent but at least one chunk (`TICK_BUDGET_NANOS`). A chunk is never read in its `ChunkUnloadEvent` (see [The Custom biomes layer](#the-custom-biomes-layer)). It also owns the records, the shapes drawn, and everything that asks biome tuning |
 | `Architect custom biomes`, the shapes executor | `BiomeShapes` builds: regions, colours, windows and the size, one world at a time in the order asked. The result goes back to the main thread |
 | `Architect custom biomes writer` | `PaintStore`'s saves of record files and the move of a file set aside, in the order asked, so two writes of one file never overlap |
-| `Architect biome scan` | `PaintScan` reads region files, one world at a time, paced at `scanMegabytesPerSecond`. It hands each file's result to the main thread with `runTask`, and never touches a record |
+| `Architect biome scan` | `PaintScan` reads region files, one world at a time, paced at `scanMegabytesPerSecond`. Between a fill's files, and unpaced, it also reads the saved copies of watched chunks that unloaded and of selections (`PaintScan.unloaded`, `selected`). It hands what it read to the main thread with `runTask`, and never touches a record |
 
 Other threads get copies (`PaintRecord.copy`, `copyOfChunks`) and plain data: `BiomeShapes.rebuild` reads the biomes'
 names and settings on the main thread before the build starts.
@@ -1112,9 +1112,20 @@ The layer only reads: it never writes to a world.
 - **Start-up.** Architect enables before the worlds, before biome tuning and before WorldEdit, so `CustomBiomes.start`
   resumes an unfinished fill and draws the worlds one tick later, when biome tuning can name their biomes, and
   `FirstUseSelections` looks WorldEdit up at the first WorldEdit command.
+- **Unloads.** Inside `ChunkUnloadEvent`, Paper 26.2 answers `World.getBiome` for the unloading chunk with the world
+  generator's biome (`LevelReader.getNoiseBiome` falls back when `getChunk(x, z, BIOMES, false)` finds nothing), while
+  `World.isChunkLoaded` still answers true. So `PaintTracker` never reads a chunk there: it hands a watched chunk to
+  `PaintScan.unloaded` with the unload's epoch second. On the scan thread, `RegionFileReader.readSaved` reads the region
+  file's header, whose second table holds the second the game last wrote each chunk, and the copy is taken once that is
+  at or after the unload: looked at 2 s after the request, and again until 54 s after it (`PaintScan.LOOK_MILLIS`).
+  Paper writes only a chunk that changed (`NewChunkHolder.saveChunk` checks `isUnsaved`), so an older copy at the last
+  look is compared with the record on the main thread, and counted for the once-a-minute log line only when they
+  differ. The second read of a selection hands its box to `PaintScan.selected` with the command's second; an older copy
+  there is never counted, as most WorldEdit commands change nothing.
 - **Tests.** The package-private `CustomBiomes` constructor takes the parts that need a server: the chunk reader, the
   selections, the facts and the shapes executor, where `null` means the server's own, made at each start; and the custom
-  ids, the scan's sleeper, the region folder and the builder test.
+  ids, the scan's sleeper, the region folder, the builder test, and the clock that times the live reads' budget and the
+  looks at saved copies.
 
 ### Copy and paste
 

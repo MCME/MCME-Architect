@@ -2285,22 +2285,27 @@ on the map as the files are read.
 | When | Which chunks |
 |---|---|
 | Every 10 seconds | Those within 2 chunks of each builder: a player who may use biome tuning (`architect.biomeTune`). |
-| 2 seconds and 30 seconds after a WorldEdit or FastAsyncWorldEdit command | Those in that player's selection. |
+| 2 seconds and 30 seconds after a WorldEdit or FastAsyncWorldEdit command | Those in that player's selection. At 30 seconds, the selection's chunks that are not loaded are read from their saved copies, those the server wrote after the command. |
 | Every 2 minutes | All of them: the slow pass. |
 | Soon after `scan <world>`, and as the first read goes on | Those loaded when the command is given, and those loaded when the read reaches their region file: what that file holds may be older. Until it is read, such a chunk keeps what the record holds for it, or else its saved copy. |
-| As a chunk unloads | That chunk, if in the last 10 minutes it was within 4 chunks of a builder, in a selection, or among the chunks of the row above. |
+| A few seconds after a chunk unloads | That chunk's saved copy, if in the last 10 minutes the chunk was within 4 chunks of a builder, in a selection, or among the chunks of the row above. |
 
-All of this shares a small budget on the main thread: about half a millisecond a tick (and at least one chunk a tick),
-plus up to 2 milliseconds a tick for chunks that unload. Paint made with WorldEdit or FastAsyncWorldEdit over a
+The reads of loaded chunks share a small budget on the main thread: about half a millisecond a tick (and at least one
+chunk a tick). Saved copies are read off the main thread. Paint made with WorldEdit or FastAsyncWorldEdit over a
 selection of a few dozen chunks shows within about 10 seconds. A bigger selection takes longer, as its chunks share that
 budget, and an edit still running 2 seconds after the command shows once the second read, 30 seconds after it, has
-reached its chunks. Other paint shows within a few minutes, as long as its chunks stay loaded. The layer is drawn again
-at most once every 10 seconds, and the first change after a quiet spell within a second. Architect finds WorldEdit or
-FastAsyncWorldEdit when the first WorldEdit command is typed, and says in its log which one it reads selections through.
+reached its chunks, or a few seconds after its chunks unload. Other paint shows within a few minutes, as long as its
+chunks stay loaded. The layer is drawn again at most once every 10 seconds, and the first change after a quiet spell
+within a second. Architect finds WorldEdit or FastAsyncWorldEdit when the first WorldEdit command is typed, and says in
+its log which one it reads selections through.
 
-A chunk that unloads without being read keeps its old record until it is loaded and read again, or until the next scan.
-The reads at unload have an allowance of their own: when more watched chunks unload in one tick than it covers, as after
-a long teleport, the rest go unread, and the log says how many, once a minute (see below).
+When a watched chunk unloads, Architect reads its saved copy a few seconds later, off the main thread. It does not read
+the chunk as it unloads: at that moment the server answers with the biomes its world generator would make, not the
+painted ones. The server writes a chunk that changed as it unloads, a moment later, so Architect takes only a copy
+written after the unload, and looks again for about a minute until one comes. A chunk that did not change is not
+written again: its older copy agrees with the record, which keeps what it holds. When no newer copy comes in time and
+the older one differs from the record, or there is no copy at all, the chunk keeps its old record until it is loaded and
+read again, or until the next scan, and the log says how many such chunks there were, once a minute (see below).
 
 **What the map shows.** An area is a stretch of ground where the same custom biomes lie in every 4 x 4 block column; its
 outline follows the 4-block grid that the game stores biomes on.
@@ -2353,8 +2358,8 @@ setting.
 | `Custom biomes layer: <world> is not drawn: its markers would add <n> KB to every map visit, over the 512 KB target.` | The world is over the size limit. Said once. |
 | `Custom biomes layer: <world> is drawn again: its markers add <n> KB.` | The world fits again. |
 | `Custom biomes layer: biome tuning could not tell the name and settings of <biome>, so its window shows its id and no settings.` | A warning, with the error below it, such as a datapack folder that cannot be listed. The other biomes are still drawn with theirs. Said once while it lasts. |
-| `Custom biomes layer: <n> chunks unloaded before they could be read; /architect maplayers scan <world> catches them.` | Paint in these chunks was missed. At most once a minute; run the scan again. |
-| `Custom biomes layer: <n> chunks were already unloaded when their unload was handled, so they were not read; /architect maplayers scan <world> catches them.` | The server had unloaded these watched chunks before Architect could read them, so their paint was missed. At most once a minute; run the scan again. If it comes after every unload, the reads at unload do not work on this server. |
+| `Custom biomes layer: <n> chunks unloaded, but their saved copies were not written in time to be read; /architect maplayers scan <world> catches them.` | For about a minute after these watched chunks unloaded, the server wrote no newer copy of them, and the copy it had differs from what Architect holds, or there was none. Their paint may be missed. At most once a minute; run the scan again. If it comes after most unloads, Architect does not find the world's saved files where the server writes them. |
+| `Custom biomes layer: reading the saved copies of chunks of <worlds> failed, so they were not read; /architect maplayers scan with the world catches them.` | A warning, with the error below it: something such as running out of memory stopped a read of saved copies. Later ones still run. |
 
 **Good to know**
 
@@ -3302,7 +3307,7 @@ Each entry gives the symptom, the cause and the fix.
 - **The Custom biomes layer is empty, or lacks some paint.** Cause: no world is on the layer
   (`/architect maplayers scan` lists the worlds that are on); or the first read has not got to the paint yet (the state
   says `reading 3 of 12 region files`); or the world is `not drawn`, because its markers are over the size limit;
-  or the paint is in chunks that unloaded before they were read. Fix: put the world on with
-  `/architect maplayers scan <world>`, and wait for `up to date`. The same command reads a world that is on again from
-  the start, which catches missed paint. A world that is `not drawn` comes back by itself when its markers fit; see
-  [Custom biomes](#custom-biomes).
+  or the paint is in chunks whose saved copy the server had not written a minute after they unloaded (the log says so
+  once a minute). Fix: put the world on with `/architect maplayers scan <world>`, and wait for `up to date`. The same
+  command reads a world that is on again from the start, which catches missed paint. A world that is `not drawn` comes
+  back by itself when its markers fit; see [Custom biomes](#custom-biomes).

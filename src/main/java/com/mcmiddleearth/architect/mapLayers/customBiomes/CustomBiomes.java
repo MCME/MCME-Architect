@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -97,6 +98,7 @@ public final class CustomBiomes implements MapLayer {
     private final PaintScan.Sleeper sleeper;
     private final Function<World, Path> regionFolder;
     private final Predicate<Player> isBuilder;
+    private final LongSupplier nanoClock;
 
     /** The worlds whose record changed since the last report, to be drawn again at the next. */
     private final Set<String> pending = new LinkedHashSet<>();
@@ -117,7 +119,7 @@ public final class CustomBiomes implements MapLayer {
     public CustomBiomes(MapLayerConfig.Layer config, File dataFolder) {
         this(config, dataFolder, null, null, ChunkPaintReader::customIdsOnThisServer, null, Thread::sleep,
                 world -> world.getWorldPath().resolve("region"),
-                player -> PluginData.hasPermission(player, Permission.BIOME_TUNE), null);
+                player -> PluginData.hasPermission(player, Permission.BIOME_TUNE), null, System::nanoTime);
     }
 
     /**
@@ -133,11 +135,13 @@ public final class CustomBiomes implements MapLayer {
      * @param regionFolder the folder of a world's saved region files
      * @param isBuilder    whether the chunks around a player are read often
      * @param background   builds the shapes: one thread, which runs what it is given in that order
+     * @param nanoClock    nanoseconds on a clock that never goes back, which times the live reads' budget and the
+     *                     looks at saved copies: {@code System::nanoTime}
      */
     CustomBiomes(MapLayerConfig.Layer config, File dataFolder, PaintTracker.ChunkReader reader,
                  SelectionSource selections, Supplier<Set<String>> customIds, BiomeFacts facts,
                  PaintScan.Sleeper sleeper, Function<World, Path> regionFolder, Predicate<Player> isBuilder,
-                 Executor background) {
+                 Executor background, LongSupplier nanoClock) {
         this.config = config;
         this.dataFolder = dataFolder;
         this.givenReader = reader;
@@ -148,6 +152,7 @@ public final class CustomBiomes implements MapLayer {
         this.regionFolder = regionFolder;
         this.isBuilder = isBuilder;
         this.givenBackground = background;
+        this.nanoClock = nanoClock;
     }
 
     /** The layer that is running, for the scan command; none while the layer is switched off or not started. */
@@ -205,12 +210,16 @@ public final class CustomBiomes implements MapLayer {
             reader = (world, chunkX, chunkZ) -> ChunkPaintReader.read(world, chunkX, chunkZ, customIdOf);
         }
         SelectionSource selections = givenSelections != null ? givenSelections : new FirstUseSelections(plugin);
+        // the scan hands chunks to the tracker, which is made next, and the tracker hands saved reads to the scan
+        scan = new PaintScan(plugin, store, regionFolder, customIds, this::dirty,
+                (world, chunkX, chunkZ) -> tracker.readSoon(world, chunkX, chunkZ), megabytesPerSecond(), sleeper,
+                nanoClock);
         tracker = new PaintTracker(plugin, store::record, reader, selections,
-                PaintTracker.worldEditCommands(plugin.getServer()), isBuilder, this::dirty, System::nanoTime);
-        scan = new PaintScan(plugin, store, regionFolder, customIds, this::dirty, tracker::readSoon,
-                megabytesPerSecond(), sleeper);
+                PaintTracker.worldEditCommands(plugin.getServer()), isBuilder, this::dirty, scan, nanoClock,
+                () -> System.currentTimeMillis() / 1000);
         timers.add(scheduler.runTaskTimer(plugin, reporter::everySecond, SECOND_TICKS, SECOND_TICKS));
         timers.add(scheduler.runTaskTimer(plugin, store::saveDirty, PaintStore.SAVE_TICKS, PaintStore.SAVE_TICKS));
+        timers.add(scheduler.runTaskTimer(plugin, scan::logLate, PaintScan.LATE_TICKS, PaintScan.LATE_TICKS));
         timers.add(scheduler.runTaskTimer(plugin, this::drawAllIfFactsChanged, FACTS_TICKS, FACTS_TICKS));
         tracker.start();
         // the first tick comes once the server has loaded its worlds, which a fill needs, and once biome tuning has

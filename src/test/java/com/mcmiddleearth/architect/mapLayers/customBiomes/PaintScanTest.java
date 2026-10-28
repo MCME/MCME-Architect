@@ -39,6 +39,8 @@ import static org.junit.jupiter.api.Assertions.*;
 // -1 and z -6 to -1 of the 26.2 test world, all painted with cbc:111g380-5p and partly with mcme:custom_003; as
 // r.0.0.mca the same chunks lie one region further on, at x and z 26 to 31. A fill that must not get further than its
 // first file is held by a Sleeper that blocks: at 0.1 MB/s the fill sleeps after its first file.
+// The same thread reads the saved copies of chunks that unloaded, and of selections. Their looks are timed on a fake
+// clock that a test moves on; the time each chunk was saved is set in its region file's header.
 class PaintScanTest {
 
     private static final String CBC = "cbc:111g380-5p";
@@ -49,6 +51,10 @@ class PaintScanTest {
     private static final Duration WAIT = Duration.ofSeconds(30);
     private static final PaintScan.Sleeper NO_SLEEP = millis -> {
     };
+    /** The second a chunk unloaded at, or a WorldEdit command came, in the saved-read tests. */
+    private static final long UNLOADED = 1_800_000_000L;
+    /** The milliseconds from a saved read's request to each of its looks: 2 s, then 2, 5, 15 and 30 s more. */
+    private static final long[] LOOKS = {2_000, 2_000, 5_000, 15_000, 30_000};
 
     @TempDir
     Path dir;
@@ -62,6 +68,8 @@ class PaintScanTest {
     /** The chunks handed to the live reads, in order. */
     private final List<Handed> handed = new ArrayList<>();
     private final Logged logged = new Logged();
+    /** The clock the looks at saved copies are timed on, in nanoseconds. */
+    private final AtomicLong clock = new AtomicLong();
 
     /** A chunk the fill handed to the live reads. */
     private record Handed(String world, int x, int z) {}
@@ -86,7 +94,41 @@ class PaintScanTest {
 
     private PaintScan scan(double megabytesPerSecond, PaintScan.Sleeper sleeper) {
         return new PaintScan(plugin, store, w -> regionFolder(w.getName()), () -> IDS, changes::add,
-                (worldName, x, z) -> handed.add(new Handed(worldName, x, z)), megabytesPerSecond, sleeper);
+                (worldName, x, z) -> handed.add(new Handed(worldName, x, z)), megabytesPerSecond, sleeper, clock::get);
+    }
+
+    /** Moves the clock of the looks at saved copies on. */
+    private void later(long millis) {
+        clock.addAndGet(millis * 1_000_000);
+    }
+
+    /** Waits for the scan thread to make the looks that are due, and lets the main thread take what they found. */
+    private void look() {
+        awaitIdle();
+        ticks(1);
+    }
+
+    /** Every look at a saved read, from its request to its last. */
+    private void allLooks() {
+        for (long wait : LOOKS) {
+            later(wait);
+            look();
+        }
+    }
+
+    /** The world's region file that a test sets the save times in: a copy of the fixture. */
+    private Path firstFile(String worldName) {
+        return regionFolder(worldName).resolve(FIRST);
+    }
+
+    /** Sets the time the chunk's copy in the fixture was saved, as the game would. */
+    private void savedAt(String worldName, int chunkX, int chunkZ, long epochSecond) throws IOException {
+        RegionFixtures.savedAt(firstFile(worldName), RegionFixtures.indexOf(chunkX, chunkZ), epochSecond);
+    }
+
+    /** The fixture's paint of a chunk. */
+    private static ChunkPaint saved(int chunkX, int chunkZ) throws IOException {
+        return fixturePaints(0, 0).get(PaintRecord.chunkKey(chunkX, chunkZ));
     }
 
     private Path regionFolder(String worldName) {
@@ -525,6 +567,294 @@ class PaintScanTest {
         ticks(1);
 
         assertTrue(store.record("other").fillDone(), "a new thread read it");
+    }
+
+    // A watched chunk that unloads has its saved copy read, off the main thread, 2 seconds later: the game writes a
+    // chunk that changed as it unloads, and stamps the second it wrote it at in the region file's header. A copy
+    // stamped at the unload's second or later goes into the record. An empty one does too: it takes a stale entry out.
+    @Test
+    void aSavedCopyWrittenAfterTheUnloadIsRecorded() throws IOException {
+        regionFiles("world", FIRST);
+        savedAt("world", -3, -4, UNLOADED + 1);
+        savedAt("world", -1, -1, UNLOADED);
+        Path plain = regionFolder("world").resolve(SECOND); // chunk (0, 0), saved without a custom biome
+        RegionFixtures.region(plain, Map.of(0, RegionFixtures.chunk(4903, "minecraft:full",
+                Map.of(0, Collections.nCopies(64, "minecraft:plains")))), 2, UNLOADED + 2);
+        PaintRecord record = store.turnOn("world", key -> false);
+        record.put(-3, -4, paint("cbc:before"));
+        record.put(0, 0, paint("cbc:stale"));
+        store.saveDirty();
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", -3, -4, UNLOADED);
+        scan.unloaded("world", -1, -1, UNLOADED);
+        scan.unloaded("world", 0, 0, UNLOADED);
+        later(1_999);
+        look();
+        assertEquals(paint("cbc:before"), record.get(-3, -4), "not looked at before 2 seconds have passed");
+        later(1);
+        look();
+
+        assertEquals(saved(-3, -4), record.get(-3, -4), "the copy written as it unloaded");
+        assertEquals(saved(-1, -1), record.get(-1, -1), "a copy written in the second of the unload counts");
+        assertTrue(record.get(0, 0).isEmpty(), "an empty copy takes the stale entry out");
+        assertEquals(2, record.chunks().size());
+        assertEquals(List.of("world"), changes, "the map hears of them at once");
+        assertEquals(List.of(), handed);
+        store.saveDirty();
+        assertEquals(record.chunks(), PaintRecord.load(dir.resolve("records").resolve("world.dat")).chunks(),
+                "the record was marked to be saved");
+    }
+
+    // The game writes a chunk that unloads a moment later, on a thread of its own. A copy stamped before the unload is
+    // the one from before: it is not taken, and the chunk is looked at again.
+    @Test
+    void aSavedCopyNotYetWrittenIsTriedAgain() throws IOException {
+        regionFiles("world", FIRST);
+        savedAt("world", -3, -4, UNLOADED - 60);
+        PaintRecord record = store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", -3, -4, UNLOADED);
+        later(2_000);
+        look();
+        assertTrue(record.chunks().isEmpty(), "the copy from before the unload is not taken");
+
+        savedAt("world", -3, -4, UNLOADED + 3); // the game's write lands
+        later(1_999);
+        look();
+        assertTrue(record.chunks().isEmpty(), "the second look is 2 seconds after the first");
+        later(1);
+        look();
+
+        assertEquals(saved(-3, -4), record.get(-3, -4), "taken at the second look");
+        assertEquals(List.of("world"), changes);
+    }
+
+    // A copy that is still older than the unload at the last look, a minute after it, is never taken: the record keeps
+    // what a live read found there, which differs from it. The chunk is counted, and told once, at the next minute.
+    @Test
+    void aSavedReadThatNeverLandsIsCountedAndLoggedOnce() throws IOException {
+        regionFiles("world", FIRST);
+        savedAt("world", -3, -4, UNLOADED - 60);
+        PaintRecord record = store.turnOn("world", key -> false);
+        ChunkPaint live = paint("cbc:live");
+        record.put(-3, -4, live);
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", -3, -4, UNLOADED);
+        for (int i = 0; i < LOOKS.length - 1; i++) {
+            later(LOOKS[i]);
+            look();
+            scan.logLate();
+        }
+        assertEquals(List.of(), logged.messages(Level.INFO), "not counted before the last look");
+        later(LOOKS[LOOKS.length - 1]);
+        look();
+        assertEquals(live, record.get(-3, -4), "an older copy is never taken");
+
+        scan.logLate(); // the minute's line
+        later(60_000);
+        look();
+        scan.logLate(); // and nothing new to tell a minute later
+
+        List<String> told = logged.messages(Level.INFO);
+        assertEquals(1, told.size(), told.toString());
+        assertTrue(told.get(0).endsWith("Custom biomes layer: 1 chunk unloaded, but its saved copy was not written in "
+                + "time to be read; /architect maplayers scan world catches it."), told.get(0));
+        assertEquals(List.of(), changes);
+    }
+
+    // A chunk whose region file holds no copy of it, or whose region file is not there at all, at the last look is
+    // counted as well: so a folder that is not where the game saves is seen in the log.
+    @Test
+    void aChunkWithNoSavedCopyAtTheLastLookIsCounted() throws IOException {
+        regionFiles("world", FIRST);
+        store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", -10, -10, UNLOADED); // r.-1.-1.mca holds no copy of it
+        scan.unloaded("world", 40, 40, UNLOADED); // r.1.1.mca is not there
+        allLooks();
+        scan.logLate();
+
+        List<String> told = logged.messages(Level.INFO);
+        assertEquals(1, told.size(), told.toString());
+        assertTrue(told.get(0).endsWith("Custom biomes layer: 2 chunks unloaded, but their saved copies were not "
+                + "written in time to be read; /architect maplayers scan world catches them."), told.get(0));
+    }
+
+    // The game writes only a chunk that changed since it was last saved. One that a builder only walked past keeps its
+    // older copy, and the record agrees with it already: there was nothing to miss, so it is not counted.
+    @Test
+    void anUnchangedChunkThatTheGameDoesNotWriteAgainIsNotCounted() throws IOException {
+        regionFiles("world", FIRST);
+        savedAt("world", -3, -4, UNLOADED - 600);
+        PaintRecord record = store.turnOn("world", key -> false);
+        record.put(-3, -4, saved(-3, -4)); // what a live read found while it was loaded
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", -3, -4, UNLOADED);
+        allLooks();
+        scan.logLate();
+
+        assertEquals(List.of(), logged.messages(Level.INFO));
+        assertEquals(saved(-3, -4), record.get(-3, -4));
+        assertEquals(List.of(), changes);
+    }
+
+    // A player may load the chunk again before its copy is looked at. Its saved copy may be older than what the game
+    // holds now, so the chunk goes to the live reads, and the record is left as it is.
+    @Test
+    void aChunkLoadedAgainBeforeItsSavedReadIsReadLive() throws IOException {
+        regionFiles("world", FIRST);
+        savedAt("world", -3, -4, UNLOADED + 1);
+        PaintRecord record = store.turnOn("world", key -> false);
+        ChunkPaint live = paint("cbc:live");
+        record.put(-3, -4, live);
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", -3, -4, UNLOADED);
+        world.getChunkAt(-3, -4); // loaded again
+        later(2_000);
+        look();
+
+        assertEquals(List.of(new Handed("world", -3, -4)), handed, "the live reads take it");
+        assertEquals(live, record.get(-3, -4), "the record is left as it is");
+        assertEquals(List.of(), changes);
+    }
+
+    // A saved read asked for before the world was switched off, or before a scan of it started over, does not reach
+    // the record: the world is off, or read again from the start.
+    @Test
+    void aSavedReadOfAWorldSwitchedOffOrScannedAgainIsDropped() throws IOException {
+        regionFiles("world", FIRST);
+        savedAt("world", -3, -4, UNLOADED + 1);
+        store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+        scan.unloaded("world", -3, -4, UNLOADED);
+        store.turnOff("world");
+        PaintRecord again = store.turnOn("world", key -> false);
+        later(2_000);
+        look();
+        assertTrue(again.chunks().isEmpty(), "asked for under the record of before");
+        assertEquals(List.of(), changes, "and nothing changed");
+
+        scan.unloaded("world", -3, -4, UNLOADED);
+        assertEquals(PaintScan.Start.STARTED, scan.start(world)); // the scan starts over
+        awaitIdle();
+        ticks(1);
+        again.clearExcept(key -> false); // what the new fill read, so that the saved read would show
+        later(2_000);
+        look();
+
+        assertTrue(again.chunks().isEmpty(), "asked for before the new fill started");
+    }
+
+    // A stop drops the saved reads asked for, and what a look found that waits for the main thread when it comes.
+    @Test
+    void savedReadsStopWithTheLayer() throws IOException {
+        regionFiles("world", FIRST);
+        savedAt("world", -3, -4, UNLOADED + 1);
+        savedAt("world", -1, -1, UNLOADED + 1);
+        PaintRecord record = store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+        scan.unloaded("world", -3, -4, UNLOADED);
+        later(2_000);
+        awaitIdle(); // looked at: its copy waits for the main thread
+        scan.unloaded("world", -1, -1, UNLOADED); // not looked at yet
+
+        scan.stop();
+        later(60_000);
+        ticks(1);
+        scan.unloaded("world", -1, -1, UNLOADED); // asked for after the stop
+        later(60_000);
+        ticks(1);
+
+        assertTrue(record.chunks().isEmpty());
+        assertEquals(List.of(), changes);
+        assertEquals(List.of(), server.getScheduler().getPendingTasks());
+    }
+
+    // At the second read of a selection, 30 seconds after the command, the saved copies of its chunks that the game
+    // wrote at the command's second or later are read: the edit's. A chunk that is loaded goes to the live reads, once.
+    // Most WorldEdit commands change nothing, and the game writes only chunks that changed, so a copy that stays older
+    // is looked at again, then left alone, and not counted.
+    @Test
+    void aSelectionTakesTheSavedCopiesWrittenSinceItsCommand() throws IOException {
+        regionFiles("world", FIRST);
+        for (int x = -6; x <= -1; x++) {
+            for (int z = -6; z <= -1; z++) {
+                savedAt("world", x, z, UNLOADED - 60);
+            }
+        }
+        savedAt("world", -3, -4, UNLOADED + 5);
+        savedAt("world", -2, -2, UNLOADED);
+        savedAt("world", -1, -1, UNLOADED + 5); // outside the box
+        world.getChunkAt(-2, -2);
+        PaintRecord record = store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.selected(new SelectionSource.ChunkBox("world", -4, -4, -2, -2), UNLOADED);
+        later(2_000);
+        look();
+        assertEquals(Map.of(PaintRecord.chunkKey(-3, -4), saved(-3, -4)), record.chunks());
+        assertEquals(List.of(new Handed("world", -2, -2)), handed);
+
+        savedAt("world", -4, -4, UNLOADED + 40); // the edit reaches another chunk
+        for (int i = 1; i < LOOKS.length; i++) {
+            later(LOOKS[i]);
+            look();
+        }
+        scan.logLate();
+
+        assertEquals(Map.of(PaintRecord.chunkKey(-3, -4), saved(-3, -4), PaintRecord.chunkKey(-4, -4), saved(-4, -4)),
+                record.chunks(), "a copy written after the first look is taken at a later one");
+        assertEquals(List.of(new Handed("world", -2, -2)), handed, "not handed over again at every look");
+        assertEquals(List.of(), logged.messages(Level.INFO), "the copies that stayed older are not counted");
+    }
+
+    // A selection may cover thousands of region files' worth of land: only the files that are there are read.
+    @Test
+    void aSelectionOfBillionsOfChunksReadsTheFilesThatAreThere() throws IOException {
+        regionFiles("world", FIRST);
+        savedAt("world", -3, -4, UNLOADED + 5);
+        PaintRecord record = store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.selected(new SelectionSource.ChunkBox("world", -20_000, -20_000, 20_000, 20_000), UNLOADED);
+        later(2_000);
+        assertTimeout(Duration.ofSeconds(10), this::look);
+
+        assertEquals(Map.of(PaintRecord.chunkKey(-3, -4), saved(-3, -4)), record.chunks());
+    }
+
+    // The saved reads share the scan thread with the fills. They are small, so they go first: between two region files
+    // of a fill, not after its last.
+    @Test
+    void savedCopiesAreReadBetweenTheFilesOfAFill() throws IOException {
+        server.addSimpleWorld("other");
+        regionFiles("world", FIRST, SECOND);
+        regionFiles("other", FIRST);
+        savedAt("other", -3, -4, UNLOADED + 1);
+        store.turnOn("world", key -> false);
+        PaintRecord other = store.turnOn("other", key -> false);
+        Gate gate = new Gate(false);
+        scan = scan(0.1, gate);
+        scan.start(world);
+        gate.awaitReached(); // the first file is read, and the fill waits out its pace
+        ticks(1);
+        assertEquals(List.of("world"), changes);
+
+        scan.unloaded("other", -3, -4, UNLOADED);
+        later(2_000);
+        gate.release();
+        awaitIdle();
+        ticks(1);
+
+        assertEquals(List.of("world", "other", "world"), changes, "the saved copy before the fill's second file");
+        assertEquals(saved(-3, -4), other.get(-3, -4));
+        assertTrue(store.record("world").fillDone());
     }
 
     /**
