@@ -54,10 +54,10 @@ import java.util.regex.Pattern;
  *     off, or off and on again, is stopped there instead. What a look at saved copies found goes in there too, and the
  *     copies that were not written in time are counted there.</li>
  *     <li><b>The scan thread</b> reads the files and the saved copies, and hands what it read to the main thread
- *     through the scheduler: one task a file, one for each tenth of the files read, which the log tells, one at the end,
- *     and one for each round of looks at saved copies. It never touches a record. A fill that fails there with an
- *     Error, such as running out of memory, is logged with its stack trace and dropped on the main thread, and the
- *     next fill runs.</li>
+ *     through the scheduler: one task a file, one for each tenth of the files read, which the log tells, one at the
+ *     end, and one for each region file a round of looks at saved copies found copies in. It never touches a record. A
+ *     fill that fails there with an Error, such as running out of memory, is logged with its stack trace and dropped
+ *     on the main thread, and the next fill runs.</li>
  *     <li><b>Both</b> use the queue of waiting fills, the fill being read, the saved reads waiting for their next look
  *     and the stop flag, under this object's lock. A cancel interrupts the thread only while the fill it ends is the
  *     one being read and no saved copies are, and the thread clears any interrupt before it takes the next fill, so a
@@ -661,12 +661,13 @@ public final class PaintScan implements PaintTracker.SavedReads {
 
     /**
      * Scan thread: one look at each saved read that is due. A region file is opened once a look, however many of its
-     * chunks are asked for: a teleport unloads hundreds at once. What the look found goes to the main thread in one
-     * hand-over. A read that still waits for a copy is looked at again, until its last look: then a chunk that unloaded
-     * and has only an older copy is handed over with it, and one whose region file holds no copy is handed over as
-     * such. What cannot be read is not late, and is not handed over: a region file that fails to read is looked at
-     * again, and a chunk that cannot be read too, unless it stays so until the game saves it anew. Both are told in the
-     * log, once a world and reason while it lasts, and given up at the last look.
+     * chunks are asked for: a teleport unloads hundreds at once. What a file held goes to the main thread on its own,
+     * as a fill's files do, so that no task there takes more than a file's 1,024 chunks; the chunks found to have no
+     * copy follow, in parts of that size. A read that still waits for a copy is looked at again, until its last look:
+     * then a chunk that unloaded and has only an older copy is handed over with it, and one whose region file holds no
+     * copy is handed over as such. What cannot be read is not late, and is not handed over: a region file that fails to
+     * read is looked at again, and a chunk that cannot be read too, unless it stays so until the game saves it anew.
+     * Both are told in the log, once a world and reason while it lasts, and given up at the last look.
      */
     private void look(List<SavedRead> due) {
         Map<Path, List<SavedRead>> byFile = new TreeMap<>();
@@ -676,7 +677,6 @@ public final class PaintScan implements PaintTracker.SavedReads {
                 byFile.computeIfAbsent(file, key -> new ArrayList<>()).add(read);
             }
         }
-        List<Found> found = new ArrayList<>();
         // the reads with a chunk in a region file whose copy has not come, or could not be read
         Set<SavedRead> waiting = new HashSet<>();
         // the reads whose region file failed to read at this look, and what this look could not read, by world
@@ -689,6 +689,7 @@ public final class PaintScan implements PaintTracker.SavedReads {
             }
             List<SavedRead> reads = file.getValue();
             String world = reads.get(0).world; // a folder is one world's
+            List<Found> found = new ArrayList<>(); // what this file held
             try {
                 reads.get(0).reader.readSaved(file.getKey(), (x, z, savedAt) -> {
                     boolean wanted = false;
@@ -736,6 +737,9 @@ public final class PaintScan implements PaintTracker.SavedReads {
                         + " chunks of " + world + " in " + file.getKey().getFileName() + ", so they are not brought up"
                         + " to date from it. This is logged once while it lasts.");
             }
+            if (!found.isEmpty() && !handOver(() -> mergeSaved(found))) {
+                return;
+            }
         }
         // a reason no longer met at a look of its world is told again when it comes back
         for (String world : looked) {
@@ -746,6 +750,7 @@ public final class PaintScan implements PaintTracker.SavedReads {
             });
         }
         List<SavedRead> again = new ArrayList<>();
+        List<Found> none = new ArrayList<>();
         for (SavedRead read : due) {
             if (read.unload) {
                 if (!read.taken.isEmpty()) {
@@ -755,7 +760,7 @@ public final class PaintScan implements PaintTracker.SavedReads {
                     if (failed.contains(read)) {
                         continue; // told, and not late
                     }
-                    found.add(new Found(read, read.box.minX(), read.box.minZ(), null, Copy.NONE));
+                    none.add(new Found(read, read.box.minX(), read.box.minZ(), null, Copy.NONE));
                 } else {
                     again.add(read);
                 }
@@ -763,8 +768,11 @@ public final class PaintScan implements PaintTracker.SavedReads {
                 again.add(read);
             }
         }
-        if (!found.isEmpty() && !handOver(() -> mergeSaved(found))) {
-            return;
+        for (int from = 0; from < none.size(); from += REGION * REGION) {
+            List<Found> part = List.copyOf(none.subList(from, Math.min(none.size(), from + REGION * REGION)));
+            if (!handOver(() -> mergeSaved(part))) {
+                return;
+            }
         }
         synchronized (this) {
             if (stopped) {

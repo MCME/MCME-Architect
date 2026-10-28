@@ -601,7 +601,7 @@ class PaintScanTest {
         assertEquals(saved(-1, -1), record.get(-1, -1), "a copy written in the second of the unload counts");
         assertTrue(record.get(0, 0).isEmpty(), "an empty copy takes the stale entry out");
         assertEquals(2, record.chunks().size());
-        assertEquals(List.of("world"), changes, "the map hears of them at once");
+        assertEquals(List.of("world", "world"), changes, "the map hears of each region file's at once");
         assertEquals(List.of(), handed);
         store.saveDirty();
         assertEquals(record.chunks(), PaintRecord.load(dir.resolve("records").resolve("world.dat")).chunks(),
@@ -983,6 +983,28 @@ class PaintScanTest {
 
         assertEquals(saved(-3, -4), other.get(-3, -4), "the look read the copy");
         assertEquals(List.of(), warnings());
+    }
+
+    // A look hands what it found to the main thread one region file at a time, as a fill does its files, so that a
+    // selection with thousands of changed chunks never lands in one task of the main thread: two files, two tasks.
+    @Test
+    void aLookHandsOverWhatItFoundOneRegionFileAtATime() throws IOException {
+        regionFiles("world", FIRST, SECOND);
+        savedAt("world", -3, -4, UNLOADED + 1);
+        RegionFixtures.savedAt(regionFolder("world").resolve(SECOND), RegionFixtures.indexOf(29, 28), UNLOADED + 1);
+        PaintRecord record = store.turnOn("world", key -> false);
+        scan = scan(20, NO_SLEEP);
+
+        scan.unloaded("world", -3, -4, UNLOADED);
+        scan.unloaded("world", 29, 28, UNLOADED); // the same chunk of the fixture, in r.0.0.mca
+        later(2_000);
+        awaitIdle();
+
+        assertEquals(2, server.getScheduler().getPendingTasks().size(), "a task for each region file");
+        ticks(1);
+        assertEquals(List.of("world", "world"), changes);
+        assertEquals(saved(-3, -4), record.get(-3, -4));
+        assertEquals(saved(-3, -4), record.get(29, 28));
     }
 
     /** The log's lines about saved copies not written in time. */
