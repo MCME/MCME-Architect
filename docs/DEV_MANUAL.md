@@ -1102,8 +1102,9 @@ The layer only reads: it never writes to a world.
   (`display` and `float` go). So the window uses only `div`, `table`, `b`, `code` and `span`, with inline styles of
   plain CSS, and `BiomeWindowTest` checks that. The sanitiser also rewrites what it keeps (entities become characters,
   `tbody` is added), without changing the look. A window keeps the colour it was built with, so
-  `BiomeShapes.recolour` marks the world of an area it restyled, and `factsChanged()` says so until the world is built
-  again.
+  `BiomeShapes.recolour` marks the world of an area it restyled, and `factsChanged()` says so until a rebuild of that
+  world starts, as it does for a changed name or settings: a build that fails or runs long delivers no finish, and must
+  not make every check draw every world again.
 - **Seams with hidden borders.** A map area cannot have a hole, so `PaintRegions` joins each hole to the outline with a
   seam: a cut out to the hole and back along one line. A seam would show as a line, so a region with holes is drawn with
   the line opacity `BiomeShapes.SEAM_OPACITY` (0.01, because LiveAtlas draws 0 as 1): its border is hidden.

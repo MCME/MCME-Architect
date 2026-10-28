@@ -681,6 +681,91 @@ class BiomeShapesTest {
         assertFalse(shapes.factsChanged());
     }
 
+    // Like a changed name, a colour that left a window behind is dealt with once the world's rebuild has started, which
+    // reads the colours anew: the next check must not ask for another while that one is under way.
+    @Test
+    void aWorldBeingDrawnAgainIsNotBehindAtTheNextCheck() throws IOException {
+        keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
+        Held background = new Held();
+        shapes = shapes(background, Runnable::run);
+        Map<Long, ChunkPaint> a = new Paint().add("cbc:q", 0, 0).chunks();
+        shapes.rebuild("a", a);
+        background.runAll();
+        // in b, q touches r, which had colour 1 first, so q takes another: a's window is behind
+        shapes.rebuild("b", new Paint().add("cbc:q", 0, 0).add("cbc:r", 1, 0).chunks());
+        background.runAll();
+        assertTrue(shapes.factsChanged());
+
+        shapes.rebuild("a", a); // the check draws a again, and its build has not run yet
+
+        assertFalse(shapes.factsChanged(), "a is being drawn again: another build would not help");
+        background.runAll();
+        assertTrue(area("cb.a.0.0.cbc:q").description().contains("solid " + hex(PALETTE[index("cbc:q")]) + ";"));
+        assertFalse(shapes.factsChanged());
+    }
+
+    // A build that fails, or that takes longer than the 10 seconds between two checks, delivers no finish to clear the
+    // mark. The world must not be marked for good: every check would draw every world again, and say why in the log.
+    @Test
+    void aRecolouredWorldWhoseBuildFailsIsNotDrawnAgainEveryTenSeconds() throws IOException {
+        keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
+        Map<Long, ChunkPaint> a = new Paint().add("cbc:q", 0, 0).chunks();
+        Map<Long, ChunkPaint> b = new Paint().add("cbc:q", 0, 0).add("cbc:r", 1, 0).chunks();
+        boolean[] failing = {false};
+        // while this is set, a build fails when it hands its result over, as any exception in a build would: no finish
+        shapes = shapes(Runnable::run, task -> {
+            if (failing[0]) {
+                throw new IllegalStateException("the hand-over failed");
+            }
+            task.run();
+        });
+        shapes.rebuild("a", a);
+        shapes.rebuild("b", b); // q takes another colour: a's window is behind
+        assertTrue(shapes.factsChanged());
+        failing[0] = true;
+
+        int drawnAgain = 0;
+        for (int check = 0; check < 5; check++) { // what the timer does every 10 seconds: draw every world again
+            if (shapes.factsChanged()) {
+                drawnAgain++;
+                shapes.rebuild("a", a);
+                shapes.rebuild("b", b);
+            }
+        }
+
+        assertEquals(1, drawnAgain, "drawn again once, not at every check");
+        assertEquals(2, messages(Level.WARNING).size(), "a failure for each of the two builds: "
+                + messages(Level.WARNING));
+    }
+
+    // Another world's recolour can mark a world after its rebuild has started. That build began after the new colours
+    // were taken, so its windows have them, and the mark ends with its finish.
+    @Test
+    void aMarkSetWhileAWorldIsBeingDrawnAgainEndsWithTheFinishOfItsBuild() throws IOException {
+        keptColours(List.of("cbc:r;1;1", "cbc:q;1;2"));
+        Held background = new Held();
+        Held mainThread = new Held();
+        shapes = shapes(background, mainThread);
+        Map<Long, ChunkPaint> a = new Paint().add("cbc:q", 0, 0).chunks();
+        shapes.rebuild("a", a);
+        background.runAll();
+        mainThread.runAll();
+        // b gives q another colour on the background thread; its result has not reached the main thread yet
+        shapes.rebuild("b", new Paint().add("cbc:q", 0, 0).add("cbc:r", 1, 0).chunks());
+        background.runAll();
+
+        shapes.rebuild("a", a); // starts after the new colours, and before they reach a's areas
+        mainThread.runAll(); // b's result: a's areas take the new colour, and a is marked
+        assertTrue(shapes.factsChanged(), "marked after its rebuild started");
+        background.runAll();
+        mainThread.runAll();
+
+        int q = PALETTE[index("cbc:q")];
+        assertNotEquals(PALETTE[1], q);
+        assertTrue(area("cb.a.0.0.cbc:q").description().contains("solid " + hex(q) + ";"), "built with the new colour");
+        assertFalse(shapes.factsChanged(), "so none is behind");
+    }
+
     @Test
     void forgetDropsTheWorldFromTheColourUnion() throws IOException {
         keptColours(threeAndFillers()); // with a and b both on the layer, q gets colour 2: see the test above

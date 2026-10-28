@@ -86,7 +86,8 @@ public final class BiomeShapes {
     private final Set<String> unreadable = new HashSet<>();
     /**
      * Main thread: the worlds with an area that took a new colour after its window was built. The header of a window
-     * has its biome's colour, so such a window still shows the old one until the world is built again.
+     * has its biome's colour, so such a window still shows the old one until the world is drawn again: the mark goes
+     * when a rebuild of the world starts, and again when one finishes, for a colour that changed between the two.
      */
     private final Set<String> behindInColour = new HashSet<>();
     /** Background thread: what each world's newest rebuild found, for the colours. */
@@ -131,6 +132,9 @@ public final class BiomeShapes {
         Map<String, Facts> used = Map.copyOf(read);
         long generation = generations.merge(world, 1L, Long::sum);
         factsRead.put(world, used);
+        // drawn again from here on, like a name or settings once they are read: a build that fails, or one that takes
+        // longer than a check, delivers no finish to clear the mark, and every check would start another build
+        behindInColour.remove(world);
         background.execute(() -> build(world, generation, chunks, used));
     }
 
@@ -168,8 +172,8 @@ public final class BiomeShapes {
     /**
      * Whether a biome of a world on the layer now has another name or other settings than its world's latest rebuild
      * read, or an area of a world has taken a new colour since its window was built, so that its windows are behind. A
-     * world held back counts too for a name or settings, since its size changes with them. Main thread only: it reads
-     * them.
+     * world held back counts too for a name or settings, since its size changes with them. Once a rebuild of a world
+     * has started, the colour no longer counts, whether or not that rebuild ends. Main thread only: it reads them.
      */
     boolean factsChanged() {
         if (!behindInColour.isEmpty()) {
@@ -290,7 +294,9 @@ public final class BiomeShapes {
     private void finish(String world, long generation, List<Shown> shown, int bytes, boolean recoloured) {
         boolean changed = false;
         if (latest(world, generation)) {
-            behindInColour.remove(world); // its windows are new, and a colour that changed since is dealt with below
+            // its windows are new, which also settles a mark that another world's recolour set since the rebuild
+            // started; a colour that changed after they were built marks the world again below
+            behindInColour.remove(world);
             long kb = Math.round(bytes / 1000.0);
             if (bytes > MarkerSize.TARGET) {
                 drawn.remove(world);
