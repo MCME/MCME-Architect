@@ -613,7 +613,12 @@ public final class PaintScan implements PaintTracker.SavedReads {
         return Math.max(1, Math.ceilDiv(savedReads.peek().dueNanos - nanoClock.getAsLong(), 1_000_000));
     }
 
-    /** Scan thread, between two files of a fill: the looks at saved copies that are due, which are small, come first. */
+    /**
+     * Scan thread, between two files of a fill: the looks at saved copies that are due, which are small, come first. A
+     * cancel's interrupt that came after the last file was read is still pending here. It is meant for the fill, so it
+     * is set aside while the looks read, which it would cut short, and put back for the fill after them. A stop is
+     * seen through its flag.
+     */
     private void serveDue() {
         List<SavedRead> due;
         synchronized (this) {
@@ -623,7 +628,14 @@ public final class PaintScan implements PaintTracker.SavedReads {
             }
             serving = true;
         }
-        serve(due);
+        boolean interrupted = Thread.interrupted();
+        try {
+            serve(due);
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     /**

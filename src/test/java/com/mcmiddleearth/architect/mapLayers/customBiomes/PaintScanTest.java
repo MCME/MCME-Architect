@@ -958,6 +958,33 @@ class PaintScanTest {
         assertEquals(paint("cbc:before"), record.get(0, 0), "the record keeps what it holds");
     }
 
+    // A cancel interrupts the thread while it reads a fill. Should the interrupt still be pending when the looks between
+    // two of its files come, it must not cut them short: the look reads the copy, and the interrupt is left for the fill.
+    @Test
+    void anInterruptLeftForTheFillDoesNotCutALookShort() throws IOException {
+        server.addSimpleWorld("other");
+        regionFiles("world", FIRST, SECOND);
+        regionFiles("other", FIRST);
+        savedAt("other", -3, -4, UNLOADED + 1);
+        store.turnOn("world", key -> false);
+        PaintRecord other = store.turnOn("other", key -> false);
+        AtomicBoolean once = new AtomicBoolean();
+        scan = scan(0.1, millis -> {
+            if (once.compareAndSet(false, true)) {
+                later(2_000); // the look comes due while the fill reads its first file
+                Thread.currentThread().interrupt(); // as a cancel's interrupt that came after that file was read
+            }
+        });
+        scan.unloaded("other", -3, -4, UNLOADED);
+
+        scan.start(world);
+        awaitIdle();
+        ticks(1);
+
+        assertEquals(saved(-3, -4), other.get(-3, -4), "the look read the copy");
+        assertEquals(List.of(), warnings());
+    }
+
     /** The log's lines about saved copies not written in time. */
     private List<String> late() {
         return logged.messages(Level.INFO).stream().filter(line -> line.contains("not written in time")).toList();
