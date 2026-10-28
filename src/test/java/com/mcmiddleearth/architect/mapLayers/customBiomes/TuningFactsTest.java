@@ -21,7 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,6 +39,9 @@ class TuningFactsTest {
 
     @TempDir
     Path dir;
+
+    /** The milliseconds the facts' clock shows: a test moves it by hand. */
+    private final AtomicLong now = new AtomicLong(1_700_000_000_000L);
 
     /** JSON written with single quotes, to keep the tests readable. */
     private static String q(String json) {
@@ -512,7 +518,7 @@ class TuningFactsTest {
             throw new BiomeTuningException("mcme-biometune.json could not be read");
         }, key -> {
             throw new BiomeTuningException("no datapack defines " + key);
-        }, () -> true);
+        }, () -> true, now::get);
 
         assertNull(facts.label(ID));
         assertNull(facts.settings(ID));
@@ -529,7 +535,7 @@ class TuningFactsTest {
         }, key -> {
             documentsFor.add(key);
             return document;
-        }, () -> true);
+        }, () -> true, now::get);
 
         assertEquals("Old harbour", facts.label(ID));
         assertEquals(List.of("0.8"), texts(facts.settings(ID), "Climate"));
@@ -546,7 +552,7 @@ class TuningFactsTest {
         }, key -> {
             asked.incrementAndGet();
             return null;
-        }, () -> true);
+        }, () -> true, now::get);
 
         assertNull(facts.label("Not A Key"));
         assertNull(facts.settings("Not A Key"));
@@ -555,7 +561,7 @@ class TuningFactsTest {
 
     @Test
     void aLabelBiomeTuningDoesNotHaveIsNoLabel() {
-        TuningFacts facts = TuningFacts.reading(key -> Optional.empty(), key -> null, () -> true);
+        TuningFacts facts = TuningFacts.reading(key -> Optional.empty(), key -> null, () -> true, now::get);
 
         assertNull(facts.label(ID));
     }
@@ -566,9 +572,221 @@ class TuningFactsTest {
             throw new AssertionError("asked for a label");
         }, key -> {
             throw new AssertionError("asked for a document");
-        }, () -> false);
+        }, () -> false, now::get);
 
         assertNull(facts.label(ID));
         assertNull(facts.settings(ID));
+    }
+
+    // --- what failed is remembered for a minute ---
+    // Biome tuning keeps nothing of a failure, and finding out costs a scan of the datapacks folder (or a new reading
+    // of the labels file), so a window that asks for every shown biome at each redraw must not ask again at once.
+
+    /** A look-up that always fails, and counts how often it was asked. */
+    private static <T> TuningFacts.Lookup<T> failing(AtomicInteger asked) {
+        return key -> {
+            asked.incrementAndGet();
+            throw new BiomeTuningException("cannot answer for " + key);
+        };
+    }
+
+    @Test
+    void aBiomeWhoseDefinitionCannotBeFoundIsAskedAboutOnlyOnceAMinute() {
+        long start = now.get();
+        AtomicInteger asked = new AtomicInteger();
+        TuningFacts facts = TuningFacts.reading(key -> Optional.empty(), failing(asked), () -> true, now::get);
+
+        assertNull(facts.settings(ID));
+        assertEquals(1, asked.get());
+        now.set(start + 1);
+        assertNull(facts.settings(ID));
+        now.set(start + 59_999);
+        assertNull(facts.settings(ID));
+        assertEquals(1, asked.get(), "asked once, and not again within the minute");
+
+        now.set(start + 60_000);
+        assertNull(facts.settings(ID));
+        assertEquals(2, asked.get(), "asked again a minute after it failed");
+        now.set(start + 60_000 + 59_999);
+        assertNull(facts.settings(ID));
+        assertEquals(2, asked.get(), "and the second failure is remembered for a minute too");
+        now.set(start + 120_000);
+        assertNull(facts.settings(ID));
+        assertEquals(3, asked.get());
+    }
+
+    @Test
+    void aLabelsFileThatCannotBeReadIsAskedAboutOnlyOnceAMinute() {
+        long start = now.get();
+        AtomicInteger asked = new AtomicInteger();
+        TuningFacts facts = TuningFacts.reading(failing(asked), key -> null, () -> true, now::get);
+
+        assertNull(facts.label(ID));
+        assertEquals(1, asked.get());
+        now.set(start + 1);
+        assertNull(facts.label(ID));
+        now.set(start + 59_999);
+        assertNull(facts.label(ID));
+        assertEquals(1, asked.get(), "asked once, and not again within the minute");
+
+        now.set(start + 60_000);
+        assertNull(facts.label(ID));
+        assertEquals(2, asked.get(), "asked again a minute after it failed");
+        now.set(start + 60_000 + 59_999);
+        assertNull(facts.label(ID));
+        assertEquals(2, asked.get(), "and the second failure is remembered for a minute too");
+        now.set(start + 120_000);
+        assertNull(facts.label(ID));
+        assertEquals(3, asked.get());
+    }
+
+    @Test
+    void anAnswerIsNeverRemembered() throws Exception {
+        BiomeDocument document = document(q("{'temperature':0.8}"));
+        AtomicInteger asked = new AtomicInteger();
+        TuningFacts facts = TuningFacts.reading(key -> Optional.empty(), key -> {
+            asked.incrementAndGet();
+            return document;
+        }, () -> true, now::get);
+
+        for (int i = 0; i < 3; i++) {
+            assertEquals(List.of("0.8"), texts(facts.settings(ID), "Climate"));
+        }
+        assertEquals(3, asked.get(), "asked every time, also in the same millisecond");
+
+        TuningProperty temperature = TuningProperties.resolve("temperature").orElseThrow();
+        document.accept(document.with(temperature, new JsonPrimitive(2)));
+        assertEquals(List.of("2"), texts(facts.settings(ID), "Climate"), "and so the values are live");
+        assertEquals(4, asked.get());
+    }
+
+    @Test
+    void aLabelIsNeverRememberedEither() {
+        AtomicReference<Optional<String>> label = new AtomicReference<>(Optional.of("Old harbour"));
+        AtomicInteger asked = new AtomicInteger();
+        TuningFacts facts = TuningFacts.reading(key -> {
+            asked.incrementAndGet();
+            return label.get();
+        }, key -> null, () -> true, now::get);
+
+        assertEquals("Old harbour", facts.label(ID));
+        assertEquals("Old harbour", facts.label(ID));
+        label.set(Optional.of("Harbour of Pelargir"));
+        assertEquals("Harbour of Pelargir", facts.label(ID));
+        label.set(Optional.empty());
+        assertNull(facts.label(ID));
+        assertNull(facts.label(ID));
+        assertEquals(5, asked.get(), "a name, and no name, are read each time");
+    }
+
+    @Test
+    void whatFailedIsForgottenWhileBiomeTuningIsOffWhicheverFactIsAskedThen() {
+        for (boolean settingsAreAsked : new boolean[] {true, false}) {
+            AtomicInteger labelsAsked = new AtomicInteger();
+            AtomicInteger documentsAsked = new AtomicInteger();
+            AtomicBoolean on = new AtomicBoolean(true);
+            TuningFacts facts = TuningFacts.reading(failing(labelsAsked), failing(documentsAsked), on::get, now::get);
+            assertNull(facts.label(ID));
+            assertNull(facts.settings(ID));
+            assertNull(facts.label(ID));
+            assertNull(facts.settings(ID));
+            assertEquals(1, labelsAsked.get());
+            assertEquals(1, documentsAsked.get());
+
+            on.set(false);
+            // one fact is asked, and both memories go; nothing is asked of biome tuning while it is off
+            assertNull(settingsAreAsked ? facts.settings(ID) : facts.label(ID));
+            assertEquals(1, labelsAsked.get());
+            assertEquals(1, documentsAsked.get());
+            on.set(true);
+
+            assertNull(facts.label(ID));
+            assertNull(facts.settings(ID));
+            assertEquals(2, labelsAsked.get(), "asked again at once, a moment later: it may be a new service");
+            assertEquals(2, documentsAsked.get());
+        }
+    }
+
+    @Test
+    void aFailureIsRememberedForThatBiomeOnly() throws Exception {
+        BiomeDocument document = document(q("{'temperature':0.8}"));
+        List<String> asked = new ArrayList<>();
+        TuningFacts facts = TuningFacts.reading(key -> Optional.empty(), key -> {
+            asked.add(key.toString());
+            if (key.toString().equals("cbc:broken")) {
+                throw new BiomeTuningException("no datapack defines " + key);
+            }
+            return document;
+        }, () -> true, now::get);
+
+        assertNull(facts.settings("cbc:broken"));
+        assertNotNull(facts.settings("cbc:fine"));
+        assertNull(facts.settings("cbc:broken"));
+        assertNotNull(facts.settings("cbc:fine"));
+        assertEquals(List.of("cbc:broken", "cbc:fine", "cbc:fine"), asked);
+    }
+
+    @Test
+    void aBiomeWithNoReadableSettingsStillGetsItsName() {
+        AtomicInteger documentsAsked = new AtomicInteger();
+        TuningFacts facts = TuningFacts.reading(key -> Optional.of("Old harbour"), failing(documentsAsked), () -> true,
+                now::get);
+
+        assertNull(facts.settings(ID));
+        assertEquals("Old harbour", facts.label(ID));
+        assertNull(facts.settings(ID));
+        assertEquals("Old harbour", facts.label(ID));
+        assertEquals(1, documentsAsked.get());
+    }
+
+    @Test
+    void aBiomeWhoseNameCannotBeReadStillGetsItsSettings() throws Exception {
+        BiomeDocument document = document(q("{'temperature':0.8}"));
+        AtomicInteger labelsAsked = new AtomicInteger();
+        TuningFacts facts = TuningFacts.reading(failing(labelsAsked), key -> document, () -> true, now::get);
+
+        assertNull(facts.label(ID));
+        assertEquals(List.of("0.8"), texts(facts.settings(ID), "Climate"));
+        assertNull(facts.label(ID));
+        assertEquals(List.of("0.8"), texts(facts.settings(ID), "Climate"));
+        assertEquals(1, labelsAsked.get());
+    }
+
+    @Test
+    void aBiomeThatCanBeReadAgainIsReadLiveFromThenOn() throws Exception {
+        BiomeDocument document = document(q("{'temperature':0.8}"));
+        AtomicBoolean broken = new AtomicBoolean(true);
+        AtomicInteger asked = new AtomicInteger();
+        long start = now.get();
+        TuningFacts facts = TuningFacts.reading(key -> Optional.empty(), key -> {
+            asked.incrementAndGet();
+            if (broken.get()) {
+                throw new BiomeTuningException(key + " is defined in a zip pack");
+            }
+            return document;
+        }, () -> true, now::get);
+
+        assertNull(facts.settings(ID));
+        broken.set(false);
+        assertNull(facts.settings(ID));
+        assertEquals(1, asked.get(), "the failure holds until the minute is over, though the biome is fine now");
+
+        now.set(start + 60_000);
+        assertEquals(List.of("0.8"), texts(facts.settings(ID), "Climate"));
+        assertEquals(List.of("0.8"), texts(facts.settings(ID), "Climate"));
+        assertEquals(3, asked.get(), "and from then on every time, as an answer is never remembered");
+    }
+
+    @Test
+    void anErrorThatIsNotBiomeTuningsIsNeitherHiddenNorRemembered() {
+        AtomicInteger asked = new AtomicInteger();
+        TuningFacts facts = TuningFacts.reading(key -> Optional.empty(), key -> {
+            asked.incrementAndGet();
+            throw new IllegalStateException("a bug");
+        }, () -> true, now::get);
+
+        assertThrows(IllegalStateException.class, () -> facts.settings(ID));
+        assertThrows(IllegalStateException.class, () -> facts.settings(ID));
+        assertEquals(2, asked.get());
     }
 }
