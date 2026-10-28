@@ -19,12 +19,14 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayDeque;
 import java.util.Comparator;
 import java.util.Deque;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
@@ -38,7 +40,8 @@ import java.util.logging.Level;
  *     <li>every 10 seconds, the chunks within 2 of each builder (a player passing {@code isBuilder});</li>
  *     <li>2 seconds and again 30 seconds after a WorldEdit command, the loaded chunks of the player's selection;</li>
  *     <li>once every 2 minutes, every loaded chunk: the slow pass;</li>
- *     <li>as it unloads, a watched chunk: one within 4 of a builder, or in a selection.</li>
+ *     <li>as it unloads, a watched chunk: one that was within 4 of a builder at a builder check, or in a selection at a
+ *     WorldEdit command, in the last 10 minutes.</li>
  * </ul>
  * Only watched chunks are checked as they unload. Reading biomes costs about 0.1 to 0.3 ms a chunk, and a server
  * unloads many chunks a tick. Paint elsewhere is still found by the slow pass while its chunk stays loaded, and always
@@ -47,6 +50,16 @@ import java.util.logging.Level;
  * Each tick reads queued chunks, those of builders, selections and refreshes before those of the slow pass, until
  * {@link #TICK_BUDGET_NANOS} have passed on the clock, but at least one chunk if any is queued. The slow pass starts a
  * new round only when the last one is done and 2 minutes have passed since it began, so an idle server spends nothing.
+ * <p>
+ * Reads at unload have an allowance of their own, {@link #UNLOAD_BUDGET_NANOS} a tick, because unloads come in
+ * bursts: a builder who teleports lets go of dozens of watched chunks at once, and the end of a big edit of thousands.
+ * Past the allowance a watched chunk unloads unread. Those are counted, and logged once a minute with the world that
+ * a scan catches them in.
+ * <p>
+ * A selection is watched as a box, however big, and a builder's chunks one by one. Both are watched for
+ * {@link #WATCH_TICKS} from the command or the builder check that set them, and the ones that have run out are
+ * dropped at least once a minute. A chunk near a builder is watched until it unloads; a chunk in a selection is read
+ * each time it unloads for as long as the selection is watched.
  * <p>
  * A chunk is read only if it is loaded when its turn comes, not when it was queued: the game answers about an unloaded
  * chunk with the biomes its generator would make, which would write a wrong entry. The check at unload runs inside
@@ -76,10 +89,17 @@ public final class PaintTracker implements Listener {
     /** ...and again this many ticks after it, for an edit that is not finished by then. */
     static final int SELECTION_REREAD_TICKS = 600;
     /**
-     * A selection of more chunks than this is watched only where it is loaded when the command comes. Watching each
-     * chunk of a selection that spans a continent would cost more than the reading it saves.
+     * The ticks a chunk near a builder, or a selection, stays watched after the builder check or the command that set
+     * it: 10 minutes. Long enough for the edit of a big selection to finish and its chunks to go.
      */
-    static final long WATCH_IN_FULL_CHUNKS = 16_384;
+    static final int WATCH_TICKS = 12_000;
+    /**
+     * What the reads of chunks that unload may spend in one tick, on the {@code nanoClock}: 2 ms, four times the
+     * queue's {@link #TICK_BUDGET_NANOS}.
+     */
+    static final long UNLOAD_BUDGET_NANOS = 2_000_000;
+    /** The ticks between two rounds of housekeeping: dropping watches that ran out, and logging skipped unloads. */
+    static final int HOUSEKEEPING_TICKS = 1200;
 
     private static final String WORLD_EDIT = "WorldEdit";
     private static final String FAST_ASYNC_WORLD_EDIT = "FastAsyncWorldEdit";
@@ -103,14 +123,20 @@ public final class PaintTracker implements Listener {
     private final Set<ChunkRef> priority = new LinkedHashSet<>();
     /** The chunks the running slow pass has still to read. */
     private final Deque<ChunkRef> pass = new ArrayDeque<>();
-    /** Chunks to read as they unload. */
-    private final Set<ChunkRef> watched = new HashSet<>();
+    /** Chunks near builders to read as they unload, each watched until the tick it maps to. */
+    private final Map<ChunkRef, Long> builderMarks = new HashMap<>();
+    /** Selections whose chunks are read as they unload, each watched until the tick it maps to. */
+    private final Map<ChunkBox, Long> watchedBoxes = new HashMap<>();
+    /** The chunks that unloaded unread because the tick's allowance was spent, by world, since the last log line. */
+    private final Map<String, Integer> skippedUnloads = new TreeMap<>();
     /** Selections to queue, the soonest first. */
     private final Queue<DueRead> dueReads = new PriorityQueue<>(Comparator.comparingLong(DueRead::tick));
     private BukkitTask task;
     /** Counts the ticks since {@link #start}, so that the timers need no tasks of their own. */
     private long tick;
     private long passStartedAt;
+    /** What the reads at unload have spent since this tick began. */
+    private long unloadSpent;
     private boolean warned;
 
     /**
@@ -167,6 +193,7 @@ public final class PaintTracker implements Listener {
         }
         tick = 0;
         passStartedAt = -PASS_TICKS;
+        unloadSpent = 0;
         warned = false;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         task = plugin.getServer().getScheduler().runTaskTimer(plugin, this::everyTick, 1, 1);
@@ -182,7 +209,9 @@ public final class PaintTracker implements Listener {
         task = null;
         priority.clear();
         pass.clear();
-        watched.clear();
+        builderMarks.clear();
+        watchedBoxes.clear();
+        skippedUnloads.clear();
         dueReads.clear();
     }
 
@@ -193,6 +222,10 @@ public final class PaintTracker implements Listener {
 
     private void everyTick() {
         tick++;
+        unloadSpent = 0;
+        if (tick % HOUSEKEEPING_TICKS == 0) {
+            housekeeping();
+        }
         if (tick % BUILDER_TICKS == 0) {
             followBuilders();
         }
@@ -206,7 +239,10 @@ public final class PaintTracker implements Listener {
         readQueued();
     }
 
-    /** Queues the loaded chunks near each builder and watches the ones a little further out, in worlds that are on. */
+    /**
+     * Queues the loaded chunks near each builder and watches the ones a little further out, in worlds that are on. A
+     * builder who stays has the watch renewed at each check; one who leaves lets it run out.
+     */
     private void followBuilders() {
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             World world = player.getWorld();
@@ -222,7 +258,7 @@ public final class PaintTracker implements Listener {
                         continue;
                     }
                     ChunkRef ref = new ChunkRef(world.getName(), x, z);
-                    watched.add(ref);
+                    builderMarks.put(ref, tick + WATCH_TICKS);
                     if (Math.abs(x - chunkX) <= BUILDER_RADIUS && Math.abs(z - chunkZ) <= BUILDER_RADIUS) {
                         priority.add(ref);
                     }
@@ -240,22 +276,26 @@ public final class PaintTracker implements Listener {
     }
 
     /**
-     * Watches the chunks of a selection, loaded or not: a WorldEdit edit may load a chunk, change it and let it go
-     * again before the selection is read. A selection too big for that is watched where it is loaded.
+     * Watches a selection, loaded chunks or not: a WorldEdit edit may load a chunk, change it and let it go again
+     * before the selection is read. The box is kept as it is, so a selection of millions of chunks costs one entry. A
+     * selection that is watched already is watched from now on: the later end wins.
      */
     private void watch(ChunkBox box) {
-        if (area(box) <= WATCH_IN_FULL_CHUNKS) {
-            for (int x = box.minX(); x <= box.maxX(); x++) {
-                for (int z = box.minZ(); z <= box.maxZ(); z++) {
-                    watched.add(new ChunkRef(box.world(), x, z));
-                }
+        watchedBoxes.merge(box, tick + WATCH_TICKS, Long::max);
+    }
+
+    private boolean inWatchedBox(ChunkRef ref) {
+        for (Map.Entry<ChunkBox, Long> watch : watchedBoxes.entrySet()) {
+            ChunkBox box = watch.getKey();
+            if (watch.getValue() > tick && box.world().equals(ref.world()) && contains(box, ref.x(), ref.z())) {
+                return true;
             }
-            return;
         }
-        World world = plugin.getServer().getWorld(box.world());
-        if (world != null) {
-            forEachLoadedIn(world, box, watched::add);
-        }
+        return false;
+    }
+
+    private static boolean contains(ChunkBox box, int chunkX, int chunkZ) {
+        return chunkX >= box.minX() && chunkX <= box.maxX() && chunkZ >= box.minZ() && chunkZ <= box.maxZ();
     }
 
     private static long area(ChunkBox box) {
@@ -279,8 +319,7 @@ public final class PaintTracker implements Listener {
             return;
         }
         for (Chunk chunk : world.getLoadedChunks()) {
-            if (chunk.getX() >= box.minX() && chunk.getX() <= box.maxX()
-                    && chunk.getZ() >= box.minZ() && chunk.getZ() <= box.maxZ()) {
+            if (contains(box, chunk.getX(), chunk.getZ())) {
                 action.accept(new ChunkRef(name, chunk.getX(), chunk.getZ()));
             }
         }
@@ -358,7 +397,7 @@ public final class PaintTracker implements Listener {
         return true;
     }
 
-    /** A WorldEdit command may change the biomes of the selection: it is read twice, and watched until it unloads. */
+    /** A WorldEdit command may change the biomes of the selection: it is read twice, and watched for 10 minutes. */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onCommand(PlayerCommandPreprocessEvent event) {
         if (!isWorldEditCommand.test(event.getMessage())) {
@@ -373,16 +412,54 @@ public final class PaintTracker implements Listener {
         });
     }
 
-    /** A watched chunk is read at once, whatever the tick has spent, and is watched no more. */
+    /**
+     * A watched chunk is read at once, outside the queue's budget, as long as this tick's allowance for such reads has
+     * not run out. After that it unloads unread, and is counted. A chunk near a builder is watched no more once it
+     * has unloaded; one in a selection is watched until the selection runs out.
+     */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onChunkUnload(ChunkUnloadEvent event) {
-        if (watched.isEmpty()) {
+        if (builderMarks.isEmpty() && watchedBoxes.isEmpty()) {
             return;
         }
         Chunk chunk = event.getChunk();
         ChunkRef ref = new ChunkRef(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
-        if (watched.remove(ref)) {
-            read(ref);
+        Long markedUntil = builderMarks.remove(ref);
+        boolean watchedNow = (markedUntil != null && markedUntil > tick) || inWatchedBox(ref);
+        if (!watchedNow || recordOf.apply(ref.world()) == null) {
+            return;
         }
+        if (unloadSpent >= UNLOAD_BUDGET_NANOS) {
+            skippedUnloads.merge(ref.world(), 1, Integer::sum);
+            return;
+        }
+        long started = nanoClock.getAsLong();
+        read(ref);
+        unloadSpent += nanoClock.getAsLong() - started;
+    }
+
+    /** Once a minute: drops the watches that have run out, and tells of the chunks that unloaded unread. */
+    private void housekeeping() {
+        builderMarks.values().removeIf(until -> until <= tick);
+        watchedBoxes.values().removeIf(until -> until <= tick);
+        skippedUnloads.forEach((world, count) -> plugin.getLogger().info(skippedMessage(world, count)));
+        skippedUnloads.clear();
+    }
+
+    private static String skippedMessage(String world, int count) {
+        String scan = "; /architect maplayers scan " + world + " catches ";
+        return count == 1
+                ? "Custom biomes layer: 1 chunk unloaded before it could be read" + scan + "it."
+                : "Custom biomes layer: " + count + " chunks unloaded before they could be read" + scan + "them.";
+    }
+
+    /** For tests: the selections now watched, the ones that have run out included until the next housekeeping. */
+    int watchedBoxCount() {
+        return watchedBoxes.size();
+    }
+
+    /** For tests: the chunks near builders now watched, the ones that have run out included until housekeeping. */
+    int builderMarkCount() {
+        return builderMarks.size();
     }
 }

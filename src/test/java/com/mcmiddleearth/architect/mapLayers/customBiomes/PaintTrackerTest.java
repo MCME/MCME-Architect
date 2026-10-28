@@ -37,9 +37,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 // The tracker keeps a world's record current from the chunks that are loaded: the chunks around builders every 10 s, a
 // WorldEdit selection 2 s and 30 s after a command, every loaded chunk once every 2 minutes, and a watched chunk as it
-// unloads. All of it fits in about half a millisecond of each tick. The fake reader counts the chunks it is asked about
-// and moves a fake clock by what a read costs, so a tick's budget can be told in reads: at 0.2 ms a read, the third
-// read reaches 0.5 ms, so a tick reads three chunks.
+// unloads. The queue fits in about half a millisecond of each tick, and the reads at unload in an allowance of 2 ms.
+// The fake reader counts the chunks it is asked about and moves a fake clock by what a read costs, so a tick's budget
+// can be told in reads: at 0.2 ms a read, the third read reaches 0.5 ms, so a tick of the queue reads three chunks,
+// and the allowance holds ten.
 class PaintTrackerTest {
 
     /** A chunk of a world, as the fake reader is asked about it. */
@@ -166,6 +167,22 @@ class PaintTrackerTest {
     /** The unload event of a chunk, fired while the chunk is still loaded, as Paper does. */
     private void unloading(int x, int z) {
         server.getPluginManager().callEvent(new ChunkUnloadEvent(world.getChunkAt(x, z), true));
+    }
+
+    /** Every chunk of the box unloads in the same tick: no tick passes between the events. */
+    private void unloadAll(int minX, int minZ, int maxX, int maxZ) {
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                unloading(x, z);
+            }
+        }
+    }
+
+    private Logged capture() {
+        Logged logged = new Logged();
+        plugin.getLogger().setLevel(Level.ALL);
+        plugin.getLogger().addHandler(logged);
+        return logged;
     }
 
     // 25 chunks around the builder: the first pass reads each once, three a tick. The builder check at tick 200 reads
@@ -314,8 +331,8 @@ class PaintTrackerTest {
         assertEquals(0, selectionsAsked);
     }
 
-    // A chunk is watched from a command until it unloads, and is read then, at once and outside the tick's budget:
-    // four chunks unload here, and a tick reads three.
+    // The chunks of a selection are watched from the command on, and read as they unload, at once and outside the
+    // queue's budget: four chunks unload here, and a tick of the queue reads three.
     @Test
     void aWatchedChunkIsReadAsItUnloads() {
         builder = false;
@@ -325,14 +342,26 @@ class PaintTrackerTest {
         forgetReads();
         command("//setbiome cbc:a");
 
-        unloading(0, 0);
-        unloading(1, 0);
-        unloading(0, 1);
-        unloading(1, 1);
+        unloadAll(0, 0, 1, 1);
 
         assertAllRead(0, 0, 1, 1, 1);
+    }
+
+    // A selection that is still watched watches its chunks every time they unload: an edit may load a chunk, change
+    // it, let it go, and come back to it.
+    @Test
+    void aChunkOfAWatchedSelectionIsReadEachTimeItUnloads() {
+        builder = false;
+        load(0, 0, 1, 1);
+        tracker.start();
+        ticks(5);
+        forgetReads();
+        command("//setbiome cbc:a");
+
         unloading(0, 0);
-        assertEquals(1, reads(0, 0), "a chunk leaves the watched set when it is read");
+        unloading(0, 0);
+
+        assertEquals(2, reads(0, 0));
     }
 
     @Test
@@ -349,11 +378,26 @@ class PaintTrackerTest {
         assertEquals(1, reads(1, 1));
     }
 
-    // Watching every chunk of a selection of millions would cost more than the reading it saves.
+    // FAWE can take minutes over a big selection, loading its chunks long after the command and letting them go again.
     @Test
-    void aSelectionTooBigToWatchInFullIsWatchedWhereItIsLoaded() {
+    void aSelectionOverUnloadedLandIsWatchedWhenItsChunksLoadAndGoWithinTenMinutes() {
         builder = false;
-        selection = new ChunkBox("world", 0, 0, 199, 199);
+        selection = new ChunkBox("world", 40, 40, 43, 43); // nothing there is loaded
+        tracker.start();
+        ticks(5);
+        command("//setbiome cbc:a");
+
+        ticks(11_000);
+        unloading(41, 42);
+
+        assertEquals(1, reads(41, 42));
+    }
+
+    // A selection is a box, however big, so it costs one entry to watch it.
+    @Test
+    void aSelectionOfBillionsOfChunksIsWatchedWhereverItsChunksLoad() {
+        builder = false;
+        selection = new ChunkBox("world", -20_000, -20_000, 20_000, 20_000);
         world.getChunkAt(0, 0);
         tracker.start();
         ticks(5);
@@ -361,9 +405,12 @@ class PaintTrackerTest {
         command("//setbiome cbc:a");
 
         unloading(1, 1);
-        assertEquals(0, reads(1, 1), "not loaded when the command came");
-        unloading(0, 0);
-        assertEquals(1, reads(0, 0));
+        unloading(-19_999, 20_000);
+        unloading(30_000, 0);
+
+        assertEquals(1, reads(1, 1), "not loaded when the command came");
+        assertEquals(1, reads(-19_999, 20_000), "at the far corner");
+        assertEquals(0, reads(30_000, 0), "outside the selection");
     }
 
     @Test
@@ -399,7 +446,7 @@ class PaintTrackerTest {
     }
 
     // The builder check watches the chunks within 4 of a builder, so that the last paint reaches the record when the
-    // builder walks away and the chunks go.
+    // builder walks away and the chunks go. A chunk that has gone is not watched any more.
     @Test
     void aChunkNearABuilderIsReadAsItUnloads() {
         load(-5, -5, 5, 5);
@@ -407,16 +454,251 @@ class PaintTrackerTest {
         tracker.start();
         ticks(210);
         forgetReads();
+        assertEquals(81, tracker.builderMarkCount(), "the 9 x 9 chunks within 4");
 
         unloading(4, -4);
         unloading(-4, 0);
         unloading(5, 5);
         unloading(5, 0);
+        unloading(4, -4);
 
-        assertEquals(1, reads(4, -4));
+        assertEquals(1, reads(4, -4), "once: the second unload comes with no builder check in between");
         assertEquals(1, reads(-4, 0));
         assertEquals(0, reads(5, 5), "five chunks from the builder");
         assertEquals(0, reads(5, 0));
+        assertEquals(79, tracker.builderMarkCount(), "the two chunks that went have left the watch");
+    }
+
+    // A builder who leaves is not followed for ever: the chunks watched at the last check stay watched for 12,000
+    // ticks, 10 minutes, and no longer.
+    @Test
+    void aChunkNearABuilderIsWatchedForTenMinutes() {
+        load(-5, -5, 5, 5);
+        builderIn(0, 0);
+        tracker.start();
+        ticks(200); // the builder check marks the chunks within 4, until tick 12,200
+        builder = false; // and no later check marks them again
+
+        ticks(11_999); // tick 12,199
+        forgetReads();
+        unloading(4, 4);
+        assertEquals(1, reads(4, 4), "one tick before the watch runs out");
+
+        ticks(1); // tick 12,200
+        forgetReads();
+        unloading(-4, -4);
+        assertEquals(0, reads(-4, -4), "12,000 ticks after the check");
+    }
+
+    @Test
+    void thePositionsOfALeftBuilderAreDroppedWhenTheWatchHasRunOut() {
+        load(-5, -5, 5, 5);
+        builderIn(0, 0);
+        tracker.start();
+        ticks(200);
+        builder = false;
+        assertEquals(81, tracker.builderMarkCount());
+
+        ticks(13_000); // tick 13,200: the housekeeping of the minute after the watch ran out at 12,200
+
+        assertEquals(0, tracker.builderMarkCount());
+    }
+
+    // A selection is watched for 12,000 ticks from its command, 10 minutes, and no longer.
+    @Test
+    void aSelectionIsWatchedForTenMinutes() {
+        builder = false;
+        load(0, 0, 1, 1);
+        tracker.start();
+        ticks(5);
+        command("//setbiome cbc:a"); // watched until tick 12,005
+
+        ticks(11_999); // tick 12,004
+        forgetReads();
+        unloading(0, 0);
+        assertEquals(1, reads(0, 0), "one tick before the watch runs out");
+
+        ticks(1); // tick 12,005
+        forgetReads();
+        unloading(1, 1);
+        assertEquals(0, reads(1, 1), "12,000 ticks after the command");
+    }
+
+    @Test
+    void identicalSelectionsAreOneWatchAndTheLaterEndWins() {
+        builder = false;
+        world.getChunkAt(0, 0);
+        tracker.start();
+        ticks(5);
+        command("//setbiome cbc:a"); // watched until tick 12,005
+        ticks(6_000);
+        command("//setbiome cbc:a"); // the same box: still one watch, now until tick 18,005
+        assertEquals(1, tracker.watchedBoxCount());
+
+        ticks(7_000); // tick 13,005, past the first end
+        forgetReads();
+        unloading(0, 0);
+
+        assertEquals(1, reads(0, 0), "still watched, by the later end");
+    }
+
+    // 1,000 selections of 10,000 x 10,000 chunks each: a thousand entries, not billions of chunks, and none left once
+    // they have run out and the minute's housekeeping has come.
+    @Test
+    void manyHugeSelectionsAreOneWatchEachAndAreDroppedWhenTheyHaveRunOut() {
+        builder = false;
+        tracker.start();
+        ticks(5);
+        for (int i = 0; i < 1_000; i++) {
+            selection = new ChunkBox("world", i, i, i + 10_000, i + 10_000);
+            command("//setbiome cbc:a");
+        }
+        assertEquals(1_000, tracker.watchedBoxCount(), "one entry for each, whatever its size");
+
+        ticks(12_000); // tick 12,005: every watch has run out
+        ticks(1_200); // and the housekeeping at tick 13,200 has dropped them
+
+        assertEquals(0, tracker.watchedBoxCount());
+    }
+
+    // New selections keep coming, one every 20 ticks. A watch lasts 12,000 ticks and is dropped at the next full
+    // minute, so at most 660 are ever held, not the 1,000 that came.
+    @Test
+    void watchesDoNotPileUpWhileSelectionsKeepComing() {
+        builder = false;
+        tracker.start();
+        ticks(5);
+        int most = 0;
+        for (int i = 0; i < 1_000; i++) {
+            selection = new ChunkBox("world", i, i, i + 10_000, i + 10_000);
+            command("//setbiome cbc:a");
+            most = Math.max(most, tracker.watchedBoxCount());
+            ticks(20);
+        }
+
+        assertTrue(most <= 660, "most held at once: " + most);
+        assertTrue(most >= 600, "they do add up until they run out: " + most);
+    }
+
+    // Unloads come in bursts: a builder who teleports lets go of dozens of watched chunks in one tick. Their reads get
+    // an allowance of 2 ms a tick, ten reads of 0.2 ms here, and the other chunks unload unread.
+    @Test
+    void unloadReadsInOneTickStopAtTheirAllowance() {
+        builder = false;
+        selection = new ChunkBox("world", 0, 0, 4, 3);
+        load(0, 0, 4, 3); // 20 chunks
+        tracker.start();
+        ticks(10);
+        forgetReads();
+        command("//setbiome cbc:a");
+
+        unloadAll(0, 0, 4, 3);
+
+        assertEquals(10, readLog.size(), "2 ms in reads of 0.2 ms");
+        unloading(0, 0);
+        assertEquals(10, readLog.size(), "and nothing more in the same tick");
+    }
+
+    @Test
+    void theUnloadAllowanceIsBackAtTheNextTickAndIsNotTheQueuesBudget() {
+        builder = false;
+        selection = new ChunkBox("world", 0, 0, 4, 3);
+        load(0, 0, 4, 3);
+        tracker.start();
+        ticks(10);
+        forgetReads();
+        command("//setbiome cbc:a");
+        unloadAll(0, 0, 4, 3);
+        assertEquals(10, readLog.size());
+        forgetReads();
+
+        tracker.readLoadedNow();
+        assertEquals(3, readsInTheNextTick(), "the queue keeps its own budget: three reads of 0.2 ms");
+        forgetReads();
+        unloadAll(0, 0, 4, 3);
+
+        assertEquals(10, readLog.size(), "the allowance began again with the tick, whatever the queue read");
+    }
+
+    @Test
+    void skippedUnloadsAreCountedAndLoggedOnceAMinute() {
+        builder = false;
+        Logged logged = capture();
+        selection = new ChunkBox("world", 0, 0, 4, 3);
+        load(0, 0, 4, 3);
+        tracker.start();
+        ticks(10);
+        command("//setbiome cbc:a");
+
+        unloadAll(0, 0, 4, 3); // ten are read, ten unload unread
+        unloading(9, 9); // not watched: not counted
+        ticks(1);
+        unloadAll(0, 0, 4, 3); // ten more
+        ticks(1_100); // tick 1,111: the minute is not over
+        assertEquals(List.of(), logged.messages(Level.INFO), "not at every skip, nor at every tick");
+
+        ticks(100); // tick 1,211: the housekeeping of tick 1,200 has run
+        List<String> told = logged.messages(Level.INFO);
+        assertEquals(1, told.size(), told.toString());
+        assertTrue(told.get(0).endsWith("Custom biomes layer: 20 chunks unloaded before they could be read; "
+                + "/architect maplayers scan world catches them."), told.get(0));
+        ticks(1_200); // nothing was skipped since, so there is nothing to say
+        assertEquals(1, logged.messages(Level.INFO).size());
+    }
+
+    @Test
+    void oneSkippedUnloadIsToldInTheSingular() {
+        builder = false;
+        Logged logged = capture();
+        selection = new ChunkBox("world", 0, 0, 10, 0);
+        load(0, 0, 10, 0); // 11 chunks, and the allowance holds ten reads
+        tracker.start();
+        ticks(10);
+        command("//setbiome cbc:a");
+
+        unloadAll(0, 0, 10, 0);
+        ticks(1_200);
+
+        List<String> told = logged.messages(Level.INFO);
+        assertEquals(1, told.size(), told.toString());
+        assertTrue(told.get(0).endsWith("Custom biomes layer: 1 chunk unloaded before it could be read; "
+                + "/architect maplayers scan world catches it."), told.get(0));
+    }
+
+    // The allowance is shared by the worlds, and each world with skipped unloads is named in its own line.
+    @Test
+    void skippedUnloadsAreLoggedForEachWorld() {
+        builder = false;
+        Logged logged = capture();
+        WorldMock other = server.addSimpleWorld("other");
+        records.put("other", new PaintRecord());
+        load(0, 0, 3, 2);
+        for (int x = 0; x <= 3; x++) {
+            for (int z = 0; z <= 2; z++) {
+                other.getChunkAt(x, z);
+            }
+        }
+        tracker.start();
+        ticks(10);
+        selection = new ChunkBox("world", 0, 0, 3, 2);
+        command("//setbiome cbc:a");
+        selection = new ChunkBox("other", 0, 0, 3, 2);
+        command("//setbiome cbc:a");
+
+        unloadAll(0, 0, 3, 2); // twelve chunks: ten are read, two unload unread
+        for (int x = 0; x <= 3; x++) {
+            for (int z = 0; z <= 2; z++) {
+                server.getPluginManager().callEvent(new ChunkUnloadEvent(other.getChunkAt(x, z), true));
+            }
+        }
+        ticks(1_200);
+
+        List<String> told = logged.messages(Level.INFO);
+        assertEquals(2, told.size(), told.toString());
+        assertTrue(told.get(0).endsWith("Custom biomes layer: 12 chunks unloaded before they could be read; "
+                + "/architect maplayers scan other catches them."), told.get(0));
+        assertTrue(told.get(1).endsWith("Custom biomes layer: 2 chunks unloaded before they could be read; "
+                + "/architect maplayers scan world catches them."), told.get(1));
     }
 
     @Test
@@ -602,8 +884,7 @@ class PaintTrackerTest {
     @Test
     void aReaderThatFailsIsLoggedOnceAndTheOtherChunksAreStillRead() {
         builder = false;
-        Warnings warnings = new Warnings();
-        plugin.getLogger().addHandler(warnings);
+        Logged logged = capture();
         unreadable.add(new Spot("world", 0, 0));
         unreadable.add(new Spot("world", 1, 1));
         load(-1, -1, 1, 1);
@@ -614,7 +895,7 @@ class PaintTrackerTest {
         assertEquals(1, reads(0, 0), "tried once");
         assertEquals(1, reads(-1, -1));
         assertEquals(1, reads(1, 0));
-        assertEquals(1, warnings.seen.size(), "one warning for the two failures");
+        assertEquals(1, logged.messages(Level.WARNING).size(), "one warning for the two failures");
     }
 
     @Test
@@ -625,14 +906,17 @@ class PaintTrackerTest {
         ticks(5);
         command("//setbiome cbc:a");
         tracker.readLoadedNow();
+        assertEquals(1, tracker.watchedBoxCount());
         tracker.stop();
         forgetReads();
+        assertEquals(0, tracker.watchedBoxCount(), "the watches are dropped");
 
         command("//setbiome cbc:a");
         unloading(0, 0);
         ticks(3_000);
 
         assertTrue(readLog.isEmpty());
+        assertEquals(0, tracker.watchedBoxCount());
     }
 
     @Test
@@ -709,14 +993,13 @@ class PaintTrackerTest {
         }
     }
 
-    private static final class Warnings extends Handler {
+    /** What the plugin's logger was asked to log. */
+    private static final class Logged extends Handler {
         private final List<LogRecord> seen = new ArrayList<>();
 
         @Override
         public void publish(LogRecord record) {
-            if (record.getLevel().intValue() >= Level.WARNING.intValue()) {
-                seen.add(record);
-            }
+            seen.add(record);
         }
 
         @Override
@@ -725,6 +1008,11 @@ class PaintTrackerTest {
 
         @Override
         public void close() {
+        }
+
+        /** The messages logged at exactly that level, with the plugin's name in front, as the server shows them. */
+        List<String> messages(Level level) {
+            return seen.stream().filter(record -> record.getLevel().equals(level)).map(LogRecord::getMessage).toList();
         }
     }
 }
