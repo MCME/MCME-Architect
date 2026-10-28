@@ -56,9 +56,10 @@ import java.util.regex.Pattern;
  *     copies found goes in there too, and the copies that were not written in time are counted there.</li>
  *     <li><b>The scan thread</b> reads the files and the saved copies, and hands what it read to the main thread
  *     through the scheduler: one task a file, one for each tenth of the files read, which the log tells, one at the
- *     end, and one for each region file a round of looks at saved copies found copies in. It never touches a record. A
- *     fill that fails there with an Error, such as running out of memory, is logged with its stack trace and dropped
- *     on the main thread, and the next fill runs.</li>
+ *     end, and, for a round of looks at saved copies, one for each region file it found copies in, then the chunks it
+ *     found with no copy, in parts of 1,024. It never touches a record. A fill that fails there with an Error, such as
+ *     running out of memory, is logged with its stack trace and dropped on the main thread, and the next fill
+ *     runs.</li>
  *     <li><b>Both</b> use the queue of waiting fills, the fill being read, the saved reads waiting for their next look
  *     and the stop flag, under this object's lock. A cancel interrupts the thread only while the fill it ends is the
  *     one being read and no saved copies are. The looks between two files of a fill set a pending interrupt aside

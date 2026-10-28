@@ -142,11 +142,14 @@ public final class PaintTracker implements Listener {
     /** The chunks the running slow pass has still to read. */
     private final Deque<ChunkRef> pass = new ArrayDeque<>();
     /**
-     * Chunks near builders, and chunks handed over, whose saved copies are read as they unload, each watched until the
-     * tick it maps to.
+     * Chunks near builders, and chunks handed over, whose saved copies are read a few seconds after they unload, each
+     * watched until the tick it maps to.
      */
     private final Map<ChunkRef, Long> builderMarks = new HashMap<>();
-    /** Selections whose chunks' saved copies are read as they unload, each watched until the tick it maps to. */
+    /**
+     * Selections whose chunks' saved copies are read a few seconds after each unloads, each watched until the tick it
+     * maps to.
+     */
     private final Map<ChunkBox, Long> watchedBoxes = new HashMap<>();
     /** Selections to queue, the soonest first. */
     private final Queue<DueRead> dueReads = new PriorityQueue<>(Comparator.comparingLong(DueRead::tick));
