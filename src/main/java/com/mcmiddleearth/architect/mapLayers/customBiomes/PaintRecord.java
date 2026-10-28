@@ -27,7 +27,8 @@ import java.util.zip.GZIPOutputStream;
  * The custom biomes of one world: the paint of each chunk that holds any, and how far the first fill of the world's
  * saved files has come. A chunk without a custom biome is not kept.
  * <p>
- * Not thread-safe. Use it from one thread, and give another thread a {@link #copyOfChunks() copy}.
+ * Not thread-safe. Use it from one thread, and give another thread a {@link #copyOfChunks() copy} or a
+ * {@link #copy() copy of the record}.
  * <p>
  * A saved record is gzip over big-endian data, in this order:
  * <ul>
@@ -91,6 +92,18 @@ public final class PaintRecord {
     /** The painted chunks as they are now. Paints cannot change, so this is safe to read on another thread. */
     public Map<Long, ChunkPaint> copyOfChunks() {
         return new HashMap<>(chunks);
+    }
+
+    /**
+     * A new record with the same chunks, fill state and finished files, which does not change with this one. Paints
+     * cannot change, so the copy is safe to read and save on another thread.
+     */
+    public PaintRecord copy() {
+        PaintRecord copy = new PaintRecord();
+        copy.chunks.putAll(chunks);
+        copy.finished.addAll(finished);
+        copy.fillDone = fillDone;
+        return copy;
     }
 
     /** Whether the first fill has read all of the world's region files. */

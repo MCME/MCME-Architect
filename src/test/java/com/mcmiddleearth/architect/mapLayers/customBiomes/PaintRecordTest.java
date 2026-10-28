@@ -96,6 +96,28 @@ class PaintRecordTest {
         assertThrows(UnsupportedOperationException.class, () -> view.put(PaintRecord.chunkKey(5, 5), forest));
     }
 
+    // A copy is what a save writes on another thread, while the record goes on changing on the main thread.
+    @Test
+    void aCopyHoldsTheSameAndThenGoesItsOwnWay() {
+        PaintRecord record = new PaintRecord();
+        record.put(0, 0, forest);
+        record.fillDone(true);
+        record.finished("r.0.0.mca");
+
+        PaintRecord copy = record.copy();
+
+        assertEquals(record.chunks(), copy.chunks());
+        assertTrue(copy.fillDone());
+        assertEquals(Set.of("r.0.0.mca"), copy.finishedFiles());
+        record.put(1, 1, forest);
+        record.clearFill();
+        copy.put(2, 2, forest);
+        assertEquals(Set.of(PaintRecord.chunkKey(0, 0), PaintRecord.chunkKey(2, 2)), copy.chunks().keySet());
+        assertTrue(copy.fillDone(), "the copy keeps the fill state it was made with");
+        assertEquals(Set.of("r.0.0.mca"), copy.finishedFiles());
+        assertEquals(Set.of(PaintRecord.chunkKey(0, 0), PaintRecord.chunkKey(1, 1)), record.chunks().keySet());
+    }
+
     @Test
     void clearExceptKeepsOnlyTheKeptChunks() {
         PaintRecord record = new PaintRecord();
