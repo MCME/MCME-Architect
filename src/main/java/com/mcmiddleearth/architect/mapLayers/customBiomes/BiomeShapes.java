@@ -324,7 +324,8 @@ public final class BiomeShapes {
      * Gives every area kept its biome's colour now, where that changed, and keeps all else, the line opacity included.
      * The areas just kept are among them, since the background thread may have coloured again after building them.
      * Says whether any changed. The window of such an area keeps the colour it was built with, so its world is marked
-     * as behind, and {@link #factsChanged} says so until the world is built again.
+     * as behind, and {@link #factsChanged} says so until a rebuild of that world starts; a mark set while one is under
+     * way ends with its finish. Other worlds keep their marks.
      */
     private boolean recolour() {
         Map<String, Assignment> now = colours.current();
