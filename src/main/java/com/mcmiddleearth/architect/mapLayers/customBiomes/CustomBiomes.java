@@ -43,9 +43,10 @@ import java.util.function.Supplier;
  * and the worlds marked are drawn again at most every 10 seconds; one change after a quiet spell is drawn within a
  * second.
  * <p>
- * A start loads the records, draws the worlds that are on, and starts the live checks. Two things wait for later,
- * because Architect starts before the server loads its worlds and before WorldEdit starts: a fill that a restart
- * stopped goes on at the first tick, and WorldEdit is looked up when a selection is first asked for.
+ * A start loads the records and starts the live checks. Three things wait for later, because Architect starts before
+ * the server loads its worlds, before biome tuning and before WorldEdit: a fill that a restart stopped goes on at the
+ * first tick; the worlds that are on are drawn at the first tick too, when biome tuning can name their biomes; and
+ * WorldEdit is looked up when a selection is first asked for.
  * <p>
  * Which thread owns what:
  * <ul>
@@ -212,9 +213,12 @@ public final class CustomBiomes implements MapLayer {
         timers.add(scheduler.runTaskTimer(plugin, store::saveDirty, PaintStore.SAVE_TICKS, PaintStore.SAVE_TICKS));
         timers.add(scheduler.runTaskTimer(plugin, this::drawAllIfFactsChanged, FACTS_TICKS, FACTS_TICKS));
         tracker.start();
-        // the first tick comes once the server has loaded its worlds, which a fill needs
-        timers.add(scheduler.runTask(plugin, scan::resumeUnfinished));
-        drawAll();
+        // the first tick comes once the server has loaded its worlds, which a fill needs, and once biome tuning has
+        // started, which names the biomes in the windows
+        timers.add(scheduler.runTask(plugin, () -> {
+            scan.resumeUnfinished();
+            drawAll();
+        }));
     }
 
     /** A rate that is not above 0, NaN included, would stop the layer from starting: the default stands in. */

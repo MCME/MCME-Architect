@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -321,7 +322,7 @@ class CustomBiomesTest {
     void aWorldOverTheTargetIsListedAsNotDrawn() throws IOException {
         saved("crowded", recordOf(crowded(), true));
         layer(NO_SLEEP).start(plugin);
-        ticks(1); // the shapes built at the start come back
+        ticks(2); // drawn at the first tick, and the shapes come back a tick later
 
         scan();
 
@@ -339,7 +340,7 @@ class CustomBiomesTest {
     void scanOffSetsTheRecordAsideAndClearsTheMap() throws IOException {
         saved("world", recordOf(fixturePaints(0, 0), true));
         layer(NO_SLEEP).start(plugin);
-        ticks(1);
+        ticks(2); // drawn at the first tick, and the shapes come back a tick later
         assertEquals(idsOf("world", fixturePaints(0, 0)), ids(), "drawn from the record at the start");
 
         scan("world", "off");
@@ -412,6 +413,25 @@ class CustomBiomesTest {
         Map<Long, ChunkPaint> expected = fixturePaints(0, 0);
         expected.put(PaintRecord.chunkKey(-3, -4), paint("cbc:live"));
         assertEquals(idsOf("walked", expected), ids(), "the chunk as it was when it unloaded");
+    }
+
+    // Architect starts before biome tuning does, so the worlds are first drawn at the first tick, when biome tuning
+    // can name their biomes. They are drawn once: the 10-second look at the names finds nothing new.
+    @Test
+    void theWorldsAreFirstDrawnOnceBiomeTuningCanNameTheirBiomes() throws IOException {
+        saved("named", recordOf(Map.of(PaintRecord.chunkKey(0, 0), paint("cbc:named")), true));
+        AtomicInteger builds = new AtomicInteger();
+        layer(new YamlConfiguration(), NO_SLEEP, task -> {
+            builds.incrementAndGet();
+            task.run();
+        }).start(plugin);
+        labels.put("cbc:named", "Named"); // biome tuning starts after Architect
+
+        ticks(2); // drawn at the first tick, and kept a tick later
+        assertEquals(List.of("Named"), layer.shapes().stream().map(MapShape::label).toList());
+        ticks(200); // past the look at the names at tick 200
+
+        assertEquals(1, builds.get(), "built once");
     }
 
     @Test

@@ -443,7 +443,7 @@ Three listener classes are never registered: `AfkListener` and `TestListener` (c
 | Kit save | `GetData.load` | once, 2000 ticks after a load |
 | Map-layer redraws; budget counting and saving | `MapLayers`, `ItemBlockBudget` | redraws on the tick after a change; budget recounts each second and saves each minute |
 | Custom biomes: live reads | `PaintTracker.start`, from `CustomBiomes.start` | every tick, within about 0.5 ms (at least one chunk); a look at the builders every 200 ticks; a slow pass every 2400; housekeeping every 1200 |
-| Custom biomes: reports, saves, windows, first fill | `CustomBiomes.start` | a report each second (a redraw at most every 10 seconds); changed records saved every 1200 ticks; names and settings compared every 200; an unfinished fill resumed once, on the first tick |
+| Custom biomes: reports, saves, windows, first fill | `CustomBiomes.start` | a report each second (a redraw at most every 10 seconds); changed records saved every 1200 ticks; names and settings compared every 200; an unfinished fill resumed and the worlds drawn once, on the first tick |
 | Entity-log dumps | `EntityLogger.start` (`/architect eLog true`) | after 500 ticks, then every 2000 |
 
 ### The world generator
@@ -1109,8 +1109,9 @@ The layer only reads: it never writes to a world.
 - **Redraw pacing.** `ChangeReporter` applies the `ItemBlockBudget` rule: a change after a quiet spell is drawn within a
   second, and after that at most once every 10 seconds, since each changed marker makes dynmap rewrite its world's
   marker file.
-- **Start-up.** Architect enables before the worlds and before WorldEdit, so `CustomBiomes.start` resumes an unfinished
-  fill one tick later, and `FirstUseSelections` looks WorldEdit up at the first WorldEdit command.
+- **Start-up.** Architect enables before the worlds, before biome tuning and before WorldEdit, so `CustomBiomes.start`
+  resumes an unfinished fill and draws the worlds one tick later, when biome tuning can name their biomes, and
+  `FirstUseSelections` looks WorldEdit up at the first WorldEdit command.
 - **Tests.** The package-private `CustomBiomes` constructor takes the parts that need a server: the chunk reader, the
   selections, the facts and the shapes executor, where `null` means the server's own, made at each start; and the custom
   ids, the scan's sleeper, the region folder and the builder test.
