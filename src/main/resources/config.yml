@@ -23,6 +23,7 @@ dynmap:
 #                      borderWidth: 2, borderOpacity: 0.3, areaOpacity: 0.2}
 #    itemBlockBudget: {enabled: true, hidden: true, warnPercent: 50, highPercent: 80,
 #                      warnColor: '#ffd700', highColor: '#ff8c00', fullColor: '#ff0000', areaOpacity: 0.35}
+#    customBiomes:    {enabled: true, hidden: true, borderWidth: 2, borderOpacity: 0.6, areaOpacity: 0.3, scanMegabytesPerSecond: 20}
 entityLogger:
     enabled: true
 EntityLimit:

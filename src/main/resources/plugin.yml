@@ -64,7 +64,7 @@ commands:
       description: Architect's help, version, reload and admin tools.
       usage: >-
         /architect [help [page]] | version | reload | reloaddata | world | blockdata | dev | checkNBT | weather |
-        eLog | placeAllBlockStates | maplayers refresh
+        eLog | placeAllBlockStates | maplayers refresh|scan
    chunkupdate:
       description: Switches automatic block resends (the radius form does nothing in this version).
       usage: /chunkupdate [radius] | auto <world|-default> [true]
@@ -443,7 +443,7 @@ permissions:
         description: Use /architect checkNBT.
         default: op
     architect.maplayers:
-        description: Allows to redraw Architect's web-map layers with /architect maplayers refresh
+        description: Allows to redraw Architect's web-map layers with /architect maplayers refresh, and to choose the worlds of the Custom biomes layer with /architect maplayers scan
         default: op
     architect.gamemodeSwitcher:
         description: Allows to switch to every game mode with the F3+F4 switcher, without op

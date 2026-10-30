@@ -1,6 +1,7 @@
 package com.mcmiddleearth.architect.mapLayers;
 
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.mapLayers.customBiomes.CustomBiomes;
 import com.mcmiddleearth.architect.noPhysicsEditor.NoPhysicsData;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.specialBlockHandling.itemBlock.ItemBlockManager;
@@ -42,6 +43,10 @@ public final class ArchitectLayers {
         if (budget.enabled()) {
             result.add(new ItemBlockBudgetLayer(budget, new File(dataFolder, "mapLayers/itemBlockBudget.yml"),
                     new ItemBlockLimits()));
+        }
+        MapLayerConfig.Layer customBiomes = layers.layer(CustomBiomes.KEY, false);
+        if (customBiomes.enabled()) {
+            result.add(new CustomBiomes(customBiomes, dataFolder));
         }
         return result;
     }

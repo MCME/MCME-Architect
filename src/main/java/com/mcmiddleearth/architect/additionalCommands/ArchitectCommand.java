@@ -22,6 +22,7 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.blockData.BlockDataManager;
 import com.mcmiddleearth.architect.entityLogging.EntityLogger;
 import com.mcmiddleearth.architect.mapLayers.MapLayers;
+import com.mcmiddleearth.architect.mapLayers.customBiomes.CustomBiomes;
 import com.mcmiddleearth.pluginutil.NumericUtil;
 import com.mcmiddleearth.pluginutil.message.FancyMessage;
 import com.mcmiddleearth.pluginutil.message.MessageType;
@@ -39,7 +40,9 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /**
  *
@@ -159,8 +162,17 @@ public class ArchitectCommand extends AbstractArchitectCommand{
                 PluginData.getMessageUtil().sendNoPermissionError(sender);
                 return true;
             }
+            if (args.length >= 2 && args[1].equalsIgnoreCase("scan")) {
+                String[] rest = Arrays.copyOfRange(args, 2, args.length);
+                CustomBiomes.active().ifPresentOrElse(layer -> layer.scanCommand(sender, rest),
+                        () -> PluginData.getMessageUtil().sendErrorMessage(sender, "The Custom biomes layer is not "
+                                + "running: mapLayers.customBiomes is switched off in config.yml, or Architect's map "
+                                + "layers are not running."));
+                return true;
+            }
             if (args.length < 2 || !args[1].equalsIgnoreCase("refresh")) {
-                PluginData.getMessageUtil().sendErrorMessage(sender, "Usage: /architect maplayers refresh");
+                PluginData.getMessageUtil().sendErrorMessage(sender,
+                        "Usage: /architect maplayers refresh | scan [<world> [off]]");
                 return true;
             }
             switch (MapLayers.refreshAll()) {
@@ -304,15 +316,24 @@ public class ArchitectCommand extends AbstractArchitectCommand{
         return true;
     }
     
-    /*@Override
-    public List<String> onTabComplete(CommandSender sender,
-                                               Command command,
-                                               java.lang.String alias,
-                                               java.lang.String[] args) {
-        List<String> result = new ArrayList<>();
-        result.add("placeallblockstates");
-        return result;
-    }*/
+    // maplayers completes its words for those who may use it, by the rule onCommand applies. Nothing is an empty list,
+    // not null: on null, Bukkit would offer the names of every online player.
+    @Override
+    public List<String> onTabComplete(@NotNull CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length < 2 || !args[0].equalsIgnoreCase("maplayers")
+                || !(sender instanceof ConsoleCommandSender || PluginData.hasPermission(sender, Permission.MAP_LAYERS))) {
+            return new ArrayList<>();
+        }
+        if (args.length == 2) {
+            String typed = args[1].toLowerCase(Locale.ROOT);
+            return new ArrayList<>(List.of("refresh", "scan").stream().filter(word -> word.startsWith(typed)).toList());
+        }
+        if (!args[1].equalsIgnoreCase("scan")) {
+            return new ArrayList<>();
+        }
+        String[] rest = Arrays.copyOfRange(args, 2, args.length);
+        return new ArrayList<>(CustomBiomes.active().map(layer -> layer.completeScan(rest)).orElse(List.of()));
+    }
     
     private void showDetails(CommandSender cs) {
         PluginData.getMessageUtil().sendInfoMessage(cs,"DevUtil: Level - "+DevUtil.getLevel()+"; Console - "+DevUtil.isConsoleOutput()+"; ");
@@ -359,7 +380,7 @@ public class ArchitectCommand extends AbstractArchitectCommand{
 
     @Override
     public String getUsageDescription() {
-        return " [subcommand]: 'help [page]' lists the Architect commands you may use. Staff tools: world, blockdata, dev, version, reload, reloaddata, checkNBT, weather, eLog and maplayers refresh.";
+        return " [subcommand]: 'help [page]' lists the Architect commands you may use. Staff tools: world, blockdata, dev, version, reload, reloaddata, checkNBT, weather, eLog and maplayers refresh or scan.";
     }
 
 }
