@@ -43,8 +43,8 @@ releases; the next version is built on `development`.
   - `/rp release` builds and publishes a pack, and reports how it went in chat.
 - **Live biome tuning:** `/biometune` and an in-game editor change a biome's colours and atmosphere while players watch,
   without a restart. Saving writes the biome into its datapack.
-- **Map layers:** resource-pack regions, item-block limits and budgets, and no-physics exception areas, drawn on the
-  dynmap web map.
+- **Map layers:** resource-pack regions, item-block limits and budgets, no-physics exception areas, and where custom
+  biomes are painted, drawn on the dynmap web map.
 - **Comfort:**
   - full brightness (`/fbt`);
   - a client view distance (`/viewdistance`);

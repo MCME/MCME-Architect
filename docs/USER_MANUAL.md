@@ -1,6 +1,6 @@
 # MCME-Architect — User Manual
 
-For builders, staff and server admins of MCME-Architect 3.2.1 on Paper 26.2. For the architecture, building, testing
+For builders, staff and server admins of MCME-Architect 3.3.0 on Paper 26.2. For the architecture, building, testing
 and releasing, see the [Developer Manual](DEV_MANUAL.md).
 
 ## Contents
@@ -242,7 +242,7 @@ When it is off, `/inv` answers `Custom build inventories are not enabled in this
 
 - `/inv search` opens the saved inventories, because every word that starts with `s` or `c` does. Search with
   `/inv b s:<text>`. The letters are case-sensitive: `/inv B` is refused.
-- `/inv i` answers `Not implemented yet!`: no command opens item inventories in 3.2.1.
+- `/inv i` answers `Not implemented yet!`: no command opens item inventories in 3.3.0.
 
 #### Using the window
 
@@ -320,7 +320,7 @@ builders take from it.
 
 **Good to know**
 
-- In 3.2.1 every saved inventory is public: everyone who can use `/inv` can open it and take from it. The file says
+- In 3.3.0 every saved inventory is public: everyone who can use `/inv` can open it and take from it. The file says
   `isPrivate: true`, which Architect reads the other way round.
 - A saved inventory's name may not contain `/` or `\`: such a name is refused with `Invalid name. A name may not
   contain / or \.` Otherwise `/inv create` answers `Inventory saved.`, even when saving failed; check the window.
@@ -354,7 +354,7 @@ A private set is only hidden: `/get list` shows it to its owner alone, but anyon
 **Limits**
 
 - A player can have at most 11 private sets; the twelfth is refused.
-- In 3.2.1, private sets can be lost once their owner has been offline for about 14 hours: the next save of the set
+- In 3.3.0, private sets can be lost once their owner has been offline for about 14 hours: the next save of the set
   file leaves them out, and after the next restart they are gone. Use a public set
   for anything you want to keep.
 - Set names are case-sensitive, but `list`, `armor` and `help` cannot be used as set names in any case (`List` and
@@ -465,7 +465,7 @@ This part is for staff and for the server admin. The blocks of each pack live in
 them with a git repository.
 
 > [!WARNING]
-> In 3.2.1, two editor paths write values that Bukkit cannot read back. The whole tab file then fails to load, and all
+> In 3.3.0, two editor paths write values that Bukkit cannot read back. The whole tab file then fails to load, and all
 > its blocks disappear from the build inventory, although the editor reports the save and `Inventory reload done!`.
 >
 > - **Changing the item during an edit.** At `To change the inventory item hold in main hand a new item and type 'ok'`,
@@ -637,7 +637,7 @@ E4  E3  E2  E1  E0     J1  J2  J3  J4
 - A file with a YAML error is skipped as a whole, and Architect's log names it. Single skipped entries (unknown type,
   duplicate key, invalid state) are only reported at debug level 2: run `/architect dev 2` and `/architect dev`, then
   `/inv reload`, to see them in chat.
-- These types cannot be loaded in 3.2.1, so their entries are skipped: `OPEN_HALF_DOOR`, `BRANCH_TWIGS_UPPER`,
+- These types cannot be loaded in 3.3.0, so their entries are skipped: `OPEN_HALF_DOOR`, `BRANCH_TWIGS_UPPER`,
   `BRANCH_TWIGS_LOWER`, `BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS` and `BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS`.
   `MATCH_ORIENTATION` behaves like `FOUR_DIRECTIONS`, and `MOB_SPAWNER_BLOCK` places nothing.
 - An item's id is `<pack>/<key>`. Renaming a key or a pack folder makes the existing items of it outdated.
@@ -730,7 +730,7 @@ bundle.
 |---|---|---|---|---|
 | Oak, spruce, birch, jungle, acacia, dark oak or iron door | `Half` | Right-click a block: only the lower half of the door is placed, turned the way you look. | `architect.place.halfDoor` | `modules.specialBlocks.halfDoors` |
 | Red bed | `Half` | Right-click a block: one half of a bed is placed, turned the way you look. You get the foot, or the head if the name ends in `(head)`. | `architect.place.halfBed` | `modules.specialBlocks.halfBeds` |
-| Redstone torch | `Unlit` | Right-click a block: a redstone torch is placed on the face you clicked. In 3.2.1 it comes out lit, despite the key word; set `lit=false` with the stick. | `architect.place.torch` | `modules.specialBlocks.redstoneTorch` |
+| Redstone torch | `Unlit` | Right-click a block: a redstone torch is placed on the face you clicked. In 3.3.0 it comes out lit, despite the key word; set `lit=false` with the stick. | `architect.place.torch` | `modules.specialBlocks.redstoneTorch` |
 | Wheat, melon seeds, pumpkin seeds, brown or red mushroom, cactus, rose bush, dead bush, nether wart or lily pad | `Placeable` | Right-click a block: the plant is placed without the soil or water it needs. Right-click a crop of the same kind to lower its growth stage by one instead; below the lowest it starts again at the highest. | `architect.place.plant` | `modules.specialBlocks.plants` |
 | Piston | `Table` or `Wheel` | Place it: you get a sticky piston head on its own, facing you. | `architect.place.pistonExtension` | `modules.specialBlocks.pistonExtenstions` (spelt this way) |
 | Furnace | `Burning` | Place it: you get a lit furnace that faces you and stays lit. | `architect.place.burningFurnace` | `modules.specialBlocks.burningFurnace` |
@@ -1067,7 +1067,7 @@ Three switches take items, or their powers, away. On a new install all three are
 **Good to know**
 
 - `modules.protection.blockOpItems` is read from the server's first world only, and then applies in every world.
-- The world setting `allowedEnchantments` has no effect in 3.2.1: its names never match, so every enchantment is
+- The world setting `allowedEnchantments` has no effect in 3.3.0: its names never match, so every enchantment is
   removed. Enchanted books keep the enchantments stored in them.
 
 ---
@@ -1208,7 +1208,7 @@ banner. `architect.bannerEditor.save` (Artist bundle) to save. You may delete yo
 
 **Good to know**
 
-- Orientation, the starting mode, does nothing in 3.2.1: the stick cannot turn a banner.
+- Orientation, the starting mode, does nothing in 3.3.0: the stick cannot turn a banner.
 - The pattern number stays set. After a remove, the patterns above it move down one number.
 - Any word works as a mode if its first letter fits: `/banner colour` selects colour mode.
 - Your mode and pattern number are forgotten when the server restarts.
@@ -1601,7 +1601,7 @@ resends just that block. Only you get these updates. Clicks with the stick and t
 | Command | What it does |
 |---|---|
 | `/chunkupdate auto <world>\|-default [true\|false]` | Turns automatic updates on (`true`) or off (anything else, or nothing) in a world, or in `defaultWorldConfig.yml`. It takes effect at once. |
-| `/chunkupdate [radius]` | Does nothing in 3.2.1; it answers "Manual chunk updates are not available. Rejoin to reload your chunks." |
+| `/chunkupdate [radius]` | Does nothing in 3.3.0; it answers "Manual chunk updates are not available. Rejoin to reload your chunks." |
 
 **Permissions:** `architect.chunkupdate` (Artist bundle) for `/chunkupdate`. `/chunkupdate auto` also needs
 `architect.chunkupdate.auto`, which is in no bundle and defaults to op, so only ops have it unless you grant it.
@@ -1699,7 +1699,7 @@ New players start with automatic switching on, client type `vanilla`, variant `l
 
 1. **Pack:** your region's pack, or the one you loaded.
 2. **Client type:** yours, if the pack has it. Otherwise the first client type the pack lists.
-3. **Resolution:** `16px`, or else the first one listed. 3.2.1 has no command to change the resolution.
+3. **Resolution:** `16px`, or else the first one listed. 3.3.0 has no command to change the resolution.
 4. **Variant:** yours, if the pack has it. Otherwise the first one listed.
 5. **Version:** the newest version of the pack that is not newer than your Minecraft version. A client older than all
    of them gets the oldest. Architect reads your version from your connection, or from ViaVersion when the server has
@@ -2023,7 +2023,7 @@ hex box that overrides the sliders. `Show` shows the new colour in the window on
 `Copy from biome…` takes the colour from another biome, vanilla biomes included. `Clear` removes the value, so the
 default or the climate's colour applies.
 
-**Music, sounds and particles** are edited as raw JSON in 3.2.1. The JSON editor shows the live value in a text box.
+**Music, sounds and particles** are edited as raw JSON in 3.3.0. The JSON editor shows the live value in a text box.
 The game checks your JSON when you click `Apply`, and `Clear` removes the value. In the Audio & particles section,
 `Copy from biome…` copies the music and sounds, the particles, or both, from another biome, such as
 `minecraft:basalt_deltas`. Values that biome leaves unset are removed here too.
@@ -2212,8 +2212,8 @@ editor says "see Architect's log", look in that file.
 
 ## Map layers
 
-Architect draws four layers of its own on the dynmap web map, so staff can see where its invisible rules apply. Every
-layer starts hidden: switch it on in the map's layer list.
+Architect draws five layers of its own on the dynmap web map, so staff can see where its invisible rules apply and
+where custom biomes are painted. Every layer starts hidden: switch it on in the map's layer list.
 
 | Layer in the list | What it shows | Its popup |
 |---|---|---|
@@ -2221,6 +2221,7 @@ layer starts hidden: switch it on in the map's layer list.
 | `itemBlockLimit` | Item-block limit regions, in red. | Name, item blocks allowed per chunk, and heights. |
 | `No-physics exceptions` | No-physics exception areas: redstone areas in orange, water areas in blue. | Name, kind of area, heights, and which blocks keep their physics there. |
 | `Item-block budget` | Chunks filling up against their item-block limit: yellow from 50 %, orange from 80 %, red when full. | The armor stands, item frames and paintings in the chunk against its limit, where the limit comes from, and when the count last changed. |
+| `Custom biomes` | Where each custom biome is painted, on the worlds an admin switched on; one colour per biome, and biomes that touch never share one. | Every custom biome painted at that spot, from the highest down: name, id, heights there, how many places and chunks hold it, its settings, and the command to change the biome. |
 
 The map draws areas flat; the popup gives their heights. Polygons follow their points, cylinders and ellipsoids show
 as ellipses, and anything else as a box.
@@ -2230,19 +2231,170 @@ Architect's item blocks. A chunk's limit is read at its centre: the highest limi
 spot, at any height, or else the world's base limit. Changes reach the map within about 10 seconds. The counts are kept
 in `plugins/MCME-Architect/mapLayers/itemBlockBudget.yml`.
 
+### Custom biomes
+
+The `Custom biomes` layer shows where each custom biome is painted. A custom biome is any biome whose id is outside the
+`minecraft:` namespace, such as a spare biome (`mcme:custom_001`) or a biome from your own datapack; an id that the
+server does not define is skipped. The layer draws only the worlds that an admin has put on it.
+
+**Putting a world on the layer.** A world is on from `/architect maplayers scan <world>` until
+`/architect maplayers scan <world> off`. While it is on, Architect keeps a record of the world: for each chunk that
+holds custom biomes, which biomes lie there and between which heights. The layer draws from that record. A world that is
+not on is not drawn, however much custom biome paint it holds.
+
+- `/architect maplayers scan` lists the worlds that are on, one line each, such as
+  `world: 118 chunks with custom biomes, up to date`. The state is `reading 3 of 12 region files`,
+  `waiting to be read`, `up to date`, or `not drawn: its markers would add 703 KB, over the 512 KB target`. A world is
+  `waiting to be read` while another world's read goes first, or when its read stopped and has not gone on, as for a
+  world that was not loaded when Architect started (see below). With no world on, it says so and shows how to start
+  one.
+- `/architect maplayers scan <world>` puts the world on and starts its first read. It answers that the world's saved
+  files are being read in the background, with their number of region files. A world that is being read already says
+  how far it is, and one that waits behind another world's read says so.
+- `/architect maplayers scan <world> off` takes the world off: its areas leave the map, a read in progress stops, and
+  its record is set aside as `<world>.dat.off`. A world that is not on says so.
+- A name that is no loaded world gets `No loaded world is named <world>.` While `mapLayers.customBiomes` is switched
+  off, or Architect's map layers are not running, the command says that the layer is not running.
+
+**The first read.** `scan <world>` starts reading the world's saved files. Architect reads its region files
+(`r.X.Z.mca`, in the world's `region` folder) in the background, on a thread of its own, one world at a time; a second
+world waits for its turn. It only reads: it loads no chunk into the game and writes nothing to the world. Areas appear
+on the map as the files are read.
+
+- The read is paced. After each region file it waits as long as it takes to keep the average at or below
+  `scanMegabytesPerSecond` megabytes a second (20 by default), so the disk is not hogged.
+- It survives a restart. The record remembers which region files are done. After a restart or `/architect reload`, the
+  read goes on with the others a moment after Architect has started, once the worlds are loaded. A world that is not
+  loaded then is not read: it stays `waiting to be read` until a later restart or reload finds it loaded. `scan <world>`
+  starts its read again, but from the beginning, not from where it stopped (see the last point).
+- While it runs, Architect's log says how far it is each time another tenth of the world's region files is read, with
+  a line such as `Custom biomes layer: reading world's saved files: 120 of 1200 region files.`
+- When it ends, Architect's log has a line such as
+  `Custom biomes layer: read world's saved files: 5000 chunks, 120 with custom biomes.`, followed by `Skipped:` and the
+  reasons if some chunks could not be read. A damaged chunk is skipped and counted; it does not stop the read. So is a
+  chunk that the server saved again while its file was read, as `moved while being read`: what was found in its place
+  belongs to another chunk. The live reads pick it up while it is loaded, and the next scan in any case.
+- `scan <world>` for a world that is on reads it again from the start, unless its read is under way or waits behind
+  another world's. That includes a world whose read stopped, such as one that was not loaded when Architect started.
+  The record keeps only the chunks that are loaded at that moment, which the live reads below keep current, so the rest
+  of the world leaves the map and comes back as its files are read again. Do this when paint reached the world without
+  the server seeing it, for example from a tool that edits the world files.
+
+**Keeping it current.** Besides the first read, the layer reads the chunks that are loaded, in the worlds that are on:
+
+| When | Which chunks |
+|---|---|
+| Every 10 seconds | Those within 2 chunks of each builder: a player who may use biome tuning (`architect.biomeTune`). |
+| 2 seconds and 30 seconds after a WorldEdit or FastAsyncWorldEdit command | Those in that player's selection. At 30 seconds, the selection's chunks that are not loaded are read from their saved copies, those the server wrote after the command. |
+| Every 2 minutes | All of them: the slow pass. |
+| Soon after `scan <world>`, and as the first read goes on | Those loaded when the command is given, and those loaded when the read reaches their region file: what that file holds may be older. Until it is read, such a chunk keeps what the record holds for it, or else its saved copy. |
+| A few seconds after a chunk unloads | That chunk's saved copy, if in the last 10 minutes the chunk was within 4 chunks of a builder, in a selection, or among the chunks of the row above. |
+
+The reads of loaded chunks share a small budget on the main thread: about half a millisecond a tick (and at least one
+chunk a tick). Saved copies are read off the main thread. Paint made with WorldEdit or FastAsyncWorldEdit over a
+selection of a few dozen chunks shows within about 10 seconds. A bigger selection takes longer, as its chunks share that
+budget, and an edit still running 2 seconds after the command shows once the second read, 30 seconds after it, has
+reached its chunks, or a few seconds after its chunks unload. While a world's first read is under way, WorldEdit paint
+can take longer to show: the loaded chunks that the read hands over wait in the same queue. Other paint shows within a
+few minutes, as long as its chunks stay loaded. The layer is drawn again at most once every 10 seconds, and the first
+change after a quiet spell within a second. Architect finds WorldEdit or FastAsyncWorldEdit when the first WorldEdit
+command is typed, and says in its log which one it reads selections through.
+
+When a watched chunk unloads, Architect reads its saved copy a few seconds later, off the main thread. It does not read
+the chunk as it unloads: at that moment the server answers with the biomes its world generator would make, not the
+painted ones. The server writes a chunk that changed as it unloads, a moment later, so Architect takes only a copy
+written after the unload, and looks again for about a minute until one comes. A chunk that did not change is not
+written again: its older copy agrees with the record, which keeps what it holds. While the world's first read is under
+way, the record holds nothing yet from the region files that read has still to reach, and it puts the older copy when
+it gets there. When no newer copy comes in time and the older one differs from the record, or there is no copy at all,
+the chunk keeps its old record until it is loaded and read again, or until the next scan, and the log says how many such
+chunks there were, once a minute (see below).
+
+**What the map shows.** An area is a stretch of ground where the same custom biomes lie in every 4 x 4 block column; its
+outline follows the 4-block grid that the game stores biomes on.
+
+- **Colours.** The layer has 16 colours. A biome gets its own while there are colours left, and biomes that touch, side
+  by side or one above the other, never share one (a biome that touches biomes of all 16 colours is the one exception).
+  A biome keeps its colour from one redraw to the next and across restarts, because the colours are kept in
+  `colours.txt`, for all worlds together.
+- **Stacked biomes.** Where custom biomes lie one above the other, the area is drawn once for each biome, in that
+  biome's colour over the same outline, so the colours mix. One window lists every biome there, from the highest down.
+  The area's label names the biomes, joined by plus signs.
+- **Holes.** A map area cannot have a hole, so an area with another biome in the middle is drawn with the hole joined to
+  its outline by a seam. Its border is hidden, so that no seam line shows. A click in the hole reaches the biome there.
+
+**The window.** A click on an area opens a window with a block for each custom biome on that spot, from the highest
+down. Where there are several, the window starts with `<n> custom biomes here, top first`. A block has:
+
+- a header, tinted in the biome's map colour and with a bar of that colour at its left edge. It names the biome:
+  its label, if biome tuning has one for it (`/biometune label`), with its id in grey beside it, else the id alone. In
+  smaller grey type it gives the biome's heights there (such as `Y 40–120`, with a minus sign for a height below
+  zero), in how many places on the world it is painted (`2 places`), and in about how many chunks (`~180 chunks`);
+- under the header, `Changed in game, not saved yet` in orange, when biome tuning holds unsaved edits of the biome;
+- or `Its settings cannot be read here.` in grey, when biome tuning is off or cannot read the biome's file: a biome in
+  a zip pack, in no datapack folder, or in two;
+- a row for each setting its definition sets, and only those. The setting's name is at the left (`Sky`, `Sky light`,
+  `Fog`, `Water`, `Water fog`, `Grass`, `Music`, `Ambient sounds`, `Ambient particles` and so on) and its value at the
+  right. A colour shows a swatch and its value as `#rrggbb`; the two colours that have an alpha, `Sunrise` and `Cloud`,
+  show `#aarrggbb`. The climate settings share one row, `Climate`, such as `temperature 0.7`, `downfall 0.8` and
+  `rain on` divided by dots. A sound or particle of the game's own is written without `minecraft:`; an id of any other
+  namespace keeps its namespace;
+- the command `/biometune edit <id>` in small type at the bottom, to change the biome.
+
+The settings are live, from biome tuning and not from the saved file. A change reaches the window within about 10
+seconds.
+
+**The size limit.** Every visit to the web map downloads the markers of the world it shows, hidden layers included. A
+world whose Custom biomes markers would add more than 512 KB to that download, measured as the web server sends it
+(gzipped at level 1), is not drawn at all. `scan` then says `not drawn` with the size, and the log says so once. The
+world stays on, and is drawn again, with a line in the log, as soon as its markers fit. The 512 KB is fixed; it is not a
+setting.
+
+**Files.** Under `plugins/MCME-Architect/mapLayers/customBiomes/`:
+
+| File | What it holds |
+|---|---|
+| `<world>.dat` | The world's record, in a binary format. It is written when it changed, at most once a minute, and when Architect stops. `<world>.dat.tmp` is there while it is written. |
+| `<world>.dat.bak` | A record that could not be read, set aside at the start with a warning in the log. The world is read again from the start. |
+| `<world>.dat.off` | The record of a world taken off with `scan <world> off`. Architect does not read it again: keep it or delete it. |
+| `colours.txt` | Each biome's colour: one `<biome id>;<colour number>;<order>` line per biome. Delete it, with the server stopped, to colour the biomes again. |
+
+**What the log says.** Among the lines in Architect's log (see [Logs and debugging](#logs-and-debugging)) are:
+
+| Line | Meaning |
+|---|---|
+| `Custom biomes layer: reading <world>'s saved files: <n> of <total> region files.` | How far the first read of the world is. Said at each tenth of its region files. |
+| `Custom biomes layer: reading the saved files of <world> failed, so its read stopped; /architect maplayers scan <world> reads it again from the start.` | A warning, with the error below it: something such as running out of memory stopped the world's first read. What was read so far stays, and the next world's read still runs. |
+| `Custom biomes layer: <world> is not drawn: its markers would add <n> KB to every map visit, over the 512 KB target.` | The world is over the size limit. Said once. |
+| `Custom biomes layer: <world> is drawn again: its markers add <n> KB.` | The world fits again. |
+| `Custom biomes layer: biome tuning could not tell the name and settings of <biome>, so its window shows its id and no settings.` | A warning, with the error below it, such as a datapack folder that cannot be listed. The other biomes are still drawn with theirs. Said once while it lasts. |
+| `Custom biomes layer: <n> chunks unloaded, but their saved copies were not written in time to be read; /architect maplayers scan <world> catches them.` | For about a minute after these watched chunks unloaded, the server wrote no newer copy of them, and the copy it had differs from what Architect holds, or there was none. Their paint may be missed. At most once a minute; run the scan again. If it comes after most unloads, Architect does not find the world's saved files where the server writes them. |
+| `Custom biomes layer: could not read the saved chunks of <world> in <file>, so they are not brought up to date from it. This is logged once while it lasts.` | A warning, with the error below it: a region file of the world could not be read, for example for its permissions. Said once for the world and the error, and again only after each file that failed so has been read without it; reads of the world's other files do not count. These chunks are not counted in the line above. |
+| `Custom biomes layer: the saved copy of chunk <x>, <z> of <world> cannot be read (<reason>), so the chunk is not brought up to date from it. This is logged once while it lasts.` | A warning: the chunk is saved in a form Architect does not read, such as LZ4 compression, or it still could not be read about a minute after it unloaded. Its record stays as it was. Said once for the world and the reason, and again only after a chunk of each file it came from has been read without it. The first read skips such chunks too, and its last line counts them. |
+| `Custom biomes layer: reading the saved copies of chunks of <worlds> failed, so they were not read; /architect maplayers scan with the world catches them.` | A warning, with the error below it: something such as running out of memory stopped a read of saved copies. Later ones still run. |
+
+**Good to know**
+
+- To show a biome's settings, the layer asks biome tuning for the biome, which loads its file as `/biometune info`
+  does. If you change that file by hand afterwards, `/biometune save` refuses until `/biometune revert <biome>` loads
+  the new version; see [Live, saved and published](#live-saved-and-published).
+- `/architect reload` and a restart stop the layer, which saves every record first, and start it again. A read that was
+  under way goes on with the files it had not finished.
+
 ### Refreshing the layers
 
 The layers redraw by themselves when their data changes, at `/architect reload`, when dynmap starts again, and when a
-world is loaded.
+world is loaded. Two commands, both under `/architect maplayers`, act by hand:
 
 | Command | What it does |
 |---|---|
-| `/architect maplayers refresh` | Gathers every layer's data again, recounts the loaded chunks, looks up dynmap afresh and redraws every layer. |
+| `/architect maplayers refresh` | Gathers every layer's data again, recounts the loaded chunks, looks up dynmap afresh and redraws every layer. The Custom biomes layer reads every loaded chunk of its worlds again, but not their saved files: `scan` does that. |
+| `/architect maplayers scan [<world> [off]]` | Lists the worlds on the Custom biomes layer; with a world, puts it on the layer and reads its saved files; with `off`, takes it off. See [Custom biomes](#custom-biomes). |
 
-**Permission:** `architect.maplayers` (Head Designer bundle), or the console.
+**Permission:** `architect.maplayers` (Head Designer bundle), or the console, for both.
 
-It answers `Architect's map layers are drawn again, and loaded chunks recounted.`, or says that dynmap is not enabled
-or that the map layers are not running.
+`refresh` answers `Architect's map layers are drawn again, and loaded chunks recounted.`, or says that dynmap is
+not enabled or that the map layers are not running.
 
 ### Map layer settings
 
@@ -2256,15 +2408,21 @@ written `'#rrggbb'`.
 | `mapLayers.itemBlockLimit` | The same keys, with `color: '#ff0000'`. |
 | `mapLayers.noPhysics` | `enabled: true`, `hidden: true`, `redstoneColor: '#ff8c00'`, `waterColor: '#1e64ff'`, `borderWidth: 2`, `borderOpacity: 0.3`, `areaOpacity: 0.2` |
 | `mapLayers.itemBlockBudget` | `enabled: true`, `hidden: true`, `warnPercent: 50`, `highPercent: 80`, `warnColor: '#ffd700'`, `highColor: '#ff8c00'`, `fullColor: '#ff0000'`, `areaOpacity: 0.35` |
+| `mapLayers.customBiomes` | `enabled: true`, `hidden: true`, `borderWidth: 2`, `borderOpacity: 0.6`, `areaOpacity: 0.3`, `scanMegabytesPerSecond: 20` |
 
 `enabled` draws the layer. `hidden` keeps it switched off in the layer list until a viewer turns it on. `borderWidth`,
 `borderOpacity` and `areaOpacity` (0 to 1) style the lines and the fill. A chunk shows on the budget layer from
 `warnPercent` of its limit (1 to 100), and turns orange from `highPercent`.
 
+The Custom biomes layer has no colour keys: it colours its biomes itself, and draws nothing until an admin puts a world
+on it (see [Custom biomes](#custom-biomes)). `scanMegabytesPerSecond` is the most that the first read of a world's saved
+files takes from the disk, in megabytes a second on average. A value of 0 or less is replaced by 20, with a warning in
+Architect's log.
+
 **The older `dynmap` section.** Until `rpRegions` or `itemBlockLimit` has an entry of its own under `mapLayers`, that
 layer reads the `dynmap` section instead: `dynmap.enabled` (off unless `true`), `dynmap.hide` (default `true`),
 `dynmap.borderColor` and `dynmap.areaColor` (Bukkit colour objects), `dynmap.borderWidth`, `dynmap.borderOpacity` and
-`dynmap.areaOpacity`. The other two layers never read it.
+`dynmap.areaOpacity`. The other three layers never read it.
 
 `/architect reload` applies changes to both sections.
 
@@ -2272,13 +2430,15 @@ layer reads the `dynmap` section instead: `dynmap.enabled` (off unless `true`), 
 
 dynmap is optional. Without it, Architect starts as normal, draws nothing, and logs
 `dynmap is not enabled, so Architect's map layers are not drawn.` The budget layer still counts entities and saves its
-file; on a server without a web map, `itemBlockBudget: false` under `mapLayers` saves that work. If drawing fails, Architect switches all its
+file; on a server without a web map, `itemBlockBudget: false` under `mapLayers` saves that work. The Custom biomes layer
+likewise goes on reading chunks and saving its records for the worlds that are on, so on such a server put no world on
+it, or set `customBiomes: false`. If drawing fails, Architect switches all its
 layers off with one warning, until `/architect maplayers refresh`, or until dynmap or Architect starts again.
 
 **Good to know**
 
 - `dynmap.enabled` is not a master switch. It covers only the resource pack region and item-block limit layers; the
-  other two are on by default.
+  other three are on by default.
 - A `config.yml` with no `dynmap` section, and no `mapLayers` entries for those two layers, leaves them off.
 - The budget tiles are a guide. The limit is read at the chunk's centre, while placing checks the exact spot, and
   players with `architect.itemBlock.region.ignore` can place in a full chunk.
@@ -2329,12 +2489,12 @@ it logs, how to reload it, and the `/architect` command.
 
 #### Getting the jar
 
-- **GitHub:** the releases of `MCME/MCME-Architect` on github.com. Release `v3.2.1` has `MCME-Architect-3.2.1.jar` and
-  `MCME-Architect-3.2.1.jar.sha256`. Compare the jar's SHA-256 checksum with the `.sha256` file before you install it.
-- **Maven repository:** `com.mcmiddleearth:MCME-Architect:3.2.1` in `https://repo.mcmiddleearth.com/releases`.
+- **GitHub:** the releases of `MCME/MCME-Architect` on github.com. Release `v3.3.0` has `MCME-Architect-3.3.0.jar` and
+  `MCME-Architect-3.3.0.jar.sha256`. Compare the jar's SHA-256 checksum with the `.sha256` file before you install it.
+- **Maven repository:** `com.mcmiddleearth:MCME-Architect:3.3.0` in `https://repo.mcmiddleearth.com/releases`.
 
 Jars built from source carry the build type and the commit in their name, for example
-`MCME-Architect-3.2.1-DEV-<commit>.jar`. `/architect version` shows only `3.2.1`, so the file name is the only way to
+`MCME-Architect-3.3.0-DEV-<commit>.jar`. `/architect version` shows only `3.3.0`, so the file name is the only way to
 tell such builds apart.
 
 #### First start
@@ -2389,14 +2549,14 @@ its layout (such as the indentation) can change.
 | `ServerResourcePacks` | The server resource packs: per pack, client type, resolution and variant, a download address and SHA-1 for each Minecraft version. | [Resource packs](#resource-packs) |
 | `rpSettingsDatabase` | The MySQL database for players' pack settings: `user`, `password`, `dbName`, `ip`, `port`. The placeholder `xxx` means no database. | [Resource packs](#resource-packs) |
 | `gitHubRpReleases` | Per pack: the GitHub `owner` and `repo`, and the release `script`, its folder `path` and `timeoutMinutes`, for `/rp release` and `/rp server`. | [Resource packs](#resource-packs) |
-| `mapLayers` | Switches and styles of the four map layers. Commented out in the bundled file: every key is optional. | [Map layers](#map-layers) |
+| `mapLayers` | Switches and styles of the five map layers. Commented out in the bundled file: every key is optional. | [Map layers](#map-layers) |
 | `dynmap` | The older switch and style of two map layers (below). | [Map layers](#map-layers) |
 | `entityLogger` | The entity logger's map markers (below). | [Logs and debugging](#logs-and-debugging) |
 | `headGalleryLocation` | Where the custom head gallery stands (below). | [Custom heads](#custom-heads) |
 | `inventoryDownload`, `inventoryUpload` | `script` and `path` of the scripts that `/inv download` and `/inv upload` run. The bundled file has only `inventoryDownload`. | [Blocks and inventories](#blocks-and-inventories) |
 | `logging.file` | Architect's own log files (below). | [Logs and debugging](#logs-and-debugging) |
 | `biomeTuning` | Live biome tuning: undo depth, backups, spare biomes, target pack and refresh timing. | [Biome tuning](#biome-tuning) |
-| `EntityLimit` | `number` and `radius`. Read, but used by nothing in 3.2.1. | — |
+| `EntityLimit` | `number` and `radius`. Read, but used by nothing in 3.3.0. | — |
 | `CopyPasteUndoLimit` | Undo steps kept per player for `/undo` and `/redo` (default `30`). Not in the bundled file: add it to change it. | [Copy, paste and shaping](#copy-paste-and-shaping) |
 | `CustomHeadUploadPath` | The web address that `/chead upload` reads head lists from. Architect adds it at the first `/chead upload`. | [Custom heads](#custom-heads) |
 
@@ -2502,13 +2662,13 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `poweredDoors` | Architect places doors taken from the creative inventory itself: oak, spruce, jungle, acacia and dark oak doors powered, birch and iron doors unpowered. Doors of newer wood types stay as the game places them. |
 | `halfDoors` | A door item named `Half…` places only the lower half (`architect.place.halfDoor`). A lone half door cannot be opened in any world, whatever this switch says. |
 | `halfBeds` | A red bed named `Half…` places one half of a bed (`architect.place.halfBed`). |
-| `redstoneTorch` | A redstone torch named `Unlit…` places a torch on the clicked face; in 3.2.1 it comes out lit (`architect.place.torch`). |
+| `redstoneTorch` | A redstone torch named `Unlit…` places a torch on the clicked face; in 3.3.0 it comes out lit (`architect.place.torch`). |
 | `plants` | Plant items named `Placeable…` can be placed on any block (`architect.place.plant`). |
 | `pistonExtenstions` (spelt this way) | A piston named `Table…` or `Wheel…` places a piston head (`architect.place.pistonExtension`). |
 | `burningFurnace` | Furnaces that finish smelting are refilled, so they burn for ever. Clicking the input slot lights a furnace or puts it out, where the player may build. A furnace named `Burning…` is placed lit (`architect.place.burningFurnace`). |
 | `dragonEgg` | Dragon eggs never teleport. Only players in creative mode with `architect.interactDragonEgg` and build permission can break one. |
-| `doubleSlabs` | No effect in 3.2.1. |
-| `sixSidedLogs` | No effect in 3.2.1. |
+| `doubleSlabs` | No effect in 3.3.0. |
+| `sixSidedLogs` | No effect in 3.3.0. |
 
 **Environment (`modules.environment.*`)**
 
@@ -2542,7 +2702,7 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `bannerEditor` | `/banner`, and editing banners with a stick. |
 | `paintingEditor` | Changing a painting's motif with a stick. |
 | `armorStandEditor` | `/armor`, and editing armor stands with a stick. New armor stands in the world get no gravity and cannot be damaged. |
-| `armorStandRollback` | `/armor rollback`, which is unfinished in 3.2.1. |
+| `armorStandRollback` | `/armor rollback`, which is unfinished in 3.3.0. |
 | `customHeadManager` | `/chead`, and taking a copy of a head by clicking it with a stick. |
 | `resourcePackSwitcher` | The `/rp` player commands and region commands in this world. `/rp check` and the admin commands that also run from the console keep working, and RP regions switch packs whatever this switch says. |
 | `fullBrightness` | `/fbt` gives night vision in this world. When off, players who arrive in the world lose their night vision. In `server.yml`, it decides at start whether `/fbt` exists at all. |
@@ -2550,13 +2710,13 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `weSchemViewer` | `/schlist`. |
 | `voxelViewer` | `/vv`. |
 | `stencilListEditor` | `/sl`. |
-| `modules.commmand.itemTexture` (three m, a group of its own) | No effect in 3.2.1. |
+| `modules.commmand.itemTexture` (three m, a group of its own) | No effect in 3.3.0. |
 
 **Protection (`modules.protection.*`)**
 
 | Key | When on |
 |---|---|
-| `blockOpItems` | Items lose every enchantment and every attribute modifier when a player picks them up, drops them, selects them or moves them in an inventory. Read from the first loaded world only, for the whole server. In 3.2.1 no enchantment is kept (see `allowedEnchantments` below). |
+| `blockOpItems` | Items lose every enchantment and every attribute modifier when a player picks them up, drops them, selects them or moves them in an inventory. Read from the first loaded world only, for the whole server. In 3.3.0 no enchantment is kept (see `allowedEnchantments` below). |
 | `removeContainerItemsOnBreak` | A broken container drops nothing: its contents are deleted. Jukeboxes and decorated pots lose their contents too. |
 | `blockArrowShooting` | Nobody can shoot a bow or crossbow, mobs included. |
 | `tnt` | TNT cannot be lit. |
@@ -2571,8 +2731,8 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | Key | When on |
 |---|---|
 | `modules.chunkupdate.auto` | After every block click, placement or break, Architect sends the nearby blocks again to the player who acted, so their client shows connections (fences, walls, panes, gates, doors) correctly. |
-| `modules.chunkupdate.manual` | Allows `/chunkupdate`, which does nothing in 3.2.1. Also needed in your current world to use `/chunkupdate auto`. |
-| `modules.voxelBiomeBrushFix` | No effect in 3.2.1. |
+| `modules.chunkupdate.manual` | Allows `/chunkupdate`, which does nothing in 3.3.0. Also needed in your current world to use `/chunkupdate auto`. |
+| `modules.voxelBiomeBrushFix` | No effect in 3.3.0. |
 
 #### Other keys
 
@@ -2587,7 +2747,7 @@ see its row.
 | `noInteraction` | 11 entries: acacia, jungle, dark oak and spruce fence gates; `minecraft:birch_fence_gate[powered=true]`; acacia, jungle, dark oak and spruce doors with `powered=false`; `minecraft:repeater`; `minecraft:comparator` | Block states nobody may right-click, while `specialBlocks.blockPlayerInteraction` is on. Doors on the list are also left out of Architect's double-door opening, and right-clicking such a block with a special block item places the item instead of using the block. |
 | `disabledBlockStates` | `minecraft:blue_stained_glass_pane[east=false,north=false,south=false,west=false]` | Block states the stick never switches to, and that special blocks never connect into. |
 | `inventoryAccess.<TYPE>` | see below | Who may open each type of container. |
-| `allowedEnchantments.<Name>` | `Durability: 1` | Meant as the enchantments, each with a highest level, that `blockOpItems` keeps. In 3.2.1 no entry ever matches, so `blockOpItems` removes every enchantment: switch `blockOpItems` off to keep enchantments. Read from the first loaded world only. |
+| `allowedEnchantments.<Name>` | `Durability: 1` | Meant as the enchantments, each with a highest level, that `blockOpItems` keeps. In 3.3.0 no entry ever matches, so `blockOpItems` removes every enchantment: switch `blockOpItems` off to keep enchantments. Read from the first loaded world only. |
 | `doubleSlabReplacements.<pack>.<name>` | an example for the pack `gondor` | `from` and `to`, both block data. When a player stacks two slabs into a double slab, and the slab that was there matches `from` exactly, the double slab becomes `to`. `<pack>` is the player's resource pack (or the RP region's), written in lower case. Needs `specialBlocks.place`. |
 | `viewDistance` | `255` | The view distance Architect tells players in this world who have not set their own with `/viewdistance`; 255 means no limit in practice. With the defaults, every player in the world is told 255 and keeps every chunk it has received. Needs ProtocolLib and `command.viewdistance`. |
 | `armorStand.minScale`, `armorStand.maxScale` | `0.0625`, `16.0` | Smallest and largest scale of the armor stand editor's scale mode. In a world file, set both keys: a missing one reads as 0. |
@@ -2686,11 +2846,13 @@ Architect keeps its files in `plugins/MCME-Architect/`. Back up the whole folder
 | `regions/<name>.reg` | RP regions | One file per region. Older `.json` region files found here are converted once, then deleted. |
 | `rp-release-times.yml` | `/rp release` | How long the last successful release of each pack took. |
 | `inventories/block/<pack>/` | build inventories | `categories.yml` and the block files of one pack. The folder name must equal the pack's key under `ServerResourcePacks`, including case. Architect creates `inventories/block/` but not the pack folders, and it rewrites the block files when it loads them. |
-| `inventories/item/<pack>/` | item inventories | Loaded, but no command opens them in 3.2.1. |
+| `inventories/item/<pack>/` | item inventories | Loaded, but no command opens them in 3.3.0. |
 | `inventories/saved/<pack>/<name>.yml` | `/inv create` | Saved inventories. |
 | `itemSets.yml` | `/get` | Kits. |
 | `itemBlockRegions/<name>.reg` | `/itemblock` | Item block limit regions. |
 | `mapLayers/itemBlockBudget.yml` | map layers | Item block counts per chunk. |
+| `mapLayers/customBiomes/<world>.dat` | Custom biomes layer | One file per world on the layer, in a binary format: the custom biomes of each chunk, and how far the first read has come. A `.tmp` file appears while saving, a `.bak` copy when a file could not be read, and a `.off` copy when the world was taken off. See [Custom biomes](#custom-biomes). |
+| `mapLayers/customBiomes/colours.txt` | Custom biomes layer | The map colour of each biome, one `<biome id>;<colour number>;<order>` line per biome. |
 | `NoPhyExceptionAreas.txt` | `/nophy exception` | One line per exception area. A `.tmp` file appears while saving, and a `.bak` copy is kept when a load had to skip a broken line. |
 | `customHeads/accepted/`, `customHeads/submitted/` | `/chead` | The head collection (folders are categories) and the heads waiting for review. |
 | `clipboards/<player UUID>.cbd` | copy and paste | Each player's clipboard, in a binary format. |
@@ -2831,32 +2993,34 @@ without a restart leaves live biome edits in the game while Architect forgets th
 
 ### The `/architect` command
 
-`/architect` is Architect's admin command. Subcommand names are not case-sensitive. It offers no tab completion.
+`/architect` is Architect's admin command. Subcommand names are not case-sensitive. Only `maplayers` offers tab
+completion: `refresh` and `scan`, then the loaded worlds and `off`.
 
 | Syntax | Who may use it | What it does |
 |---|---|---|
 | `/architect`, `/architect help [page]` | players with `architect.help` (everyone by default) | Lists the Architect commands you may use, ten per page, with clickable lines. Careful: clicking the lines of `/copy`, `/cut`, `/paste`, `/undo`, `/redo` and `/flip` runs that command at once. |
-| `/architect version` | the console, `architect.reload` | Shows Architect's version, for example `Version: 3.2.1`. |
+| `/architect version` | the console, `architect.reload` | Shows Architect's version, for example `Version: 3.3.0`. |
 | `/architect reload` | the console, `architect.reload` | Reloads Architect's settings and data; see [Reloading](#reloading). |
 | `/architect reloaddata` | the console, `architect.reload` | Reloads the server's data packs (loot tables, advancements and the like). Not Architect's own data. |
 | `/architect world` | the console, `architect.info` or `architect.reload` | Lists the loaded worlds. In game, clicking a name puts `/mvtp <world>` (a Multiverse command) in your chat box. |
 | `/architect blockdata` | players with `architect.info` or `architect.reload` | Shows the full block data of the block you look at, up to 100 blocks away. |
 | `/architect dev [true\|false\|<level>\|-r]` | the console, `architect.info` or `architect.reload` | Architect's debug output; see [Logs and debugging](#logs-and-debugging). |
 | `/architect checkNBT [player]` | the console, `architect.checknbt` | Shows the stored data of the item in your main hand, or of every item an online player carries. From the console, name a player. |
-| `/architect weather clear\|rain\|thunder` | players with `architect.weather` | Changes the weather in your world once, past `weatherBlocking`. In 3.2.1 `thunder` gives rain only. |
+| `/architect weather clear\|rain\|thunder` | players with `architect.weather` | Changes the weather in your world once, past `weatherBlocking`. In 3.3.0 `thunder` gives rain only. |
 | `/architect maplayers refresh` | the console, `architect.maplayers` | Draws Architect's map layers again and recounts the loaded chunks; see [Map layers](#map-layers). |
+| `/architect maplayers scan [<world> [off]]` | the console, `architect.maplayers` | Lists the worlds on the Custom biomes layer; with a world, puts it on the layer and reads its saved files; with `off`, takes it off. See [Custom biomes](#custom-biomes). |
 | `/architect eLog true`, `/architect eLog` | the console, `architect.reload` | Starts or stops the entity logger; see [Logs and debugging](#logs-and-debugging). |
 | `/architect placeAllBlockStates [file]` | players with `architect.reload` | A developer tool. Places every state of every block type in a large grid next to you, with no undo: never use it in a build world. With `file`, it places nothing and writes the list to `blockList.txt` in the server's main folder. |
 
 - `architect.reload` allows everything that `architect.info` allows.
 - Senders that are neither the console nor a player, such as command blocks and RCON, can use only `checkNBT`, and
-  `maplayers refresh` if they hold `architect.maplayers`.
+  `maplayers refresh` and `maplayers scan` if they hold `architect.maplayers`.
 
 ---
 
 ## Command reference
 
-Every command Architect registers in 3.2.1. Permissions are per subcommand where they differ; the
+Every command Architect registers in 3.3.0. Permissions are per subcommand where they differ; the
 [Permissions](#permissions) chapter explains each node. Every command also works with the prefix `mcme-architect:`,
 for example `/mcme-architect:undo`, which helps when another plugin has a command of the same name.
 
@@ -2864,7 +3028,7 @@ for example `/mcme-architect:undo`, which helps when another plugin has a comman
 |---|---|---|---|---|
 | `/architect` | `/architect [help [page]]` | Lists the Architect commands you may use. | `architect.help` (everyone by default) | [Running Architect](#the-architect-command) |
 | `/architect` (admin) | `/architect version`, `reload`, `reloaddata`, `world`, `blockdata`, `dev [true\|false\|<level>\|-r]`, `checkNBT [player]`, `weather clear\|rain\|thunder`, `eLog [true]`, `placeAllBlockStates [file]` | Version, reloading, worlds, block data, debug output, item data, weather, entity logger. | `architect.info`, `architect.reload`, `architect.checknbt` or `architect.weather`; see [The /architect command](#the-architect-command) | [Running Architect](#the-architect-command) |
-| `/architect maplayers` | `/architect maplayers refresh` | Draws the map layers again. | `architect.maplayers` | [Map layers](#map-layers) |
+| `/architect maplayers` | `/architect maplayers refresh`, `/architect maplayers scan [<world> [off]]` | Draws the map layers again; lists the worlds on the Custom biomes layer, puts a world on it and reads its saved files, or takes it off. | `architect.maplayers` | [Map layers](#map-layers) |
 | `/get` | `/get [help [page]]`, `/get list [page]`, `/get <set> [-o]` | Lists kits and gives one; with `-o`, into the same hotbar slots. | `architect.getCommand` | [Blocks and inventories](#blocks-and-inventories) |
 | `/get` (kits) | `/get pcreate <set> [description]`, `/get create <set> [description]`, `/get publish <set>`, `/get unpublish <set>`, `/get delete <set>` | Saves your hotbar as a private or public kit; publishes, unpublishes or deletes a kit. | `architect.getCommand`, plus `architect.get.private` for `pcreate`, `architect.get.public` for `create`, `publish` and `unpublish`, and `architect.get.other` for another player's kit | [Blocks and inventories](#blocks-and-inventories) |
 | `/get armor` | `/get armor <RRGGBB>` | Gives leather armor dyed that colour. | `architect.getCommand`, `architect.get.armor` | [Blocks and inventories](#blocks-and-inventories) |
@@ -2874,7 +3038,7 @@ for example `/mcme-architect:undo`, which helps when another plugin has a comman
 | `/inv` (admin) | `/inv reload`, `/inv download <pack>`, `/inv upload <pack> <description>` | Reloads the inventory files; runs the download or upload script. | `architect.inventory.reload`, `architect.inventory.download`, `architect.inventory.upload` | [Blocks and inventories](#blocks-and-inventories) |
 | `/itemblock` | `/itemblock help`, `stats <radius> [height]`, `glow <radius>\|off`, `remove <radius> [height]`, `list`, `create <name>`, `delete <name>`, `limit <name> <n>`, `limit -base <n>` | Item block counts, glow and clean-up (`remove` removes every named armor stand in the box), and item block limit regions. | `architect.itemBlock`, plus `architect.itemBlock.remove` for `remove`, `architect.itemBlock.region.create` for `create` and `delete`, and `architect.itemBlock.region.limit` for `limit` | [Blocks and inventories](#blocks-and-inventories) |
 | `/nophy` | `/nophy list <world\|-default>`, `/nophy add\|remove <world\|-default> <block>`, `/nophy exception redstone\|water <name>`, `/nophy exception delete <name>`, `/nophy exception list [page]`, `/nophy help [page]` | Shows and edits the no-physics list; manages exception areas. | `architect.noPhysicsList.view`, plus `architect.noPhysicsList.edit` for `add` and `remove`, and `architect.noPhysicsList.exception` for `exception` | [Placing and physics](#placing-and-physics) |
-| `/chunkupdate` | `/chunkupdate [radius]`, `/chunkupdate auto <world\|-default> [true]` | The radius form does nothing in 3.2.1. `auto` switches automatic block resends on (with `true`) or off. | `architect.chunkupdate`, plus `architect.chunkupdate.auto` for `auto` | [Seeing and moving](#seeing-and-moving) |
+| `/chunkupdate` | `/chunkupdate [radius]`, `/chunkupdate auto <world\|-default> [true]` | The radius form does nothing in 3.3.0. `auto` switches automatic block resends on (with `true`) or off. | `architect.chunkupdate`, plus `architect.chunkupdate.auto` for `auto` | [Seeing and moving](#seeing-and-moving) |
 | `/switchstick` (`/swst`, `/ss`) | `/switchstick [help]` | Switches your stick's block-state editing on or off. It is off until you first run this. | `architect.switchstick` | [Placing and physics](#placing-and-physics) |
 | `/weselect` (`/wes`) | `/weselect <command>`, `/weselect shift <command>`, `/weselect show`, `/weselect reset`, `/weselect help [page]` | Sets the command that flint clicks put in your chat box, for a click and a sneak-click; `#` becomes the block data. | `architect.weselect` | [Placing and physics](#placing-and-physics) |
 | `/sign` | `/sign <1-4> <text>`, `/sign glow true\|false` | Changes a line of the sign you selected with a stick; switches glowing text. | `architect.signEditor` | [Editing tools](#editing-tools) |
@@ -2948,7 +3112,7 @@ Notes:
 
 ### All nodes
 
-What each node allows in 3.2.1, as the code checks it. "Build permission" means TheGaffer's permission to build at
+What each node allows in 3.3.0, as the code checks it. "Build permission" means TheGaffer's permission to build at
 that spot. Bundle names are short: adventurer, artist, designer, head designer.
 
 | Node | Default | Bundle | What it allows |
@@ -2957,7 +3121,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.armorStandEditor` | op | adventurer | `/armor`: every mode, copy and paste, listing and loading saved stands. Where armor stand protection is on, also hitting armor stands, and placing and using them (with build permission). |
 | `architect.armorStandEditor.delete` | op | head designer | Renaming and deleting other players' saved armor stands. |
 | `architect.armorStandEditor.trusted` | op | artist | Saving armor stands to files, renaming and deleting your own files. Includes `architect.armorStandEditor`. |
-| `architect.armorStandRollback` | op | — | `/armor rollback`, which is unfinished in 3.2.1: it does not roll anything back. |
+| `architect.armorStandRollback` | op | — | `/armor rollback`, which is unfinished in 3.3.0: it does not roll anything back. |
 | `architect.bannerEditor` | op | adventurer | `/banner`, editing banners with a stick (with build permission), and deleting your own banner files. |
 | `architect.bannerEditor.delete` | op | head designer | Deleting other players' banner files. |
 | `architect.bannerEditor.save` | op | artist | `/banner save`. Includes `architect.bannerEditor`. |
@@ -2966,7 +3130,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.biomeTune.publish` | op | — | `/biometune publish`, and `/biometune preview <player>`. |
 | `architect.biomeTune.save` | op | — | `/biometune save`: writing a biome to its datapack file. |
 | `architect.checknbt` | op | — | `/architect checkNBT`. |
-| `architect.chunkupdate` | op | artist | `/chunkupdate`, which does nothing in 3.2.1. Also needed for `/chunkupdate auto`. |
+| `architect.chunkupdate` | op | artist | `/chunkupdate`, which does nothing in 3.3.0. Also needed for `/chunkupdate auto`. |
 | `architect.chunkupdate.auto` | op | — | `/chunkupdate auto`, together with `architect.chunkupdate`. |
 | `architect.copypaste` | op | designer | `/copy`, `/cut`, `/paste`, `/undo`, `/redo`, `/flip` and `/rot`. |
 | `architect.copypaste.unlimited` | op | — | Copying and cutting selections of any size. |
@@ -2978,7 +3142,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.gamemodeSwitcher.adventure`, `architect.gamemodeSwitcher.creative`, `architect.gamemodeSwitcher.survival` | false | — | That game mode with the F3+F4 switcher, without op. |
 | `architect.gamemodeSwitcher.spectator` | false | — | Spectator mode with F3+F4 or F3+N, without op. Give another mode's node with it: without one, a player cannot switch out of spectator mode. |
 | `architect.get.armor` | op | adventurer | `/get armor`. |
-| `architect.get.doors`, `architect.get.food`, `architect.get.logs`, `architect.get.misc`, `architect.get.plants`, `architect.get.slabs` | op | adventurer | No effect in 3.2.1. |
+| `architect.get.doors`, `architect.get.food`, `architect.get.logs`, `architect.get.misc`, `architect.get.plants`, `architect.get.slabs` | op | adventurer | No effect in 3.3.0. |
 | `architect.get.head` | op | adventurer | `/get head`. |
 | `architect.get.other` | op | head designer | Publishing, unpublishing and deleting other players' kits. |
 | `architect.get.private` | op | artist | `/get pcreate`: private kits. |
@@ -3003,22 +3167,22 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.itemBlock.region.ignore` | op | head designer | Placing item blocks in a chunk that has reached its limit. |
 | `architect.itemBlock.region.limit` | op | head designer | `/itemblock limit`, for regions and for the world's base limit. |
 | `architect.itemBlock.remove` | op | head designer | `/itemblock remove`. |
-| `architect.itemTexture` | op | — | No effect in 3.2.1. |
-| `architect.itemTexture.manager` | op | — | No effect in 3.2.1. |
+| `architect.itemTexture` | op | — | No effect in 3.3.0. |
+| `architect.itemTexture.manager` | op | — | No effect in 3.3.0. |
 | `architect.lecternEditor` | op | — | Taking a lectern's book (not a copy) and putting books on lecterns, without build permission. |
-| `architect.maplayers` | op | head designer | `/architect maplayers refresh`. |
+| `architect.maplayers` | op | head designer | `/architect maplayers refresh` and `/architect maplayers scan`. |
 | `architect.noPhysicsList.edit` | op | head designer | `/nophy add` and `/nophy remove`. Includes `architect.noPhysicsList.view`. |
 | `architect.noPhysicsList.exception` | op | designer | `/nophy exception`. Needs `architect.noPhysicsList.view` as well. |
 | `architect.noPhysicsList.view` | op | adventurer | `/nophy`, `/nophy list` and `/nophy help`. |
 | `architect.paintingEditor` | op | adventurer | Changing a painting's motif with a stick (with build permission). |
 | `architect.place.burningFurnace` | op | adventurer | Placing a lit furnace from a furnace named `Burning…`. |
-| `architect.place.doubleSlab` | op | adventurer | No effect in 3.2.1. |
+| `architect.place.doubleSlab` | op | adventurer | No effect in 3.3.0. |
 | `architect.place.halfBed` | op | adventurer | Placing half beds from a red bed named `Half…`. |
 | `architect.place.halfDoor` | op | adventurer | Placing half doors from a door named `Half…`. |
 | `architect.place.pistonExtension` | op | adventurer | Placing piston heads from a piston named `Table…` or `Wheel…`. |
 | `architect.place.plant` | op | adventurer | Placing plants named `Placeable…` on any block. |
-| `architect.place.sixSidedLog` | op | adventurer | No effect in 3.2.1. |
-| `architect.place.torch` | op | adventurer | Placing redstone torches from a torch named `Unlit…` (they come out lit in 3.2.1). |
+| `architect.place.sixSidedLog` | op | adventurer | No effect in 3.3.0. |
+| `architect.place.torch` | op | adventurer | Placing redstone torches from a torch named `Unlit…` (they come out lit in 3.3.0). |
 | `architect.randomiser.allowMaterials` | op | head designer | `/random allow` and `/random deny`. Includes `architect.randomiser.user`. |
 | `architect.randomiser.user` | op | designer | `/random`, except `allow` and `deny`. |
 | `architect.ranks.adventurer`, `architect.ranks.artist`, `architect.ranks.designer`, `architect.ranks.headDesigner` | op | — | The rank bundles; see [Rank bundles](#rank-bundles). |
@@ -3073,7 +3237,7 @@ Each entry gives the symptom, the cause and the fix.
 
 - **Dropped items vanish.** Cause: `modules.environment.dropBlocking` is on, which deletes dropped items. Fix: set it
   to `false` in that world's file (or in `defaultWorldConfig.yml`) and run `/architect reload`.
-- **Enchantments disappear from items.** Cause: `modules.protection.blockOpItems` is on, and in 3.2.1
+- **Enchantments disappear from items.** Cause: `modules.protection.blockOpItems` is on, and in 3.3.0
   `allowedEnchantments` never matches, so every enchantment is removed. It is read from the first loaded world only.
   Fix: set `blockOpItems: false` in the main world's file or in `defaultWorldConfig.yml`, and run `/architect reload`.
 - **Blocks ignore their neighbours after a fresh install: torches, plants and sand stay put when the block below them
@@ -3082,7 +3246,7 @@ Each entry gives the symptom, the cause and the fix.
   without physics), or `noPhysicsListEnabled: false`, and run `/architect reload`. Or list the blocks that should keep
   physics.
 - **Levers, buttons, lamps and doors ignore redstone power.** Cause: Architect freezes redstone power on the whole
-  server, on purpose: the resource packs use redstone block states as decoration. Fix: none in 3.2.1.
+  server, on purpose: the resource packs use redstone block states as decoration. Fix: none in 3.3.0.
 - **No mobs, no weather changes, no fire spread, no leaf decay.** Cause: the environment switches are on by default.
   Fix: switch off the ones you do not want; see [Module switches](#module-switches).
 - **Players cannot open furnaces, smokers, blast furnaces, brewing stands, hoppers or dispensers.** Cause:
@@ -3104,7 +3268,7 @@ Each entry gives the symptom, the cause and the fix.
 - **With a stick in hand, doors, buttons and block breaking do nothing.** Cause: where `modules.command.cycleBlocks` is
   on, every block click made with a stick is cancelled. Fix: hold something else, or switch the module off in that
   world.
-- **A build inventory tab is empty or gone after an edit in the in-game editor.** Cause: in 3.2.1 the editor can write
+- **A build inventory tab is empty or gone after an edit in the in-game editor.** Cause: in 3.3.0 the editor can write
   a value that cannot be read back. Changing an entry's item writes `itemMaterial: !!org.bukkit.Material {}`, and
   answering `yes` to listing a collection entry in its tab writes a `!!…SpecialBlock {}` value under
   `collection.indirect`. At the reload that follows, Architect skips the whole file and logs an error for it. Fix: open
@@ -3113,7 +3277,7 @@ Each entry gives the symptom, the cause and the fix.
   than in the editor.
 - **Item blocks are refused everywhere in a new item block region.** Cause: `/itemblock create` makes a region with
   limit 0. Fix: `/itemblock limit <name> <n>`.
-- **`/chunkupdate` says "Manual chunk updates are not available."** Cause: the radius form does nothing in 3.2.1.
+- **`/chunkupdate` says "Manual chunk updates are not available."** Cause: the radius form does nothing in 3.3.0.
   Automatic resends (`modules.chunkupdate.auto`) still work. Fix: rejoin, so the client loads the chunks again.
 - **`/inv upload` fails at once with `exitCode=-1`.** Cause: `config.yml` has no `inventoryUpload` section (the bundled
   file has none), or the server runs Windows. Fix: add `inventoryUpload` with `script` and `path`, on a Linux server.
@@ -3152,3 +3316,10 @@ Each entry gives the symptom, the cause and the fix.
   item-block-limit layers off; or a drawing error switched all layers off. Fix: check Architect's log. After
   changing the `dynmap` or `mapLayers` sections, run `/architect reload`; after a drawing error, run
   `/architect maplayers refresh`.
+- **The Custom biomes layer is empty, or lacks some paint.** Cause: no world is on the layer
+  (`/architect maplayers scan` lists the worlds that are on); or the first read has not got to the paint yet (the state
+  says `reading 3 of 12 region files`); or the world is `not drawn`, because its markers are over the size limit;
+  or the paint is in chunks whose saved copy the server had not written a minute after they unloaded (the log says so
+  once a minute). Fix: put the world on with `/architect maplayers scan <world>`, and wait for `up to date`. The same
+  command reads a world that is on again from the start, which catches missed paint. A world that is `not drawn` comes
+  back by itself when its markers fit; see [Custom biomes](#custom-biomes).
