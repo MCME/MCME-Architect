@@ -740,6 +740,10 @@ Minecraft's `ServerboundChangeGameModePacket` by name, and `ViewDistanceListener
   Paper 26.2 (server classes of build 111, API of build 126).
 - The constructor resolves every class, method and field once and records failures instead of throwing. If
   `selfCheck()` returns problems, biome tuning logs `Biome tuning is unavailable on <version>: ...` and stays off.
+- The login replay's handles (Paper's `HorriblePlayerLoginEventHack.execute`, `Connection.handledLegacyLoginEvent`
+  and the configuration listener's `gameProfile`, checked against server build 126) are reported apart, by
+  `loginReplayCheck()`. If it returns problems, biome tuning logs `Biome tuning cannot replay logins on <version>: ...`
+  and stays on; players whose login ran `PlayerLoginEvent` then take Paper's route, which Paper refuses.
 - `BiomeTuning.enable` builds the bridge inside a guard that catches `RuntimeException` and `LinkageError`: an internals
   change the self-check did not foresee switches tuning off, and must never reach `onEnable`, where Paper would disable
   all of Architect.
@@ -1011,11 +1015,24 @@ reads the files again.
 
 Clients see biome data only when they receive the registries. `RefreshCoordinator.refresh(player, inject)` sends a
 player back through the configuration phase:
-1. It calls `player.getConnection().reenterConfiguration()`. Paper fires `PlayerQuitEvent` inside that call, and the
-   coordinator removes the quit message. If no quit fires, Paper refused: it does for players who logged in while a
-   plugin listened to the legacy `PlayerLoginEvent`.
-2. On `PlayerConnectionReconfigureEvent`, the bridge queues vanilla's full registry sync (`injectRegistrySync`), and
-   the coordinator calls `completeReconfiguration()`.
+1. It picks the route. Paper refuses its own, `player.getConnection().reenterConfiguration()`, for a player whose
+   login ran the deprecated `PlayerLoginEvent`; Paper runs it whenever a plugin listens to it, and LuckPerms does. The
+   bridge reads that mark (`loggedInWithLegacyEvent`):
+   - not marked: Paper's route;
+   - marked: the bridge switches the player past Paper's guard (vanilla's `switchToConfig()`), and the refresh is
+     flagged to replay the login. `/biometune debug refresh <player> bypass` forces this route.
+
+   Paper fires `PlayerQuitEvent` inside either call, and the coordinator removes the quit message. If no quit fires,
+   Paper refused, and chat says that live preview is not available on this server.
+2. Paper fires `PlayerConnectionReconfigureEvent` on a network thread, so the coordinator hands the rest to the main
+   thread. The client waits in the configuration phase until then.
+   - A flagged refresh first replays Paper's own login step (`replayLegacyLogin`). It builds the player object that
+     the reconfiguration spawns and fires `PlayerLoginEvent` for it, so plugins set that object up as at a real
+     login: LuckPerms attaches its permissions there. If a plugin disallows the login, the player leaves with its
+     message. If the replay fails, they get the "please rejoin" disconnect, rather than return without what plugins
+     set up at login.
+   - The bridge queues vanilla's full registry sync (`injectRegistrySync`), and the coordinator calls
+     `completeReconfiguration()`.
 3. On `PlayerJoinEvent`, the refresh ends and the join message is removed. The editor shows its window again once the
    client has loaded the world.
 4. The 1-second timer ends refreshes older than `refresh.timeoutSeconds` with a "please rejoin" disconnect, works

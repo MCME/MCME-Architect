@@ -2077,8 +2077,8 @@ across a save. **Revert** goes back to the saved file and clears the undo steps.
 
 - A restart loses every unsaved edit, so save first. Architect's log lists the unsaved biomes at shutdown.
 - Edits change this server only. Other servers keep their own biomes.
-- If a plugin on the server listens to Paper's old login event, a refresh can be refused: "Paper refused to
-  reconfigure <name>…". Rejoin to see the live values.
+- If a refresh cannot run on a server, chat says "Live preview is not available on this server right now".
+  Switching servers and back, or rejoining, shows the live values.
 - Only colours, atmosphere and climate go live. Changes to features, carvers or mob spawns made by hand in a biome file
   need a restart.
 - Save rewrites the whole file in a standard JSON layout. Values that biome tuning does not handle are kept.
@@ -3305,7 +3305,7 @@ Each entry gives the symptom, the cause and the fix.
 - **Biome changes do not show.** Cause: edits are live on the server, but a client sees them only after a refresh.
   Fix: `/biometune preview` for your own view, `/biometune publish` for everyone in your world, or rejoin. Save with
   `/biometune save <biome>`: unsaved edits are lost at restart. Other servers are not changed. If preview answers that
-  Paper refused to reconfigure you, rejoin.
+  live preview is not available on this server, switch servers and back, or rejoin.
 - **`/biometune` answers "Biome tuning is unavailable on this server version".** Cause: biome tuning could not start on
   this Paper build; the rest of Architect keeps working. Fix: read the problem in Architect's log. Biome tuning reads
   Minecraft's internals, so after a Paper update it may need a newer Architect.
