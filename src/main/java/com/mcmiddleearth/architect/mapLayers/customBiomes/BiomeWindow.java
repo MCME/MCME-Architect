@@ -17,12 +17,25 @@ import java.util.Objects;
  * it does not know, and every attribute but {@code style}. A cell spanning two columns ({@code colspan}) would shrink
  * to one. So a part that is as wide as the window, such as a header, is a {@code div}, and only the settings, in
  * columns of a name and a value, are a table. Text a builder may have typed goes through {@link MapShape#html}.
+ * <p>
+ * The window is shown in the map's own popup, and it cannot tell whose: dynmap's own map draws popups white with dark
+ * text, LiveAtlas (as on MCME's map) dark with light text. So the window names no colour for its text, which takes the
+ * popup's, and the few colours it names read on both: {@link #GREY} for the quieter lines and an orange for unsaved
+ * edits. The header's tint is the map colour laid thinly over the popup, and a swatch is a chip with a grey edge, so a
+ * dark colour shows on a dark popup and a pale one on a white popup. The sanitiser drops {@code opacity} and
+ * {@code currentColor}, so a paler shade of the popup's own colour cannot be written.
  */
 public final class BiomeWindow {
 
-    private static final String WINDOW_OPEN = "<div style=\"font:12px/1.35 sans-serif;color:#222\">";
+    private static final String WINDOW_OPEN = "<div style=\"font:12px/1.35 sans-serif\">";
     private static final String SETTINGS_OPEN = "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;"
-            + "color:#222;width:100%\">";
+            + "width:100%\">";
+    /**
+     * The one grey the window names: for the names of the settings, the count of a stacked spot, the note that
+     * settings cannot be read, the command, and the edge of a swatch. It reads on a white popup (3.5 : 1) and on
+     * LiveAtlas's dark one (4.7 : 1).
+     */
+    private static final String GREY = "#888";
     /**
      * The width of the column of names, in pixels. Each biome's settings are a table of their own, so this fits the
      * longest names (Firefly bush sounds takes about 104 in 12 px Arial, and a wider font takes more), and the values
@@ -34,8 +47,11 @@ public final class BiomeWindow {
     private static final String CLIMATE = "Climate";
     /** The namespace of the game's own ids, which the window leaves out. */
     private static final String MINECRAFT = "minecraft:";
-    /** How far the map colour is mixed towards white for the header's background, in percent. */
-    private static final int TINT_PERCENT = 15;
+    /**
+     * How much of the map colour the header's background takes. Over a white popup the header looks as it always did,
+     * the colour mixed 15 percent towards white; over a dark one it darkens with the popup.
+     */
+    private static final String TINT_ALPHA = "0.15";
 
     /**
      * One biome at the clicked spot.
@@ -67,7 +83,7 @@ public final class BiomeWindow {
         }
         StringBuilder html = new StringBuilder(WINDOW_OPEN);
         if (sections.size() > 1) {
-            html.append("<div style=\"padding:0 0 6px;font-size:11px;color:#777\">").append(sections.size())
+            html.append("<div style=\"padding:0 0 6px;font-size:11px;color:" + GREY + "\">").append(sections.size())
                     .append(" custom biomes here, top first</div>");
         }
         for (int i = 0; i < sections.size(); i++) {
@@ -86,15 +102,15 @@ public final class BiomeWindow {
                 .append(ColourMath.hex(section.rgb())).append(";padding:4px 7px\"><b>")
                 .append(named ? MapShape.html(section.label()) : id).append("</b> ");
         if (named) {
-            html.append("<code style=\"color:#777\">").append(id).append("</code> ");
+            html.append("<code>").append(id).append("</code> ");
         }
-        html.append("<span style=\"color:#777;font-size:11px\">&nbsp;Y ").append(height(section.minY()))
+        html.append("<span style=\"font-size:11px\">&nbsp;Y ").append(height(section.minY()))
                 .append("&ndash;").append(height(section.maxY())).append(" &middot; ")
                 .append(count(section.places(), "place")).append(" &middot; ~")
                 .append(count(section.chunks(), "chunk")).append("</span></div>");
         BiomeFacts.Settings settings = section.settings();
         if (settings == null) {
-            note(html, "#888", "Its settings cannot be read here.");
+            note(html, GREY, "Its settings cannot be read here.");
         } else {
             if (settings.unsaved()) {
                 note(html, "#b26a00", "Changed in game, not saved yet");
@@ -108,7 +124,7 @@ public final class BiomeWindow {
             }
         }
         html.append("<div style=\"padding:3px 7px ").append(last ? "0" : "8px")
-                .append(";font:11px monospace;color:#666\">/biometune edit ").append(id).append("</div>");
+                .append(";font:11px monospace;color:" + GREY + "\">/biometune edit ").append(id).append("</div>");
     }
 
     /** A line under the header that is not a setting. */
@@ -144,7 +160,7 @@ public final class BiomeWindow {
      */
     private static void row(StringBuilder table, String label, String value) {
         boolean first = table.length() == 0;
-        table.append("<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;vertical-align:top");
+        table.append("<tr><td style=\"color:" + GREY + ";padding:0 10px 0 7px;white-space:nowrap;vertical-align:top");
         if (first) {
             table.append(";width:").append(NAME_WIDTH).append("px");
         }
@@ -156,7 +172,8 @@ public final class BiomeWindow {
         String text = MapShape.html(withoutMinecraft(setting.text()));
         // the swatch is built from the number alone, never from text, so nothing typed can reach the style
         return setting.rgb() == null ? text
-                : "<span style=\"color:" + ColourMath.hex(setting.rgb()) + "\">&#9632;</span> " + text;
+                : "<span style=\"background:" + ColourMath.hex(setting.rgb()) + ";border:1px solid " + GREY
+                        + ";padding:0 4px;font-size:10px\">&nbsp;</span> " + text;
     }
 
     /** The name with a capital first letter. */
@@ -192,17 +209,13 @@ public final class BiomeWindow {
     }
 
     /**
-     * The header's background: the biome's map colour with each channel mixed {@value #TINT_PERCENT} percent towards
-     * white, as {@code #rrggbb}.
+     * The header's background: the biome's map colour at {@link #TINT_ALPHA}, as {@code rgba( r , g , b , 0.15 )}.
+     * dynmap's sanitiser writes every {@code rgba} it keeps that way, so the bytes the map stores are the bytes
+     * counted.
      */
     static String tint(int rgb) {
-        int mixed = 0;
-        for (int shift = 16; shift >= 0; shift -= 8) {
-            int channel = (rgb >> shift) & 0xff;
-            // 255 - round((255 - channel) * 0.15), in whole numbers, so that a half always rounds up
-            mixed = (mixed << 8) | (255 - ((255 - channel) * TINT_PERCENT + 50) / 100);
-        }
-        return ColourMath.hex(mixed);
+        return "rgba( " + ((rgb >> 16) & 0xff) + " , " + ((rgb >> 8) & 0xff) + " , " + (rgb & 0xff) + " , "
+                + TINT_ALPHA + " )";
     }
 
     /** A height, with a minus sign for one below zero. */

@@ -24,9 +24,13 @@ class BiomeWindowTest {
     private static final int RED = 0xe6194b;
     private static final int GREEN = 0x3cb44b;
     private static final int YELLOW = 0xffe119;
+    /** Their header tints: each colour at 15 percent, written as dynmap's sanitiser writes it. */
+    private static final String RED_TINT = "rgba( 230 , 25 , 75 , 0.15 )";
+    private static final String GREEN_TINT = "rgba( 60 , 180 , 75 , 0.15 )";
+    private static final String YELLOW_TINT = "rgba( 255 , 225 , 25 , 0.15 )";
     /** The header of the old harbour: a named biome that is painted in 2 places and 180 chunks, from Y 40 to 120. */
-    private static final String HARBOUR = header("#fbdce4", "#e6194b", "Old harbour",
-            "<code style=\"color:#777\">cbc:111g380-5p</code> ",
+    private static final String HARBOUR = header(RED_TINT,"#e6194b", "Old harbour",
+            "<code>cbc:111g380-5p</code> ",
             "Y 40&ndash;120 &middot; 2 places &middot; ~180 chunks");
 
     /** One heading and the settings under it. */
@@ -64,18 +68,18 @@ class BiomeWindowTest {
     // The pieces of the markup, each spelled once out in full
 
     private static String window(String... blocks) {
-        return "<div style=\"font:12px/1.35 sans-serif;color:#222\">" + String.join("", blocks) + "</div>";
+        return "<div style=\"font:12px/1.35 sans-serif\">" + String.join("", blocks) + "</div>";
     }
 
     /** The header of a biome; {@code code} is the id in its own element, or nothing, and {@code facts} the rest. */
     private static String header(String tint, String colour, String name, String code, String facts) {
         return "<div style=\"background:" + tint + ";border-left:5px solid " + colour + ";padding:4px 7px\"><b>"
-                + name + "</b> " + code + "<span style=\"color:#777;font-size:11px\">&nbsp;" + facts + "</span></div>";
+                + name + "</b> " + code + "<span style=\"font-size:11px\">&nbsp;" + facts + "</span></div>";
     }
 
     /** The table of a biome's settings, from the rows given. */
     private static String rows(String... settings) {
-        return "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
+        return "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;width:100%\">"
                 + String.join("", settings) + "</table>";
     }
 
@@ -92,17 +96,18 @@ class BiomeWindowTest {
     }
 
     private static String swatch(String colour) {
-        return "<span style=\"color:" + colour + "\">&#9632;</span> " + colour;
+        return "<span style=\"background:" + colour + ";border:1px solid #888;padding:0 4px;font-size:10px\">"
+                + "&nbsp;</span> " + colour;
     }
 
     private static String edit(String id, boolean last) {
         return "<div style=\"padding:3px 7px " + (last ? "0" : "8px")
-                + ";font:11px monospace;color:#666\">/biometune edit " + id + "</div>";
+                + ";font:11px monospace;color:#888\">/biometune edit " + id + "</div>";
     }
 
     /** The window of one biome that has no settings to show. */
     private static String bare(String id, String name, String code, String facts) {
-        return window(header("#fbdce4", "#e6194b", name, code, facts), edit(id, true));
+        return window(header(RED_TINT,"#e6194b", name, code, facts), edit(id, true));
     }
 
     // --- the layout ---
@@ -116,18 +121,21 @@ class BiomeWindowTest {
                         item("music", "minecraft:music.nether.basalt_deltas, every 600 to 1200 s"),
                         item("ambient particles", "minecraft:crimson_spore 2.5%")));
 
-        assertEquals("<div style=\"font:12px/1.35 sans-serif;color:#222\">"
-                + "<div style=\"background:#fbdce4;border-left:5px solid #e6194b;padding:4px 7px\">"
-                + "<b>Old harbour</b> <code style=\"color:#777\">cbc:111g380-5p</code> "
-                + "<span style=\"color:#777;font-size:11px\">&nbsp;Y 40&ndash;120 &middot; 2 places &middot; "
+        assertEquals("<div style=\"font:12px/1.35 sans-serif\">"
+                + "<div style=\"background:rgba( 230 , 25 , 75 , 0.15 );border-left:5px solid #e6194b;"
+                + "padding:4px 7px\">"
+                + "<b>Old harbour</b> <code>cbc:111g380-5p</code> "
+                + "<span style=\"font-size:11px\">&nbsp;Y 40&ndash;120 &middot; 2 places &middot; "
                 + "~180 chunks</span></div>"
-                + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
+                + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;width:100%\">"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
                 + "vertical-align:top;width:112px\">Sky</td>"
-                + "<td><span style=\"color:#2040ff\">&#9632;</span> #2040ff</td></tr>"
+                + "<td><span style=\"background:#2040ff;border:1px solid #888;padding:0 4px;font-size:10px\">"
+                + "&nbsp;</span> #2040ff</td></tr>"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
                 + "vertical-align:top\">Fog</td>"
-                + "<td><span style=\"color:#ffaa00\">&#9632;</span> #ffaa00</td></tr>"
+                + "<td><span style=\"background:#ffaa00;border:1px solid #888;padding:0 4px;font-size:10px\">"
+                + "&nbsp;</span> #ffaa00</td></tr>"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
                 + "vertical-align:top\">Climate"
                 + "</td><td>temperature 0.7 &middot; downfall 0.8 &middot; rain on</td></tr>"
@@ -137,7 +145,7 @@ class BiomeWindowTest {
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;vertical-align:top\">"
                 + "Ambient particles</td><td>crimson_spore 2.5%</td></tr>"
                 + "</table>"
-                + "<div style=\"padding:3px 7px 0;font:11px monospace;color:#666\">"
+                + "<div style=\"padding:3px 7px 0;font:11px monospace;color:#888\">"
                 + "/biometune edit cbc:111g380-5p</div>"
                 + "</div>", BiomeWindow.html(List.of(harbour(settings))));
     }
@@ -154,43 +162,49 @@ class BiomeWindowTest {
                 new Section("mcme:custom_003", null, 60, 123, 1, 2, second, GREEN),
                 new Section("mcme:custom_002", null, -40, 3, 2, 6, third, YELLOW)));
 
-        assertEquals("<div style=\"font:12px/1.35 sans-serif;color:#222\">"
-                + "<div style=\"padding:0 0 6px;font-size:11px;color:#777\">3 custom biomes here, top first</div>"
+        assertEquals("<div style=\"font:12px/1.35 sans-serif\">"
+                + "<div style=\"padding:0 0 6px;font-size:11px;color:#888\">3 custom biomes here, top first</div>"
 
-                + "<div style=\"background:#fbdce4;border-left:5px solid #e6194b;padding:4px 7px\">"
-                + "<b>cbc:111g380-5p</b> <span style=\"color:#777;font-size:11px\">&nbsp;Y &minus;64&ndash;319 "
+                + "<div style=\"background:rgba( 230 , 25 , 75 , 0.15 );border-left:5px solid #e6194b;"
+                + "padding:4px 7px\">"
+                + "<b>cbc:111g380-5p</b> <span style=\"font-size:11px\">&nbsp;Y &minus;64&ndash;319 "
                 + "&middot; 8 places &middot; ~1574 chunks</span></div>"
-                + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
+                + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;width:100%\">"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
                 + "vertical-align:top;width:112px\">Sky</td>"
-                + "<td><span style=\"color:#2040ff\">&#9632;</span> #2040ff</td></tr>"
+                + "<td><span style=\"background:#2040ff;border:1px solid #888;padding:0 4px;font-size:10px\">"
+                + "&nbsp;</span> #2040ff</td></tr>"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
                 + "vertical-align:top\">Climate"
                 + "</td><td>temperature 0.7 &middot; downfall 0.8 &middot; rain on</td></tr>"
                 + "</table>"
-                + "<div style=\"padding:3px 7px 8px;font:11px monospace;color:#666\">"
+                + "<div style=\"padding:3px 7px 8px;font:11px monospace;color:#888\">"
                 + "/biometune edit cbc:111g380-5p</div>"
 
-                + "<div style=\"background:#e2f4e4;border-left:5px solid #3cb44b;padding:4px 7px\">"
-                + "<b>mcme:custom_003</b> <span style=\"color:#777;font-size:11px\">&nbsp;Y 60&ndash;123 "
+                + "<div style=\"background:rgba( 60 , 180 , 75 , 0.15 );border-left:5px solid #3cb44b;"
+                + "padding:4px 7px\">"
+                + "<b>mcme:custom_003</b> <span style=\"font-size:11px\">&nbsp;Y 60&ndash;123 "
                 + "&middot; 1 place &middot; ~2 chunks</span></div>"
-                + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
+                + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;width:100%\">"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
                 + "vertical-align:top;width:112px\">Sky</td>"
-                + "<td><span style=\"color:#78a7ff\">&#9632;</span> #78a7ff</td></tr>"
+                + "<td><span style=\"background:#78a7ff;border:1px solid #888;padding:0 4px;font-size:10px\">"
+                + "&nbsp;</span> #78a7ff</td></tr>"
                 + "</table>"
-                + "<div style=\"padding:3px 7px 8px;font:11px monospace;color:#666\">"
+                + "<div style=\"padding:3px 7px 8px;font:11px monospace;color:#888\">"
                 + "/biometune edit mcme:custom_003</div>"
 
-                + "<div style=\"background:#fffadc;border-left:5px solid #ffe119;padding:4px 7px\">"
-                + "<b>mcme:custom_002</b> <span style=\"color:#777;font-size:11px\">&nbsp;Y &minus;40&ndash;3 "
+                + "<div style=\"background:rgba( 255 , 225 , 25 , 0.15 );border-left:5px solid #ffe119;"
+                + "padding:4px 7px\">"
+                + "<b>mcme:custom_002</b> <span style=\"font-size:11px\">&nbsp;Y &minus;40&ndash;3 "
                 + "&middot; 2 places &middot; ~6 chunks</span></div>"
-                + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;color:#222;width:100%\">"
+                + "<table style=\"border-collapse:collapse;font:12px/1.35 sans-serif;width:100%\">"
                 + "<tr><td style=\"color:#888;padding:0 10px 0 7px;white-space:nowrap;"
                 + "vertical-align:top;width:112px\">Water"
-                + "</td><td><span style=\"color:#3f76e4\">&#9632;</span> #3f76e4</td></tr>"
+                + "</td><td><span style=\"background:#3f76e4;border:1px solid #888;padding:0 4px;"
+                + "font-size:10px\">&nbsp;</span> #3f76e4</td></tr>"
                 + "</table>"
-                + "<div style=\"padding:3px 7px 0;font:11px monospace;color:#666\">"
+                + "<div style=\"padding:3px 7px 0;font:11px monospace;color:#888\">"
                 + "/biometune edit mcme:custom_002</div>"
                 + "</div>", html);
     }
@@ -200,7 +214,7 @@ class BiomeWindowTest {
         String html = BiomeWindow.html(List.of(new Section("cbc:a", "A", 0, 1, 1, 1, NO_SETTINGS, RED),
                 new Section("cbc:b", "B", 0, 1, 1, 1, NO_SETTINGS, GREEN)));
 
-        assertTrue(html.contains("<div style=\"padding:0 0 6px;font-size:11px;color:#777\">"
+        assertTrue(html.contains("<div style=\"padding:0 0 6px;font-size:11px;color:#888\">"
                 + "2 custom biomes here, top first</div>"), html);
         assertEquals(1, html.split("custom biomes here", -1).length - 1, html);
     }
@@ -233,14 +247,14 @@ class BiomeWindowTest {
                 new Section("cbc:c", null, 0, 49, 2, 3, plain, YELLOW)));
 
         assertEquals(window(
-                "<div style=\"padding:0 0 6px;font-size:11px;color:#777\">3 custom biomes here, top first</div>",
-                header("#fbdce4", "#e6194b", "cbc:a", "", "Y 100&ndash;200 &middot; 1 place &middot; ~2 chunks"),
+                "<div style=\"padding:0 0 6px;font-size:11px;color:#888\">3 custom biomes here, top first</div>",
+                header(RED_TINT,"#e6194b", "cbc:a", "", "Y 100&ndash;200 &middot; 1 place &middot; ~2 chunks"),
                 "<div style=\"padding:2px 7px 0;color:#b26a00\">Changed in game, not saved yet</div>",
                 rows(firstSetting("Climate", "rain on")), edit("cbc:a", false),
-                header("#e2f4e4", "#3cb44b", "cbc:b", "", "Y 50&ndash;99 &middot; 1 place &middot; ~1 chunk"),
+                header(GREEN_TINT,"#3cb44b", "cbc:b", "", "Y 50&ndash;99 &middot; 1 place &middot; ~1 chunk"),
                 "<div style=\"padding:2px 7px 0;color:#888\">Its settings cannot be read here.</div>",
                 edit("cbc:b", false),
-                header("#fffadc", "#ffe119", "cbc:c", "", "Y 0&ndash;49 &middot; 2 places &middot; ~3 chunks"),
+                header(YELLOW_TINT,"#ffe119", "cbc:c", "", "Y 0&ndash;49 &middot; 2 places &middot; ~3 chunks"),
                 rows(firstSetting("Sky", swatch("#78a7ff"))), edit("cbc:c", true)), html);
     }
 
@@ -293,7 +307,7 @@ class BiomeWindowTest {
 
     @Test
     void aLabelThatDiffersFromTheIdShowsTheIdBesideIt() {
-        assertEquals(bare("cbc:x", "Old harbour", "<code style=\"color:#777\">cbc:x</code> ",
+        assertEquals(bare("cbc:x", "Old harbour", "<code>cbc:x</code> ",
                         "Y 0&ndash;63 &middot; 3 places &middot; ~9 chunks"),
                 BiomeWindow.html(List.of(new Section("cbc:x", "Old harbour", 0, 63, 3, 9, NO_SETTINGS, RED))));
     }
@@ -311,14 +325,14 @@ class BiomeWindowTest {
 
     @Test
     void onePlaceAndOneChunkAreSingular() {
-        assertEquals(bare("cbc:x", "X", "<code style=\"color:#777\">cbc:x</code> ",
+        assertEquals(bare("cbc:x", "X", "<code>cbc:x</code> ",
                         "Y 0&ndash;63 &middot; 1 place &middot; ~1 chunk"),
                 BiomeWindow.html(List.of(new Section("cbc:x", "X", 0, 63, 1, 1, NO_SETTINGS, RED))));
     }
 
     @Test
     void noPlacesAndSeveralChunksArePlural() {
-        String code = "<code style=\"color:#777\">cbc:x</code> ";
+        String code = "<code>cbc:x</code> ";
         assertEquals(bare("cbc:x", "X", code, "Y 0&ndash;63 &middot; 0 places &middot; ~0 chunks"),
                 BiomeWindow.html(List.of(new Section("cbc:x", "X", 0, 63, 0, 0, NO_SETTINGS, RED))));
         assertEquals(bare("cbc:x", "X", code, "Y 0&ndash;63 &middot; 1 place &middot; ~2 chunks"),
@@ -329,29 +343,32 @@ class BiomeWindowTest {
 
     @Test
     void heightsBelowZeroHaveAMinusSignAndLargeCountsAreWrittenPlainly() {
-        String code = "<code style=\"color:#777\">cbc:x</code> ";
+        String code = "<code>cbc:x</code> ";
         assertEquals(bare("cbc:x", "X", code, "Y &minus;64&ndash;751 &middot; 1234 places &middot; ~1234567 chunks"),
                 BiomeWindow.html(List.of(new Section("cbc:x", "X", -64, 751, 1234, 1234567, NO_SETTINGS, RED))));
         assertEquals(bare("cbc:x", "X", code, "Y &minus;60&ndash;&minus;40 &middot; 1 place &middot; ~1 chunk"),
                 BiomeWindow.html(List.of(new Section("cbc:x", "X", -60, -40, 1, 1, NO_SETTINGS, RED))));
     }
 
+    // The tint is laid over the popup: on dynmap's white one it looks as the header always did, the map colour mixed
+    // 15 percent towards white, and on LiveAtlas's dark one it darkens with the popup, under text in the popup's own
+    // colour. dynmap's sanitiser rewrites rgba(230,25,75,.15) as below, so the window writes it so: the bytes it stores
+    // are then the bytes counted.
     @Test
-    void theTintMixesTheMapColourFifteenPercentTowardsWhite() {
-        assertEquals("#fbdce4", BiomeWindow.tint(0xe6194b));
-        assertEquals("#e2f4e4", BiomeWindow.tint(GREEN));
-        assertEquals("#fffadc", BiomeWindow.tint(YELLOW));
-        assertEquals("#d9d9d9", BiomeWindow.tint(0x000000));
-        assertEquals("#ffffff", BiomeWindow.tint(0xffffff));
-        assertEquals("#dbe1e6", BiomeWindow.tint(0x123456));
+    void theTintIsTheMapColourAtFifteenPercentAsTheSanitiserWritesIt() {
+        assertEquals(RED_TINT, BiomeWindow.tint(RED));
+        assertEquals(GREEN_TINT, BiomeWindow.tint(GREEN));
+        assertEquals(YELLOW_TINT, BiomeWindow.tint(YELLOW));
+        assertEquals("rgba( 0 , 0 , 0 , 0.15 )", BiomeWindow.tint(0x000000));
+        assertEquals("rgba( 255 , 255 , 255 , 0.15 )", BiomeWindow.tint(0xffffff));
+        assertEquals("rgba( 18 , 52 , 86 , 0.15 )", BiomeWindow.tint(0x123456));
     }
 
     @Test
-    void everyChannelOfTheTintFollowsTheFormula() {
+    void everyChannelOfTheTintIsWrittenAsItsNumberInItsPlace() {
         for (int channel = 0; channel < 256; channel++) {
-            int expected = 255 - (int) Math.round((255 - channel) * 0.15);
-            assertEquals(String.format("#%02x%02x%02x", expected, expected, expected),
-                    BiomeWindow.tint(channel << 16 | channel << 8 | channel), "channel " + channel);
+            assertEquals("rgba( " + channel + " , " + (255 - channel) + " , " + channel / 2 + " , 0.15 )",
+                    BiomeWindow.tint(channel << 16 | (255 - channel) << 8 | channel / 2), "channel " + channel);
         }
     }
 
@@ -359,7 +376,8 @@ class BiomeWindowTest {
     void theHeaderTakesTheBiomesTintAndColourFromTheSection() {
         String html = BiomeWindow.html(List.of(new Section("cbc:x", "X", 0, 63, 1, 1, NO_SETTINGS, 0x4363d8)));
 
-        assertTrue(html.contains("style=\"background:#e3e8f9;border-left:5px solid #4363d8;padding:4px 7px\""), html);
+        assertTrue(html.contains("style=\"background:rgba( 67 , 99 , 216 , 0.15 );border-left:5px solid #4363d8;"
+                + "padding:4px 7px\""), html);
     }
 
     // --- the rows of settings ---
@@ -380,7 +398,8 @@ class BiomeWindowTest {
         Settings argb = settings(false, group("Sky and fog", new Setting("sunrise", "#80ff8040", 0x80ff8040)));
 
         assertEquals(window(HARBOUR,
-                rows(firstSetting("Sunrise", "<span style=\"color:#ff8040\">&#9632;</span> #80ff8040")),
+                rows(firstSetting("Sunrise", "<span style=\"background:#ff8040;border:1px solid #888;padding:0 4px;"
+                        + "font-size:10px\">&nbsp;</span> #80ff8040")),
                 edit("cbc:111g380-5p", true)), BiomeWindow.html(List.of(harbour(argb))));
     }
 
@@ -477,7 +496,7 @@ class BiomeWindowTest {
         String html = BiomeWindow.html(List.of(new Section("minecraft:plains", "Plains", 0, 63, 1, 1, NO_SETTINGS,
                 RED)));
 
-        assertTrue(html.contains("<code style=\"color:#777\">minecraft:plains</code>"), html);
+        assertTrue(html.contains("<code>minecraft:plains</code>"), html);
         assertTrue(html.contains("/biometune edit minecraft:plains</div>"), html);
     }
 
@@ -491,8 +510,8 @@ class BiomeWindowTest {
         String html = BiomeWindow.html(List.of(new Section("cbc:<x>&\"y\"", "<b>Fen & \"Marsh\"</b>", 0, 63, 1, 1,
                 dangerous, RED)));
 
-        assertEquals(window(header("#fbdce4", "#e6194b", "&lt;b&gt;Fen &amp; &quot;Marsh&quot;&lt;/b&gt;",
-                        "<code style=\"color:#777\">cbc:&lt;x&gt;&amp;&quot;y&quot;</code> ",
+        assertEquals(window(header(RED_TINT,"#e6194b", "&lt;b&gt;Fen &amp; &quot;Marsh&quot;&lt;/b&gt;",
+                        "<code>cbc:&lt;x&gt;&amp;&quot;y&quot;</code> ",
                         "Y 0&ndash;63 &middot; 1 place &middot; ~1 chunk"),
                 rows(firstSetting("A&lt;b", "x&amp;y&quot;z")), edit("cbc:&lt;x&gt;&amp;&quot;y&quot;", true)), html);
         assertFalse(html.contains("Fen & "), html);
@@ -515,13 +534,32 @@ class BiomeWindowTest {
 
         String html = BiomeWindow.html(List.of(new Section("cbc:<x>", "L", 0, 63, 1, 1, dangerous, RED)));
 
-        assertEquals(window(header("#fbdce4", "#e6194b", "L", "<code style=\"color:#777\">cbc:&lt;x&gt;</code> ",
+        assertEquals(window(header(RED_TINT,"#e6194b", "L", "<code>cbc:&lt;x&gt;</code> ",
                         "Y 0&ndash;63 &middot; 1 place &middot; ~1 chunk"),
                 rows(firstSetting("A&lt;b", "x&amp;y&quot;z"),
-                        setting("C&gt;d", "<span style=\"color:#123456\">&#9632;</span> &lt;i&gt;e&lt;/i&gt;"),
+                        setting("C&gt;d", "<span style=\"background:#123456;border:1px solid #888;padding:0 4px;"
+                                + "font-size:10px\">&nbsp;</span> &lt;i&gt;e&lt;/i&gt;"),
                         setting("Climate", "t&lt; &quot;hot&quot; &amp; &lt;dry&gt; &middot; rain &lt;on&gt;")),
                 edit("cbc:&lt;x&gt;", true)), html);
         assertFalse(html.contains("<Sky>"), html);
+    }
+
+    // --- the colours ---
+
+    // A map shows the window in a popup of its own: dynmap's is white with dark text, LiveAtlas's dark with light text,
+    // and the window cannot tell which. So its text takes the popup's colour, and the only colours it names for text
+    // read on both: the grey of the quieter lines and the orange of unsaved edits. dynmap's sanitiser drops opacity and
+    // currentColor, so a paler shade of the popup's own colour cannot be written.
+    @Test
+    void theTextTakesThePopupsColourSaveAGreyAndAnOrangeThatReadOnAnyPopup() {
+        Settings unsaved = settings(true, group("Sky and fog", colour("sky", 0x102030)),
+                group("Climate", item("rain", "on")));
+        String html = BiomeWindow.html(List.of(harbour(unsaved), harbour(null),
+                new Section("cbc:x", null, 0, 63, 1, 1, NO_SETTINGS, GREEN)));
+
+        Set<String> named = Set.copyOf(Pattern.compile("(?<![a-z-])color:([^;\"]+)").matcher(html).results()
+                .map(found -> found.group(1)).toList());
+        assertEquals(Set.of("#888", "#b26a00"), named, html);
     }
 
     // --- the bytes ---
@@ -547,8 +585,8 @@ class BiomeWindowTest {
     }
 
     private static final Set<String> TAGS = Set.of("div", "table", "tr", "td", "b", "code", "span");
-    private static final Set<String> PROPERTIES = Set.of("color", "background", "border-left", "padding", "font",
-            "font-size", "white-space", "vertical-align", "width", "border-collapse");
+    private static final Set<String> PROPERTIES = Set.of("color", "background", "border", "border-left", "padding",
+            "font", "font-size", "white-space", "vertical-align", "width", "border-collapse");
 
     // dynmap keeps a marker's description through a sanitiser that allows blocks, tables, formatting and inline styles
     // of plain CSS, and nothing else. Run on this window, it drops every attribute but style, so a cell spanning two

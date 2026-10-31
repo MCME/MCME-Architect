@@ -1,6 +1,6 @@
 # MCME-Architect — Developer Manual
 
-For developers of MCME-Architect 3.3.0. For how to use the plugin, see the [User Manual](USER_MANUAL.md).
+For developers of MCME-Architect 3.3.1. For how to use the plugin, see the [User Manual](USER_MANUAL.md).
 
 ## Contents
 
@@ -182,7 +182,7 @@ The jar lands in `target/`.
 ### The jar name
 
 `<finalName>` is `${project.artifactId}-${project.version}-${build.type}-${git.commit.id.abbrev}`. A local build gives
-`target/MCME-Architect-3.3.0-DEV-<commit>.jar`.
+`target/MCME-Architect-3.3.1-DEV-<commit>.jar`.
 
 - `build.type` is a pom property: `DEV` by default; pass `-Dbuild.type=RELEASE` for a release build (`SNAPSHOT` is
   also allowed).
@@ -229,7 +229,7 @@ Only three build plugins are pinned: `git-commit-id-maven-plugin` 9.0.1, `maven-
 ### The test stack
 
 - JUnit Jupiter 6.1, with `junit-jupiter-params`, and MockBukkit for Paper 26.2. Assertions are JUnit's own.
-- 3.3.0 has 118 test classes and 12 helper classes. About two fifths of the test classes use no MockBukkit at all:
+- 3.3.1 has 118 test classes and 12 helper classes. About two fifths of the test classes use no MockBukkit at all:
   plain unit tests, mostly in `biomeTuning` and `mapLayers`.
 - Surefire runs with `<reuseForks>false</reuseForks>`: **every test class runs in a fresh JVM**, one class after
   another. The reason is the static state described in [Mental model](#mental-model): a second load of the plugin in
@@ -1100,9 +1100,13 @@ The layer only reads: it never writes to a world.
   so that the values of every block start at the same place. dynmap keeps a marker's description through an OWASP
   sanitiser (formatting, blocks, images, links, styles, tables and old tags), and that one keeps no attribute but
   `style` (on table cells it drops `colspan`, so a header cannot be a cell spanning the table: it is a `div`) and no
-  CSS property it does not know (`display` and `float` go). So the window uses only `div`, `table`, `b`, `code` and
-  `span`, with inline styles of plain CSS, and `BiomeWindowTest` checks that. The sanitiser also rewrites what it keeps
-  (entities become characters, `tbody` is added), without changing the look. A window keeps the colour it was built
+  CSS property or value it does not know (`display`, `float`, `opacity` and `currentColor` go). So the window uses
+  only `div`, `table`, `b`, `code` and `span`, with inline styles of plain CSS, and `BiomeWindowTest` checks that. The
+  sanitiser also rewrites what it keeps (entities become characters, `tbody` is added, `rgba()` gets spaces), without
+  changing the look. The window names no colour for its text, which takes the popup's: dynmap's own map draws popups
+  white with dark text, LiveAtlas dark with light text. The header's tint is the map colour at 15 %, written
+  `rgba( r , g , b , 0.15 )` as the sanitiser writes it, so the stored bytes are the counted ones. A swatch is a chip
+  with a grey edge, and the one grey the window names, `#888`, reads on both. A window keeps the colour it was built
   with, so `BiomeShapes.recolour` marks the world of an area it restyled, and `factsChanged()` says so until a rebuild
   of that world starts, as it does for a changed name or settings: a build that fails or runs long delivers no finish,
   and must not make every check draw every world again.
