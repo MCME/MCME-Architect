@@ -1100,9 +1100,13 @@ The layer only reads: it never writes to a world.
   so that the values of every block start at the same place. dynmap keeps a marker's description through an OWASP
   sanitiser (formatting, blocks, images, links, styles, tables and old tags), and that one keeps no attribute but
   `style` (on table cells it drops `colspan`, so a header cannot be a cell spanning the table: it is a `div`) and no
-  CSS property it does not know (`display` and `float` go). So the window uses only `div`, `table`, `b`, `code` and
-  `span`, with inline styles of plain CSS, and `BiomeWindowTest` checks that. The sanitiser also rewrites what it keeps
-  (entities become characters, `tbody` is added), without changing the look. A window keeps the colour it was built
+  CSS property or value it does not know (`display`, `float`, `opacity` and `currentColor` go). So the window uses
+  only `div`, `table`, `b`, `code` and `span`, with inline styles of plain CSS, and `BiomeWindowTest` checks that. The
+  sanitiser also rewrites what it keeps (entities become characters, `tbody` is added, `rgba()` gets spaces), without
+  changing the look. The window names no colour for its text, which takes the popup's: dynmap's own map draws popups
+  white with dark text, LiveAtlas dark with light text. The header's tint is the map colour at 15 %, written
+  `rgba( r , g , b , 0.15 )` as the sanitiser writes it, so the stored bytes are the counted ones. A swatch is a chip
+  with a grey edge, and the one grey the window names, `#888`, reads on both. A window keeps the colour it was built
   with, so `BiomeShapes.recolour` marks the world of an area it restyled, and `factsChanged()` says so until a rebuild
   of that world starts, as it does for a changed name or settings: a build that fails or runs long delivers no finish,
   and must not make every check draw every world again.

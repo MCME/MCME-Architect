@@ -2327,9 +2327,9 @@ outline follows the 4-block grid that the game stores biomes on.
 down. Where there are several, the window starts with `<n> custom biomes here, top first`. A block has:
 
 - a header, tinted in the biome's map colour and with a bar of that colour at its left edge. It names the biome:
-  its label, if biome tuning has one for it (`/biometune label`), with its id in grey beside it, else the id alone. In
-  smaller grey type it gives the biome's heights there (such as `Y 40–120`, with a minus sign for a height below
-  zero), in how many places on the world it is painted (`2 places`), and in about how many chunks (`~180 chunks`);
+  its label, if biome tuning has one for it (`/biometune label`), with its id beside it, else the id alone. In smaller
+  type it gives the biome's heights there (such as `Y 40–120`, with a minus sign for a height below zero), in how
+  many places on the world it is painted (`2 places`), and in about how many chunks (`~180 chunks`);
 - under the header, `Changed in game, not saved yet` in orange, when biome tuning holds unsaved edits of the biome;
 - or `Its settings cannot be read here.` in grey, when biome tuning is off or cannot read the biome's file: a biome in
   a zip pack, in no datapack folder, or in two;
@@ -2341,8 +2341,9 @@ down. Where there are several, the window starts with `<n> custom biomes here, t
   namespace keeps its namespace;
 - the command `/biometune edit <id>` in small type at the bottom, to change the biome.
 
-The settings are live, from biome tuning and not from the saved file. A change reaches the window within about 10
-seconds.
+The window's text takes the colours of the map's own popup, so it reads on a light map and on a dark one, such as
+LiveAtlas. The settings are live, from biome tuning and not from the saved file. A change reaches the window within
+about 10 seconds.
 
 **The size limit.** Every visit to the web map downloads the markers of the world it shows, hidden layers included. A
 world whose Custom biomes markers would add more than 512 KB to that download, measured as the web server sends it
