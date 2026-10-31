@@ -1,6 +1,6 @@
 # MCME-Architect — Developer Manual
 
-For developers of MCME-Architect 3.3.0. For how to use the plugin, see the [User Manual](USER_MANUAL.md).
+For developers of MCME-Architect 3.3.1. For how to use the plugin, see the [User Manual](USER_MANUAL.md).
 
 ## Contents
 
@@ -182,7 +182,7 @@ The jar lands in `target/`.
 ### The jar name
 
 `<finalName>` is `${project.artifactId}-${project.version}-${build.type}-${git.commit.id.abbrev}`. A local build gives
-`target/MCME-Architect-3.3.0-DEV-<commit>.jar`.
+`target/MCME-Architect-3.3.1-DEV-<commit>.jar`.
 
 - `build.type` is a pom property: `DEV` by default; pass `-Dbuild.type=RELEASE` for a release build (`SNAPSHOT` is
   also allowed).
@@ -229,7 +229,7 @@ Only three build plugins are pinned: `git-commit-id-maven-plugin` 9.0.1, `maven-
 ### The test stack
 
 - JUnit Jupiter 6.1, with `junit-jupiter-params`, and MockBukkit for Paper 26.2. Assertions are JUnit's own.
-- 3.3.0 has 118 test classes and 12 helper classes. About two fifths of the test classes use no MockBukkit at all:
+- 3.3.1 has 118 test classes and 12 helper classes. About two fifths of the test classes use no MockBukkit at all:
   plain unit tests, mostly in `biomeTuning` and `mapLayers`.
 - Surefire runs with `<reuseForks>false</reuseForks>`: **every test class runs in a fresh JVM**, one class after
   another. The reason is the static state described in [Mental model](#mental-model): a second load of the plugin in
