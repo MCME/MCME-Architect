@@ -282,7 +282,7 @@ class BiomeShapesTest {
             assertEquals("Old <forest> + cbc:fireflies", area.label(), "plain text: the marker is no markup");
         }
         String window = areas().get(0).description();
-        assertTrue(window.contains("<b>Old &lt;forest&gt;</b> <code style=\"color:#777\">cbc:forest</code>"),
+        assertTrue(window.contains("<b>Old &lt;forest&gt;</b> <code>cbc:forest</code>"),
                 "the window escapes it");
         assertFalse(window.contains("Old <forest>"), "and only the label is plain text");
     }
