@@ -2,18 +2,23 @@ package com.mcmiddleearth.architect.biomeTuning;
 
 import com.google.gson.JsonObject;
 import io.papermc.paper.connection.PlayerConfigurationConnection;
+import io.papermc.paper.connection.PlayerConnection;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.Consumer;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 
 /**
  * A bridge without Minecraft: decode() returns the JSON itself, apply() records it per biome, encode() serves
- * prepared JSON, and vanilla biomes and codec rejections can be arranged.
+ * prepared JSON, and vanilla biomes and codec rejections can be arranged. The refresh steps (switching past Paper's
+ * guard, replaying a login, queueing the sync) are recorded in order in {@link #steps}.
  */
 final class FakeNmsBridge implements NmsBridge {
 
@@ -24,6 +29,18 @@ final class FakeNmsBridge implements NmsBridge {
     Path datapacks;
     /** Thrown by selfCheck: a server whose internals changed in a way the check did not foresee. */
     Error selfCheckFailure;
+    /** Players whose login ran PlayerLoginEvent, as Paper marks them. */
+    final Set<UUID> legacyLogins = new HashSet<>();
+    /** What the login replay would lack on this server; empty means it can run. */
+    List<String> loginReplayProblems = List.of();
+    /** Runs when a player is switched past Paper's guard; tests make the player leave the world, as Paper does. */
+    Consumer<Player> onSwitchPastGuard = player -> {
+    };
+    BiomeTuningException switchFailure;
+    /** A plugin disallows the replayed login. */
+    boolean replayRefuses;
+    BiomeTuningException replayFailure;
+    final List<String> steps = new ArrayList<>();
 
     @Override
     public List<String> selfCheck() {
@@ -31,6 +48,11 @@ final class FakeNmsBridge implements NmsBridge {
             throw selfCheckFailure;
         }
         return List.of();
+    }
+
+    @Override
+    public List<String> loginReplayCheck() {
+        return loginReplayProblems;
     }
 
     @Override
@@ -70,11 +92,30 @@ final class FakeNmsBridge implements NmsBridge {
 
     @Override
     public void injectRegistrySync(PlayerConfigurationConnection connection) {
-        throw new AssertionError("not used in these tests");
+        steps.add("sync " + connection.getProfile().getName());
     }
 
     @Override
-    public void switchToConfigurationIgnoringLoginGuard(Player player) {
-        throw new AssertionError("not used in these tests");
+    public boolean loggedInWithLegacyEvent(Player player) {
+        return legacyLogins.contains(player.getUniqueId());
+    }
+
+    @Override
+    public PlayerConnection switchToConfigurationIgnoringLoginGuard(Player player) throws BiomeTuningException {
+        if (switchFailure != null) {
+            throw switchFailure;
+        }
+        steps.add("switch " + player.getName());
+        onSwitchPastGuard.accept(player);
+        return null;
+    }
+
+    @Override
+    public boolean replayLegacyLogin(PlayerConfigurationConnection connection) throws BiomeTuningException {
+        if (replayFailure != null) {
+            throw replayFailure;
+        }
+        steps.add("replay " + connection.getProfile().getName() + (replayRefuses ? " (refused)" : ""));
+        return !replayRefuses;
     }
 }

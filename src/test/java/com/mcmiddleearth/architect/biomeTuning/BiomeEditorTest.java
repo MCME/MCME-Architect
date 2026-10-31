@@ -99,7 +99,8 @@ class BiomeEditorTest {
                 new BiomeLabels(() -> dir.resolve("datapacks"), "bukkit"), service,
                 () -> Instant.parse("2026-09-29T12:00:00Z"), logger);
         service.lock(spares::lockedBecause); // as BiomeTuning wires them
-        refresher = new RefreshCoordinator(bridge, now::get, logger, this::reenter, BiomeTuningSettings.DEFAULTS);
+        refresher = new RefreshCoordinator(bridge, now::get, logger, this::reenter, BiomeTuningSettings.DEFAULTS,
+                Runnable::run);
         screen = new RecordingPresenter();
         MessageUtil messages = new MessageUtil();
         messages.setPluginName("Architect");
@@ -1220,8 +1221,10 @@ class BiomeEditorTest {
         refuseReconfiguration = true;
         editor.open(builder, CBC);
         click("Preview in world");
-        assertTrue(text().contains("PlayerLoginEvent"), text());
-        assertTrue(text().contains("Rejoin to see the live values."), "what a rejoin shows: " + text());
+        assertTrue(text().contains("Live preview is not available on this server right now."), text());
+        assertTrue(text().contains("Switching servers and back, or rejoining, shows the live values."),
+                "what shows the live values instead: " + text());
+        assertFalse(text().contains("PlayerLoginEvent"), "the server log has the technical reason: " + text());
         screen.shown.clear();
         server.getPluginManager().callEvent(new PlayerClientLoadedWorldEvent(builder, false));
         assertNull(screen.of(builder), "no window pops up later");

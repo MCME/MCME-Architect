@@ -14,8 +14,8 @@ class RefreshTrackerTest {
     @Test
     void refusesASecondRefreshWhileOneIsPending() {
         RefreshTracker tracker = new RefreshTracker();
-        assertTrue(tracker.begin(ALICE, true, 0));
-        assertFalse(tracker.begin(ALICE, false, 10));
+        assertTrue(tracker.begin(ALICE, true, false, 0));
+        assertFalse(tracker.begin(ALICE, false, false, 10));
         assertTrue(tracker.isPending(ALICE));
         assertFalse(tracker.isPending(BOB));
     }
@@ -23,7 +23,7 @@ class RefreshTrackerTest {
     @Test
     void remembersThatThePlayerLeftTheWorld() {
         RefreshTracker tracker = new RefreshTracker();
-        tracker.begin(ALICE, true, 0);
+        tracker.begin(ALICE, true, false, 0);
         assertFalse(tracker.hasLeftWorld(ALICE));
         assertTrue(tracker.markLeftWorld(ALICE));
         assertTrue(tracker.hasLeftWorld(ALICE));
@@ -31,12 +31,13 @@ class RefreshTrackerTest {
     }
 
     @Test
-    void reconfiguringKeepsTheInjectFlagAndRecordsTheTime() {
+    void reconfiguringKeepsTheFlagsAndRecordsTheTime() {
         RefreshTracker tracker = new RefreshTracker();
-        tracker.begin(ALICE, false, 100);
+        tracker.begin(ALICE, false, true, 100);
         RefreshTracker.Entry entry = tracker.markReconfiguring(ALICE, 250);
         assertEquals(RefreshTracker.Stage.RECONFIGURING, entry.stage());
         assertFalse(entry.inject());
+        assertTrue(entry.replayLogin());
         assertEquals(250, entry.reconfiguredAt());
         assertNull(tracker.markReconfiguring(BOB, 250), "a reconfiguration we did not start is not ours");
     }
@@ -44,7 +45,7 @@ class RefreshTrackerTest {
     @Test
     void completeFinishesTheRefresh() {
         RefreshTracker tracker = new RefreshTracker();
-        tracker.begin(ALICE, true, 0);
+        tracker.begin(ALICE, true, false, 0);
         assertNotNull(tracker.complete(ALICE));
         assertFalse(tracker.isPending(ALICE));
         assertNull(tracker.complete(ALICE));
@@ -53,8 +54,8 @@ class RefreshTrackerTest {
     @Test
     void expireReturnsOnlyRefreshesPastTheTimeout() {
         RefreshTracker tracker = new RefreshTracker();
-        tracker.begin(ALICE, true, 0);
-        tracker.begin(BOB, true, 10_000);
+        tracker.begin(ALICE, true, false, 0);
+        tracker.begin(BOB, true, false, 10_000);
         List<RefreshTracker.Entry> expired = tracker.expire(15_000, 15_000);
         assertEquals(1, expired.size());
         assertEquals(ALICE, expired.get(0).player());

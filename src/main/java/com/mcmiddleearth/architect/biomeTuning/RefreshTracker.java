@@ -11,28 +11,33 @@ import java.util.UUID;
  */
 public final class RefreshTracker {
 
-    /** REQUESTED: reenter was called. RECONFIGURING: the client acknowledged and the sync was queued. */
+    /** REQUESTED: the switch to configuration was asked for. RECONFIGURING: the client acknowledged it. */
     public enum Stage { REQUESTED, RECONFIGURING }
 
-    public record Entry(UUID player, boolean inject, long startedAt, Stage stage, long reconfiguredAt, boolean leftWorld) {
+    /**
+     * {@code replayLogin}: the player was switched past Paper's guard, so their login is replayed while they
+     * reconfigure.
+     */
+    public record Entry(UUID player, boolean inject, boolean replayLogin, long startedAt, Stage stage,
+                        long reconfiguredAt, boolean leftWorld) {
 
         Entry withLeftWorld() {
-            return new Entry(player, inject, startedAt, stage, reconfiguredAt, true);
+            return new Entry(player, inject, replayLogin, startedAt, stage, reconfiguredAt, true);
         }
 
         Entry withReconfiguring(long now) {
-            return new Entry(player, inject, startedAt, Stage.RECONFIGURING, now, leftWorld);
+            return new Entry(player, inject, replayLogin, startedAt, Stage.RECONFIGURING, now, leftWorld);
         }
     }
 
     private final Map<UUID, Entry> entries = new HashMap<>();
 
     /** Registers a refresh; false if one is already pending for this player. */
-    public boolean begin(UUID player, boolean inject, long now) {
+    public boolean begin(UUID player, boolean inject, boolean replayLogin, long now) {
         if (entries.containsKey(player)) {
             return false;
         }
-        entries.put(player, new Entry(player, inject, now, Stage.REQUESTED, -1, false));
+        entries.put(player, new Entry(player, inject, replayLogin, now, Stage.REQUESTED, -1, false));
         return true;
     }
 

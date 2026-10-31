@@ -115,8 +115,14 @@ public final class BiomeTuning {
         spares = new SparePool(settings.spares(), settings.targetPack(), knownBiomes, datapacksDir,
                 new BiomeLabels(datapacksDir, settings.targetPack()), service, Instant::now, owner.getLogger());
         service.lock(spares::lockedBecause);
+        List<String> replayProblems = nmsBridge.loginReplayCheck();
+        if (!replayProblems.isEmpty()) {
+            owner.getLogger().warning("Biome tuning cannot replay logins on " + owner.getServer().getVersion() + ": "
+                    + String.join("; ", replayProblems) + ". Where a plugin listens to PlayerLoginEvent, players see "
+                    + "edits only after switching servers and back, or rejoining.");
+        }
         refresher = new RefreshCoordinator(nmsBridge, System::currentTimeMillis, owner.getLogger(),
-                RefreshCoordinator::reenter, settings);
+                RefreshCoordinator::reenter, settings, task -> owner.getServer().getScheduler().runTask(owner, task));
         owner.getServer().getPluginManager().registerEvents(refresher, owner);
         // the editor only measures durations, as Paper does for callback lifetimes, so it takes a monotonic clock
         editor = new BiomeEditor(service, spares, refresher, new PaperDialogPresenter(),
