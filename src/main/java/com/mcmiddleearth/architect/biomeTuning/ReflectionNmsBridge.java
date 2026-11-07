@@ -277,10 +277,12 @@ public final class ReflectionNmsBridge implements NmsBridge {
     @Override
     public PlayerConnection switchToConfigurationIgnoringLoginGuard(Player player) throws BiomeTuningException {
         try {
+            // asked first: the switch takes the player out of the world
+            PlayerConnection connection = player.getConnection();
             Object handle = player.getClass().getMethod("getHandle").invoke(player);
             Object gameListener = handle.getClass().getField("connection").get(handle);
             gameListener.getClass().getMethod("switchToConfig").invoke(gameListener);
-            return player.getConnection();
+            return connection;
         } catch (ReflectiveOperationException | RuntimeException e) {
             throw new BiomeTuningException("could not switch " + player.getName() + " to configuration: " + rootMessage(e), e);
         }

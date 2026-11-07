@@ -227,6 +227,21 @@ class RefreshCoordinatorTest {
         assertFalse(coordinator.isRefreshing(alice.getUniqueId()));
     }
 
+    // once the player has left the world, a failing switch cannot be undone: the refresh is kept, so the client's
+    // acknowledgement still completes it (or the timeout ends it) instead of nobody ever completing it
+    @Test
+    void aSwitchThatFailsAfterThePlayerLeftTheWorldIsStillSeenThrough() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        bridge.switchFailureAfterLeaving = new BiomeTuningException("could not switch Alice to configuration: boom");
+        assertEquals(RefreshCoordinator.Outcome.STARTED, coordinator.refresh(alice, true));
+        assertTrue(coordinator.isRefreshing(alice.getUniqueId()));
+        bridge.steps.clear();
+        acknowledged(alice, true);
+        nextTick();
+        assertEquals(List.of("replay Alice", "sync Alice", "complete Alice"), bridge.steps);
+    }
+
     @Test
     void theDebugBypassSwitchesPastTheGuardEvenAfterAPlainLogin() {
         PlayerMock alice = server.addPlayer("Alice");

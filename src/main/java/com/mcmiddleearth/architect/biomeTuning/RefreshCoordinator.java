@@ -117,8 +117,12 @@ public final class RefreshCoordinator implements Listener {
         try {
             connection = reenter.apply(player); // the player's PlayerQuitEvent fires inside this call
         } catch (BiomeTuningException e) {
-            tracker.forget(id);
             logger.warning("biometune: " + e.getMessage());
+            if (tracker.hasLeftWorld(id)) {
+                // too late to stay: the acknowledgement may still complete the refresh, or the timeout ends it
+                return Outcome.STARTED;
+            }
+            tracker.forget(id);
             return Outcome.REFUSED;
         } catch (RuntimeException e) {
             tracker.forget(id);
@@ -126,8 +130,8 @@ public final class RefreshCoordinator implements Listener {
         }
         if (!tracker.hasLeftWorld(id)) {
             tracker.forget(id);
-            logger.warning("biometune: Paper did not reconfigure " + player.getName()
-                    + "; its warning about it is in the server log");
+            logger.warning("biometune: " + player.getName() + " did not leave the world, so the refresh is off"
+                    + (pastGuard ? "" : "; Paper's warning about it is in the server log"));
             return Outcome.REFUSED;
         }
         if (connection != null) {

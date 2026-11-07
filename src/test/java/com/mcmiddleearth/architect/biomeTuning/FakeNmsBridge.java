@@ -37,6 +37,8 @@ final class FakeNmsBridge implements NmsBridge {
     Consumer<Player> onSwitchPastGuard = player -> {
     };
     BiomeTuningException switchFailure;
+    /** Thrown once onSwitchPastGuard has run: the switch failed after the player had left the world. */
+    BiomeTuningException switchFailureAfterLeaving;
     /** A plugin disallows the replayed login. */
     boolean replayRefuses;
     BiomeTuningException replayFailure;
@@ -107,6 +109,9 @@ final class FakeNmsBridge implements NmsBridge {
         }
         steps.add("switch " + player.getName());
         onSwitchPastGuard.accept(player);
+        if (switchFailureAfterLeaving != null) {
+            throw switchFailureAfterLeaving;
+        }
         return null;
     }
 
