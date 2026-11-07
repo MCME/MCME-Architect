@@ -6,12 +6,16 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import javax.imageio.stream.MemoryCacheImageInputStream;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * come from the vanilla client jar, like on the client.
  */
 public final class Models {
+
+    /** The widest and highest texture read, in pixels; a bigger one counts as missing. */
+    public static final int MAX_TEXTURE_SIDE = 4096;
 
     /** A model as a block state draws it, turned by x, then y (degrees). */
     public record Placed(String model, int x, int y) {
@@ -464,7 +471,7 @@ public final class Models {
             }
             BufferedImage img;
             try {
-                img = ImageIO.read(new ByteArrayInputStream(raw));
+                img = readImage(raw);
             } catch (IOException | RuntimeException ex) {
                 return NO_IMAGE;
             }
@@ -494,6 +501,27 @@ public final class Models {
             return new Stats((int) Math.round(r / a) << 16 | (int) Math.round(g / a) << 8 | (int) Math.round(b / a),
                     Math.sqrt(Math.max(0, ll / a - mean * mean)));
         });
+    }
+
+    /** The image, or null if no reader knows it or it is wider or higher than MAX_TEXTURE_SIDE, which is read from
+     *  its header before any pixels. */
+    private static BufferedImage readImage(byte[] raw) throws IOException {
+        try (ImageInputStream in = new MemoryCacheImageInputStream(new ByteArrayInputStream(raw))) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+            if (!readers.hasNext()) {
+                return null;
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(in, true, true);
+                if (reader.getWidth(0) > MAX_TEXTURE_SIDE || reader.getHeight(0) > MAX_TEXTURE_SIDE) {
+                    return null;
+                }
+                return reader.read(0);
+            } finally {
+                reader.dispose();
+            }
+        }
     }
 
     // -- rotation -------------------------------------------------------------------------------------------

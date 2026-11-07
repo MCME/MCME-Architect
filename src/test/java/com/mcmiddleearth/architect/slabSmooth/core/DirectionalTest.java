@@ -66,19 +66,30 @@ class DirectionalTest {
         }
     }
 
-    /** Brush-style run on the user's terrain: only blocks in the sphere change, in every direction. */
+    /**
+     * Brush-style run on the golden hillside, with large ferns on its grass: only blocks in the sphere change, in
+     * every direction. Where the sphere ends between a fern's halves, the fern stays whole.
+     */
     @Test
     void sphereLimitsChanges() throws Exception {
-        var fx = TestTables.fixture("toti");
-        int h = fx.get("height").getAsInt(), l = fx.get("length").getAsInt(), w = fx.get("width").getAsInt();
-        List<String> palette = new ArrayList<>();
-        fx.getAsJsonArray("palette").forEach(e -> palette.add(e.getAsString()));
-        int[] blocks = new int[fx.getAsJsonArray("blocks").size()];
-        for (int i = 0; i < blocks.length; i++) {
-            blocks[i] = fx.getAsJsonArray("blocks").get(i).getAsInt();
+        GoldenScenes.Scene hillside = GoldenScenes.scene("hillside");
+        int h = hillside.height(), l = hillside.length(), w = hillside.width();
+        int[] blocks = hillside.blocks().clone();
+        List<String> palette = new ArrayList<>(hillside.palette());
+        // The brush clicked on the ground in the middle of the slope.
+        int cx = w / 2, cz = l / 2, cy = surface(blocks, h, l, w, cx, cz);
+        int grass = palette.indexOf("minecraft:grass_block"), lower = palette.size(), upper = lower + 1;
+        palette.add("minecraft:large_fern[half=lower]");
+        palette.add("minecraft:large_fern[half=upper]");
+        for (int z = 0; z < l; z++) {
+            for (int x = 0; x < w; x++) {
+                int top = surface(blocks, h, l, w, x, z);
+                if (blocks[(top * l + z) * w + x] == grass && top + 2 < h) {
+                    blocks[((top + 1) * l + z) * w + x] = lower;
+                    blocks[((top + 2) * l + z) * w + x] = upper;
+                }
+            }
         }
-        // A spot on a cliff face (found from the data: the steepest column step near the middle).
-        int cx = 48, cz = 48, cy = surface(blocks, h, l, w, cx, cz) - 3;
         boolean[] inside = new boolean[blocks.length];
         for (int i = 0; i < blocks.length; i++) {
             int x = i % w, z = (i / w) % l, y = i / (w * l);
@@ -90,10 +101,7 @@ class DirectionalTest {
             if (r.blocks()[i] != blocks[i] && !BlockStates.normalize(r.palette().get(r.blocks()[i]))
                     .equals(BlockStates.normalize(palette.get(blocks[i])))) {
                 int x = i % w, z = (i / w) % l, y = i / (w * l);
-                // The grass rule may recolour the block just under a changed top, and tall plants lose their top.
-                boolean nextToInside = inside[i] || (y > 0 && inside[i - w * l]) || (y + 1 < h && inside[i + w * l])
-                        || (y > 1 && inside[i - 2 * w * l]);
-                assertTrue(nextToInside, "changed outside the sphere at " + x + "," + y + "," + z);
+                assertTrue(inside[i], "changed outside the sphere at " + x + "," + y + "," + z);
             }
         }
     }

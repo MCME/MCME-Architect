@@ -13,6 +13,9 @@ import java.util.zip.ZipFile;
 /** Files of a resource pack (or the vanilla client jar), by path inside it ("assets/minecraft/..."). */
 public interface Resources extends Closeable {
 
+    /** The largest zip entry read; a bigger one reads as missing, so a broken pack can't fill the memory. */
+    int MAX_ENTRY_BYTES = 16 * 1024 * 1024;
+
     /** The file's bytes, or null if it isn't there. */
     byte[] read(String path);
 
@@ -48,7 +51,8 @@ public interface Resources extends Closeable {
                     return null;
                 }
                 try (InputStream in = zip.getInputStream(e)) {
-                    return in.readAllBytes();
+                    byte[] bytes = in.readNBytes(MAX_ENTRY_BYTES + 1); // the stated size may be false, so count
+                    return bytes.length > MAX_ENTRY_BYTES ? null : bytes;
                 } catch (IOException ex) {
                     throw new UncheckedIOException(ex);
                 }

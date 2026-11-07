@@ -45,10 +45,10 @@ public final class Options {
                 case "sigma" -> sigma = range(Double.parseDouble(value), 0, 8, name);
                 case "w_data" -> wData = range(Double.parseDouble(value), 0, 100, name);
                 case "w_diag" -> wDiag = range(Double.parseDouble(value), 0, 100, name);
-                case "cost_stairs" -> costStairs = range(Double.parseDouble(value), -100, 100, name);
-                case "cost_corner" -> costCorner = range(Double.parseDouble(value), -100, 100, name);
-                case "cost_vslab" -> costVslab = range(Double.parseDouble(value), -100, 100, name);
-                case "cost_fill" -> costFill = range(Double.parseDouble(value), -100, 100, name);
+                case "cost_stairs" -> costStairs = range(Double.parseDouble(value), 0, 100, name);
+                case "cost_corner" -> costCorner = range(Double.parseDouble(value), 0, 100, name);
+                case "cost_vslab" -> costVslab = range(Double.parseDouble(value), 0, 100, name);
+                case "cost_fill" -> costFill = range(Double.parseDouble(value), 0, 100, name);
                 case "mode" -> mode = oneOf(value, name, "both", "cut", "fill");
                 case "plants" -> plants = oneOf(value, name, "remove", "keep");
                 case "border" -> border = range(Integer.parseInt(value), 0, 16, name);

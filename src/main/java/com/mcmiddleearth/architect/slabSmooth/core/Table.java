@@ -108,8 +108,11 @@ public final class Table {
     }
 
     private Kind3 classify3(String state) {
-        Kind kind = kind(state);
         BlockStates.Parsed parsed = BlockStates.parse(state);
+        if (waterlogged(parsed)) {
+            return new Kind3(OTHER, -1, 0);
+        }
+        Kind kind = kind(state);
         if (kind.category() == AIR || kind.category() == DECOR || kind.category() == TERRAIN) {
             return new Kind3(kind.category(), kind.material(), kind.category() == TERRAIN ? 0xFF : 0);
         }
@@ -145,6 +148,9 @@ public final class Table {
         BlockStates.Parsed parsed = BlockStates.parse(state);
         String id = parsed.name();
         Map<String, String> props = parsed.props();
+        if (waterlogged(parsed)) {
+            return OTHER_KIND;
+        }
         if (air.contains(id)) {
             return AIR_KIND;
         }
@@ -181,6 +187,12 @@ public final class Table {
             }
         }
         return OTHER_KIND;
+    }
+
+    /** A waterlogged block is left alone: any piece or air put in its place would lose the water, and a pattern
+     *  without properties (a coral, a stair block) matches it too. */
+    private static boolean waterlogged(BlockStates.Parsed parsed) {
+        return "true".equals(parsed.props().get("waterlogged"));
     }
 
     private static boolean matches(String id, Map<String, String> props, BlockStates.Parsed pattern) {

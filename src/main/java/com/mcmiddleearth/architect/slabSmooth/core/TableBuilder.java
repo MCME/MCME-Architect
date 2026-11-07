@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 
 /**
  * Builds a material table from a pack's inventory and its models, with no hand-made recipe:
@@ -49,6 +50,11 @@ public final class TableBuilder {
         public Map<String, List<String>> pairs = Map.of();
         /** Inventory keys of full blocks that are terrain although their category isn't a terrain category. */
         public Set<String> terrain = Set.of();
+        /** Whether the server knows a block state. One it doesn't is left out of the table, with a line in the report. */
+        public Predicate<String> validState = state -> true;
+        /** Whether a block state has a block entity (a barrel, a chest). Such a full block never becomes a material;
+         *  such a piece (a comparator slab) still can. */
+        public Predicate<String> hasBlockEntity = state -> false;
     }
 
     /** materials: terrain materials; others: materials of other blocks, smoothed only with "blocks all". */
@@ -86,6 +92,7 @@ public final class TableBuilder {
         Map<String, Full> fulls = new LinkedHashMap<>();
         List<Group> groups = new ArrayList<>();
         Set<String> seenPieces = new HashSet<>();
+        List<String> leftOutNotes = new ArrayList<>();
         List<Inventory.Entry> ordered = new ArrayList<>(entries);
         ordered.sort(Comparator.comparing((Inventory.Entry e) -> !terrainCats.contains(e.category().toLowerCase(Locale.ROOT))));
         for (Inventory.Entry e : ordered) {
@@ -96,6 +103,7 @@ public final class TableBuilder {
             boolean terra = terrainCats.contains(category);
             List<Member> members = new ArrayList<>();
             String note = "";
+            Map<String, List<String>> leftOut = new LinkedHashMap<>();
             if (e.vanilla() && e.block().endsWith("_stairs")) {
                 int wrong = 0;
                 for (int high = 1; high < Shapes.ALL; high++) {
@@ -107,10 +115,10 @@ public final class TableBuilder {
                         String state = BlockStates.format(e.block(), Map.of("facing", fs[0], "half", top ? "top" : "bottom",
                                 "shape", fs[1], "waterlogged", "false"));
                         int expected = Octants.stairs(high, top);
-                        Integer mask = models.cleanMask(state);
-                        if (mask != null && mask == expected) {
+                        int mask = shape(state, models, settings, leftOut);
+                        if (mask == expected) {
                             members.add(new Member(state, expected, pieceMasks.get(expected)));
-                        } else {
+                        } else if (mask != LEFT_OUT) {
                             wrong++;
                         }
                     }
@@ -132,12 +140,14 @@ public final class TableBuilder {
                     if ("true".equals(BlockStates.parse(state).props().get("waterlogged"))) {
                         continue; // would place water
                     }
-                    Integer mask = models.cleanMask(state);
-                    if (mask == null) {
-                        continue; // not a shape the smoother knows: never touched
+                    int mask = shape(state, models, settings, leftOut);
+                    if (mask == NO_SHAPE || mask == LEFT_OUT) {
+                        continue; // not a shape the smoother knows, or left out: never touched
                     }
                     if (mask == Octants.FULL) {
-                        fulls.putIfAbsent(state, new Full(state, e, terra, terra || settings.terrain.contains(e.key())));
+                        if (!settings.hasBlockEntity.test(state)) { // cutting a barrel or a chest would empty it
+                            fulls.putIfAbsent(state, new Full(state, e, terra, terra || settings.terrain.contains(e.key())));
+                        }
                     } else if (pieceMasks.containsKey(mask) && seenPieces.add(state)) {
                         members.add(new Member(state, mask, pieceMasks.get(mask)));
                     }
@@ -146,6 +156,7 @@ public final class TableBuilder {
             if (!members.isEmpty()) {
                 groups.add(new Group(e, members, terra ? note : "", terra));
             }
+            noteLeftOut(e, leftOut, leftOutNotes);
         }
 
         // 2. Each full block's pieces: forced pairs first, then the same texture, then the same name, then (terrain
@@ -223,6 +234,7 @@ public final class TableBuilder {
                 report.add("note: " + label(g.entry()) + ": " + g.note());
             }
         }
+        report.addAll(leftOutNotes);
         List<Full> unused = fulls.values().stream().filter(f -> f.terrain() && !shapesOf.containsKey(f.state())).toList();
         if (!unused.isEmpty()) {
             report.add(unused.size() + " terrain full blocks have no matching pieces and are left alone: "
@@ -263,6 +275,36 @@ public final class TableBuilder {
         table.add("decor", decorJson);
         table.add("materials", mats);
         return new Result(table, report, terrainCount, mats.size() - terrainCount);
+    }
+
+    /** {@link #shape}: the state's model isn't a clean shape ({@link Models#cleanMask} is null). */
+    private static final int NO_SHAPE = -1;
+    /** {@link #shape}: the state is left out of the table and noted in the report. */
+    private static final int LEFT_OUT = -2;
+
+    /**
+     * The octants of a state's model, NO_SHAPE, or LEFT_OUT if the server doesn't know the state or its model can't
+     * be read (a broken pack file); such states are listed in leftOut under the reason.
+     */
+    private static int shape(String state, Models models, Settings settings, Map<String, List<String>> leftOut) {
+        if (!settings.validState.test(state)) {
+            leftOut.computeIfAbsent("the server doesn't know", why -> new ArrayList<>()).add(state);
+            return LEFT_OUT;
+        }
+        Integer mask;
+        try {
+            mask = models.cleanMask(state);
+        } catch (RuntimeException e) {
+            leftOut.computeIfAbsent("can't read the model (" + e + ") of", why -> new ArrayList<>()).add(state);
+            return LEFT_OUT;
+        }
+        return mask == null ? NO_SHAPE : mask;
+    }
+
+    /** One report line per reason: "note: Rock: the server doesn't know minecraft:x[...] and 3 more, left out". */
+    private static void noteLeftOut(Inventory.Entry e, Map<String, List<String>> leftOut, List<String> notes) {
+        leftOut.forEach((why, states) -> notes.add("note: " + label(e) + ": " + why + " " + states.get(0)
+                + (states.size() > 1 ? " and " + (states.size() - 1) + " more" : "") + ", left out"));
     }
 
     private static void take(Group g, Map<Integer, String> shapes, List<String> sources, String how) {

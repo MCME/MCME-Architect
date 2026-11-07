@@ -429,6 +429,7 @@ public final class Directional {
         final World world;
         final Frame f;
         final Options opts;
+        final boolean[] editable; // null, or per world block whether it may change
         final boolean prototype; // tops like the Python prototype: topmost surface only, vertical-run ground
         final int cols;
         final int[] frameToWorld;
@@ -450,6 +451,7 @@ public final class Directional {
             this.world = world;
             this.f = f;
             this.opts = opts;
+            this.editable = editable;
             this.prototype = prototype;
             cols = f.fw * f.fl;
             int fn = cols * f.fh;
@@ -483,7 +485,7 @@ public final class Directional {
                     isGround[fi] = ground[fi] && supported[frameToWorld[fi]];
                 }
             }
-            findNodes(editable, owner);
+            findNodes(owner);
         }
 
         int block(int fy, int c) {
@@ -495,7 +497,7 @@ public final class Directional {
             return f.toFrame(k.mask());
         }
 
-        void findNodes(boolean[] editable, byte[] owner) {
+        void findNodes(byte[] owner) {
             List<int[]> found = new ArrayList<>(); // {line, s}
             lineNodes = new int[cols][];
             for (int c = 0; c < cols; c++) {
@@ -565,6 +567,12 @@ public final class Directional {
                 }
                 if (editable != null && (!editable[wi] || top + 1 < f.fh && !editable[frameToWorld[block(top + 1, c)]])) {
                     status[k] = FIXED;
+                }
+                if (editable != null) {
+                    int plantTop = plantTop(c, top);
+                    if (plantTop >= 0 && !editable[plantTop]) {
+                        status[k] = FIXED; // a change would take away the top half of a plant outside the mask
+                    }
                 }
             }
             // Neighbours: in each neighbouring line, the surface nearest in height.
@@ -965,26 +973,26 @@ public final class Directional {
                 }
                 if (f.dir == UP && config.hasZero() && top > 0) {
                     int below = frameToWorld[block(top - 1, c)];
-                    if (world.kinds.get(before[below]).category() == TERRAIN && mat[block(top - 1, c)] != this.material[k]) {
+                    if (world.kinds.get(before[below]).category() == TERRAIN && mat[block(top - 1, c)] != this.material[k]
+                            && (editable == null || editable[below])) {
                         // Half of the block is cut away: the top of the block below shows, so it takes the surface material.
                         world.blocks[below] = world.state(surfaceIsTerrain ? original : material.fullState);
                     }
                 }
                 if (top + 1 < f.fh) {
                     int above = frameToWorld[block(top + 1, c)];
-                    int tallAbove = top + 2 < f.fh && cat[block(top + 2, c)] == DECOR ? frameToWorld[block(top + 2, c)] : -1;
+                    int plantTop = plantTop(c, top);
                     if (upperMask == 0) {
                         if (plantAbove[k] && lowerMask != Octants.FULL) {
                             world.blocks[above] = air;
                             plantsRemoved++;
-                            if (tallAbove >= 0) {
-                                world.blocks[tallAbove] = air; // the top half of a tall plant
+                            if (plantTop >= 0) {
+                                world.blocks[plantTop] = air; // the top half of a tall plant
                             }
                         }
                     } else {
                         if (cat[block(top + 1, c)] == DECOR) {
                             plantsRemoved++;
-                            int plantTop = f.dir == UP ? tallAbove : aboveInWorld(above, DECOR);
                             if (plantTop >= 0) {
                                 world.blocks[plantTop] = air;
                             }
@@ -1010,6 +1018,21 @@ public final class Directional {
                 log.accept(String.format("%s: %d of %d surfaces changed, energy %.1f -> %.1f, %d sweeps",
                         NAMES[f.dir], changedNodes, freeNodes, energyBefore, energyAfter, sweeps));
             }
+        }
+
+        /**
+         * The top half of a tall plant on the surface at frame block (top, c), as a world block, or -1; it goes when
+         * the plant does. On tops it is the plant block above the plant; on walls and undersides, whose "up" isn't
+         * the world's, it is the plant block above the plant in the world.
+         */
+        int plantTop(int c, int top) {
+            if (top + 1 >= f.fh || cat[block(top + 1, c)] != DECOR) {
+                return -1;
+            }
+            if (f.dir == UP) {
+                return top + 2 < f.fh && cat[block(top + 2, c)] == DECOR ? frameToWorld[block(top + 2, c)] : -1;
+            }
+            return aboveInWorld(frameToWorld[block(top + 1, c)], DECOR);
         }
 
         /** The world block above i if it has the given category, else -1. */
