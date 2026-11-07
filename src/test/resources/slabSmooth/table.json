@@ -1,0 +1,389 @@
+{
+  "name": "RP-Human terrain",
+  "air": [
+    "minecraft:air",
+    "minecraft:cave_air",
+    "minecraft:void_air"
+  ],
+  "decor": [
+    "minecraft:acacia_sapling",
+    "minecraft:acacia_sapling[stage=0]",
+    "minecraft:allium",
+    "minecraft:azure_bluet",
+    "minecraft:bamboo_sapling",
+    "minecraft:beetroots[age=0]",
+    "minecraft:beetroots[age=1]",
+    "minecraft:beetroots[age=2]",
+    "minecraft:beetroots[age=3]",
+    "minecraft:big_dripleaf[facing=north,tilt=full,waterlogged=false]",
+    "minecraft:big_dripleaf[facing=north,tilt=none,waterlogged=false]",
+    "minecraft:big_dripleaf_stem[facing=north,waterlogged=false]",
+    "minecraft:birch_sapling[stage=1]",
+    "minecraft:blue_orchid",
+    "minecraft:brain_coral",
+    "minecraft:brain_coral[waterlogged=false]",
+    "minecraft:brain_coral_fan[waterlogged=false]",
+    "minecraft:brown_mushroom",
+    "minecraft:bubble_coral",
+    "minecraft:bubble_coral[waterlogged=false]",
+    "minecraft:bubble_coral_fan[waterlogged=false]",
+    "minecraft:bush",
+    "minecraft:cactus[age=0]",
+    "minecraft:carrots[age=0]",
+    "minecraft:carrots[age=1]",
+    "minecraft:carrots[age=2]",
+    "minecraft:carrots[age=3]",
+    "minecraft:carrots[age=4]",
+    "minecraft:carrots[age=5]",
+    "minecraft:carrots[age=6]",
+    "minecraft:carrots[age=7]",
+    "minecraft:cherry_door[facing=east,half=lower,hinge=right,open=true,powered=false]",
+    "minecraft:cherry_door[facing=east,half=upper,hinge=left,open=false,powered=false]",
+    "minecraft:cherry_door[facing=north,half=lower,hinge=right,open=true,powered=false]",
+    "minecraft:cherry_door[facing=north,half=upper,hinge=left,open=false,powered=false]",
+    "minecraft:cherry_door[facing=south,half=lower,hinge=right,open=true,powered=false]",
+    "minecraft:cherry_door[facing=south,half=upper,hinge=left,open=false,powered=false]",
+    "minecraft:cherry_door[facing=west,half=lower,hinge=right,open=true,powered=false]",
+    "minecraft:cherry_door[facing=west,half=upper,hinge=left,open=false,powered=false]",
+    "minecraft:cherry_sapling[stage=0]",
+    "minecraft:cornflower",
+    "minecraft:crimson_roots",
+    "minecraft:dandelion",
+    "minecraft:dark_oak_sapling[stage=0]",
+    "minecraft:dark_oak_sapling[stage=1]",
+    "minecraft:dead_brain_coral",
+    "minecraft:dead_brain_coral[waterlogged=false]",
+    "minecraft:dead_brain_coral_fan[waterlogged=false]",
+    "minecraft:dead_bubble_coral",
+    "minecraft:dead_bubble_coral[waterlogged=false]",
+    "minecraft:dead_bubble_coral_wall_fan[facing=east,waterlogged=false]",
+    "minecraft:dead_bubble_coral_wall_fan[facing=north,waterlogged=false]",
+    "minecraft:dead_bubble_coral_wall_fan[facing=south,waterlogged=false]",
+    "minecraft:dead_bubble_coral_wall_fan[facing=west,waterlogged=false]",
+    "minecraft:dead_bush",
+    "minecraft:dead_fire_coral",
+    "minecraft:dead_fire_coral[waterlogged=false]",
+    "minecraft:dead_horn_coral",
+    "minecraft:dead_horn_coral[waterlogged=false]",
+    "minecraft:dead_tube_coral",
+    "minecraft:dead_tube_coral[waterlogged=false]",
+    "minecraft:fern",
+    "minecraft:fire_coral",
+    "minecraft:fire_coral[waterlogged=false]",
+    "minecraft:fire_coral_fan[waterlogged=false]",
+    "minecraft:firefly_bush",
+    "minecraft:grass",
+    "minecraft:horn_coral",
+    "minecraft:horn_coral[waterlogged=false]",
+    "minecraft:horn_coral_fan[waterlogged=false]",
+    "minecraft:jungle_sapling[stage=0]",
+    "minecraft:large_fern",
+    "minecraft:large_fern[half=lower]",
+    "minecraft:large_fern[half=upper]",
+    "minecraft:leaf_litter",
+    "minecraft:lilac",
+    "minecraft:lilac[half=lower]",
+    "minecraft:lilac[half=upper]",
+    "minecraft:lily_of_the_valley",
+    "minecraft:lily_pad",
+    "minecraft:mangrove_leaves[distance=7,persistent=true,waterlogged=false]",
+    "minecraft:melon",
+    "minecraft:nether_wart[age=0]",
+    "minecraft:nether_wart[age=1]",
+    "minecraft:nether_wart[age=2]",
+    "minecraft:nether_wart[age=3]",
+    "minecraft:orange_tulip",
+    "minecraft:oxeye_daisy",
+    "minecraft:peony",
+    "minecraft:peony[half=lower]",
+    "minecraft:peony[half=upper]",
+    "minecraft:pink_petals",
+    "minecraft:pink_tulip",
+    "minecraft:pitcher_plant",
+    "minecraft:poppy",
+    "minecraft:potatoes[age=0]",
+    "minecraft:potatoes[age=1]",
+    "minecraft:potatoes[age=2]",
+    "minecraft:potatoes[age=3]",
+    "minecraft:potatoes[age=4]",
+    "minecraft:potatoes[age=5]",
+    "minecraft:potatoes[age=6]",
+    "minecraft:potatoes[age=7]",
+    "minecraft:pumpkin",
+    "minecraft:rail[shape=ascending_east,waterlogged=false]",
+    "minecraft:rail[shape=ascending_west,waterlogged=false]",
+    "minecraft:red_mushroom",
+    "minecraft:red_tulip",
+    "minecraft:redstone_wire[power=3]",
+    "minecraft:redstone_wire[power=6]",
+    "minecraft:redstone_wire[power=7]",
+    "minecraft:repeater[delay=1,facing=east,locked=false,powered=false]",
+    "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]",
+    "minecraft:repeater[delay=1,facing=north,locked=true,powered=false]",
+    "minecraft:repeater[delay=1,facing=west,locked=false,powered=false]",
+    "minecraft:rose_bush",
+    "minecraft:rose_bush[half=lower]",
+    "minecraft:rose_bush[half=upper]",
+    "minecraft:short_dry_grass",
+    "minecraft:short_grass",
+    "minecraft:small_dripleaf[facing=east,half=lower,waterlogged=false]",
+    "minecraft:small_dripleaf[facing=east,half=upper,waterlogged=false]",
+    "minecraft:small_dripleaf[facing=north,half=lower,waterlogged=false]",
+    "minecraft:small_dripleaf[facing=north,half=upper,waterlogged=false]",
+    "minecraft:small_dripleaf[facing=south,half=lower,waterlogged=false]",
+    "minecraft:small_dripleaf[facing=south,half=upper,waterlogged=false]",
+    "minecraft:small_dripleaf[facing=west,half=lower,waterlogged=false]",
+    "minecraft:small_dripleaf[facing=west,half=upper,waterlogged=false]",
+    "minecraft:snow",
+    "minecraft:sugar_cane[age=0]",
+    "minecraft:sugar_cane[age=4]",
+    "minecraft:sugar_cane[age=5]",
+    "minecraft:sugar_cane[age=6]",
+    "minecraft:sunflower",
+    "minecraft:sweet_berry_bush",
+    "minecraft:tall_dry_grass",
+    "minecraft:tall_grass",
+    "minecraft:tall_grass[half=upper]",
+    "minecraft:torch_flower[age=1]",
+    "minecraft:torchflower",
+    "minecraft:torchflower_crop[age=0]",
+    "minecraft:torchflower_crop[age=1]",
+    "minecraft:tube_coral[waterlogged=false]",
+    "minecraft:tube_coral_wall_fan[facing=east,waterlogged=false]",
+    "minecraft:tube_coral_wall_fan[facing=north,waterlogged=false]",
+    "minecraft:tube_coral_wall_fan[facing=south,waterlogged=false]",
+    "minecraft:tube_coral_wall_fan[facing=west,waterlogged=false]",
+    "minecraft:twisting_vines[age=16]",
+    "minecraft:twisting_vines[age=17]",
+    "minecraft:twisting_vines_plant",
+    "minecraft:vine",
+    "minecraft:warped_fungus",
+    "minecraft:warped_roots",
+    "minecraft:weeping_vines_plant",
+    "minecraft:wheat[age=0]",
+    "minecraft:wheat[age=1]",
+    "minecraft:wheat[age=2]",
+    "minecraft:wheat[age=3]",
+    "minecraft:wheat[age=4]",
+    "minecraft:wheat[age=5]",
+    "minecraft:wheat[age=6]",
+    "minecraft:wheat[age=7]",
+    "minecraft:white_tulip",
+    "minecraft:wildflowers"
+  ],
+  "materials": {
+    "grass": {
+      "full": [
+        "minecraft:grass_block",
+        "minecraft:oak_leaves[distance=1,persistent=false]",
+        "minecraft:oak_leaves[distance=5,persistent=false]",
+        "minecraft:oak_leaves[distance=6,persistent=false]",
+        "minecraft:oak_leaves[distance=4,persistent=true]",
+        "minecraft:oak_leaves[distance=1,persistent=true]",
+        "minecraft:oak_leaves[distance=2,persistent=true]",
+        "minecraft:oak_leaves[distance=3,persistent=true]",
+        "minecraft:oak_leaves[distance=2,persistent=false]",
+        "minecraft:oak_leaves[distance=3,persistent=false]",
+        "minecraft:oak_leaves[distance=5,persistent=true]",
+        "minecraft:oak_leaves[distance=6,persistent=true]",
+        "minecraft:oak_leaves[distance=4,persistent=false]"
+      ],
+      "color": "#3c4e25",
+      "side_color": "#3c4e25",
+      "slab": "minecraft:sugar_cane[age=2]"
+    },
+    "stone": {
+      "full": [
+        "minecraft:stone"
+      ],
+      "color": "#86836e",
+      "side_color": "#86836e",
+      "slab": "minecraft:stone_slab[type=bottom,waterlogged=false]",
+      "stairs": "minecraft:stone_stairs",
+      "vslab": {
+        "north": "minecraft:crimson_fence_gate[facing=north,in_wall=true,open=false,powered=true]",
+        "south": "minecraft:crimson_fence_gate[facing=south,in_wall=true,open=false,powered=true]",
+        "east": "minecraft:crimson_fence_gate[facing=east,in_wall=true,open=false,powered=true]",
+        "west": "minecraft:crimson_fence_gate[facing=west,in_wall=true,open=false,powered=true]"
+      }
+    },
+    "smooth_dark_stone": {
+      "full": [
+        "minecraft:polished_andesite"
+      ],
+      "color": "#706f5c",
+      "side_color": "#706f5c",
+      "slab": "minecraft:polished_andesite_slab[type=bottom,waterlogged=false]",
+      "stairs": "minecraft:polished_andesite_stairs",
+      "vslab": {
+        "north": "minecraft:mangrove_fence_gate[facing=north,in_wall=false,open=false,powered=false]",
+        "south": "minecraft:mangrove_fence_gate[facing=south,in_wall=false,open=false,powered=false]",
+        "east": "minecraft:mangrove_fence_gate[facing=east,in_wall=false,open=false,powered=false]",
+        "west": "minecraft:mangrove_fence_gate[facing=west,in_wall=false,open=false,powered=false]"
+      }
+    },
+    "smooth_light_stone": {
+      "full": [
+        "minecraft:polished_diorite"
+      ],
+      "color": "#949481",
+      "side_color": "#949481",
+      "slab": "minecraft:polished_diorite_slab[type=bottom,waterlogged=false]"
+    },
+    "brown_stone": {
+      "full": [
+        "minecraft:polished_granite"
+      ],
+      "color": "#777157",
+      "side_color": "#777157",
+      "slab": "minecraft:repeater[delay=4,facing=west,locked=false,powered=true]",
+      "stairs": "minecraft:polished_granite_stairs"
+    },
+    "dark_brown_stone": {
+      "full": [
+        "minecraft:granite"
+      ],
+      "color": "#68634c",
+      "side_color": "#68634c",
+      "slab": "minecraft:repeater[delay=3,facing=east,locked=false,powered=true]"
+    },
+    "rough_dark_stone": {
+      "full": [
+        "minecraft:andesite"
+      ],
+      "color": "#727162",
+      "side_color": "#727162",
+      "slab": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+    },
+    "rough_light_stone_2": {
+      "full": [
+        "minecraft:diamond_ore"
+      ],
+      "color": "#83836f",
+      "side_color": "#83836f",
+      "slab": "minecraft:repeater[delay=4,facing=east,locked=false,powered=true]"
+    },
+    "rough_brown_stone": {
+      "full": [
+        "minecraft:nether_quartz_ore"
+      ],
+      "color": "#736b52",
+      "side_color": "#736b52",
+      "slab": "minecraft:repeater[delay=4,facing=south,locked=false,powered=true]"
+    },
+    "smooth_brown_stone": {
+      "full": [
+        "minecraft:terracotta"
+      ],
+      "color": "#665743",
+      "side_color": "#665743",
+      "slab": "minecraft:comparator[facing=south,mode=subtract,powered=false]"
+    },
+    "rough_gravel": {
+      "full": [
+        "minecraft:lime_concrete_powder"
+      ],
+      "color": "#544c3e",
+      "side_color": "#544c3e",
+      "slab": "minecraft:granite_slab[type=bottom,waterlogged=false]",
+      "stairs": "minecraft:granite_stairs"
+    },
+    "gravel": {
+      "full": [
+        "minecraft:gravel"
+      ],
+      "color": "#645745",
+      "side_color": "#645745",
+      "slab": "minecraft:comparator[facing=north,mode=compare,powered=true]"
+    },
+    "dark_gravel": {
+      "full": [
+        "minecraft:orange_concrete_powder"
+      ],
+      "color": "#6f6e5d",
+      "side_color": "#6f6e5d",
+      "slab": "minecraft:repeater[delay=3,facing=north,locked=false,powered=false]"
+    },
+    "greenish_dirt": {
+      "full": [
+        "minecraft:mycelium"
+      ],
+      "color": "#5b5128",
+      "side_color": "#5b5128",
+      "slab": "minecraft:comparator[facing=west,mode=subtract,powered=true]",
+      "stairs": "minecraft:prismarine_stairs"
+    },
+    "dirt": {
+      "full": [
+        "minecraft:dirt"
+      ],
+      "color": "#5e513b",
+      "side_color": "#5e513b",
+      "slab": "minecraft:comparator[facing=west,mode=subtract,powered=false]"
+    },
+    "coarse_dirt": {
+      "full": [
+        "minecraft:coarse_dirt"
+      ],
+      "color": "#5f523e",
+      "side_color": "#5f523e",
+      "slab": "minecraft:comparator[facing=south,mode=compare,powered=true]"
+    },
+    "light_dirt": {
+      "full": [
+        "minecraft:clay"
+      ],
+      "color": "#685a44",
+      "side_color": "#685a44",
+      "slab": "minecraft:comparator[facing=north,mode=subtract,powered=false]"
+    },
+    "dark_dirt": {
+      "full": [
+        "minecraft:mycelium[snowy=true]"
+      ],
+      "color": "#564c3a",
+      "side_color": "#564c3a",
+      "slab": "minecraft:comparator[facing=east,mode=subtract,powered=false]"
+    },
+    "sand": {
+      "full": [
+        "minecraft:sand"
+      ],
+      "color": "#ccbc92",
+      "side_color": "#ccbc92",
+      "slab": "minecraft:comparator[facing=west,mode=compare,powered=true]"
+    },
+    "continental_sand": {
+      "full": [
+        "minecraft:light_blue_concrete_powder"
+      ],
+      "color": "#ac9e79",
+      "side_color": "#ac9e79",
+      "slab": "minecraft:smooth_red_sandstone_slab[type=bottom,waterlogged=false]"
+    },
+    "sediment": {
+      "full": [
+        "minecraft:red_concrete"
+      ],
+      "color": "#695e45",
+      "side_color": "#695e45",
+      "slab": "minecraft:comparator[facing=east,mode=compare,powered=true]"
+    },
+    "dark_mud": {
+      "full": [
+        "minecraft:bubble_coral_block"
+      ],
+      "color": "#322d21",
+      "side_color": "#322d21",
+      "slab": "minecraft:repeater[delay=1,facing=south,locked=true,powered=true]"
+    },
+    "dry_mud": {
+      "full": [
+        "minecraft:gray_concrete"
+      ],
+      "color": "#6c5f4b",
+      "side_color": "#6c5f4b",
+      "slab": "minecraft:repeater[delay=3,facing=north,locked=false,powered=true]"
+    }
+  }
+}
