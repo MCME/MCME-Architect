@@ -52,8 +52,8 @@ public final class TableBuilder {
         public Set<String> terrain = Set.of();
         /** Whether the server knows a block state. One it doesn't is left out of the table, with a line in the report. */
         public Predicate<String> validState = state -> true;
-        /** Whether a block state has a block entity (a barrel, a chest). Such a full block never becomes a material;
-         *  such a piece (a comparator slab) still can. */
+        /** Whether a block state has a block entity (a barrel, a chest, a head). Such a full block never becomes a
+         *  material, and such a plant is never removed with the plants; such a piece (a comparator slab) is still used. */
         public Predicate<String> hasBlockEntity = state -> false;
     }
 
@@ -117,7 +117,9 @@ public final class TableBuilder {
                         int expected = Octants.stairs(high, top);
                         int mask = shape(state, models, settings, leftOut);
                         if (mask == expected) {
-                            members.add(new Member(state, expected, pieceMasks.get(expected)));
+                            if (facesReadable(state, models, leftOut, pieceMasks.get(expected))) {
+                                members.add(new Member(state, expected, pieceMasks.get(expected)));
+                            }
                         } else if (mask != LEFT_OUT) {
                             wrong++;
                         }
@@ -145,10 +147,12 @@ public final class TableBuilder {
                         continue; // not a shape the smoother knows, or left out: never touched
                     }
                     if (mask == Octants.FULL) {
-                        if (!settings.hasBlockEntity.test(state)) { // cutting a barrel or a chest would empty it
+                        // cutting a barrel or a chest would empty it
+                        if (!settings.hasBlockEntity.test(state) && facesReadable(state, models, leftOut, ALL_SIDES)) {
                             fulls.putIfAbsent(state, new Full(state, e, terra, terra || settings.terrain.contains(e.key())));
                         }
-                    } else if (pieceMasks.containsKey(mask) && seenPieces.add(state)) {
+                    } else if (pieceMasks.containsKey(mask) && seenPieces.add(state)
+                            && facesReadable(state, models, leftOut, pieceMasks.get(mask))) {
                         members.add(new Member(state, mask, pieceMasks.get(mask)));
                     }
                 }
@@ -265,7 +269,9 @@ public final class TableBuilder {
             }
         }
         JsonArray decorJson = new JsonArray();
-        decor.stream().map(BlockStates::normalize).filter(s -> !terrainStates.contains(s)).distinct().sorted().forEach(decorJson::add);
+        decor.stream().map(BlockStates::normalize).filter(s -> !terrainStates.contains(s))
+                .filter(s -> !settings.hasBlockEntity.test(s)) // a head or a pot: removing it like a plant would lose it
+                .distinct().sorted().forEach(decorJson::add);
 
         JsonObject table = new JsonObject();
         table.addProperty("name", name);
@@ -295,10 +301,34 @@ public final class TableBuilder {
         try {
             mask = models.cleanMask(state);
         } catch (RuntimeException e) {
-            leftOut.computeIfAbsent("can't read the model (" + e + ") of", why -> new ArrayList<>()).add(state);
+            unreadable(state, e, leftOut);
             return LEFT_OUT;
         }
         return mask == null ? NO_SHAPE : mask;
+    }
+
+    /** Every side, as {@link Models#face} numbers them: a full block can be compared on any of them. */
+    private static final int[] ALL_SIDES = {0, 1, 2, 3, 4, 5};
+
+    /**
+     * Whether the textures of a state's model can be read on these sides, which the matching compares (a broken
+     * pack file can have good boxes but faces or textures that can't be read); if not, the state is listed in
+     * leftOut.
+     */
+    private static boolean facesReadable(String state, Models models, Map<String, List<String>> leftOut, int... sides) {
+        try {
+            for (int side : sides) {
+                models.face(state, side);
+            }
+            return true;
+        } catch (RuntimeException e) {
+            unreadable(state, e, leftOut);
+            return false;
+        }
+    }
+
+    private static void unreadable(String state, RuntimeException e, Map<String, List<String>> leftOut) {
+        leftOut.computeIfAbsent("can't read the model (" + e + ") of", why -> new ArrayList<>()).add(state);
     }
 
     /** One report line per reason: "note: Rock: the server doesn't know minecraft:x[...] and 3 more, left out". */

@@ -10,6 +10,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,6 +60,18 @@ class TableBuilderRulesTest {
         blockstate("spruce_slab", "{\"variants\": {\"type=bottom\": {\"model\": \"block/barrel_slab\"}}}");
         FILES.put("assets/minecraft/models/block/mud.json", "{\"elements\": [{\"from\": [0, 0], \"to\": [16, 16, 16]}]}");
         blockstate("mud", "{\"variants\": {\"\": {\"model\": \"block/mud\"}}}");
+        // good boxes, but faces or textures that can't be read
+        FILES.put("assets/minecraft/models/block/clay.json", """
+                {"textures": {"t": "block/clay"}, "elements": [{"from": [0, 0, 0], "to": [16, 16, 16], "faces": []}]}""");
+        blockstate("clay", "{\"variants\": {\"\": {\"model\": \"block/clay\"}}}");
+        FILES.put("assets/minecraft/models/block/gravel.json", """
+                {"textures": "block/gravel", "elements": [{"from": [0, 0, 0], "to": [16, 16, 16], "faces": {
+                  "up": {"texture": "#t"}}}]}""");
+        blockstate("gravel", "{\"variants\": {\"\": {\"model\": \"block/gravel\"}}}");
+        FILES.put("assets/minecraft/models/block/sandstone_slab.json", """
+                {"textures": {"t": "block/sandstone"}, "elements": [{"from": [0, 0, 0], "to": [16, 8, 16], "faces": {
+                  "up": "#t"}}]}""");
+        blockstate("sandstone_slab", "{\"variants\": {\"type=bottom\": {\"model\": \"block/sandstone_slab\"}}}");
     }
 
     private static final Resources PACK = path -> {
@@ -202,6 +215,37 @@ class TableBuilderRulesTest {
         assertEquals(spec(new TableBuilder.Settings()).getAsJsonObject("materials").keySet(),
                 result.table().getAsJsonObject("materials").keySet(), "the other materials are built");
         assertTrue(result.report().stream().anyMatch(line -> line.contains("minecraft:mud")), String.join("\n", result.report()));
+    }
+
+    /** Clay's faces are a list, gravel's textures a string, and one face of the sandstone slab a string. */
+    @Test
+    void aBrokenModelFaceSkipsOnlyThatBlock() {
+        List<String> broken = List.of("minecraft:clay", "minecraft:gravel", "minecraft:sandstone_slab[type=bottom,waterlogged=false]");
+        TableBuilder.Result result = assertDoesNotThrow(() -> result(new TableBuilder.Settings(), List.of(
+                entry("clay", "Terra", "BLOCK", Map.of("blockData", broken.get(0)), ""),
+                entry("gravel", "Terra", "BLOCK", Map.of("blockData", broken.get(1)), ""),
+                entry("sandstone_slab", "Terra", "BLOCK", Map.of("blockData", broken.get(2)), ""))));
+        assertEquals(spec(new TableBuilder.Settings()).getAsJsonObject("materials"), result.table().getAsJsonObject("materials"),
+                "the other materials are built as without them");
+        for (String state : broken) {
+            assertTrue(result.report().stream().anyMatch(line -> line.contains(state)), state + " in\n" + String.join("\n", result.report()));
+        }
+    }
+
+    /** Smoothing removes plants where the ground under them changes; a head or a pot would lose its contents. */
+    @Test
+    void aBlockEntityPlantIsNeverDecor() {
+        TableBuilder.Settings settings = new TableBuilder.Settings();
+        settings.hasBlockEntity = state -> List.of("minecraft:player_head", "minecraft:decorated_pot").contains(BlockStates.parse(state).name());
+        com.google.gson.JsonObject spec = result(settings, List.of(
+                entry("mushroom_head", "Plant", "BLOCK", Map.of("blockData", "minecraft:player_head[rotation=4]"), ""),
+                entry("pot", "Plant", "VANILLA", Map.of("block", "minecraft:decorated_pot"), ""))).table();
+        List<String> decor = new ArrayList<>();
+        spec.getAsJsonArray("decor").forEach(s -> decor.add(s.getAsString()));
+        assertFalse(decor.contains("minecraft:player_head[rotation=4]"), decor.toString());
+        assertFalse(decor.contains("minecraft:decorated_pot"), decor.toString());
+        assertTrue(decor.contains("minecraft:poppy"), "the other plants stay");
+        assertEquals(Table.OTHER, new Table(spec).kind3("minecraft:player_head[rotation=4]").category());
     }
 
     /** Names of the materials that have the state as a full block or a piece. */
