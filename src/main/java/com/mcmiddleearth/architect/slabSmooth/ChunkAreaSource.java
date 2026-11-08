@@ -24,9 +24,11 @@ import java.util.function.LongSupplier;
  * <p>
  * Everything a load does on the main thread happens in nextTick runs of about SLICE_NANOS each: asking Paper for the
  * chunks, holding each one with a plugin chunk ticket, and copying it. A big area spreads over several ticks instead of
- * stalling one. Every run holds all that Paper has handed over so far, however much of the run's time is used up,
- * because Paper keeps a chunk it has just loaded for only about a tick. Holding is quick next to copying. The tickets
- * stay until release, so writing the result doesn't load the chunks again.
+ * stalling one. Every run holds all that Paper has handed over so far, however much of the run's time is used up:
+ * Paper lets a chunk it has just loaded go at that world's next ticket purge, which can come before the next run. A
+ * chunk that has gone by then is asked for again instead of held, because a ticket on a chunk that isn't loaded loads
+ * it from disk, on the main thread. Holding a loaded chunk is quick next to copying it. The tickets stay until release,
+ * so writing the result doesn't load the chunks again.
  * <p>
  * Loads must not overlap. A plugin has one ticket per chunk, so the first release would let the other load's chunks go;
  * the jobs run one at a time.
@@ -117,15 +119,24 @@ final class ChunkAreaSource implements AreaSource {
             }
         }
 
-        /** Holds every chunk Paper has handed over and this load hasn't held yet; throws for one that isn't generated. */
+        /**
+         * Holds every chunk Paper has handed over and this load hasn't held yet, and asks again for one that Paper has
+         * let go since: a ticket on a chunk that isn't loaded loads it from disk at once. Throws for a chunk that isn't
+         * generated.
+         */
         private void hold() {
             for (int i = firstNotHeld; i < requested.size(); i++) {
                 CompletableFuture<Chunk> request = requested.get(i);
                 if (held[i] == null && request.isDone()) {
+                    int cx = cx0 + i / chunksZ, cz = cz0 + i % chunksZ;
                     Chunk chunk = request.join();
                     if (chunk == null) {
-                        throw new IllegalArgumentException("Part of the area (chunk " + (cx0 + i / chunksZ) + ", "
-                                + (cz0 + i % chunksZ) + ") hasn't been generated; SlabSmooth only smooths existing terrain.");
+                        throw new IllegalArgumentException("Part of the area (chunk " + cx + ", " + cz
+                                + ") hasn't been generated; SlabSmooth only smooths existing terrain.");
+                    }
+                    if (!world.isChunkLoaded(cx, cz)) {
+                        requested.set(i, world.getChunkAtAsync(cx, cz, false)); // held in a later run
+                        continue;
                     }
                     chunk.addPluginChunkTicket(plugin);
                     held[i] = chunk;

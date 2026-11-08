@@ -70,8 +70,9 @@ class ChunkAreaSourceTest {
     private final class FakeChunk {
         final int x, z;
         final Chunk chunk;
-        int tickets, removed, copies;
+        int asked, tickets, removed, copies, blockingLoads;
         boolean generated = true; // false: Paper hands over null for it
+        boolean loaded = true; // false: Paper has let it go
         Throwable copyFailure; // thrown by its copy, if set
 
         FakeChunk(int x, int z) {
@@ -83,6 +84,10 @@ class ChunkAreaSourceTest {
                 case "addPluginChunkTicket" -> {
                     assertSame(plugin, args[0]);
                     onlyInARun("a ticket");
+                    if (!loaded) { // Paper's ticket call then loads the chunk at once, from disk, on the main thread
+                        blockingLoads++;
+                        loaded = true;
+                    }
                     tickets++;
                     yield true;
                 }
@@ -122,7 +127,7 @@ class ChunkAreaSourceTest {
         throw unexpected(method);
     });
     private final Map<Long, FakeChunk> chunks = new HashMap<>();
-    /** Answers that differ from the world's: a load Paper hasn't finished yet, or one that failed. */
+    /** Answers to a chunk's first request that differ from the world's: a load Paper hasn't finished, or one that failed. */
     private final Map<Long, CompletableFuture<Chunk>> answers = new HashMap<>();
     private final Map<String, BlockData> blockData = new HashMap<>();
     private final AtomicLong clock = new AtomicLong();
@@ -145,6 +150,10 @@ class ChunkAreaSourceTest {
         world = fake(World.class, "world", (method, args) -> switch (method) {
             case "getMinHeight" -> 0;
             case "getMaxHeight" -> MAX_Y + 1;
+            case "isChunkLoaded" -> {
+                assertEquals(2, args.length, "isChunkLoaded(x, z)");
+                yield chunks.get(key((int) args[0], (int) args[1])).loaded;
+            }
             case "isChunkGenerated" -> {
                 askedWhetherGenerated = true;
                 throw new AssertionError("isChunkGenerated waits for a chunk read on the main thread");
@@ -157,7 +166,10 @@ class ChunkAreaSourceTest {
                 requests++;
                 long key = key((int) args[0], (int) args[1]);
                 FakeChunk chunk = chunks.get(key);
-                yield answers.getOrDefault(key, CompletableFuture.completedFuture(chunk.generated ? chunk.chunk : null));
+                chunk.asked++;
+                chunk.loaded = true; // by the time Paper hands it over
+                CompletableFuture<Chunk> answer = answers.remove(key); // for the first request only
+                yield answer != null ? answer : CompletableFuture.completedFuture(chunk.generated ? chunk.chunk : null);
             }
             default -> throw unexpected(method);
         });
@@ -308,8 +320,27 @@ class ChunkAreaSourceTest {
 
         assertEquals(6, requests);
         for (FakeChunk chunk : chunksIn(0, 2, 0, 1)) {
-            assertEquals(1, chunk.tickets, "Paper keeps a chunk it has just loaded for only about a tick: " + chunk.chunk);
+            assertEquals(1, chunk.tickets, "Paper lets a chunk it has just loaded go at the world's next ticket purge: "
+                    + chunk.chunk);
         }
+    }
+
+    @Test
+    void aChunkThatUnloadedBeforeItWasHeldIsAskedForAgain() throws Exception {
+        CompletableFuture<Chunk> late = new CompletableFuture<>();
+        answers.put(key(1, 1), late);
+
+        CompletableFuture<AreaSource.LoadedArea> load = load(0, 0, 0, 31, 63, 31);
+        runOneTick();
+        late.complete(chunk(1, 1).chunk); // Paper hands it over after that run...
+        chunk(1, 1).loaded = false;       // ...and lets it go before the next one
+        runTicks();
+
+        assertEquals(0, chunk(1, 1).blockingLoads, "a ticket on a chunk that isn't loaded loads it on the main thread");
+        assertEquals(2, chunk(1, 1).asked, "asked for again");
+        assertEquals(1, chunk(1, 1).tickets);
+        assertEquals(List.of(), outsideRuns);
+        loaded(load).read();
     }
 
     @Test
