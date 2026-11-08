@@ -53,11 +53,22 @@ public final class Directional {
      */
     public static Smoother.Result smooth(int[] blocks, int height, int length, int width, List<String> palette,
                                          Table table, Options opts, boolean[] editable, Consumer<String> log) {
+        return smooth(blocks, height, length, width, palette, table, opts, editable, log, WorkBudget.NONE);
+    }
+
+    /**
+     * As above, but stops with {@link TooMuchWork} when the budget runs out. Nothing is returned then, so nothing
+     * changes.
+     */
+    public static Smoother.Result smooth(int[] blocks, int height, int length, int width, List<String> palette,
+                                         Table table, Options opts, boolean[] editable, Consumer<String> log,
+                                         WorkBudget budget) {
         World world = new World(blocks, height, length, width, palette, table);
         byte[] owner = owners(world, opts);
         Totals totals = new Totals();
         for (int dir : ORDER) {
-            Pass pass = new Pass(world, new Frame(dir, width, height, length), opts, editable, owner, false);
+            budget.checkTime();
+            Pass pass = new Pass(world, new Frame(dir, width, height, length), opts, editable, owner, false, budget);
             pass.run(log, totals);
         }
         return totals.result(world);
@@ -68,7 +79,7 @@ public final class Directional {
                                                    Table table, Options opts) {
         World world = new World(blocks, height, length, width, palette, table);
         Totals totals = new Totals();
-        new Pass(world, new Frame(UP, width, height, length), opts, null, null, true).run(null, totals);
+        new Pass(world, new Frame(UP, width, height, length), opts, null, null, true, WorkBudget.NONE).run(null, totals);
         return totals.result(world);
     }
 
@@ -431,6 +442,7 @@ public final class Directional {
         final Options opts;
         final boolean[] editable; // null, or per world block whether it may change
         final boolean prototype; // tops like the Python prototype: topmost surface only, vertical-run ground
+        final WorkBudget budget;
         final int cols;
         final int[] frameToWorld;
         final byte[] cat;
@@ -447,7 +459,9 @@ public final class Directional {
         int[][] lineNodes;    // nodes per line, highest first
         int[][] links;        // per node, per neighbour offset (dz, dx index): neighbour node or -1
 
-        Pass(World world, Frame f, Options opts, boolean[] editable, byte[] owner, boolean prototype) {
+        Pass(World world, Frame f, Options opts, boolean[] editable, byte[] owner, boolean prototype,
+             WorkBudget budget) {
+            this.budget = budget;
             this.world = world;
             this.f = f;
             this.opts = opts;
@@ -514,6 +528,7 @@ public final class Directional {
                 lineNodes[c] = here.stream().mapToInt(Integer::intValue).toArray();
             }
             count = found.size();
+            budget.checkSurfaces(count);
             line = new int[count];
             s = new int[count];
             material = new int[count];
@@ -883,6 +898,7 @@ public final class Directional {
             double[] e = new double[kc];
             int steps = opts.anneal;
             for (int step = 0; step < steps; step++) {
+                budget.checkTime();
                 double temp = steps == 1 ? 2.0 : 2.0 * Math.pow(0.05 / 2.0, step / (double) (steps - 1));
                 for (int[] set : sets) {
                     for (int k : set) {
@@ -914,6 +930,7 @@ public final class Directional {
             }
             int sweep = 0;
             for (; sweep < 100; sweep++) {
+                budget.checkTime();
                 int changed = 0;
                 for (int[] set : sets) {
                     for (int k : set) {
@@ -942,6 +959,7 @@ public final class Directional {
         // -----------------------------------------------------------------------------------------------------
 
         void run(Consumer<String> log, Totals totals) {
+            budget.checkTime();
             build();
             solve();
             int air = world.state("minecraft:air");

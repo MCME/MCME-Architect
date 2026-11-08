@@ -76,8 +76,15 @@ public final class Smoother {
      */
     public static Result smooth(int[] blocks, int height, int length, int width, List<String> palette, Table table,
                                 Options opts, boolean[] editable, Consumer<String> log) {
+        return smooth(blocks, height, length, width, palette, table, opts, editable, log, WorkBudget.NONE);
+    }
+
+    /** As above, but stops with {@link TooMuchWork} when the budget runs out; nothing changes then. */
+    public static Result smooth(int[] blocks, int height, int length, int width, List<String> palette, Table table,
+                                Options opts, boolean[] editable, Consumer<String> log, WorkBudget budget) {
+        budget.checkTime();
         Terrain t = new Terrain(blocks, height, length, width, palette, table, opts, editable);
-        Problem problem = new Problem(t, opts);
+        Problem problem = new Problem(t, opts, budget);
         problem.solve(log);
         return apply(t, problem, blocks, palette, table);
     }
@@ -275,6 +282,7 @@ public final class Smoother {
     static final class Problem {
         final Terrain t;
         final Options opts;
+        final WorkBudget budget;
         final List<Config> configs = Shapes.allConfigs(false, false);
         final int k;
         final int[] d;               // k x 4
@@ -286,7 +294,8 @@ public final class Smoother {
         double energyBefore, energyAfter;
         int sweeps;
 
-        Problem(Terrain t, Options opts) {
+        Problem(Terrain t, Options opts, WorkBudget budget) {
+            this.budget = budget;
             this.t = t;
             this.opts = opts;
             k = configs.size();
@@ -334,6 +343,7 @@ public final class Smoother {
             can[materials][keep] = true;
 
             double[] target = target(t, opts);
+            budget.checkSurfaces(t.cols);
             unary = new double[t.cols * k];
             currentChoice = new int[t.cols];
             Arrays.fill(currentChoice, -1);
@@ -481,6 +491,7 @@ public final class Smoother {
             double[] prob = new double[k];
             int n = opts.anneal;
             for (int step = 0; step < n; step++) {
+                budget.checkTime();
                 double temp = n == 1 ? 2.0 : 2.0 * Math.pow(0.05 / 2.0, step / (double) (n - 1));
                 for (int[] set : sets) {
                     for (int c : set) {
@@ -512,6 +523,7 @@ public final class Smoother {
             }
             int sweep = 0;
             for (; sweep < 100; sweep++) {
+                budget.checkTime();
                 int changed = 0;
                 for (int[] set : sets) {
                     for (int c : set) {

@@ -17,6 +17,13 @@ public final class Tiles {
 
     public static Smoother.Result smooth(int[] blocks, int height, int length, int width, List<String> palette, Table table,
                                          Options opts, boolean[] editable, int tile, int margin, Consumer<String> log) {
+        return smooth(blocks, height, length, width, palette, table, opts, editable, tile, margin, log, WorkBudget.NONE);
+    }
+
+    /** As above, but stops with {@link TooMuchWork} when the budget runs out; nothing changes then. */
+    public static Smoother.Result smooth(int[] blocks, int height, int length, int width, List<String> palette, Table table,
+                                         Options opts, boolean[] editable, int tile, int margin, Consumer<String> log,
+                                         WorkBudget budget) {
         int[] work = blocks.clone();
         List<String> pal = new ArrayList<>(palette);
         int columns = 0, free = 0, changed = 0, plants = 0, sweeps = 0;
@@ -24,6 +31,7 @@ public final class Tiles {
         Map<String, Integer> pieces = new TreeMap<>();
         for (int tz = 0; tz < length; tz += tile) {
             for (int tx = 0; tx < width; tx += tile) {
+                budget.checkTime();
                 int x0 = Math.max(0, tx - margin), x1 = Math.min(width, tx + tile + margin);
                 int z0 = Math.max(0, tz - margin), z1 = Math.min(length, tz + tile + margin);
                 int sw = x1 - x0, sl = z1 - z0;
@@ -44,7 +52,7 @@ public final class Tiles {
                 if (!any) {
                     continue;
                 }
-                Smoother.Result r = Directional.smooth(sub, height, sl, sw, pal, table, opts, subEditable, log);
+                Smoother.Result r = Directional.smooth(sub, height, sl, sw, pal, table, opts, subEditable, log, budget);
                 pal = new ArrayList<>(r.palette());
                 for (int y = 0; y < height; y++) {
                     for (int z = z0; z < z1; z++) {
