@@ -491,6 +491,29 @@ permissions:
     architect.biomeTune.publish:
         description: Refresh other players after tuning (publish, and preview for someone else).
         default: op
+    architect.slabSmooth:
+        description: >-
+            Smooth terrain with /slabsmooth (/sls): your WorldEdit selection and the brush, with your own settings
+            for them. It doesn't include architect.slabSmooth.allBlocks.
+        default: op
+        children:
+            architect.slabSmooth.selection: true
+            architect.slabSmooth.brush: true
+    architect.slabSmooth.selection:
+        description: Smooth your WorldEdit selection with /sls selection.
+        default: op
+    architect.slabSmooth.brush:
+        description: Bind the smoothing brush to the item in your hand with /sls brush.
+        default: op
+    architect.slabSmooth.area:
+        description: Smooth a box given by its corners, in any world, with /sls area.
+        default: op
+    architect.slabSmooth.allBlocks:
+        description: Smooth every block that has pieces of its own, not just terrain, with /sls set blocks all.
+        default: op
+    architect.slabSmooth.admin:
+        description: Read the resource packs' block tables again with /sls packs rebuild.
+        default: op
     architect.weselect:
         description: Use /weselect.
         default: op

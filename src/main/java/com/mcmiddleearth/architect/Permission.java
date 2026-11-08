@@ -113,7 +113,14 @@ public enum Permission {
     BIOME_TUNE_SAVE       ("architect.biomeTune.save"),
     BIOME_TUNE_PUBLISH    ("architect.biomeTune.publish"),
 
-    MAP_LAYERS            ("architect.maplayers");
+    MAP_LAYERS            ("architect.maplayers"),
+
+    SLAB_SMOOTH           ("architect.slabSmooth"),
+    SLAB_SMOOTH_SELECTION ("architect.slabSmooth.selection"),
+    SLAB_SMOOTH_BRUSH     ("architect.slabSmooth.brush"),
+    SLAB_SMOOTH_AREA      ("architect.slabSmooth.area"),
+    SLAB_SMOOTH_ALL_BLOCKS("architect.slabSmooth.allBlocks"),
+    SLAB_SMOOTH_ADMIN     ("architect.slabSmooth.admin");
 
     private final String permissionNode;
 

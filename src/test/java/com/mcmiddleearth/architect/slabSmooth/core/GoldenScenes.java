@@ -17,14 +17,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * The golden scenes in {@code /slabSmooth/golden}: each file holds a scene (name, height, length, width, palette and
- * blocks) and the blocks Toti's released SlabSmooth 1.3.0 jar made of it in each run.
+ * blocks) and the blocks Toti's released SlabSmooth 1.3.0 jar made of it in each run. Public, so the job tests in the
+ * package above can build their test terrain from a scene.
  */
-final class GoldenScenes {
+public final class GoldenScenes {
 
     static final List<String> NAMES = List.of("hillside", "cliff", "overhang", "crevice", "tower", "boulder");
 
     /** A scene's input: blocks are indices into palette, at {@code (y * length + z) * width + x}. */
-    record Scene(String name, int height, int length, int width, List<String> palette, int[] blocks) {
+    public record Scene(String name, int height, int length, int width, List<String> palette, int[] blocks) {
     }
 
     private GoldenScenes() {
@@ -40,7 +41,7 @@ final class GoldenScenes {
         }
     }
 
-    static Scene scene(String name) throws IOException {
+    public static Scene scene(String name) throws IOException {
         return scene(read(name));
     }
 
