@@ -33,7 +33,7 @@ public final class Octants {
         };
     }
 
-    /** Name of a piece's kind, for reports (the prototype's names, plus "top slab" and "upside-down stairs"). */
+    /** Name of a piece's kind, for reports ("slab", "stairs", "vslab" and so on, plus "top slab" and "upside-down stairs"). */
     public static String kindName(int mask) {
         int lower = mask & 0x0F, upper = mask >> 4;
         if (mask == SLAB) {

@@ -441,7 +441,7 @@ public final class Directional {
         final Frame f;
         final Options opts;
         final boolean[] editable; // null, or per world block whether it may change
-        final boolean prototype; // tops like the Python prototype: topmost surface only, vertical-run ground
+        final boolean prototype; // the top-only smoother's ground rules (topmost surface only, vertical-run ground)
         final WorkBudget budget;
         final int cols;
         final int[] frameToWorld;
@@ -483,7 +483,7 @@ public final class Directional {
                         Table.Kind3 k = world.kind(wi);
                         int category = k.category();
                         if (category == PIECE && prototype && fill(f.toFrame(k.mask())) == null) {
-                            category = OTHER; // the prototype doesn't know top slabs and upside-down stairs
+                            category = OTHER; // the top-only smoother has no top slabs or upside-down stairs
                         }
                         cat[fi] = (byte) category;
                         mat[fi] = (short) k.material();

@@ -24,7 +24,7 @@ public final class Shapes {
     public enum Kind {
         AIR, FULL, SLAB, STAIRS, VSLAB, VSTAIRS;
 
-        /** Name as in the Python prototype's reports ("slab", "stairs", ...). */
+        /** Name as in the table reports ("slab", "stairs", ...). */
         public String id() {
             return name().toLowerCase();
         }
@@ -185,7 +185,8 @@ public final class Shapes {
     }
 
     /** Every column shape whose two cells are real pieces. With the defaults a column never loses or gains a
-     *  whole block. Same order as the prototype (itertools.product). */
+     *  whole block. The order is fixed (each quadrant's height from 0 to 4, the first quadrant slowest); the golden
+     *  scenes depend on it. */
     public static List<Config> allConfigs(boolean allowRemove, boolean allowAdd) {
         List<Config> configs = new ArrayList<>();
         for (int a = 0; a < 5; a++) {

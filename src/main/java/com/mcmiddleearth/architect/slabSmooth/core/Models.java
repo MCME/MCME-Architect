@@ -23,8 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * What a block state looks like in a resource pack: the octants its models fill, and the texture on each side.
- * Port of the prototype's model probe (SlabSmooth/slabsmooth/probe.py); models and blockstates not in the pack
- * come from the vanilla client jar, like on the client.
+ * It reads the pack's blockstates and models the way the game does (parents, rotations, textures). Models and
+ * blockstates not in the pack come from the vanilla client jar, like on the client.
  */
 public final class Models {
 

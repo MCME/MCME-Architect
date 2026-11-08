@@ -4,7 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Smoother settings. Names and defaults match the Python prototype's smooth.Options. */
+/** Smoother settings. The names are the ones /slabsmooth set takes, and the defaults are the ones below. */
 public final class Options {
 
     public String surfaces = "all";  // "all": tops, walls and overhangs (Directional); "top": tops only (Smoother)
@@ -25,7 +25,7 @@ public final class Options {
     public long seed = 1;
     public String blocks = "terrain"; // "terrain", or "all": also other blocks with pieces of their own (plugin only)
 
-    /** Option names as the prototype spells them (for --set and /slabsmooth set). */
+    /** Option names, as /slabsmooth set spells them. */
     public static final List<String> NAMES = List.of("surfaces", "band", "cliff", "sigma", "w_data", "w_diag", "cost_stairs",
             "cost_corner", "cost_vslab", "cost_fill", "mode", "plants", "border", "min_thickness", "anneal", "seed", "blocks");
 

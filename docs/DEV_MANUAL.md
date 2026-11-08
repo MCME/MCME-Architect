@@ -29,7 +29,7 @@ Each feature has a package of its own.
 |---|---|---|
 | The main class | `ArchitectPlugin` | Start-up, `loadData()` (which `/architect reload` runs again), shutdown, and the static `getPluginInstance()` |
 | Settings | `config.yml`, written through `ConfigFile` | Server-wide settings |
-| Per-world switches | `Modules`, `PluginData`, `WorldConfig` | 64 on/off switches, and a few lists, per world |
+| Per-world switches | `Modules`, `PluginData`, `WorldConfig` | 65 on/off switches, and a few lists, per world |
 | Permissions | the `Permission` enum and `plugin.yml` | Node names, checked with `PluginData.hasPermission` |
 | Logging | `Log`, `LogFileManager` | Architect's own rotating log files |
 | Chat and helpers | PluginUtils, through `PluginData.getMessageUtil()` | The `[Architect]` prefix, colours, standard error texts, paged and clickable lists |
@@ -92,6 +92,7 @@ All main code is under `src/main/java/com/mcmiddleearth/`. Package names below a
 | `noPhysicsEditor` | The no-physics list, exception areas, the redstone freeze (`/nophy`) | `NoPhysicsListener`, `NoPhysicsData`, `NoPhysicsCommand` |
 | `randomiser` | `/random` | `RandomiserCommand`, `RandomiserConfig` |
 | `serverResoucePack` (sic) (+ `RegionEditConversation`) | Resource packs: `/rp`, regions, player settings, releases | `RpManager`, `RpCommand`, `RpListener`, `RPSwitchTask`, `RpDatabaseConnector`, `RpReleaseUtil` |
+| `slabSmooth` (+ `core`) | Terrain smoothing (`/slabsmooth`, `/sls`), Toti Gonzales's SlabSmooth: the jobs, the brush, the packs' tables, and, in `core`, the smoother and the table builder, which know nothing of Bukkit | `SlabSmooth`, `SlabSmoothCommand`, `SmoothJobs`, `SmoothBrush`, `Packs`, `core.Smoother`, `core.Directional`, `core.TableBuilder` |
 | `specialBlockHandling` (+ `command`, `customInventories`, `data`, `itemBlock`, `listener`, `specialBlocks`) | Special blocks, the build inventory (`/inv`), `/get` kits, item blocks, the stick and the flint, doors, furnaces | `SpecialBlockListener`, `SpecialBlockInventoryData`, `SpecialBlock`, `CustomInventory`, `ItemBlockManager`, `InvCommand`, `GetCommand` |
 | `viewDistance` | `/viewdistance` | `ViewDistanceManager`, `ViewDistanceProtocol`, `ViewDistanceListener` |
 | `voxelStencilEditor`, `weSchematicsViewer` | VoxelSniper stencil files (`/vv`, `/sl`); the WorldEdit schematic list (`/schlist`) | `VvCommand`, `SlCommand`, `SchListCommand` |
@@ -133,7 +134,8 @@ The other files in `src/main/resources` are **not** in the jar, and the plugin d
 how they were made), which `RpReleaseReportTest` reads. `src/test/resources/customBiomes/r.-1.-1.mca` holds 36 chunks
 cut from a 26.2 test world's region file, with custom biomes painted in them; `RegionFileReaderTest`, `PaintScanTest`
 and `CustomBiomesTest` read it, and `RegionFixtures` writes the other chunks and region files they need, from the game's
-format.
+format. `src/test/resources/slabSmooth/` holds the golden scenes of terrain smoothing, a hand-made RP-Human table
+(`table.json`) and the octants of RP-Human's models (`octants.json`); see [Terrain smoothing](#terrain-smoothing).
 
 ### Top-level files
 
@@ -369,11 +371,12 @@ These come from comments and patterns in the test suite:
 7. Registers four incoming plugin-message channels: `mcme-modpack-marker:hello` (`RpPluginMessageListener` marks the
    player as a client of the MCME modpack, for the choice of pack), and `minecraft:brand`, `l:fmlhs` and `wdl:init`
    (`TestPluginMessageListener`, debug lines only).
-8. Binds the executors of the 28 commands. `/fbt` is bound only if `modules.command.fullBrightness` is on for the
+8. Binds the executors of the 29 commands. `/fbt` is bound only if `modules.command.fullBrightness` is on for the
    pseudo-world `server`.
 9. `CustomInventoryEditor.init(this)` builds the chat conversations of the build-inventory editor.
 10. Starts `RPSwitchTask` (first run after 500 ticks, then every 20) and the item-block glow task.
-11. `BiomeTuning.enable(this)`, last, inside a guard of its own; then logs `MCME-Architect Enabled!`.
+11. `BiomeTuning.enable(this)` and then `SlabSmooth.enable(this)`, last, each inside a guard of its own; then logs
+    `MCME-Architect Enabled!`.
 
 `loadData()` loads all feature data. It runs at start and again for `/architect reload`:
 
@@ -386,6 +389,8 @@ These come from comments and patterns in the test suite:
 6. `RpManager.init()` (protocol versions, RP regions) and `ItemBlockManager.init()` (item-block regions).
 7. `ViewDistanceManager.loadViewDistances()`.
 8. `MapLayers.start(...)`, with the layers that `config.yml` switches on, then `GamemodeSwitcher.updateRunning()`.
+9. `SlabSmooth.reload()`: new settings, packs, player options and module switch. It does nothing in `onEnable`'s first
+   load, because `SlabSmooth.enable` comes after it, and nothing while terrain smoothing is switched off.
 
 The steps are not isolated from each other. An exception in one stops the rest, and the sender of `/architect reload`
 gets Bukkit's internal-error message.
@@ -457,7 +462,7 @@ or `MCME-Architect:<name>_<size>`. `load: STARTUP` lets Architect supply the gen
 
 In this order: `GamemodeSwitcher.stopRunning()` (non-op builders get op level 0 back), `MapLayers.stop()` (the budget
 saves its counts, and the Custom biomes layer saves its records and ends its threads), `BiomeTuning.disable()` (logs
-unsaved live edits), cancel `RPSwitchTask`, disconnect the RP database, stop the glow task, `EntityLogger.stop()`, and
+unsaved live edits), `SlabSmooth.disable()` (stops its jobs and threads), cancel `RPSwitchTask`, disconnect the RP database, stop the glow task, `EntityLogger.stop()`, and
 `LogFileManager.uninstall(this)` last. The steps have no try/catch, so a failing step skips the ones after it; the first
 two are first for that reason, as their comments say.
 
@@ -708,6 +713,9 @@ The server needs WorldEdit 7.4, but `plugin.yml` lists it in neither `depend` no
 - RP regions and item-block regions are WorldEdit `Region` objects, and `loadData()` loads their files, so start-up
   touches WorldEdit classes. In tests, build regions on `NullWorld` (see [MockBukkit lessons](#mockbukkit-lessons)).
 - The comment in `WorldEditGuard` still says no 26.x WorldEdit exists. That is out of date.
+- Terrain smoothing drives WorldEdit sessions for the player (the selection, an edit that `//undo` reverts, the brush) and
+  keeps all of that behind `SmoothWorldEdit`; it works on FastAsyncWorldEdit and on plain WorldEdit, and on FAWE writes
+  off the main thread (see [Terrain smoothing](#terrain-smoothing)).
 - The Custom biomes layer reads a player's selection in `WorldEditSelections`, the only class of its package that names
   WorldEdit's types. WorldEdit and FastAsyncWorldEdit share that API, and the layer works with either or neither. It
   looks the plugin up at the first WorldEdit command, because Architect enables before both.
@@ -797,6 +805,8 @@ in a MySQL table that every server shares.
   tasks, and hand their results back with `Bukkit.getScheduler().runTask(...)`; chat is always sent from the main
   thread. Two older paths do not follow this, so do not copy them: `/chead upload` (`HttpTextInputHandler`) reads its
   download on the main thread, and `CopyPasteManager.loadClipboard` writes its plain `HashMap` from an async task.
+- Terrain smoothing has threads of its own: a worker for the smoothing, one for reading packs, and FAWE's queue thread for
+  brush clicks; its rules are under [Terrain smoothing](#terrain-smoothing).
 - Biome tuning and map layers are main-thread only, by design, codec decoding and file writes included. The Custom
   biomes layer is the exception: it has three threads of its own, below.
 - Packet handlers run on network threads: hand their work to the main thread (see [ProtocolLib](#protocollib)).
@@ -1044,6 +1054,195 @@ file, in whichever folder pack defines it, which is not necessarily `targetPack`
 
 In tests, package-private overloads of `BiomeTuning.enable` (`plugin, bridge, datapacksDir[, knownBiomes]`) inject
 `FakeNmsBridge`, `BiomeEditor.presentWith` installs a `RecordingPresenter`, and the clocks are injected.
+
+### Terrain smoothing
+
+Terrain smoothing (`/slabsmooth`, `/sls`) rounds off stair-stepped terrain with a resource pack's slabs, stairs and
+vertical slabs, on a WorldEdit selection, on a box, or with a brush. It is **Toti Gonzales's SlabSmooth**: he wrote the
+algorithm, the table builder and the plugin around them (released as SlabSmooth 1.3.0), gave it to MCME, and it became a
+module of Architect in 3.4.0. The Java here is the reference for the algorithm; there is nothing else to compare it with.
+
+The code is in `com.mcmiddleearth.architect.slabSmooth`. Its `core` package does the smoothing and the table building
+and knows nothing about Bukkit, WorldEdit or the network, so it runs on plain arrays in tests. Everything else wires it
+to the server.
+
+| Part | Classes | What it does |
+|---|---|---|
+| Wiring | `SlabSmooth`, `SlabSmoothSettings`, `ModuleSwitch`, `PlayerOptions` | `SlabSmooth.enable` starts inside a guard, as `BiomeTuning` does; `reload()` runs from `loadData()`; `disable()` from `onDisable`. A failure, or a `LinkageError` from a WorldEdit build this was not made for, switches off only this feature and `/sls` answers that it is unavailable. `SlabSmoothSettings` reads the `slabSmooth` section; `ModuleSwitch` answers whether a world has the module on; `PlayerOptions` keeps each player's settings and chosen pack. |
+| Command | `SlabSmoothCommand` | Every subcommand, in Architect's order of checks: a known subcommand, its permission, whether smoothing is available, and then, for an edit, WorldEdit and the world's switch. |
+| Jobs | `SmoothJobs`, `WorldArea`, `SmoothSummary`, `PackFootprint` | A selection or an area, as a job in five stages (below). |
+| Brush | `SmoothBrush` | A WorldEdit `Brush`. It asks `SlabSmooth` for its context at every click, so a reload or a disable reaches brushes bound earlier. |
+| Packs | `Packs`, `ArchitectPacks`, `Downloads` | The table of each pack: change checks, downloads, saved tables, reports. |
+| Seams | `SmoothWorldEdit`, `AreaSource`, `BlockTarget`, `TableSource`, `PackSources` | See below. |
+| `core` | `Smoother`, `Directional`, `Tiles`, `Table`, `TableBuilder`, `Models`, `Shapes`, `Octants`, `Options`, `Inventory`, `Resources`, `WorkBudget` | The algorithm and the tables. |
+
+#### How the smoothing works
+
+A column of terrain is described by the height of its surface in each of its four quadrants (north-west, north-east,
+south-west, south-east), in half blocks. A column's shape is chosen from the shapes its material has pieces for (a slab,
+a stair, a vertical slab, a full block, nothing), and `Shapes.allConfigs` lists the candidates. `Smoother` picks one per
+column so that the sum of these costs is smallest:
+
+- how far the quadrant tops are from the original terrain (`w_data`), and from a blurred copy of it (`sigma`), which is
+  the target the result is smoothed towards;
+- how far they are from their neighbours' (`w_diag` scales the neighbours that share only a corner);
+- what the pieces cost (`cost_stairs`, `cost_corner`, `cost_vslab`, and `cost_fill` for any piece placed above the
+  original surface).
+
+A surface may move at most `band` half blocks (`mode` allows only cutting or only filling). A step of `cliff` half blocks
+or more is a cliff: the neighbour terms do not reach across it, which keeps sharp edges sharp. The solver sweeps with
+annealing (`anneal` sweeps, random numbers from `seed`), then descends. It updates four interleaved sets of columns, in
+which no two columns are neighbours, so a whole set can change at once. Ground runs thinner than `min_thickness` that do
+not reach the bottom of the area are ignored.
+
+`Smoother` sees only one height per column, so it smooths tops. `Directional` runs the same smoother, with the same
+energy and solver, in six directions, by turning the area so that "up" points the way the surface faces:
+
+| Direction | "Up" points | A slab there is | A stair there is |
+|---|---|---|---|
+| tops | up | a slab | a stair |
+| walls (4) | out of the wall | a vertical slab | a stair on its side (normal or upside down) |
+| undersides | down | a top slab | an upside-down stair |
+
+- **Ownership.** Every surface block belongs to one direction: the one it faces most, judged from the blurred terrain,
+  among the directions its material has pieces for. Tops win on 45 degree slopes (`TOP_PREFERENCE`). Grass has only a
+  slab, so grass slopes stay with the tops. Stone has vertical slabs, top slabs and stairs, so its cliffs, walls and
+  overhangs are smoothed too.
+- **Sharp edges.** A top seen from the side is a step of `cliff` or more, so a wall direction leaves it alone, and the
+  reverse. The edge between a plateau and its cliff is not rounded off.
+- **Several surfaces per line.** A line along a direction can cross more than one surface, such as the ground under an
+  overhang and the overhang's top. Each surface is a node, and its neighbours are the nodes nearest in height in the
+  neighbouring lines.
+- **Crevices.** A piece never goes into a one-block gap, meaning air with something solid on both sides along an axis.
+  That rules out a vertical slab inside a one-block crevice, a slab under a one-block-high ceiling, and a stair or
+  vertical slab reaching across a crevice where it zig-zags. The exception is a plain slab on the floor of a crevice (or
+  a top slab under its ceiling), which leaves it open above. Cutting into the walls is always allowed, since that only
+  widens the gap.
+- **Order.** The directions run one after another (tops, east, west, south, north walls, undersides), each on the result
+  of the last.
+- **What counts as ground.** A terrain block that is part of a run of ground, at any thickness, is ground, so a wall or
+  steps of a terrain block that touch the ground are smoothed like a hillside. That is how it is, and the User Manual
+  says so plainly. Telling a thin wall from a thin ridge is hard, and an attempt could stop it smoothing real terrain.
+  `surfaces top` uses the top-only ground rules.
+- **Tiles.** `Tiles.smooth` splits a large area into 64 by 64 tiles, so memory stays small. Each tile reads a margin
+  around it (`Tiles.margin`, 5 blocks at the defaults) from the blocks as they are after the tiles before it, and changes
+  only blocks inside itself. The margin is also what the selection limits count.
+- **Work limit.** A `WorkBudget` carries a deadline and a cap on surfaces per pass. When it runs out the smoother throws
+  `TooMuchWork` and returns nothing, so nothing has changed: the algorithm hands its blocks back only at the end.
+- **The mask.** A smoothing gets an `editable` array (the selection, or the brush's sphere or cylinder). No block outside
+  it changes, not even the block below a changed top or a plant above one.
+
+#### How tables are built
+
+Each pack needs its own table, because one block state looks different in each pack. `TableBuilder` builds it from the
+pack's block inventory and its models, with no hand-made recipe:
+
+- **Terrain** is what the inventory files under the terrain categories place (`Terra`), plus the keys listed under
+  `overrides.<pack>.terrain`. Entries shown in another entry's collection (`collection: indirect: <key>`) have no
+  category of their own and take that entry's.
+- **Shapes come from the models.** `Models` reads the pack's blockstates and models, over the vanilla client jar, like
+  the client does: parents, rotations, textures. It describes a state as eight octants (half-block cubes) and keeps it
+  only if its shape is clean: plain boxes, each octant at least 90% full or at most 10% full. Thin slabs, OBJ models
+  (wedges, pillars) and turned elements are never touched. Waterlogged states are skipped. A broken file in the pack skips
+  that block and not the whole pack.
+- **Pairs.** A piece goes with a full block by the texture each shows on its outward side (a slab's top, a vertical
+  slab's outer face): first the same texture, then the same inventory name ("Dirt Slab (lower)" for "Dirt Block", up to a
+  colour difference of 40), then a similar look (average colour and contrast within `lookTolerance`). Full blocks with
+  the same pieces form one material. Full blocks with no pieces are not terrain. Terrain uses only pieces of the terrain
+  categories, so its pairing does not depend on the rest of the inventory.
+- **Other blocks.** Full blocks of every other category (except plants) that have pieces with the same texture or named
+  after them, never only a similar look, become materials marked `"terrain": false`. `Packs` keeps two tables per pack,
+  with and without them; the `blocks` setting picks one.
+- **Safety filters.** A state the server does not know is left out, with a line in the report. A full block that has a
+  block entity (a barrel, a chest) never becomes a material. A piece that is a block entity stays, because MCME's packs
+  use comparators as slabs on purpose.
+- **Plants** are the blocks of the plant categories, plus a built-in list of vanilla plants. A waterlogged state or a
+  plant with a block entity is never removed.
+
+`Packs` runs all of this on one background thread (`Architect SlabSmooth packs`), one pack at a time, and no call from
+outside touches a file or the network. When someone asks for a table, `Packs` checks at most every 5 seconds per pack
+whether the inventory files (size and date), the pack's address and SHA-1, or the settings that shape the table changed;
+if so, it reads the pack again and keeps the old table in use until the new one is ready. A saved table
+(`tables/<pack>.json`) and a fingerprint file hold what it was built from: the table format (`TABLE_FORMAT`, raised when
+the saved table's contents or meaning change), the Minecraft and Architect versions, the zip, the inventory files and the
+settings. After a restart, a pack whose fingerprint is unchanged loads its table and opens neither the zip nor the
+client jar. `Downloads` fetches the zips and the client jar with a checksum check, into `cache/`, and only when a pack
+needs it; with `download: false` a zip in `packs/<pack>.zip` is used.
+
+#### Threads
+
+The rules are in [Threading rules](#threading-rules); these are the ones smoothing follows.
+
+- **A brush click** runs on the main thread on plain WorldEdit, but on FAWE it runs on FAWE's queue thread. So
+  `SmoothBrush.build` touches only what is safe from any thread: `Packs` (concurrent maps, atomic flags), `PlayerOptions`
+  (copies; nothing handed out is changed afterwards), `RpManager`'s region lookups, and `ModuleSwitch`, which answers from
+  what the main thread read last and asks the main thread to read again, because `PluginData` and `WorldConfig` are
+  main-thread only. One player's clicks run one after another on that queue, so a click needs no guard of its own. The
+  radius is cut to `brush.maxRadius` at every click, because `//size` can raise it.
+- **A job** (`SmoothJobs`) has five stages, and one job at a time runs on the whole server:
+  1. Main thread, `start`: the limits (columns, cells), the pack, the tables, the lock. Then `AreaSource.load` starts
+     reading, in slices of about 10 ms per tick, holding each chunk with a plugin chunk ticket. It never generates a chunk.
+  2. The worker (`Architect SlabSmooth`, one daemon thread at the lowest priority): the smoothing, within the work budget.
+  3. Main thread: looks the player and the world up again by their ids. The job is dropped if the player left the server,
+     if the world is gone, or, for a selection, if the player left that world. Players are tracked by id, because a biome
+     refresh replaces the `Player` object.
+  4. The write, as one edit of the player's WorldEdit session, on the worker on FAWE (which runs the edit off the main
+     thread) and on the main thread on plain WorldEdit. Blocks that changed after the read are left alone and counted.
+  5. Main thread: the chunk tickets are let go, the lock opens, and the player is told.
+
+  Every stage catches everything it can, errors included, and ends the job the same way (`finish`), so the lock and the
+  chunk tickets are always released. A job keeps the settings and tables it started with, so a reload lets it finish.
+  `SmoothJobs.close()` at disable stops a job: no more blocks are set and nothing is said, and an edit already open is
+  closed, so what it wrote stays one undo step.
+- **The write is pinned to the world that was read.** `WorldEditSmoothing.open` sets the session's world override around
+  `createEditSession` and puts it back. Without that, FAWE writes to the world the player is in at that moment.
+
+#### The seams
+
+Interfaces keep the jobs testable without a server. `SmoothJobs` and `SmoothBrush` use only these:
+
+| Seam | On the server | What the interface is for |
+|---|---|---|
+| `SmoothWorldEdit` | `WorldEditSmoothing` | The only code that calls WorldEdit's sessions: the selection, opening an edit for a player in a world, binding the brush, and whether the write belongs off the main thread (FAWE). |
+| `AreaSource` | `ChunkAreaSource` | Reads an area from chunk snapshots into a `LoadedArea` and holds its chunks until `release`. Fails with a message for the player when part of the area has not been generated. |
+| `BlockTarget` | `EditSessionTarget` | Where the result is written: `stateAt`, `set`, `close`. It sets blocks without block updates (neighbours and update side effects off), so stairs keep their shape and MCME's sugar-cane grass slab and repeater and comparator slabs stay as they are. A `FaweException` (no allowed region, or FAWE's own limit) becomes a `Refused` with its message, recognised by class name because FAWE is not a compile dependency. |
+| `TableSource` | `Packs` | The pack choice for an edit (the named pack, the RP region's, the player's, the default) and the table for it. |
+| `PackSources` | `ArchitectPacks` | Architect's packs: names, inventory folders, download addresses, `RpManager.getRegion` and `getCurrentRpName`. |
+
+The tests use fakes for all five (`FakeSmoothWorldEdit`, `FakeAreaSource`, `FakePackSources`), plus clocks and executors
+that they control.
+
+#### Tests
+
+- **Golden scenes** (`GoldenScenesTest`). `src/test/resources/slabSmooth/golden/` holds six scenes (hillside, cliff,
+  overhang, crevice, tower, boulder), each with the blocks that Toti's released 1.3.0 jar made of it in several runs
+  (`directional`, `top` and `tiles`, with different settings). They were made once from that jar by a small generator
+  that is kept outside the repository. The test runs the `core` code on the same scenes and compares block for block, so
+  it proves that the move into Architect, and later changes, did not alter the result. **A failure means the algorithm
+  changed by accident. Never regenerate the golden files to make a test pass.** If the algorithm should change on purpose,
+  change it in a commit of its own, say so, and explain the new files in that commit.
+- **Property tests** (`AlgorithmPropertiesTest`, `DirectionalTest`, `TableSafetyTest`). On the golden scenes and on random
+  terrain: nothing changes outside the mask; block entities (apart from pieces in the table), water, waterlogged states
+  and unknown blocks never change; the same seed gives the same result.
+- **Table builder** (`TableBuilderRulesTest`) builds a table from a tiny made-up pack and checks the pairing rules.
+  `ModelsTest` and `ResourcesTest` cover the model reader.
+- **Rules and wiring** (`SmoothJobsTest`, `SmoothBrushTest`, `PacksTest`, `ArchitectPacksTest`, `ChunkAreaSourceTest`,
+  `EditSessionTargetTest`, `WorldEditSmoothingTest`, `WorldAreaWriteTest`, `PackFootprintTest`, `ModuleSwitchTest`,
+  `SlabSmoothCommandTest`, `SlabSmoothSettingsTest` and `SlabSmoothWiringTest`) run on the fakes and on MockBukkit and
+  check, among other things: a player who changed world, a block changed after the snapshot, a second job refused, a job
+  over its limits, an error in each stage releasing the lock and the tickets, startup with a `LinkageError`, a selection
+  across a pack border, `blocks all` without its permission, and `/architect reload`.
+- **`TableBuilderTest` and `BuildTable` with a local pack.** These read real packs, so they run only where the files
+  exist and are skipped elsewhere. `TableBuilderTest` looks for `RP-Human` in `.minecraft/resourcepacks` (under
+  `%APPDATA%`), for the inventories in `RP-Inventories/inventories` next to it, and for the client jar in
+  `.minecraft/versions/26.2/26.2.jar`; override the folders with `-Dslabsmooth.packs` and `-Dslabsmooth.jar`. It checks
+  that `Models` gives the octants stored in `octants.json` for every state in it, that turned models show the right
+  face, and that the built table finds every piece of the hand-made RP-Human table (`table.json`, kept as test data).
+  `BuildTable` is a class with a `main`: run it from the IDE with the pack folder and the inventory folder as arguments
+  (the `RP-Human` folder and the folder with that pack's inventory files), and it prints the report that
+  `tables/<pack>-report.txt` would hold. Use it to check what a new pack or inventory change does to a table.
+
+Change `core` with care, and run `GoldenScenesTest` first.
 
 ### Map layers
 
@@ -1367,7 +1566,9 @@ should match.
   class of its own.
 - **Module lookups have side effects.** `PluginData.isModuleEnabled` and `getOrCreateWorldConfig` write
   `WorldConfig/<world>.yml` for any name they are given, and a missing module key is written as `true`. A new module is
-  on in every world.
+  on in every world. The one exception is terrain smoothing: `ModuleSwitch` reads it with `isModuleEnabled(module, false)`,
+  and a new `defaultWorldConfig.yml` writes it as `false`. Do not read it with `PluginData.isModuleEnabled`, which counts a
+  missing key as on.
 - **Misspelt keys are permanent.** `pistonExtenstions` and `commmand.itemTexture` stay as they are.
 - **`config.yml` is shared.** Never call `saveConfig()`; use `ConfigFile.update`. Read settings on the main thread
   before async work.

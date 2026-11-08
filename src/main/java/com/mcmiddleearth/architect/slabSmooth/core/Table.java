@@ -20,8 +20,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * A material table: which blocks are terrain, and which state is each piece of it. Same JSON as the Python
- * prototype's tables (see SlabSmooth/slabsmooth/materials.py).
+ * A material table: which blocks are terrain, and which state is each piece of it. It is saved as JSON, with every
+ * piece listed under its shape (octant mask); this class is the reference for that format.
  */
 public final class Table {
 

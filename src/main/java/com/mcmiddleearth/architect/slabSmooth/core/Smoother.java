@@ -18,8 +18,9 @@ import static com.mcmiddleearth.architect.slabSmooth.core.Table.PIECE;
 import static com.mcmiddleearth.architect.slabSmooth.core.Table.TERRAIN;
 
 /**
- * The smoother: turns stair-stepped terrain into slabs, stairs and vertical slabs. A port of the Python
- * prototype (SlabSmooth/slabsmooth/smooth.py); see there for how it works.
+ * The smoother: turns stair-stepped terrain into slabs, stairs and vertical slabs, with one height per column, so
+ * it sees tops only. {@link Directional} runs the same smoother in six directions. How it works is in the Developer
+ * Manual.
  *
  * <p>Blocks are a flat array indexed [y][z][x]: {@code (y * length + z) * width + x}. Columns are indexed
  * {@code z * width + x}.
