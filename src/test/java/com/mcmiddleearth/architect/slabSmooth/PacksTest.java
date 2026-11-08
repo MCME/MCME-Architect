@@ -66,7 +66,7 @@ class PacksTest {
     /** The made-up source of packs: one pack, Human, whose zip is already in the data folder. */
     private final class Fake implements PackSources {
         final Set<String> inventoryThreads = ConcurrentHashMap.newKeySet(), sourceThreads = ConcurrentHashMap.newKeySet();
-        final AtomicInteger regionCalls = new AtomicInteger();
+        final AtomicInteger regionCalls = new AtomicInteger(), sourceCalls = new AtomicInteger();
         volatile CountDownLatch gate; // while set, asking for the inventory waits for it
         volatile CountDownLatch entered; // counted down when something waits at the gate
         volatile String region, current;
@@ -97,6 +97,7 @@ class PacksTest {
         @Override
         public Source source(String pack) {
             sourceThreads.add(Thread.currentThread().getName());
+            sourceCalls.incrementAndGet();
             return null;
         }
 
@@ -508,21 +509,24 @@ class PacksTest {
         assertTrue(packs.status().get(0).contains("ready"), packs.status().toString());
     }
 
+    // The worker is held up at the inventory, so every ask comes while the first check is still under way: only one
+    // check may have been handed over, however many threads ask (a single worker would hide a second build, so the
+    // number of checks is what is counted).
     @Test
     void twoThreadsAskingAtOnceBuildOnce() throws Exception {
+        fake.gate = new CountDownLatch(1);
+        fake.entered = new CountDownLatch(1);
         Packs packs = packs();
+        int askers = 8;
         CountDownLatch start = new CountDownLatch(1);
-        Table[] got = new Table[2];
-        Throwable[] failed = new Throwable[1];
         List<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 2; i++) {
-            int n = i;
+        for (int i = 0; i < askers; i++) {
             Thread t = new Thread(() -> {
                 try {
                     start.await();
-                    got[n] = await(packs);
-                } catch (Throwable e) {
-                    failed[0] = e;
+                    packs.table(human(), false);
+                } catch (IllegalStateException | InterruptedException e) {
+                    // the first ask: try again
                 }
             });
             t.start();
@@ -532,10 +536,12 @@ class PacksTest {
         for (Thread t : threads) {
             t.join(60_000);
         }
-
-        assertNull(failed[0], String.valueOf(failed[0]));
-        assertNotNull(got[0]);
-        assertSame(got[0], got[1]);
+        assertTrue(fake.entered.await(30, TimeUnit.SECONDS), "the worker started its check");
+        fake.gate.countDown();
+        Table table = await(packs);
+        sleep(300); // a second check, if one was handed over, would run now
+        assertSame(table, await(packs));
+        assertEquals(1, fake.sourceCalls.get(), "one check for eight asks");
         assertEquals(1, count(infos, "Pack Human:"), infos.toString());
     }
 

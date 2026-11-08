@@ -15,6 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // The RP regions are read from other threads (SlabSmooth looks them up while FastAsyncWorldEdit's queue runs a brush).
@@ -61,6 +63,13 @@ class RpRegionsConcurrencyTest {
                 RpManager.removeRegion("added-" + i);
             }
         }
+    }
+
+    // The map refuses a null key; Architect's commands have always got null and false for a name that isn't there.
+    @Test
+    void aNullNameFindsNothing() {
+        assertNull(RpManager.getRegion((String) null));
+        assertFalse(RpManager.removeRegion(null));
     }
 
     private static CuboidRegion box() {
