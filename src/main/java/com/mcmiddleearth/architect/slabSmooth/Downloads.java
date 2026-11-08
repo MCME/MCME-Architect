@@ -111,7 +111,7 @@ final class Downloads {
             }
         }
         if (versionUrl == null) {
-            throw new IOException("Minecraft " + version + " isn't in Mojang's version manifest; set vanilla.client-jar in config.yml");
+            throw new IOException("Minecraft " + version + " isn't in Mojang's version manifest; set slabSmooth.vanilla.clientJar in config.yml");
         }
         JsonObject client = json(versionUrl).getAsJsonObject("downloads").getAsJsonObject("client");
         String sha = client.get("sha1").getAsString();

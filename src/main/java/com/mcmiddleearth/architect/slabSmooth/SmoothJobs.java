@@ -61,7 +61,8 @@ final class SmoothJobs {
     /** A job over this many columns says that it has started, and is logged with its time. */
     private static final long BIG = 4096;
 
-    private static final String FAILED = "Something went wrong; the server log has the details.";
+    /** What a player is told when something unexpected failed; the command says the same. */
+    static final String FAILED = "Something went wrong; the server log has the details.";
     private static final String TOO_MUCH_WORK = "This area is too much work to smooth, so nothing was changed. Try a smaller selection.";
     private static final String WORLD_GONE = "That world is gone, so nothing was changed.";
 

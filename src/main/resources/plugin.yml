@@ -121,6 +121,12 @@ commands:
       usage: >-
         /biometune [edit] [biome|here] | info|set|unset|copy|undo|revert|save|status|preview|publish|spares|claim|label
         ... (tab completes)
+   slabsmooth:
+      description: Smooths stair-stepped terrain with the slabs, stairs and vertical slabs of a resource pack.
+      usage: >-
+        /slabsmooth selection | brush [radius] | area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack] |
+        set <option> <value> | options | reset | pack [name|auto] | packs [rebuild [pack]] | help
+      aliases: [sls]
 permissions:
     architect.*:
         description: All of Architect's rank bundles (the Head Designer bundle and everything below it).

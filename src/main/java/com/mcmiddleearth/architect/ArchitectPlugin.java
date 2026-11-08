@@ -33,6 +33,8 @@ import com.mcmiddleearth.architect.randomiser.RandomiserCommand;
 import com.mcmiddleearth.architect.serverResoucePack.*;
 import com.mcmiddleearth.architect.signEditor.SignCommand;
 import com.mcmiddleearth.architect.signEditor.SignListener;
+import com.mcmiddleearth.architect.slabSmooth.SlabSmooth;
+import com.mcmiddleearth.architect.slabSmooth.SlabSmoothCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.command.GetCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.command.InvCommand;
 import com.mcmiddleearth.architect.specialBlockHandling.command.SwitchStickCommand;
@@ -164,6 +166,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         setCommandExecutor("weselect", new WeSelectCommand());
         setCommandExecutor("switchstick", new SwitchStickCommand());
         setCommandExecutor("biometune", new BiomeTuneCommand());
+        setCommandExecutor("slabsmooth", new SlabSmoothCommand());
         //setCommandExecutor("speed", new SpeedCommand());
 //        setCommandExecutor("newafkk", new NewAfkCommand());
 
@@ -172,6 +175,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         rpSwitchTask = new RPSwitchTask().runTaskTimer(this, 500, 20);
         ItemBlockManager.startEntityGlowTask();
         BiomeTuning.enable(this);
+        SlabSmooth.enable(this);
         
         
         Log.info("MCME-Architect Enabled!");
@@ -182,6 +186,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         GamemodeSwitcher.stopRunning(); // before teardown that may fail, and it cannot fail itself
         MapLayers.stop(); // first, so the budget saves its counts even if other teardown fails
         BiomeTuning.disable();
+        SlabSmooth.disable(); // cannot fail: it stops its jobs and threads before the teardown below
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();
@@ -210,6 +215,7 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
         ViewDistanceManager.loadViewDistances();
         MapLayers.start(this, ArchitectLayers.fromConfig(getConfig(), getDataFolder()));
         GamemodeSwitcher.updateRunning(); // the reload may have turned the switcher's module on or off in a world
+        SlabSmooth.reload(); // does nothing in onEnable's first load: SlabSmooth.enable comes after it
     }
 
     public static ArchitectPlugin getPluginInstance() {

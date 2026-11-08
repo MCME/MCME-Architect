@@ -51,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 class PacksTest {
 
     private static final String WORKER = "Architect SlabSmooth packs";
-    private static final String MC = "26.2";
+    private static final String MC = "26.2", ARCHITECT = "3.4.0";
 
     @TempDir
     Path dir;
@@ -214,8 +214,12 @@ class PacksTest {
         return packs(MC, s -> true, s -> false);
     }
 
-    private Packs packs(String version, Predicate<String> validState, Predicate<String> hasBlockEntity) {
-        Packs p = new Packs(log, data, settings(), fake, version, validState, hasBlockEntity, clock::get);
+    private Packs packs(String minecraft, Predicate<String> validState, Predicate<String> hasBlockEntity) {
+        return packs(new Packs.Versions(minecraft, ARCHITECT), validState, hasBlockEntity);
+    }
+
+    private Packs packs(Packs.Versions versions, Predicate<String> validState, Predicate<String> hasBlockEntity) {
+        Packs p = new Packs(log, data, settings(), fake, versions, validState, hasBlockEntity, clock::get);
         opened.add(p);
         return p;
     }
@@ -400,6 +404,46 @@ class PacksTest {
         assertEquals(1, table.materials.size());
         assertEquals(1, count(infos, "Pack Human: 1 terrain materials"), infos.toString());
         assertEquals(0, count(infos, "Pack Human: loaded"), infos.toString());
+    }
+
+    // A fix to how tables are built comes with a new Architect, so a table saved by the one before isn't trusted.
+    @Test
+    void aDifferentArchitectVersionBuildsAgain() {
+        Packs first = packs();
+        await(first);
+        first.close();
+        infos.clear();
+
+        Table table = await(packs(new Packs.Versions(MC, "3.4.1"), s -> true, s -> false));
+
+        assertEquals(1, table.materials.size());
+        assertEquals(1, count(infos, "Pack Human: 1 terrain materials"), infos.toString());
+        assertEquals(0, count(infos, "Pack Human: loaded"), infos.toString());
+    }
+
+    @Test
+    void aRebuildSaysWhetherItStartedOne() throws Exception {
+        Packs packs = packs();
+        await(packs);
+        sleep(100); // the first check ends
+        fake.gate = new CountDownLatch(1);
+        fake.entered = new CountDownLatch(1);
+        try {
+            assertTrue(packs.rebuild("Human"), "started");
+            assertTrue(fake.entered.await(30, TimeUnit.SECONDS), "the worker is checking the pack");
+            assertFalse(packs.rebuild("Human"), "a check is under way, so nothing new starts");
+        } finally {
+            fake.gate.countDown();
+            fake.gate = null;
+        }
+        long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        while (count(infos, "Pack Human:") < 2 && System.nanoTime() < end) {
+            sleep(10);
+        }
+        assertEquals(2, count(infos, "Pack Human:"), "built once more, not twice: " + infos);
+
+        packs.close();
+        assertFalse(packs.rebuild("Human"), "closed: nothing starts");
     }
 
     @Test

@@ -79,6 +79,14 @@ final class Packs implements TableSource, Closeable {
     record Choice(String pack, String why) {
     }
 
+    /**
+     * What a saved table depends on besides its pack: the server's Minecraft version (the client jar is that version's
+     * too) and Architect's own, so a table built by an earlier Architect is built again, with any fix to how tables are
+     * built.
+     */
+    record Versions(String minecraft, String architect) {
+    }
+
     private record Source(Path inventory, String zip, String sha1, String problem) {
     }
 
@@ -94,17 +102,17 @@ final class Packs implements TableSource, Closeable {
     private final Map<String, Pack> packs = new ConcurrentHashMap<>();
     private final SlabSmoothSettings settings;
     private final PackSources sources;
-    private final String minecraftVersion;
+    private final Versions versions;
     private final Predicate<String> validState, hasBlockEntity;
     private final LongSupplier clock;
 
-    Packs(Logger log, Path dataDir, SlabSmoothSettings settings, PackSources sources, String minecraftVersion,
+    Packs(Logger log, Path dataDir, SlabSmoothSettings settings, PackSources sources, Versions versions,
           Predicate<String> validState, Predicate<String> hasBlockEntity) {
-        this(log, dataDir, settings, sources, minecraftVersion, validState, hasBlockEntity, System::currentTimeMillis);
+        this(log, dataDir, settings, sources, versions, validState, hasBlockEntity, System::currentTimeMillis);
     }
 
     /** With a clock in milliseconds, so the change check's pause can be tested. */
-    Packs(Logger log, Path dataDir, SlabSmoothSettings settings, PackSources sources, String minecraftVersion,
+    Packs(Logger log, Path dataDir, SlabSmoothSettings settings, PackSources sources, Versions versions,
           Predicate<String> validState, Predicate<String> hasBlockEntity, LongSupplier clock) {
         this.log = log;
         this.dataDir = dataDir;
@@ -113,7 +121,7 @@ final class Packs implements TableSource, Closeable {
         this.downloads = new Downloads(log);
         this.settings = settings;
         this.sources = sources;
-        this.minecraftVersion = minecraftVersion;
+        this.versions = versions;
         this.validState = validState;
         this.hasBlockEntity = hasBlockEntity;
         this.clock = clock;
@@ -187,9 +195,14 @@ final class Packs implements TableSource, Closeable {
         return out;
     }
 
-    /** Rebuilds a pack's table now, even if nothing changed. */
-    void rebuild(String name) {
-        refresh(packs.computeIfAbsent(name, Pack::new), true);
+    /**
+     * Rebuilds a pack's table now, even if nothing changed.
+     *
+     * @return false if nothing started: a check of that pack is under way already (it builds only if something
+     *         changed), or the packs are closed
+     */
+    boolean rebuild(String name) {
+        return refresh(packs.computeIfAbsent(name, Pack::new), true);
     }
 
     /** Starts reading the default pack (from its saved table if that is still good). */
@@ -205,20 +218,26 @@ final class Packs implements TableSource, Closeable {
 
     // ---------------------------------------------------------------------------------------------------------
 
-    /** Hands the change check (and a build, if one is due) to the worker; does nothing else. Any thread. */
-    private void refresh(Pack pack, boolean force) {
+    /**
+     * Hands the change check (and a build, if one is due) to the worker; does nothing else. Any thread.
+     *
+     * @return whether a check was handed over
+     */
+    private boolean refresh(Pack pack, boolean force) {
         long now = clock.getAsLong();
         if (!force && now - pack.checkedAt < CHECK_EVERY_MS) {
-            return;
+            return false;
         }
         if (!pack.building.compareAndSet(false, true)) {
-            return;
+            return false;
         }
         pack.checkedAt = now;
         try {
             worker.execute(() -> run(pack, force));
+            return true;
         } catch (RejectedExecutionException closed) {
             pack.building.set(false);
+            return false;
         }
     }
 
@@ -284,15 +303,17 @@ final class Packs implements TableSource, Closeable {
             return new Source(inventory, a.url(), a.sha1() == null ? "" : a.sha1(), null);
         }
         return new Source(null, null, null, a == null ? "no download URL in MCME-Architect's config"
-                : "downloads are off (SlabSmooth download setting); put the pack zip at " + local);
+                : "downloads are off (slabSmooth.download in config.yml); put the pack zip at " + local);
     }
 
     /**
      * What a table is built from: the pack's address and file, the inventory files, the settings that shape the table,
-     * the server version, the table format and the configured client jar. Equal fingerprints mean an equal table.
+     * the server's and Architect's versions, the table format and the configured client jar. Equal fingerprints mean
+     * an equal table.
      */
     private String fingerprint(String name, Source source) {
-        StringBuilder sb = new StringBuilder("format ").append(TABLE_FORMAT).append("|minecraft ").append(minecraftVersion)
+        StringBuilder sb = new StringBuilder("format ").append(TABLE_FORMAT).append("|versions minecraft ")
+                .append(versions.minecraft()).append(" architect ").append(versions.architect())
                 .append('|').append(source.zip()).append('|').append(source.sha1()).append('|');
         if (!isUrl(source.zip())) {
             stamp(Path.of(source.zip()), sb);
@@ -445,14 +466,15 @@ final class Packs implements TableSource, Closeable {
         if (clientJar != null && !clientJar.isBlank()) {
             Path p = Path.of(clientJar);
             if (!Files.isRegularFile(p)) {
-                throw new IOException("vanilla.clientJar " + p + " doesn't exist");
+                throw new IOException("slabSmooth.vanilla.clientJar " + p + " doesn't exist");
             }
             return p;
         }
         if (!settings.download()) {
-            throw new IOException("downloads are off (SlabSmooth download setting); set vanilla.clientJar to the " + minecraftVersion + " client jar");
+            throw new IOException("downloads are off (slabSmooth.download in config.yml); set slabSmooth.vanilla.clientJar to the "
+                    + versions.minecraft() + " client jar");
         }
-        return downloads.clientJar(minecraftVersion, cacheDir);
+        return downloads.clientJar(versions.minecraft(), cacheDir);
     }
 
     /** The table, its report and (last, so a half-written table is never trusted) the fingerprint it was built from. */
