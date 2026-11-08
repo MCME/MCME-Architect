@@ -6,26 +6,16 @@ import com.mcmiddleearth.architect.slabSmooth.core.Options;
 import com.mcmiddleearth.architect.slabSmooth.core.Smoother;
 import com.mcmiddleearth.architect.slabSmooth.core.Table;
 import com.mcmiddleearth.architect.slabSmooth.core.Tiles;
-import com.sk89q.worldedit.EditSession;
+import com.mcmiddleearth.architect.slabSmooth.core.WorkBudget;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.extent.Extent;
 import com.sk89q.worldedit.math.BlockVector3;
-import com.sk89q.worldedit.util.SideEffect;
 import com.sk89q.worldedit.world.block.BlockState;
-import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.ChunkSnapshot;
-import org.bukkit.World;
-import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
-import java.util.function.Function;
 
 /** A box of the world as the smoother sees it: blocks [y][z][x] and their palette (block state strings). */
 final class WorldArea {
@@ -35,6 +25,10 @@ final class WorldArea {
 
     interface CellTest {
         boolean test(int x, int y, int z);
+    }
+
+    /** What a write did: the blocks it set, and the blocks it left alone because they changed after the read. */
+    record Written(int blocks, int skipped) {
     }
 
     final BlockVector3 min;
@@ -51,21 +45,26 @@ final class WorldArea {
         this.blocks = new int[height * length * width];
     }
 
-    private static WorldArea box(BlockVector3 min, BlockVector3 max, int worldMinY, int worldMaxY) {
+    /** An empty area for min..max (inclusive), clamped to worldMinY..worldMaxY (inclusive). Fill it with {@link #id}. */
+    static WorldArea box(BlockVector3 min, BlockVector3 max, int worldMinY, int worldMaxY) {
         int minY = Math.max(min.y(), worldMinY);
         int maxY = Math.min(max.y(), worldMaxY);
         return new WorldArea(BlockVector3.at(min.x(), minY, min.z()), Math.max(0, maxY - minY + 1),
                 max.z() - min.z() + 1, max.x() - min.x() + 1);
     }
 
-    private int id(String state) {
+    /** The palette index of a state, added to the palette if it is new. */
+    int id(String state) {
         return ids.computeIfAbsent(state, s -> {
             palette.add(s);
             return palette.size() - 1;
         });
     }
 
-    /** Reads min..max (inclusive) through an extent, clamped to the world's height. Main thread; for brushes. */
+    /**
+     * Reads min..max (inclusive) through an extent, clamped to the world's height. For brushes, on the thread WorldEdit
+     * runs the brush on: the main thread on WorldEdit, one of FAWE's own threads on FAWE.
+     */
     static WorldArea read(Extent extent, com.sk89q.worldedit.world.World world, BlockVector3 min, BlockVector3 max) {
         WorldArea area = box(min, max, world.getMinY(), world.getMaxY());
         Map<BlockState, Integer> seen = new HashMap<>();
@@ -79,97 +78,6 @@ final class WorldArea {
             }
         }
         return area;
-    }
-
-    /**
-     * Chunk snapshots covering min..max, read later on any thread with {@link Snapshots#read()}. Chunks that aren't
-     * loaded are loaded by Paper in the background, and held with a plugin chunk ticket until copied; chunks are
-     * never generated, so an area reaching into ungenerated land fails. The copy (quick, per chunk) is made on the
-     * main thread, and the future completes there. Call on the main thread.
-     */
-    static CompletableFuture<Snapshots> snapshot(Plugin plugin, World world, BlockVector3 min, BlockVector3 max) {
-        int cx0 = min.x() >> 4, cx1 = max.x() >> 4, cz0 = min.z() >> 4, cz1 = max.z() >> 4;
-        for (int cx = cx0; cx <= cx1; cx++) {
-            for (int cz = cz0; cz <= cz1; cz++) {
-                if (!world.isChunkGenerated(cx, cz)) {
-                    return CompletableFuture.failedFuture(new IllegalArgumentException("Part of the area (chunk " + cx + ", " + cz
-                            + ") hasn't been generated; SlabSmooth only smooths existing terrain."));
-                }
-            }
-        }
-        List<CompletableFuture<Chunk>> loads = new ArrayList<>();
-        for (int cx = cx0; cx <= cx1; cx++) {
-            for (int cz = cz0; cz <= cz1; cz++) {
-                int x = cx, z = cz;
-                loads.add(world.getChunkAtAsync(cx, cz, false).thenApply(c -> {
-                    if (c == null) {
-                        throw new IllegalArgumentException("Chunk " + x + ", " + z + " couldn't be loaded.");
-                    }
-                    c.addPluginChunkTicket(plugin); // keeps it loaded until the copy below
-                    return c;
-                }));
-            }
-        }
-        Executor mainThread = task -> {
-            if (Bukkit.isPrimaryThread()) {
-                task.run();
-            } else {
-                Bukkit.getScheduler().runTask(plugin, task);
-            }
-        };
-        return CompletableFuture.allOf(loads.toArray(CompletableFuture[]::new)).handleAsync((ignored, error) -> {
-            try {
-                if (error != null) {
-                    throw error instanceof CompletionException ce && ce.getCause() != null ? ce.getCause() : error;
-                }
-                long start = System.nanoTime();
-                ChunkSnapshot[][] chunks = new ChunkSnapshot[cx1 - cx0 + 1][cz1 - cz0 + 1];
-                for (CompletableFuture<Chunk> load : loads) {
-                    Chunk c = load.join();
-                    chunks[c.getX() - cx0][c.getZ() - cz0] = c.getChunkSnapshot(false, false, false);
-                }
-                return new Snapshots(chunks, cx0, cz0, box(min, max, world.getMinHeight(), world.getMaxHeight() - 1),
-                        (System.nanoTime() - start) / 1_000_000, () -> release(plugin, loads));
-            } catch (Throwable e) {
-                release(plugin, loads);
-                throw e instanceof RuntimeException re ? re : new CompletionException(e);
-            }
-        }, mainThread);
-    }
-
-    private static void release(Plugin plugin, List<CompletableFuture<Chunk>> loads) {
-        for (CompletableFuture<Chunk> load : loads) {
-            Chunk c = load.getNow(null);
-            if (c != null) {
-                c.removePluginChunkTicket(plugin);
-            }
-        }
-    }
-
-    /**
-     * copyMs: how long the copy took on the main thread. The chunks stay loaded (so writing the result back doesn't
-     * load them again on the main thread) until {@code release} runs, on the main thread.
-     */
-    record Snapshots(ChunkSnapshot[][] chunks, int cx0, int cz0, WorldArea area, long copyMs, Runnable release) {
-        /** Fills the area from the snapshots. Any thread. */
-        WorldArea read() {
-            WorldArea a = area;
-            Map<org.bukkit.block.data.BlockData, Integer> seen = new HashMap<>();
-            int i = 0;
-            for (int y = 0; y < a.height; y++) {
-                int wy = a.min.y() + y;
-                for (int z = 0; z < a.length; z++) {
-                    int wz = a.min.z() + z;
-                    for (int x = 0; x < a.width; x++) {
-                        int wx = a.min.x() + x;
-                        ChunkSnapshot chunk = chunks[(wx >> 4) - cx0][(wz >> 4) - cz0];
-                        org.bukkit.block.data.BlockData data = chunk.getBlockData(wx & 15, wy, wz & 15);
-                        a.blocks[i++] = seen.computeIfAbsent(data, d -> a.id(d.getAsString()));
-                    }
-                }
-            }
-            return a;
-        }
     }
 
     /** Per block: whether its world position passes the test. */
@@ -199,50 +107,52 @@ final class WorldArea {
 
     /**
      * Smooths the area; null if it is outside the world's height. Works on this area's own arrays only, so it can
-     * run on any thread.
+     * run on any thread. Stops with TooMuchWork when the budget runs out, and nothing has changed then.
      *
      * @param editable per block in "all" mode, per column in "top" mode
      */
-    Smoother.Result smooth(Table table, Options opts, boolean[] editable, boolean tiled) {
+    Smoother.Result smooth(Table table, Options opts, boolean[] editable, boolean tiled, WorkBudget budget) {
         if (height == 0) {
             return null;
         }
         if ("top".equals(opts.surfaces)) {
-            return Smoother.smooth(blocks, height, length, width, palette, table, opts, editable, null);
+            return Smoother.smooth(blocks, height, length, width, palette, table, opts, editable, null, budget);
         }
         if (tiled) {
             return Tiles.smooth(blocks, height, length, width, palette, table, opts, editable, TILE,
-                    Tiles.margin(opts), null);
+                    Tiles.margin(opts), null, budget);
         }
-        return Directional.smooth(blocks, height, length, width, palette, table, opts, editable, null);
+        return Directional.smooth(blocks, height, length, width, palette, table, opts, editable, null, budget);
     }
 
     /**
-     * Writes the blocks that changed, through the edit session (so masks, limits and //undo apply), without block
-     * updates (like /setblock ... strict): stairs keep the shape the smoother chose, pieces that need support
-     * (MCME's sugar cane grass slab) stay put, and MCME's repeater and comparator slabs don't switch off a tick
-     * later and reshape their neighbours. Main thread. Returns the number of blocks set.
+     * Writes the blocks the result changed, and nothing else. With compareFirst, each of them is read from the target
+     * first, and one that is no longer what this area read (a builder changed it while the job ran) is left alone and
+     * counted as skipped. A brush reads and writes through the same edit session in one go, so it doesn't compare.
+     * States are compared as BlockStates.normalize gives them, because Bukkit and WorldEdit may list a state's
+     * properties in different orders. Any thread the target allows.
      */
-    int write(EditSession session, Smoother.Result result, Function<String, BlockState> parse) throws MaxChangedBlocksException {
-        session.setSideEffectApplier(session.getSideEffectApplier()
-                .with(SideEffect.NEIGHBORS, SideEffect.State.OFF)
-                .with(SideEffect.UPDATE, SideEffect.State.OFF));
+    Written write(BlockTarget target, Smoother.Result result, boolean compareFirst) throws MaxChangedBlocksException {
         int[] out = result.blocks();
-        Map<Long, Boolean> same = new HashMap<>();
-        int changed = 0;
+        Map<String, String> normalized = new HashMap<>(); // one entry per distinct state: few, even in a big area
+        int written = 0, skipped = 0;
         for (int i = 0; i < out.length; i++) {
             if (out[i] == blocks[i]) {
                 continue;
             }
             String state = result.palette().get(out[i]);
-            String old = palette.get(blocks[i]);
-            if (same.computeIfAbsent((long) out[i] << 32 | blocks[i], k -> BlockStates.normalize(state).equals(BlockStates.normalize(old)))) {
+            String old = normalized.computeIfAbsent(palette.get(blocks[i]), BlockStates::normalize);
+            if (normalized.computeIfAbsent(state, BlockStates::normalize).equals(old)) {
                 continue;
             }
-            int x = i % width, z = (i / width) % length, y = i / (width * length);
-            session.setBlock(min.add(x, y, z), parse.apply(state));
-            changed++;
+            int x = min.x() + i % width, z = min.z() + (i / width) % length, y = min.y() + i / (width * length);
+            if (compareFirst && !normalized.computeIfAbsent(target.stateAt(x, y, z), BlockStates::normalize).equals(old)) {
+                skipped++;
+                continue;
+            }
+            target.set(x, y, z, state);
+            written++;
         }
-        return changed;
+        return new Written(written, skipped);
     }
 }
