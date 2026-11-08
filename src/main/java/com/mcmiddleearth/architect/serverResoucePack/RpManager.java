@@ -65,7 +65,7 @@ public class RpManager {
 
     private static final String rpDatabaseConfig = "rpSettingsDatabase";
 
-    private static final Map<String, RpRegion> regions = new HashMap<>();
+    private static final Map<String, RpRegion> regions = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final Map<UUID,RpPlayerData> playerRpData = new java.util.concurrent.ConcurrentHashMap<>();
 

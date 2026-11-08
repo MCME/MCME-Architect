@@ -56,7 +56,7 @@ final class Downloads {
         Files.createDirectories(target.getParent());
         Path part = target.resolveSibling(target.getFileName() + ".part");
         HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(10))
-                .header("User-Agent", "SlabSmooth (Minecraft server plugin)").GET().build();
+                .header("User-Agent", "MCME-Architect (Minecraft server plugin)").GET().build();
         HttpResponse<InputStream> response;
         try {
             response = http().send(request, HttpResponse.BodyHandlers.ofInputStream());

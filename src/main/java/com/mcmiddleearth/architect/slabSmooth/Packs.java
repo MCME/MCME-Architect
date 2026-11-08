@@ -1,17 +1,19 @@
 package com.mcmiddleearth.architect.slabSmooth;
 
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mcmiddleearth.architect.slabSmooth.core.Inventory;
 import com.mcmiddleearth.architect.slabSmooth.core.Models;
 import com.mcmiddleearth.architect.slabSmooth.core.Resources;
 import com.mcmiddleearth.architect.slabSmooth.core.Table;
 import com.mcmiddleearth.architect.slabSmooth.core.TableBuilder;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,29 +32,41 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 /**
  * The material table of each resource pack, built from the pack's block inventory and its models, and built again
- * when either changes. Packs, inventories and RP regions come from MCME-Architect (or the "extra" packs in
- * config.yml); without either, every place uses the hand-made table in table.json.
+ * when either changes. Packs and inventories come from {@link PackSources} (MCME-Architect).
  *
- * <p>Change checks are cheap (file sizes and dates, at most every few seconds per pack) and run when someone
- * smooths. Building runs on one background thread: download the pack zip if it is new, read the inventory, and
- * work out every piece from the models. Until a rebuilt table is ready the previous one stays in use.
+ * <p>Everything here is safe from any thread, and no call touches a file or the network: the change check (file
+ * sizes and dates, at most every few seconds per pack), the download and the build all run on one background thread.
+ * A table built before is saved under tables/, with the fingerprint of what it was built from; after a restart a pack
+ * whose fingerprint is unchanged loads that table and opens neither the pack's zip nor the vanilla jar. Until a rebuilt
+ * table is ready the previous one stays in use.
  */
-final class Packs {
+final class Packs implements TableSource, Closeable {
 
     private static final long CHECK_EVERY_MS = 5_000, RETRY_AFTER_ERROR_MS = 300_000;
+    /** Part of every fingerprint: raise it when the saved table's contents or meaning change. */
+    private static final int TABLE_FORMAT = 1;
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     static final class Pack {
         final String name;
         volatile Table table, tableAll; // terrain only; also the other blocks with pieces (blocks all)
         volatile String fingerprint = "";
-        volatile long checkedAt, failedAt;
-        volatile boolean building;
+        volatile long checkedAt = Long.MIN_VALUE / 2, failedAt;
+        /** Set when a check (and maybe a build) is handed to the worker; cleared when it ends. */
+        final AtomicBoolean building = new AtomicBoolean();
+        /** True while a table is being read or built, not during a plain change check. */
+        volatile boolean reading;
+        /** The saved table has been looked at once; it is not tried again. */
+        volatile boolean savedTried;
         volatile String status = "not read yet";
         volatile String error;
 
@@ -71,109 +85,92 @@ final class Packs {
     private final Logger log;
     private final Path dataDir, cacheDir, tablesDir;
     private final Downloads downloads;
+    /** A plain single-thread executor starts its thread with the first task. */
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "SlabSmooth packs");
+        Thread t = new Thread(r, "Architect SlabSmooth packs");
         t.setDaemon(true);
         return t;
     });
     private final Map<String, Pack> packs = new ConcurrentHashMap<>();
-    private final Table builtIn;
-    private final Architect architect;
+    private final SlabSmoothSettings settings;
+    private final PackSources sources;
+    private final String minecraftVersion;
+    private final Predicate<String> validState, hasBlockEntity;
+    private final LongSupplier clock;
 
-    // config.yml, packs section
-    private final String defaultPack;
-    private final boolean download;
-    private final List<String> terrainCategories, plantCategories;
-    private final double lookTolerance;
-    private final ConfigurationSection overrides, extra;
-    private final String clientJar;
+    Packs(Logger log, Path dataDir, SlabSmoothSettings settings, PackSources sources, String minecraftVersion,
+          Predicate<String> validState, Predicate<String> hasBlockEntity) {
+        this(log, dataDir, settings, sources, minecraftVersion, validState, hasBlockEntity, System::currentTimeMillis);
+    }
 
-    Packs(SlabSmoothPlugin plugin, Table builtIn) {
-        this.log = plugin.getLogger();
-        this.dataDir = plugin.getDataPath();
+    /** With a clock in milliseconds, so the change check's pause can be tested. */
+    Packs(Logger log, Path dataDir, SlabSmoothSettings settings, PackSources sources, String minecraftVersion,
+          Predicate<String> validState, Predicate<String> hasBlockEntity, LongSupplier clock) {
+        this.log = log;
+        this.dataDir = dataDir;
         this.cacheDir = dataDir.resolve("cache");
         this.tablesDir = dataDir.resolve("tables");
         this.downloads = new Downloads(log);
-        this.builtIn = builtIn;
-        var config = plugin.getConfig();
-        this.defaultPack = config.getString("packs.default", "Human");
-        this.download = config.getBoolean("packs.download", true);
-        this.terrainCategories = config.getStringList("packs.terrain-categories").isEmpty() ? List.of("Terra")
-                : config.getStringList("packs.terrain-categories");
-        this.plantCategories = config.isList("packs.plant-categories") ? config.getStringList("packs.plant-categories")
-                : List.of("Plant", "Crop");
-        this.lookTolerance = config.getDouble("packs.look-tolerance", 10);
-        this.overrides = config.getConfigurationSection("packs.overrides");
-        this.extra = config.getConfigurationSection("packs.extra");
-        this.clientJar = config.getString("vanilla.client-jar", "");
-        this.architect = Architect.find(plugin.getServer(), log);
-    }
-
-    /** True if tables come from packs; false if every place uses the hand-made table. */
-    boolean dynamic() {
-        return architect != null || (extra != null && !extra.getKeys(false).isEmpty());
-    }
-
-    String describe() {
-        if (!dynamic()) {
-            return "hand-made table \"" + builtIn.name + "\" (" + builtIn.materials.size() + " materials; no MCME-Architect or extra packs)";
-        }
-        return (architect != null ? "MCME-Architect's packs" : "extra packs") + ", default " + defaultPack;
+        this.settings = settings;
+        this.sources = sources;
+        this.minecraftVersion = minecraftVersion;
+        this.validState = validState;
+        this.hasBlockEntity = hasBlockEntity;
+        this.clock = clock;
     }
 
     /** Every pack SlabSmooth knows of. */
     List<String> names() {
-        Set<String> out = new LinkedHashSet<>();
-        if (architect != null) {
-            out.addAll(architect.packs());
-        }
-        if (extra != null) {
-            out.addAll(extra.getKeys(false));
-        }
+        Set<String> out = new LinkedHashSet<>(sources.packs());
         out.addAll(packs.keySet());
         return new ArrayList<>(out);
     }
 
     /** The pack for an edit at location: the player's choice, the RP region there, the player's pack, the default. */
-    Choice choose(Player player, Location location, String set) {
-        if (!dynamic()) {
-            return new Choice(builtIn.name, "built in");
+    @Override
+    public Choice choose(Player player, Location location, String named) {
+        if (named != null) {
+            return new Choice(named, "set");
         }
-        if (set != null) {
-            return new Choice(set, "set");
-        }
-        String region = architect != null && location != null ? architect.regionPack(location) : null;
+        String region = location != null ? sources.regionPack(location) : null;
         if (region != null) {
             return new Choice(region, "region");
         }
-        String current = architect != null && player != null ? architect.currentPack(player) : null;
+        String current = player != null ? sources.currentPack(player) : null;
         if (current != null) {
             return new Choice(current, "your pack");
         }
-        return new Choice(defaultPack, "default");
+        return new Choice(settings.defaultPack(), "default");
+    }
+
+    @Override
+    public String regionPack(Location location) {
+        return sources.regionPack(location);
     }
 
     String defaultPack() {
-        return defaultPack;
+        return settings.defaultPack();
     }
 
     /**
      * The table to smooth with for a pack: the current one, or the one from before its latest change while that is
-     * rebuilt. allBlocks: with the other blocks that have pieces of their own, not just terrain. Main thread. Throws
-     * with a message for the player when there is none yet.
+     * rebuilt. allBlocks: with the other blocks that have pieces of their own, not just terrain. Throws with a message
+     * for the player when there is none yet (the first ask only starts reading the pack).
      */
-    Table table(Choice choice, boolean allBlocks) {
-        if (!dynamic()) {
-            return builtIn;
-        }
+    @Override
+    public Table table(Choice choice, boolean allBlocks) {
         Pack pack = packs.computeIfAbsent(choice.pack(), Pack::new);
         refresh(pack, false);
         Table t = allBlocks ? pack.tableAll : pack.table;
         if (t != null) {
             return t;
         }
-        if (pack.building) {
+        if (pack.building.get()) {
             throw new IllegalStateException("Reading the " + pack.name + " pack (" + choice.why() + ") for the first time; try again in a few seconds.");
+        }
+        t = allBlocks ? pack.tableAll : pack.table; // a build that ended just now has published its table before it cleared the flag
+        if (t != null) {
+            return t;
         }
         throw new IllegalStateException("The " + pack.name + " pack (" + choice.why() + ") can't be used: " + pack.error);
     }
@@ -183,37 +180,62 @@ final class Packs {
         List<String> out = new ArrayList<>();
         for (String name : names()) {
             Pack p = packs.get(name);
-            out.add(name + ": " + (p == null ? "not read yet (read on first use)" : p.building ? "reading... " + p.status : p.status)
-                    + (p != null && p.error != null && !p.building ? " - " + p.error : ""));
+            boolean reading = p != null && p.reading;
+            out.add(name + ": " + (p == null ? "not read yet (read on first use)" : reading ? "reading... " + p.status : p.status)
+                    + (p != null && p.error != null && !reading ? " - " + p.error : ""));
         }
         return out;
     }
 
     /** Rebuilds a pack's table now, even if nothing changed. */
     void rebuild(String name) {
-        Pack pack = packs.computeIfAbsent(name, Pack::new);
-        refresh(pack, true);
+        refresh(packs.computeIfAbsent(name, Pack::new), true);
     }
 
+    /** Starts reading the default pack (from its saved table if that is still good). */
     void prewarm() {
-        if (dynamic()) {
-            refresh(packs.computeIfAbsent(defaultPack, Pack::new), false);
-        }
+        refresh(packs.computeIfAbsent(settings.defaultPack(), Pack::new), false);
     }
 
-    void close() {
+    @Override
+    public void close() {
         worker.shutdownNow();
         downloads.close();
     }
 
     // ---------------------------------------------------------------------------------------------------------
 
+    /** Hands the change check (and a build, if one is due) to the worker; does nothing else. Any thread. */
     private void refresh(Pack pack, boolean force) {
-        long now = System.currentTimeMillis();
-        if (pack.building || (!force && now - pack.checkedAt < CHECK_EVERY_MS)) {
+        long now = clock.getAsLong();
+        if (!force && now - pack.checkedAt < CHECK_EVERY_MS) {
+            return;
+        }
+        if (!pack.building.compareAndSet(false, true)) {
             return;
         }
         pack.checkedAt = now;
+        try {
+            worker.execute(() -> run(pack, force));
+        } catch (RejectedExecutionException closed) {
+            pack.building.set(false);
+        }
+    }
+
+    /** Worker thread. Nothing escapes, errors included: the thread must go on serving other packs. */
+    private void run(Pack pack, boolean force) {
+        try {
+            check(pack, force);
+        } catch (Throwable t) {
+            fail(pack, t);
+        } finally {
+            pack.reading = false;
+            pack.building.set(false);
+        }
+    }
+
+    private void check(Pack pack, boolean force) throws IOException {
+        long now = clock.getAsLong();
         Source source = source(pack.name);
         if (source.problem() != null) {
             pack.error = source.problem();
@@ -223,28 +245,34 @@ final class Packs {
             return;
         }
         String fingerprint = fingerprint(pack.name, source);
+        if (pack.table == null && !force && !pack.savedTried) {
+            pack.savedTried = true;
+            if (loadSaved(pack, fingerprint)) {
+                return;
+            }
+        }
         boolean changed = !fingerprint.equals(pack.fingerprint);
         boolean retry = pack.error != null && now - pack.failedAt > RETRY_AFTER_ERROR_MS;
         if (!force && !changed && !retry) {
             return;
         }
-        pack.building = true;
         boolean first = pack.table == null;
-        worker.submit(() -> build(pack, source, fingerprint, first ? "first use" : force ? "asked for" : changed ? "inventory or pack changed" : "retry"));
+        try {
+            build(pack, source, fingerprint, first ? "first use" : force ? "asked for" : changed ? "inventory or pack changed" : "retry");
+        } catch (Throwable t) {
+            pack.fingerprint = fingerprint; // not tried again before the retry time, unless the inventory or pack changes
+            throw t;
+        }
     }
 
     /** Where a pack's inventory and zip are, or why it has none. */
     private Source source(String name) {
-        ConfigurationSection x = extra == null ? null : extra.getConfigurationSection(name);
-        Path inventory = null;
-        if (x != null && x.isString("inventory")) {
-            inventory = Path.of(x.getString("inventory"));
-        } else if (architect != null && architect.packs().contains(name)) {
-            inventory = architect.inventory(name);
+        PackSources.Source a = sources.source(name);
+        List<String> known = sources.packs();
+        if (!known.contains(name)) {
+            return new Source(null, null, null, "no such pack (MCME-Architect's packs: " + known + ")");
         }
-        if (inventory == null) {
-            return new Source(null, null, null, "no such pack (MCME-Architect's packs: " + (architect == null ? "none" : architect.packs()) + ")");
-        }
+        Path inventory = sources.inventory(name);
         if (!Files.isDirectory(inventory)) {
             return new Source(null, null, null, "no inventory folder " + inventory);
         }
@@ -252,30 +280,38 @@ final class Packs {
         if (Files.isRegularFile(local)) {
             return new Source(inventory, local.toString(), "", null);
         }
-        if (x != null && x.isString("pack")) {
-            return new Source(inventory, x.getString("pack"), x.getString("sha1", ""), null);
-        }
-        Architect.Source a = architect != null ? architect.source(name) : null;
-        if (a != null && download) {
-            return new Source(inventory, a.url(), a.sha1(), null);
+        if (a != null && settings.download()) {
+            return new Source(inventory, a.url(), a.sha1() == null ? "" : a.sha1(), null);
         }
         return new Source(null, null, null, a == null ? "no download URL in MCME-Architect's config"
-                : "downloads are off (packs.download); put the pack zip at " + local);
+                : "downloads are off (SlabSmooth download setting); put the pack zip at " + local);
     }
 
+    /**
+     * What a table is built from: the pack's address and file, the inventory files, the settings that shape the table,
+     * the server version, the table format and the configured client jar. Equal fingerprints mean an equal table.
+     */
     private String fingerprint(String name, Source source) {
-        StringBuilder sb = new StringBuilder(source.zip()).append('|').append(source.sha1()).append('|');
+        StringBuilder sb = new StringBuilder("format ").append(TABLE_FORMAT).append("|minecraft ").append(minecraftVersion)
+                .append('|').append(source.zip()).append('|').append(source.sha1()).append('|');
         if (!isUrl(source.zip())) {
             stamp(Path.of(source.zip()), sb);
         }
+        sb.append('|');
+        String jar = settings.clientJar();
+        if (jar != null && !jar.isBlank()) {
+            stamp(Path.of(jar), sb);
+        }
+        sb.append('|');
         try (Stream<Path> files = Files.list(source.inventory())) {
             files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".yml")).sorted().forEach(p -> stamp(p, sb));
         } catch (IOException e) {
             sb.append("unreadable");
         }
-        TableBuilder.Settings s = settings(name);
-        sb.append(s.terrainCategories).append(s.decorCategories).append(s.colorTolerance).append(s.exclude).append(s.pairs)
-                .append(new TreeSet<>(s.terrain));
+        TableBuilder.Settings s = tableSettings(name);
+        // sorted, so the same settings give the same text in every run
+        sb.append(s.terrainCategories).append(s.decorCategories).append(s.colorTolerance).append(new TreeSet<>(s.exclude))
+                .append(new TreeMap<>(s.pairs)).append(new TreeSet<>(s.terrain));
         return sb.toString();
     }
 
@@ -288,62 +324,97 @@ final class Packs {
         }
     }
 
-    private TableBuilder.Settings settings(String name) {
+    private TableBuilder.Settings tableSettings(String name) {
         TableBuilder.Settings s = new TableBuilder.Settings();
-        s.terrainCategories = terrainCategories;
-        s.decorCategories = plantCategories;
-        s.colorTolerance = lookTolerance;
-        ConfigurationSection o = overrides == null ? null : overrides.getConfigurationSection(name);
+        s.terrainCategories = settings.terrainCategories();
+        s.decorCategories = settings.plantCategories();
+        s.colorTolerance = settings.lookTolerance();
+        s.validState = validState;
+        s.hasBlockEntity = hasBlockEntity;
+        SlabSmoothSettings.PackOverride o = settings.overrides().get(name);
         if (o != null) {
-            s.exclude = Set.copyOf(o.getStringList("exclude"));
-            s.terrain = Set.copyOf(o.getStringList("terrain"));
-            ConfigurationSection pairs = o.getConfigurationSection("pairs");
-            if (pairs != null) {
-                Map<String, List<String>> map = new TreeMap<>();
-                for (String key : pairs.getKeys(false)) {
-                    map.put(key, pairs.isList(key) ? pairs.getStringList(key) : List.of(pairs.getString(key, "")));
-                }
-                s.pairs = map;
-            }
+            s.exclude = o.exclude();
+            s.terrain = o.terrain();
+            s.pairs = o.pairs();
         }
         return s;
     }
 
-    /** Background thread. */
-    private void build(Pack pack, Source source, String fingerprint, String why) {
-        long start = System.currentTimeMillis();
+    // ---------------------------------------------------------------------------------------------------------
+
+    /** Loads the table saved for this exact fingerprint, if there is one that reads. Worker thread. */
+    private boolean loadSaved(Pack pack, String fingerprint) {
+        Path json = tablesDir.resolve(fileName(pack.name) + ".json");
+        Path saved = tablesDir.resolve(fileName(pack.name) + ".fingerprint");
+        if (!Files.isRegularFile(json) || !Files.isRegularFile(saved)) {
+            return false;
+        }
+        long start = clock.getAsLong();
+        pack.reading = true;
+        pack.status = "loading the saved table";
         try {
-            pack.status = "getting the pack";
-            Path zip = packZip(pack.name, source);
-            pack.status = "getting the vanilla models";
-            Path jar = clientJar();
-            pack.status = "reading the inventory and models";
-            List<String> problems = new ArrayList<>();
-            List<Inventory.Entry> entries = Inventory.read(source.inventory(), problems::add);
-            TableBuilder.Result result;
-            try (Resources resources = Resources.layered(List.of(Resources.zip(zip), Resources.zip(jar)))) {
-                result = TableBuilder.build(pack.name, entries, new Models(resources), settings(pack.name));
+            if (!Files.readString(saved, StandardCharsets.UTF_8).equals(fingerprint)) {
+                return false;
             }
-            Table table = new Table(result.table()), tableAll = new Table(result.table(), true);
-            write(pack.name, result, problems, why);
-            pack.table = table;
-            pack.tableAll = tableAll;
-            pack.fingerprint = fingerprint;
-            pack.error = null;
-            pack.status = "ready, " + result.materials() + " terrain materials, " + result.others() + " more with blocks all (read "
-                    + LocalDateTime.now().format(TIME) + ", " + why + ")";
-            log.info("Pack " + pack.name + ": " + result.materials() + " terrain materials, and " + result.others()
-                    + " other blocks with pieces, from " + entries.size() + " inventory entries (" + why + ", "
-                    + (System.currentTimeMillis() - start) + " ms). Details: tables/" + fileName(pack.name) + "-report.txt");
-            problems.forEach(p -> log.warning("Pack " + pack.name + " inventory: " + p));
-        } catch (Exception e) {
-            pack.error = e.getMessage() == null ? e.toString() : e.getMessage();
-            pack.failedAt = System.currentTimeMillis();
-            pack.fingerprint = fingerprint;
-            pack.status = pack.table == null ? "failed" : "failed to update; still using the previous table";
-            log.warning("Pack " + pack.name + ": " + pack.error);
+            JsonObject spec;
+            try (Reader r = Files.newBufferedReader(json, StandardCharsets.UTF_8)) {
+                spec = JsonParser.parseReader(r).getAsJsonObject();
+            }
+            Table table = new Table(spec), tableAll = new Table(spec, true);
+            publish(pack, table, tableAll, fingerprint);
+            pack.status = "ready, " + table.materials.size() + " terrain materials, " + (tableAll.materials.size() - table.materials.size())
+                    + " more with blocks all (loaded the saved table)";
+            log.info("Pack " + pack.name + ": loaded the saved table (" + (clock.getAsLong() - start) + " ms).");
+            return true;
+        } catch (IOException | RuntimeException e) {
+            log.warning("Pack " + pack.name + ": the saved table can't be used (" + e + "); building it again.");
+            return false;
         } finally {
-            pack.building = false;
+            pack.reading = false;
+        }
+    }
+
+    private void publish(Pack pack, Table table, Table tableAll, String fingerprint) {
+        pack.tableAll = tableAll; // before table, so a pack with a table has both
+        pack.table = table;
+        pack.fingerprint = fingerprint;
+        pack.error = null;
+    }
+
+    /** Worker thread. */
+    private void build(Pack pack, Source source, String fingerprint, String why) throws IOException {
+        long start = clock.getAsLong();
+        pack.reading = true;
+        pack.status = "getting the pack";
+        Path zip = packZip(pack.name, source);
+        pack.status = "getting the vanilla models";
+        Path jar = clientJar();
+        pack.status = "reading the inventory and models";
+        List<String> problems = new ArrayList<>();
+        List<Inventory.Entry> entries = Inventory.read(source.inventory(), problems::add);
+        TableBuilder.Result result;
+        try (Resources resources = Resources.layered(List.of(Resources.zip(zip), Resources.zip(jar)))) {
+            result = TableBuilder.build(pack.name, entries, new Models(resources), tableSettings(pack.name));
+        }
+        Table table = new Table(result.table()), tableAll = new Table(result.table(), true);
+        write(pack.name, result, problems, why, fingerprint);
+        publish(pack, table, tableAll, fingerprint);
+        pack.status = "ready, " + result.materials() + " terrain materials, " + result.others() + " more with blocks all (read "
+                + LocalDateTime.now().format(TIME) + ", " + why + ")";
+        log.info("Pack " + pack.name + ": " + result.materials() + " terrain materials, and " + result.others()
+                + " other blocks with pieces, from " + entries.size() + " inventory entries (" + why + ", "
+                + (clock.getAsLong() - start) + " ms). Details: tables/" + fileName(pack.name) + "-report.txt");
+        problems.forEach(p -> log.warning("Pack " + pack.name + " inventory: " + p));
+    }
+
+    /** A build that failed (an error as well as an exception): the previous table, if any, stays in use. */
+    private void fail(Pack pack, Throwable t) {
+        pack.error = t.getMessage() == null ? t.toString() : t.getMessage();
+        pack.failedAt = clock.getAsLong();
+        pack.status = pack.table == null ? "failed" : "failed to update; still using the previous table";
+        log.warning("Pack " + pack.name + ": " + pack.error);
+        if (!(t instanceof Exception)) {
+            log.warning("Pack " + pack.name + ": that was " + t.getClass().getName() + ", not an ordinary error.");
         }
     }
 
@@ -370,32 +441,36 @@ final class Packs {
     }
 
     private Path clientJar() throws IOException {
+        String clientJar = settings.clientJar();
         if (clientJar != null && !clientJar.isBlank()) {
             Path p = Path.of(clientJar);
             if (!Files.isRegularFile(p)) {
-                throw new IOException("vanilla.client-jar " + p + " doesn't exist");
+                throw new IOException("vanilla.clientJar " + p + " doesn't exist");
             }
             return p;
         }
-        if (!download) {
-            throw new IOException("downloads are off (packs.download); set vanilla.client-jar to the " + Bukkit.getMinecraftVersion() + " client jar");
+        if (!settings.download()) {
+            throw new IOException("downloads are off (SlabSmooth download setting); set vanilla.clientJar to the " + minecraftVersion + " client jar");
         }
-        return downloads.clientJar(Bukkit.getMinecraftVersion(), cacheDir);
+        return downloads.clientJar(minecraftVersion, cacheDir);
     }
 
-    private void write(String name, TableBuilder.Result result, List<String> problems, String why) throws IOException {
+    /** The table, its report and (last, so a half-written table is never trusted) the fingerprint it was built from. */
+    private void write(String name, TableBuilder.Result result, List<String> problems, String why, String fingerprint) throws IOException {
         Files.createDirectories(tablesDir);
+        Files.deleteIfExists(tablesDir.resolve(fileName(name) + ".fingerprint"));
         Files.writeString(tablesDir.resolve(fileName(name) + ".json"),
                 new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(result.table()), StandardCharsets.UTF_8);
         List<String> lines = new ArrayList<>();
         lines.add("SlabSmooth table for pack " + name + ", built " + LocalDateTime.now().format(TIME) + " (" + why + ").");
         lines.add("Each terrain material: its full blocks (inventory names), and where its pieces come from (same texture,");
-        lines.add("same name, or a similar look). Change it with packs.overrides in config.yml. Terrain is what the");
-        lines.add("terrain categories place, plus the blocks listed under packs.overrides." + name + ".terrain.");
+        lines.add("same name, or a similar look). Change it with the overrides in Architect's config.yml. Terrain is what the");
+        lines.add("terrain categories place, plus the blocks listed under the overrides for " + name + ".");
         lines.add("");
         lines.addAll(result.report());
         problems.forEach(p -> lines.add("inventory problem: " + p));
         Files.write(tablesDir.resolve(fileName(name) + "-report.txt"), lines, StandardCharsets.UTF_8);
+        Files.writeString(tablesDir.resolve(fileName(name) + ".fingerprint"), fingerprint, StandardCharsets.UTF_8);
     }
 
     /** A pack without a known checksum is cached under its URL (a new release has a new URL). */

@@ -212,7 +212,7 @@ final class WorldArea {
         }
         if (tiled) {
             return Tiles.smooth(blocks, height, length, width, palette, table, opts, editable, TILE,
-                    SlabSmoothPlugin.margin(opts), null);
+                    Tiles.margin(opts), null);
         }
         return Directional.smooth(blocks, height, length, width, palette, table, opts, editable, null);
     }

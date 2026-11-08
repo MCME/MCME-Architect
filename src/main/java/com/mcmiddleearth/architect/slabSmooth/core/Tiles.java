@@ -15,6 +15,12 @@ public final class Tiles {
     private Tiles() {
     }
 
+    /** Columns read around an edit, so the blur and neighbour terms see the terrain the edit blends into. */
+    public static int margin(Options opts) {
+        int blurOctants = (int) Math.ceil(2.5 * Math.max(opts.sigma * 2, 1e-6));
+        return (blurOctants + 1) / 2 + 1;
+    }
+
     public static Smoother.Result smooth(int[] blocks, int height, int length, int width, List<String> palette, Table table,
                                          Options opts, boolean[] editable, int tile, int margin, Consumer<String> log) {
         return smooth(blocks, height, length, width, palette, table, opts, editable, tile, margin, log, WorkBudget.NONE);
