@@ -27,7 +27,10 @@ final class ModuleSwitch {
     private final Map<String, Boolean> known = new ConcurrentHashMap<>();
     private final Set<String> reading = ConcurrentHashMap.newKeySet();
 
-    /** @param mainThread runs a task on the main thread, later */
+    /**
+     * @param mainThread runs a task on the main thread in a later tick, never the current one, as
+     *                   {@link SlabSmooth#nextTick} does
+     */
     ModuleSwitch(Executor mainThread) {
         this.mainThread = mainThread;
     }

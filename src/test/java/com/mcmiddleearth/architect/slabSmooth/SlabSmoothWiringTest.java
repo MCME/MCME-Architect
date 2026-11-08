@@ -8,8 +8,10 @@ import com.mcmiddleearth.pluginutil.message.MessageUtil;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -27,6 +29,7 @@ import org.mockbukkit.mockbukkit.world.WorldMock;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -205,6 +208,26 @@ class SlabSmoothWiringTest {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(e);
         }
+    }
+
+    /** Each call the scheduler was given: its method, its plugin and its delay. */
+    private static List<String> described(FakeScheduler paper) {
+        return paper.calls().stream().map(call -> call.method() + " for " + call.plugin().getName() + ", delay "
+                + call.delay()).toList();
+    }
+
+    /** A world whose chunks Paper is still reading: none of them is handed over during the test. */
+    private static World stillLoading() {
+        return (World) Proxy.newProxyInstance(SlabSmoothWiringTest.class.getClassLoader(), new Class<?>[] {World.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "getMinHeight" -> 0;
+                    case "getMaxHeight" -> 256;
+                    case "getChunkAtAsync" -> new CompletableFuture<Chunk>();
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "equals" -> proxy == args[0];
+                    case "toString" -> "a world whose chunks are loading";
+                    default -> throw new AssertionError("unexpected call: " + method);
+                });
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -406,6 +429,71 @@ class SlabSmoothWiringTest {
         server.getScheduler().performTicks(3);
         assertEquals(List.of(), told(builder), "a closed job says nothing");
         assertEquals(sets, worldEdit.sets.size(), "and writes nothing");
+    }
+
+    // Paper runs a task that a running task hands to runTask, with no delay, in the same tick, and a chunk finishes
+    // loading only once a tick has ended. On the server a read waiting for its chunks, and the job watching it, so ran
+    // again and again in one tick, until the watchdog stopped the server. MockBukkit runs every task a tick later at the
+    // earliest, which hid it; FakeScheduler runs tasks as Paper does, and stops a tick that would never end.
+    @Test
+    void mainThreadExecutorsRunInALaterTick() {
+        FakeScheduler paper = new FakeScheduler();
+        Runnable task = () -> {
+        };
+
+        SlabSmooth.nextTick(plugin, paper.scheduler).execute(task);
+
+        assertEquals(List.of(new FakeScheduler.Call("runTaskLater", plugin, task, 1L)), paper.calls(),
+                "runTaskLater with a delay of one tick, never runTask");
+    }
+
+    @Test
+    void theJobsTheSwitchAndThePrewarmRunTheirTasksInALaterTick() throws Exception {
+        FakeScheduler paper = new FakeScheduler();
+        PluginData.setModuleEnabled(world, Modules.SLAB_SMOOTH, true);
+        areas.hold = true; // the read waits for Paper, so the job watches it every tick
+        SlabSmooth.disable();
+
+        SlabSmooth.enable(plugin, paper.scheduler, () -> new SlabSmooth.Services(sources, worldEdit, areas));
+        assertEquals(1, paper.tick(), "the prewarm");
+        ModuleSwitch module = SlabSmooth.parts().module();
+        Thread elsewhere = new Thread(() -> module.answerIn(world), "fawe-like");
+        elsewhere.start();
+        elsewhere.join();
+        assertEquals(1, paper.tick(), "the switch's read of the world, asked for by a brush click");
+        awaitTable();
+        PlayerMock builder = op();
+        SlabSmooth.jobs().start(builder, world, box(), null, true, new Options());
+        for (int tick = 0; tick < 3; tick++) {
+            assertEquals(1, paper.tick(), "the job watches its read once a tick");
+        }
+        areas.finishLoading();
+        await(() -> paper.waiting() == 2, "the smoothing hands its result to the main thread");
+        assertEquals(2, paper.tick(), "the watch, which ends now, and the check, which writes");
+
+        List<String> said = told(builder);
+        assertEquals(1, said.size(), said.toString());
+        assertTrue(said.get(0).startsWith("info: "), said.get(0));
+        assertEquals(0, paper.waiting(), "the job has ended");
+        assertEquals(Collections.nCopies(7, "runTaskLater for " + plugin.getName() + ", delay 1"), described(paper),
+                "the prewarm, the switch's read, the watch four times and the check");
+    }
+
+    @Test
+    void theChunkReaderOnTheServerRunsInALaterTick() {
+        FakeScheduler paper = new FakeScheduler();
+        AreaSource chunks = SlabSmooth.Services.onTheServer(plugin, paper.scheduler).areas();
+
+        CompletableFuture<AreaSource.LoadedArea> reading = chunks.load(stillLoading(), BlockVector3.at(0, 60, 0),
+                BlockVector3.at(31, 70, 31));
+        for (int tick = 0; tick < 3; tick++) {
+            assertEquals(1, paper.tick(), "one run a tick while Paper reads the chunks");
+        }
+        reading.cancel(false);
+        assertEquals(1, paper.tick(), "the next run finds the read given up, and ends");
+
+        assertEquals(0, paper.waiting());
+        assertEquals(Collections.nCopies(4, "runTaskLater for " + plugin.getName() + ", delay 1"), described(paper));
     }
 
     @Test

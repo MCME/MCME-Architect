@@ -6,12 +6,15 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.TileState;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitScheduler;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
@@ -40,6 +43,12 @@ public final class SlabSmooth {
 
     /** What SlabSmooth works through. On the server: Architect's packs, WorldEdit and Paper's chunks; tests use fakes. */
     record Services(PackSources sources, SmoothWorldEdit worldEdit, AreaSource areas) {
+
+        /** The services on the server. The chunks are read on the main thread, in later ticks of scheduler. */
+        static Services onTheServer(JavaPlugin owner, BukkitScheduler scheduler) {
+            return new Services(new ArchitectPacks(owner, owner.getLogger()), new WorldEditSmoothing(),
+                    new ChunkAreaSource(owner, nextTick(owner, scheduler), System::nanoTime));
+        }
     }
 
     /** What a reload replaces, all at once. defaults: the options each player starts with. */
@@ -54,6 +63,8 @@ public final class SlabSmooth {
     // the packs' worker.
     private static volatile JavaPlugin plugin;
     private static Services services;
+    /** Runs a task on the main thread in a later tick, never the current one: {@link #nextTick}. */
+    private static Executor mainThread;
     private static ExecutorService worker;
     private static SmoothJobs jobs;
     private static volatile Parts parts;
@@ -63,27 +74,48 @@ public final class SlabSmooth {
     }
 
     public static void enable(JavaPlugin owner) {
-        enable(owner, () -> new Services(new ArchitectPacks(owner, owner.getLogger()), new WorldEditSmoothing(),
-                new ChunkAreaSource(owner, task -> Bukkit.getScheduler().runTask(owner, task), System::nanoTime)));
+        BukkitScheduler scheduler = Bukkit.getScheduler();
+        enable(owner, scheduler, () -> Services.onTheServer(owner, scheduler));
+    }
+
+    /** With the server's scheduler, and services a test gives. */
+    static void enable(JavaPlugin owner, Supplier<Services> given) {
+        enable(owner, Bukkit.getScheduler(), given);
     }
 
     /**
      * The services are made inside the guard: making them can be what fails. A RuntimeException or LinkageError while
      * starting switches SlabSmooth off and says why, once. Architect's own onEnable must never see it: Paper would then
      * disable all of Architect. Other errors, such as running out of memory, pass through on purpose.
+     *
+     * @param scheduler what the jobs, the module switch and the prewarm hand their main-thread tasks to, each for a
+     *                  later tick ({@link #nextTick})
      */
-    static void enable(JavaPlugin owner, Supplier<Services> given) {
+    static void enable(JavaPlugin owner, BukkitScheduler scheduler, Supplier<Services> given) {
         try {
-            start(owner, given.get());
+            start(owner, scheduler, given.get());
         } catch (RuntimeException | LinkageError e) {
             disable();
             switchOff(owner, "could not start", e);
         }
     }
 
-    private static void start(JavaPlugin owner, Services given) {
+    /**
+     * Runs a task on the main thread in a later tick, never the current one: the scheduler's runTaskLater, one tick
+     * later. Every main-thread task of SlabSmooth goes through one of these. Paper runs a task given no delay (runTask,
+     * or runTaskLater with 0) in the same tick when a running task hands it over, and Paper hands a chunk over only once
+     * a tick has ended. So a chunk read waiting for its chunks, or a job watching that read, would run again and again
+     * within one tick, until the watchdog stopped the server. MockBukkit runs every task a tick later at the earliest,
+     * which hides this; the tests check it on FakeScheduler, which runs tasks as Paper does.
+     */
+    static Executor nextTick(Plugin owner, BukkitScheduler scheduler) {
+        return task -> scheduler.runTaskLater(owner, task, 1L);
+    }
+
+    private static void start(JavaPlugin owner, BukkitScheduler scheduler, Services given) {
         plugin = owner;
         services = given;
+        mainThread = nextTick(owner, scheduler);
         worker = Executors.newSingleThreadExecutor(task -> { // a plain one: its thread starts with the first job
             Thread thread = new Thread(task, WORKER);
             thread.setDaemon(true);
@@ -92,8 +124,8 @@ public final class SlabSmooth {
         });
         parts = parts(owner, given);
         jobs = new SmoothJobs(owner.getLogger(), () -> parts.packs(), () -> parts.settings(), given.areas(),
-                given.worldEdit(), task -> Bukkit.getScheduler().runTask(owner, task), worker, System::nanoTime,
-                Bukkit::getPlayer, Bukkit::getWorld, SlabSmooth::fail);
+                given.worldEdit(), mainThread, worker, System::nanoTime, Bukkit::getPlayer, Bukkit::getWorld,
+                SlabSmooth::fail);
         problems = List.of();
         owner.getLogger().info(describe(parts));
         prewarmSoon(owner);
@@ -111,6 +143,7 @@ public final class SlabSmooth {
         Parts oldParts = parts;
         plugin = null;
         services = null;
+        mainThread = null;
         jobs = null;
         worker = null;
         parts = null;
@@ -237,7 +270,7 @@ public final class SlabSmooth {
                 given.sources(), new Packs.Versions(Bukkit.getMinecraftVersion(), owner.getPluginMeta().getVersion()),
                 SlabSmooth::validState, SlabSmooth::hasBlockEntity);
         PlayerOptions options = new PlayerOptions(defaults);
-        ModuleSwitch module = new ModuleSwitch(task -> Bukkit.getScheduler().runTask(owner, task));
+        ModuleSwitch module = new ModuleSwitch(mainThread);
         return new Parts(settings, defaults, packs, options, module,
                 new SmoothBrush.Context(packs, options, module, settings.maxBrushRadius(), SlabSmooth::fail));
     }
@@ -251,10 +284,11 @@ public final class SlabSmooth {
     /**
      * One tick from now, once every plugin and world is up, every loaded world's switch is read, on the main thread as
      * ModuleSwitch must read them, so a brush click from FAWE's thread knows them all. Then the default pack is read,
-     * unless no loaded world has SlabSmooth on.
+     * unless no loaded world has SlabSmooth on. Handed to mainThread, so a start or reload from inside a running task
+     * still waits for the next tick.
      */
     private static void prewarmSoon(JavaPlugin owner) {
-        Bukkit.getScheduler().runTask(owner, () -> {
+        mainThread.execute(() -> {
             Parts current = parts;
             if (current == null || !problems.isEmpty()) {
                 return;

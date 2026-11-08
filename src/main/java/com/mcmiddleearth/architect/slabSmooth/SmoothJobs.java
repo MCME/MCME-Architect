@@ -84,7 +84,10 @@ final class SmoothJobs {
     /**
      * @param tables     the packs' tables as they are now; asked once per job, when it starts
      * @param settings   the settings as they are now; asked once per job, when it starts
-     * @param mainThread runs a task on the main thread in a later tick; it may refuse once the plugin is disabled
+     * @param mainThread runs a task on the main thread in a later tick, never the current one, as
+     *                   {@link SlabSmooth#nextTick} does: the watch on a read hands itself on to it every tick until
+     *                   the read ends, so in the same tick it would never let the tick end. It may refuse once the
+     *                   plugin is disabled.
      * @param worker     runs the smoothing, and on FAWE the write
      * @param nanoClock  the clock the time limit and the job's time are measured on, such as System::nanoTime
      * @param online     the player with this id, or null if they aren't on this server; main thread

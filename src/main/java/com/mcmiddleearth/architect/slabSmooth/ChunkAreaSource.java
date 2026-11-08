@@ -43,7 +43,10 @@ final class ChunkAreaSource implements AreaSource {
     private final LongSupplier nanoClock;
 
     /**
-     * @param nextTick  runs a task on the main thread in a later tick, such as the scheduler's runTask
+     * @param nextTick  runs a task on the main thread in a later tick, never the current one, as
+     *                  {@link SlabSmooth#nextTick} does. A run that waits for chunks hands itself on to it, and Paper
+     *                  hands chunks over only once a tick has ended: run again in the same tick, as Paper runs a task
+     *                  given no delay, the load would never let its tick end.
      * @param nanoClock the clock the runs are timed on, such as System::nanoTime
      */
     ChunkAreaSource(Plugin plugin, Executor nextTick, LongSupplier nanoClock) {

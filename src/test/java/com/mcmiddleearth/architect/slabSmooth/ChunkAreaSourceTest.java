@@ -478,6 +478,57 @@ class ChunkAreaSourceTest {
         assertEquals(0, chunk(0, 0).tickets);
     }
 
+    // ---------------------------------------------------------------------------------------------------------
+    // On Paper, a task that a running task hands to runTask, with no delay, runs in the same tick, and Paper hands chunks
+    // over only between ticks. FakeScheduler runs tasks as Paper does; MockBukkit runs every task a tick later.
+
+    /** Paper hands each chunk of the area 0..31, 0..31 over only when the test runs what this returns, between ticks. */
+    private List<Runnable> chunksArriveBetweenTicks() {
+        List<Runnable> arrivals = new ArrayList<>();
+        for (FakeChunk chunk : chunksIn(0, 1, 0, 1)) {
+            CompletableFuture<Chunk> later = new CompletableFuture<>();
+            answers.put(key(chunk.x, chunk.z), later);
+            arrivals.add(() -> later.complete(chunk.chunk));
+        }
+        return arrivals;
+    }
+
+    // Handed on with no delay, as the wiring once did, a load waiting for its chunks runs again and again in its first
+    // tick, and the chunks can only arrive once that tick ends: on the server, the watchdog stopped it.
+    @Test
+    void aLoadHandedOnWithNoDelayNeverLetsItsTickEnd() {
+        FakeScheduler paper = new FakeScheduler();
+        chunksArriveBetweenTicks();
+        CompletableFuture<AreaSource.LoadedArea> load = new ChunkAreaSource(plugin,
+                task -> paper.scheduler.runTask(plugin, task), clock::get)
+                .load(world, BlockVector3.at(0, 0, 0), BlockVector3.at(31, 63, 31));
+
+        assertThrows(FakeScheduler.TickNeverEnds.class, paper::tick);
+        assertFalse(load.isDone(), "it was still waiting for the chunks");
+    }
+
+    @Test
+    void withSlabSmoothsNextTickALoadRunsOnceATickUntilTheChunksArrive() throws Exception {
+        FakeScheduler paper = new FakeScheduler();
+        List<Runnable> arrivals = chunksArriveBetweenTicks();
+        CompletableFuture<AreaSource.LoadedArea> load = new ChunkAreaSource(plugin,
+                SlabSmooth.nextTick(plugin, paper.scheduler), clock::get)
+                .load(world, BlockVector3.at(0, 0, 0), BlockVector3.at(31, 63, 31));
+
+        assertEquals(1, paper.tick(), "one run, which asks for the chunks, and the tick ends");
+        assertEquals(1, paper.tick(), "one run a tick while Paper reads them");
+        assertFalse(load.isDone());
+        arrivals.forEach(Runnable::run); // between ticks
+        assertEquals(1, paper.tick(), "the next run holds and copies them");
+
+        assertTrue(load.isDone());
+        assertEquals(0, paper.waiting(), "nothing is left for a later tick");
+        for (FakeChunk chunk : chunksIn(0, 1, 0, 1)) {
+            assertEquals(1, chunk.tickets, chunk.chunk.toString());
+        }
+        loaded(load).read();
+    }
+
     @Test
     void theAreaIsReadFromTheRightChunksWithinTheWorldsHeight() throws Exception {
         CompletableFuture<AreaSource.LoadedArea> load = load(-20, 60, -5, 5, 70, 12);
