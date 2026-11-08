@@ -208,6 +208,17 @@ class TableBuilderRulesTest {
         assertTrue(result.report().stream().anyMatch(line -> line.contains(unknown)), String.join("\n", result.report()));
     }
 
+    /** core knows nothing of the plugin's config: the plugin names its own keys above the report. */
+    @Test
+    void theReportNamesNoConfigKey() {
+        List<String> report = result(new TableBuilder.Settings(), List.of()).report();
+        String text = String.join("\n", report);
+        assertTrue(report.stream().anyMatch(line -> line.contains("bricks")), "the bricks are other blocks: " + text);
+        assertTrue(report.stream().anyMatch(line -> line.contains("the pack's terrain overrides")), text);
+        assertTrue(report.stream().noneMatch(line -> line.matches(".*overrides\\.\\w.*") || line.contains("config.yml")),
+                "no config key or file: " + text);
+    }
+
     @Test
     void aBrokenModelSkipsOnlyThatBlock() {
         TableBuilder.Result result = assertDoesNotThrow(() -> result(new TableBuilder.Settings(),

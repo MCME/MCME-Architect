@@ -341,7 +341,7 @@ class SmoothJobsTest {
         Function<Location, String> regions = location -> null;
         Boxes boxes = (world, min, max) -> Set.of();
         String normal = "Human";
-        IllegalStateException notReady;
+        Refusal notReady;
         final List<String> asked = new ArrayList<>();
 
         Tables with(String pack, Table terrainTable, Table allTable) {
@@ -377,7 +377,7 @@ class SmoothJobsTest {
             }
             Table table = (allBlocks ? all : terrain).get(choice.pack());
             if (table == null) {
-                throw new IllegalStateException("The " + choice.pack() + " pack (" + choice.why() + ") can't be used: no such pack");
+                throw new Refusal("The " + choice.pack() + " pack (" + choice.why() + ") can't be used: no such pack");
             }
             return table;
         }
@@ -598,7 +598,7 @@ class SmoothJobsTest {
         jobs.start(builder, world, selection(), null, true, new Options());
         PlayerMock other = newPlayer(world);
         for (PlayerMock who : List.of(builder, other)) {
-            IllegalStateException refused = assertThrows(IllegalStateException.class,
+            Refusal refused = assertThrows(Refusal.class,
                     () -> jobs.start(who, world, selection(), null, true, new Options()));
             assertEquals(SECOND_JOB, refused.getMessage());
         }
@@ -617,7 +617,7 @@ class SmoothJobsTest {
         int columns = hillside.width() * hillside.length(); // with the margin, the selection reads the whole scene
         settings = limits(columns - 1, SlabSmoothSettings.DEFAULTS.maxCells(), 120);
 
-        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, selection(), null, true, new Options()));
 
         assertEquals("Selection too big: " + columns + " columns with the margin, max " + (columns - 1) + ".", refused.getMessage());
@@ -634,7 +634,7 @@ class SmoothJobsTest {
         Region wide = new CuboidRegion(BlockVector3.at(-2_000_000_000, 60, 0), BlockVector3.at(2_000_000_000, 60, 0));
         long columns = (4_000_000_001L + 2 * margin) * (1 + 2 * margin);
 
-        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, wide, null, false, new Options()));
 
         assertEquals("Selection too big: " + columns + " columns with the margin, max " + settings.maxColumns() + ".",
@@ -650,7 +650,7 @@ class SmoothJobsTest {
         long cells = (long) side * side * (world.getMaxHeight() - world.getMinHeight());
         settings = limits(SlabSmoothSettings.DEFAULTS.maxColumns(), cells - 1, 120);
 
-        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, tall, null, true, new Options()));
 
         assertEquals("Selection too big: " + cells + " blocks with the margin, max " + (cells - 1) + ".", refused.getMessage());
@@ -665,7 +665,7 @@ class SmoothJobsTest {
     void aSelectionAboveTheWorldIsRefusedBeforeReading() {
         Region high = new CuboidRegion(BlockVector3.at(OX, 400, OZ), BlockVector3.at(OX + 10, 410, OZ + 10));
 
-        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, high, null, true, new Options()));
 
         assertEquals("The selection is outside the world's height.", refused.getMessage());
@@ -816,11 +816,23 @@ class SmoothJobsTest {
     void aLoadOfUngeneratedTerrainSaysWhere() throws Exception {
         String where = "Part of the area (chunk 6, -3) hasn't been generated; SlabSmooth only smooths existing terrain.";
         jobs.start(builder, world, selection(), null, true, new Options());
-        areas.pending.completeExceptionally(new IllegalArgumentException(where));
+        areas.pending.completeExceptionally(new Refusal(where));
         runOut();
 
         assertEquals(List.of("error: " + where), told(builder));
         assertNoStackTrace();
+    }
+
+    // An IllegalArgumentException from Paper, say, is no refusal: its words are for the log, not for the player.
+    @Test
+    void aLoadThatFailsUnexpectedlyIsLoggedAndNotShown() throws Exception {
+        IllegalArgumentException unexpected = new IllegalArgumentException("test: words for the log, not for a player");
+        jobs.start(builder, world, selection(), null, true, new Options());
+        areas.pending.completeExceptionally(unexpected);
+        runOut();
+
+        assertEquals(List.of("error: " + FAILED), told(builder));
+        assertLoggedWithItsCause(unexpected);
     }
 
     @Test
@@ -906,7 +918,7 @@ class SmoothJobsTest {
     void aSelectionAcrossABorderIsRefusedNamingThePacks() {
         tables.regions = l -> l.getBlockX() < OX + 20 ? "Dwarven" : null; // a Dwarven RP region over the west half
 
-        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, selection(), null, true, new Options()));
 
         assertEquals("This selection covers more than one pack (Dwarven, Human). Pick one with /sls pack <name>, or select less.",
@@ -922,7 +934,7 @@ class SmoothJobsTest {
         tables.regions = l -> l.getBlockX() >= OX + 17 && l.getBlockX() <= OX + 20 && l.getBlockZ() >= OZ + 17
                 && l.getBlockZ() <= OZ + 20 ? "Elvish" : null;
 
-        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, selection(), null, true, new Options()));
 
         assertEquals("This selection covers more than one pack (Elvish, Human). Pick one with /sls pack <name>, or select less.",
@@ -982,7 +994,7 @@ class SmoothJobsTest {
         try {
             useArchitectsRegions();
 
-            IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+            Refusal refused = assertThrows(Refusal.class,
                     () -> jobs.start(builder, world, selection, null, true, new Options()));
 
             assertEquals("This selection covers more than one pack (Dwarven, Human). Pick one with /sls pack <name>, or select less.",
@@ -1014,7 +1026,7 @@ class SmoothJobsTest {
         try {
             List<String> warnings = useArchitectsRegions();
 
-            IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+            Refusal refused = assertThrows(Refusal.class,
                     () -> jobs.start(builder, world, selection(), null, true, new Options()));
 
             assertEquals("This selection covers more than one pack (Dwarven, Human). Pick one with /sls pack <name>, or select less.",
@@ -1124,9 +1136,9 @@ class SmoothJobsTest {
 
     @Test
     void aPackBeingReadSaysTryAgainWithoutTakingTheLock() {
-        tables.notReady = new IllegalStateException("Reading the Human pack (default) for the first time; try again in a few seconds.");
+        tables.notReady = new Refusal("Reading the Human pack (default) for the first time; try again in a few seconds.");
 
-        IllegalStateException refused = assertThrows(IllegalStateException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, selection(), null, true, new Options()));
 
         assertSame(tables.notReady, refused);
@@ -1156,11 +1168,12 @@ class SmoothJobsTest {
     // ---------------------------------------------------------------------------------------------------------
     // Review focus
 
-    enum Refusal { AT_THE_FIRST_READ, AT_THE_FIRST_SET, AFTER_SOME_SETS, AT_CLOSE, AT_OPEN }
+    /** When FAWE refuses the edit. */
+    enum FaweRefusal { AT_THE_FIRST_READ, AT_THE_FIRST_SET, AFTER_SOME_SETS, AT_CLOSE, AT_OPEN }
 
     @ParameterizedTest
-    @EnumSource(Refusal.class)
-    void aRefusalFromFaweIsToldWithoutAStackTraceAndStillClosed(Refusal when) throws Exception {
+    @EnumSource(FaweRefusal.class)
+    void aRefusalFromFaweIsToldWithoutAStackTraceAndStillClosed(FaweRefusal when) throws Exception {
         worldEdit.offTheMainThread = true;
         BlockTarget.Refused refused = new BlockTarget.Refused("No allowed region");
         switch (when) {
@@ -1176,10 +1189,10 @@ class SmoothJobsTest {
         jobs.start(builder, world, selection(), null, true, new Options());
         finish();
 
-        boolean wrote = when == Refusal.AFTER_SOME_SETS || when == Refusal.AT_CLOSE;
+        boolean wrote = when == FaweRefusal.AFTER_SOME_SETS || when == FaweRefusal.AT_CLOSE;
         assertEquals(List.of("error: FastAsyncWorldEdit refused the edit: No allowed region"
                 + (wrote ? " //undo reverts what was written." : "")), told(builder));
-        assertEquals(when == Refusal.AT_OPEN ? 0 : 1, worldEdit.calls("close").size(), "an edit that was opened is closed, once");
+        assertEquals(when == FaweRefusal.AT_OPEN ? 0 : 1, worldEdit.calls("close").size(), "an edit that was opened is closed, once");
         assertNoStackTrace();
         assertFalse(jobs.running());
         assertEquals(1, areas.releases);
@@ -1222,7 +1235,7 @@ class SmoothJobsTest {
     // outside a shape that is narrower above or below.
     @Test
     void aShapeThatChangesWithHeightIsRefusedForTopSurfaces() {
-        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, ellipsoid(), null, true, topSurfaces()));
 
         assertEquals("With surfaces top, select a box, polygon or cylinder.", refused.getMessage());
@@ -1278,7 +1291,7 @@ class SmoothJobsTest {
         settings = limits(SlabSmoothSettings.DEFAULTS.maxColumns(), SlabSmoothSettings.DEFAULTS.maxCells(), 1);
         PlayerMock other = newPlayer(world);
 
-        IllegalStateException refused = assertThrows(IllegalStateException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(other, world, selection(), null, true, new Options()));
         assertEquals(SECOND_JOB, refused.getMessage());
         clock.addAndGet(10 * SECOND); // past the new time limit, well inside the one it started with
@@ -1404,7 +1417,7 @@ class SmoothJobsTest {
 
     @Test
     void aNamedPackThatIsGoneSaysSoBeforeReading() {
-        IllegalStateException refused = assertThrows(IllegalStateException.class,
+        Refusal refused = assertThrows(Refusal.class,
                 () -> jobs.start(builder, world, selection(), "Gone", true, new Options()));
 
         assertEquals("The Gone pack (set) can't be used: no such pack", refused.getMessage());

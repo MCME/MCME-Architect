@@ -19,6 +19,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -192,7 +194,7 @@ class SmoothBrushTest {
 
     @Test
     void aPackBeingReadSaysTryAgainInTheActionBar() {
-        tables.notReady = new IllegalStateException("The Human pack is still being read, try again in a moment.");
+        tables.notReady = new Refusal("The Human pack is still being read, try again in a moment.");
 
         assertNull(brush.plan(on, 0, 64, 0, 5));
         assertEquals("SlabSmooth: The Human pack is still being read, try again in a moment.", text(player.nextActionBar()));
@@ -404,13 +406,15 @@ class SmoothBrushTest {
         assertEquals("SlabSmooth has stopped working: ask an admin to check the server log.", text(player.nextActionBar()));
     }
 
-    @Test
-    void otherErrorsAreLeftAlone() {
-        IllegalArgumentException bug = new IllegalArgumentException("a bug");
+    @ParameterizedTest
+    @ValueSource(classes = {IllegalArgumentException.class, IllegalStateException.class})
+    void otherErrorsAreLeftAlone(Class<? extends RuntimeException> type) throws Exception {
+        RuntimeException bug = type.getConstructor(String.class).newInstance("a bug");
         tables.notReady = bug;
 
-        assertSame(bug, org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+        assertSame(bug, org.junit.jupiter.api.Assertions.assertThrows(type,
                 () -> brush.planReportingBreakage(on, 0, 64, 0, 5)), "WorldEdit reports those itself");
         assertEquals(List.of(), reported);
+        assertNull(player.nextActionBar(), "the player isn't shown its text");
     }
 }

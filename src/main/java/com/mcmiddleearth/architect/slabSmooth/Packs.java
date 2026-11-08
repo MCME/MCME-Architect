@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -181,13 +182,13 @@ final class Packs implements TableSource, Closeable {
             return t;
         }
         if (pack.building.get()) {
-            throw new IllegalStateException("Reading the " + pack.name + " pack (" + choice.why() + ") for the first time; try again in a few seconds.");
+            throw new Refusal("Reading the " + pack.name + " pack (" + choice.why() + ") for the first time; try again in a few seconds.");
         }
         t = allBlocks ? pack.tableAll : pack.table; // a build that ended just now has published its table before it cleared the flag
         if (t != null) {
             return t;
         }
-        throw new IllegalStateException("The " + pack.name + " pack (" + choice.why() + ") can't be used: " + pack.error);
+        throw new Refusal("The " + pack.name + " pack (" + choice.why() + ") can't be used: " + pack.error);
     }
 
     /** Status lines for /slabsmooth packs. */
@@ -210,6 +211,15 @@ final class Packs implements TableSource, Closeable {
      */
     boolean rebuild(String name) {
         return refresh(packs.computeIfAbsent(name, Pack::new), true);
+    }
+
+    /**
+     * Whether a check of that pack, and maybe a build, is under way: handed to the worker and not ended yet. A table is
+     * published a moment before its check ends, so tests wait for this before they start another.
+     */
+    boolean checking(String name) {
+        Pack pack = packs.get(name);
+        return pack != null && pack.building.get();
     }
 
     /** Starts reading the default pack (from its saved table if that is still good). */
@@ -459,8 +469,12 @@ final class Packs implements TableSource, Closeable {
         Path target = dir.resolve(fileName(name) + "-" + id.substring(0, Math.min(12, id.length())) + ".zip");
         if (!Files.isRegularFile(target)) {
             downloads.fetch(source.zip(), target, source.sha1());
-            try (Stream<Path> old = Files.list(dir)) { // older versions of this pack
-                for (Path p : old.filter(p -> p.getFileName().toString().startsWith(fileName(name) + "-") && !p.equals(target)).toList()) {
+            // older versions of this pack: its name, a dash and 12 hex digits, so not those of a pack whose name starts
+            // the same, such as Human-Night's for Human
+            Pattern older = Pattern.compile(Pattern.quote(fileName(name)) + "-[0-9a-f]{12}\\.zip");
+            try (Stream<Path> old = Files.list(dir)) {
+                for (Path p : old.filter(p -> !p.equals(target) && older.matcher(p.getFileName().toString()).matches())
+                        .toList()) {
                     Files.deleteIfExists(p);
                 }
             }
@@ -490,11 +504,15 @@ final class Packs implements TableSource, Closeable {
         Files.deleteIfExists(tablesDir.resolve(fileName(name) + ".fingerprint"));
         Files.writeString(tablesDir.resolve(fileName(name) + ".json"),
                 new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(result.table()), StandardCharsets.UTF_8);
+        String overrides = "slabSmooth.overrides." + name;
         List<String> lines = new ArrayList<>();
         lines.add("SlabSmooth table for pack " + name + ", built " + LocalDateTime.now().format(TIME) + " (" + why + ").");
         lines.add("Each terrain material: its full blocks (inventory names), and where its pieces come from (same texture,");
-        lines.add("same name, or a similar look). Change it with the overrides in Architect's config.yml. Terrain is what the");
-        lines.add("terrain categories place, plus the blocks listed under the overrides for " + name + ".");
+        lines.add("same name, or a similar look). Terrain is what the terrain categories place, plus the blocks");
+        lines.add("listed under " + overrides + ".terrain in Architect's config.yml: the pack's terrain overrides.");
+        lines.add("To change the table, list the pieces a block always uses under " + overrides + ".pairs,");
+        lines.add("or blocks never to use under " + overrides + ".exclude, then run /architect reload and");
+        lines.add("/sls packs rebuild " + name + ".");
         lines.add("");
         lines.addAll(result.report());
         problems.forEach(p -> lines.add("inventory problem: " + p));

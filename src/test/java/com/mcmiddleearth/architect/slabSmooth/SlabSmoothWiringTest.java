@@ -186,7 +186,7 @@ class SlabSmoothWiringTest {
         await(() -> {
             try {
                 return SlabSmooth.parts().packs().table(new Packs.Choice(FakePackSources.PACK, "default"), false) != null;
-            } catch (IllegalStateException notYet) {
+            } catch (Refusal notYet) {
                 return false;
             }
         }, "the table of the tiny pack: " + SlabSmooth.parts().packs().status());

@@ -30,7 +30,7 @@ interface TableSource {
      * The table to smooth with for a choice. allBlocks: with the other blocks that have pieces of their own, not just
      * terrain.
      *
-     * @throws IllegalStateException with a message for the player when there is no table yet
+     * @throws Refusal with a message for the player when there is no table yet
      */
     Table table(Packs.Choice choice, boolean allBlocks);
 }

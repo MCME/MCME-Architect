@@ -10,8 +10,7 @@ interface AreaSource {
 
     /**
      * Starts reading min..max (inclusive) of a world. Call on the main thread; the future completes on the main thread.
-     * It fails with an IllegalArgumentException, whose message is for the player, when part of the area hasn't been
-     * generated.
+     * It fails with a {@link Refusal}, whose message is for the player, when part of the area hasn't been generated.
      */
     CompletableFuture<LoadedArea> load(World world, BlockVector3 min, BlockVector3 max);
 

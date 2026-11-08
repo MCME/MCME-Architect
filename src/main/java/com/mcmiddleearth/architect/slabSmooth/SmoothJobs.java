@@ -115,8 +115,8 @@ final class SmoothJobs {
      * @param followsPlayer true for a selection, which is dropped if its player has left the world when it writes;
      *                      false for an area, which names its world
      * @param options       with surfaces top, region must be a box, polygon or cylinder: the same shape at every height
-     * @throws IllegalArgumentException or IllegalStateException, with a message for the player, when the job is refused;
-     *                                  nothing has been read then, and the lock isn't taken
+     * @throws Refusal with a message for the player when the job is refused; nothing has been read then, and the lock
+     *                 isn't taken
      */
     void start(Player player, World world, Region region, String namedPack, boolean followsPlayer, Options options) {
         Region shape = region.clone(); // the player may change their selection while this runs
@@ -127,22 +127,22 @@ final class SmoothJobs {
         if (!all && !(shape instanceof CuboidRegion || shape instanceof Polygonal2DRegion || shape instanceof CylinderRegion)) {
             // the top smoother finds a column's surface at any height and keeps to the selection per column, so the
             // shape must be the same at every height
-            throw new IllegalArgumentException("With surfaces top, select a box, polygon or cylinder.");
+            throw new Refusal("With surfaces top, select a box, polygon or cylinder.");
         }
         int margin = Tiles.margin(opts), up = all ? margin : 0;
         BlockVector3 lo = shape.getMinimumPoint(), hi = shape.getMaximumPoint();
         long columns = ((long) hi.x() - lo.x() + 1 + 2L * margin) * ((long) hi.z() - lo.z() + 1 + 2L * margin);
         if (columns > limits.maxColumns()) {
-            throw new IllegalArgumentException("Selection too big: " + columns + " columns with the margin, max "
+            throw new Refusal("Selection too big: " + columns + " columns with the margin, max "
                     + limits.maxColumns() + ".");
         }
         int bottom = world.getMinHeight(), top = world.getMaxHeight() - 1;
         long layers = Math.min((long) hi.y() + up, top) - Math.max((long) lo.y() - up, bottom) + 1;
         if (layers <= 0) {
-            throw new IllegalArgumentException("The selection is outside the world's height.");
+            throw new Refusal("The selection is outside the world's height.");
         }
         if (columns * layers > limits.maxCells()) {
-            throw new IllegalArgumentException("Selection too big: " + columns * layers + " blocks with the margin, max "
+            throw new Refusal("Selection too big: " + columns * layers + " blocks with the margin, max "
                     + limits.maxCells() + ".");
         }
         Packs.Choice choice = pack(source, player, world, shape, namedPack);
@@ -154,7 +154,7 @@ final class SmoothJobs {
         Job job = new Job(player, world, followsPlayer, shape, opts, all, columns, choice, table, tableAll, now,
                 now + TimeUnit.SECONDS.toNanos(limits.maxSeconds()));
         if (!busy.compareAndSet(false, true)) {
-            throw new IllegalStateException("Another smoothing is running; try again in a moment.");
+            throw new Refusal("Another smoothing is running; try again in a moment.");
         }
         current = job;
         job.begin(player, world, lo.add(-margin, -up, -margin), hi.add(margin, up, margin));
@@ -194,7 +194,7 @@ final class SmoothJobs {
                     hi.withY(Math.clamp(hi.y(), bottom, top)), player, source));
             packs.add(choice.pack());
             if (packs.size() > 1) {
-                throw new IllegalArgumentException("This selection covers more than one pack (" + String.join(", ", packs)
+                throw new Refusal("This selection covers more than one pack (" + String.join(", ", packs)
                         + "). Pick one with /sls pack <name>, or select less.");
             }
         }
@@ -290,7 +290,7 @@ final class SmoothJobs {
                             + " columns stopped: reading the area took longer than the time limit.");
                     tellError(TOO_MUCH_WORK);
                 });
-            } else if (cause instanceof IllegalArgumentException) { // part of the area hasn't been generated
+            } else if (cause instanceof Refusal && cause.getMessage() != null) { // such as ungenerated terrain
                 finish(() -> tellError(cause.getMessage()));
             } else {
                 fail(cause);

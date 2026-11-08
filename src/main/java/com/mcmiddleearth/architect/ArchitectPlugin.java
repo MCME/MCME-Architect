@@ -185,8 +185,8 @@ public class ArchitectPlugin extends JavaPlugin implements Debugable {
     public void onDisable() {
         GamemodeSwitcher.stopRunning(); // before teardown that may fail, and it cannot fail itself
         MapLayers.stop(); // first, so the budget saves its counts even if other teardown fails
+        SlabSmooth.disable(); // cannot fail: it stops its jobs and threads before the teardown below, which can
         BiomeTuning.disable();
-        SlabSmooth.disable(); // cannot fail: it stops its jobs and threads before the teardown below
         rpSwitchTask.cancel();
         RpManager.getDbConnector().disconnect();
         ItemBlockManager.stopEntityGlowTask();

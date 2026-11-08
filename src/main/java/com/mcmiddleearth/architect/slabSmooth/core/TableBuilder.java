@@ -253,7 +253,7 @@ public final class TableBuilder {
         if (!otherLines.isEmpty()) {
             report.add("");
             report.add("Other blocks with pieces of their own. Not terrain: smoothed only for builders who use /sls set blocks all.");
-            report.add("To make one terrain for everyone, list its key under packs.overrides." + name + ".terrain in config.yml.");
+            report.add("To make one terrain for everyone, add its key to the pack's terrain overrides.");
             report.add("");
             report.addAll(otherLines);
         }

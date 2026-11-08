@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -74,6 +75,7 @@ class ChunkAreaSourceTest {
         boolean generated = true; // false: Paper hands over null for it
         boolean loaded = true; // false: Paper has let it go
         Throwable copyFailure; // thrown by its copy, if set
+        Throwable removeFailure; // thrown when its ticket is removed, if set
 
         FakeChunk(int x, int z) {
             this.x = x;
@@ -94,6 +96,9 @@ class ChunkAreaSourceTest {
                 case "removePluginChunkTicket" -> {
                     assertSame(plugin, args[0]);
                     removed++;
+                    if (removeFailure != null) {
+                        throw removeFailure;
+                    }
                     yield true;
                 }
                 case "getChunkSnapshot" -> {
@@ -279,7 +284,7 @@ class ChunkAreaSourceTest {
         CompletableFuture<AreaSource.LoadedArea> load = load(0, 0, -64, 47, 63, -1);
         runTicks();
 
-        IllegalArgumentException refusal = assertInstanceOf(IllegalArgumentException.class, failure(load));
+        Refusal refusal = assertInstanceOf(Refusal.class, failure(load));
         assertTrue(refusal.getMessage().contains("hasn't been generated"), refusal.getMessage());
         assertTrue(refusal.getMessage().contains("1, -3"), refusal.getMessage());
     }
@@ -401,7 +406,7 @@ class ChunkAreaSourceTest {
 
         Throwable cause = failure(load);
         switch (failure) {
-            case NOT_GENERATED -> assertInstanceOf(IllegalArgumentException.class, cause);
+            case NOT_GENERATED -> assertInstanceOf(Refusal.class, cause);
             case LOAD_FAILED, COPY_FAILED -> assertSame(broken, cause);
             case COPY_OUT_OF_MEMORY -> assertSame(memory, cause);
             case CANCELLED -> {
@@ -418,6 +423,25 @@ class ChunkAreaSourceTest {
         assertTrue(held > 0, "it held some chunks before it went wrong");
     }
 
+    // Removing a ticket can fail, as in a world Paper has unloaded: on a load that failed, that failure is kept with the
+    // load's own, and nothing reaches the scheduler.
+    @Test
+    void aReleaseThatFailsAfterAFailedLoadEscapesNothing() {
+        requestCost = 6 * MS; // two calls per run, so it goes wrong part way through
+        copyCost = 6 * MS;
+        RuntimeException broken = new IllegalStateException("a broken region file");
+        RuntimeException gone = new IllegalStateException("test: the world is unloaded");
+        chunk(1, 1).copyFailure = broken;
+        chunksIn(0, 1, 0, 1).forEach(chunk -> chunk.removeFailure = gone);
+
+        CompletableFuture<AreaSource.LoadedArea> load = load(0, 0, 0, 31, 63, 31);
+        assertDoesNotThrow(this::runTicks, "nothing escapes a run");
+
+        Throwable cause = failure(load);
+        assertSame(broken, cause, "the load fails with what went wrong");
+        assertEquals(List.of(gone), List.of(cause.getSuppressed()), "and the failed release is kept with it");
+    }
+
     @Test
     void aChunkArrivingAfterAFailureIsNotHeld() {
         CompletableFuture<Chunk> late = new CompletableFuture<>();
@@ -426,7 +450,7 @@ class ChunkAreaSourceTest {
 
         CompletableFuture<AreaSource.LoadedArea> load = load(0, 0, 0, 31, 63, 31);
         runTicks();
-        assertInstanceOf(IllegalArgumentException.class, failure(load));
+        assertInstanceOf(Refusal.class, failure(load));
         late.complete(chunk(0, 0).chunk);
         runTicks();
 

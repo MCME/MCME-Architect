@@ -12,16 +12,16 @@ import java.util.function.Consumer;
 
 /**
  * The slabSmooth section of Architect's config.yml. A missing or bad value falls back to its default (a bad one is
- * reported); nothing here throws.
+ * reported), and a limit above its cap is cut to the cap (and reported); nothing here throws.
  *
  * @param defaultPack     the pack used where no RP region or player pack decides
  * @param download        whether packs and the vanilla client jar may be downloaded
  * @param clientJar       a vanilla client jar to read instead of downloading one; empty: download it
  * @param overrides       per pack: terrain and exclude lists (inventory keys) and the pieces a block always uses
- * @param maxBrushRadius  the largest brush radius
- * @param maxColumns      the most columns (with the margin) one selection may read
- * @param maxCells        the most blocks one smoothing may work on
- * @param maxSeconds      the longest one smoothing may run
+ * @param maxBrushRadius  the largest brush radius, at most {@link #MAX_BRUSH_RADIUS}
+ * @param maxColumns      the most columns (with the margin) one selection may read, at most {@link #MAX_COLUMNS}
+ * @param maxCells        the most blocks one smoothing may work on, at most {@link #MAX_CELLS}
+ * @param maxSeconds      the longest one smoothing may run, at most {@link #MAX_SECONDS}
  * @param defaults        option values every smoothing starts with, by option name
  */
 public record SlabSmoothSettings(String defaultPack, boolean download, List<String> terrainCategories,
@@ -32,6 +32,13 @@ public record SlabSmoothSettings(String defaultPack, boolean download, List<Stri
     /** What one pack's table gets on top of what its inventory says. */
     public record PackOverride(Set<String> terrain, Set<String> exclude, Map<String, List<String>> pairs) {
     }
+
+    /**
+     * The highest each limit may be set to. A brush click works on FAWE's thread on a cube about twice its radius
+     * across, a smoothing counts its blocks in an int, and a job holds the server's one lock while it runs.
+     */
+    static final int MAX_BRUSH_RADIUS = 32, MAX_COLUMNS = 1_048_576;
+    static final long MAX_CELLS = 32_000_000L, MAX_SECONDS = 600;
 
     public static final SlabSmoothSettings DEFAULTS = new SlabSmoothSettings("Human", true, List.of("Terra"),
             List.of("Plant", "Crop"), 10, "", Map.of(), 12, 65536, 8_000_000L, 120, Map.of());
@@ -81,22 +88,28 @@ public record SlabSmoothSettings(String defaultPack, boolean download, List<Stri
         String clientJar = section.getString("vanilla.clientJar", "");
         clientJar = clientJar == null ? "" : clientJar.trim();
         return new SlabSmoothSettings(defaultPack, download, terrain, plants, tolerance, clientJar, overrides(section, warnings),
-                (int) positive(section, "brush.maxRadius", DEFAULTS.maxBrushRadius, Integer.MAX_VALUE, warnings),
-                (int) positive(section, "selection.maxColumns", DEFAULTS.maxColumns, Integer.MAX_VALUE, warnings),
-                positive(section, "selection.maxCells", DEFAULTS.maxCells, Long.MAX_VALUE, warnings),
-                positive(section, "selection.maxSeconds", DEFAULTS.maxSeconds, Long.MAX_VALUE, warnings),
+                (int) limit(section, "brush.maxRadius", DEFAULTS.maxBrushRadius, MAX_BRUSH_RADIUS, warnings),
+                (int) limit(section, "selection.maxColumns", DEFAULTS.maxColumns, MAX_COLUMNS, warnings),
+                limit(section, "selection.maxCells", DEFAULTS.maxCells, MAX_CELLS, warnings),
+                limit(section, "selection.maxSeconds", DEFAULTS.maxSeconds, MAX_SECONDS, warnings),
                 defaults(section, warnings));
     }
 
-    /** A limit: missing falls back quietly; a number below 1, a fraction or text falls back with a warning. */
-    private static long positive(ConfigurationSection section, String path, long fallback, long max, Consumer<String> warnings) {
+    /**
+     * A limit: missing falls back quietly; a number below 1, a fraction or text falls back with a warning; a number
+     * above its cap is cut to the cap, with a warning.
+     */
+    private static long limit(ConfigurationSection section, String path, long fallback, long cap, Consumer<String> warnings) {
         if (!section.contains(path)) {
             return fallback;
         }
         Object value = section.get(path);
-        if (value instanceof Number n && n.doubleValue() == Math.rint(n.doubleValue()) && n.doubleValue() >= 1
-                && n.doubleValue() <= max) {
-            return n.longValue();
+        if (value instanceof Number n && n.doubleValue() == Math.rint(n.doubleValue()) && n.doubleValue() >= 1) {
+            if (n.doubleValue() <= cap) {
+                return n.longValue();
+            }
+            warnings.accept(path + " can be at most " + cap + ", not " + value + "; using " + cap);
+            return cap;
         }
         warnings.accept(path + " must be a whole number above 0, not '" + value + "'; using " + fallback);
         return fallback;

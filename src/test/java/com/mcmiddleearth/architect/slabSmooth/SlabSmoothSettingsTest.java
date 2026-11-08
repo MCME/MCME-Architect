@@ -2,6 +2,8 @@ package com.mcmiddleearth.architect.slabSmooth;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +65,7 @@ class SlabSmoothSettingsTest {
                   maxRadius: 20
                 selection:
                   maxColumns: 1000
-                  maxCells: 5000000000
+                  maxCells: 20000000
                   maxSeconds: 30
                 defaults:
                   band: 2
@@ -78,7 +80,7 @@ class SlabSmoothSettingsTest {
         assertEquals("C:/mc/client.jar", s.clientJar());
         assertEquals(20, s.maxBrushRadius());
         assertEquals(1000, s.maxColumns());
-        assertEquals(5_000_000_000L, s.maxCells());
+        assertEquals(20_000_000L, s.maxCells());
         assertEquals(30, s.maxSeconds());
         assertEquals(Map.of("band", "2", "sigma", "1.5", "mode", "cut"), s.defaults());
         assertTrue(warnings.isEmpty(), warnings.toString());
@@ -107,6 +109,38 @@ class SlabSmoothSettingsTest {
         assertTrue(warnings.stream().anyMatch(w -> w.contains("selection.maxCells")), warnings.toString());
         assertTrue(warnings.stream().anyMatch(w -> w.contains("selection.maxSeconds")), warnings.toString());
         assertTrue(warnings.stream().anyMatch(w -> w.contains("lookTolerance")), warnings.toString());
+    }
+
+    /** The limit at a key, as the settings have it. */
+    private static long limit(SlabSmoothSettings s, String path) {
+        return switch (path) {
+            case "brush.maxRadius" -> s.maxBrushRadius();
+            case "selection.maxColumns" -> s.maxColumns();
+            case "selection.maxCells" -> s.maxCells();
+            case "selection.maxSeconds" -> s.maxSeconds();
+            default -> throw new AssertionError(path);
+        };
+    }
+
+    // A brush click works on FAWE's thread, a smoothing counts its blocks in an int, and a job holds the server's one
+    // lock: a limit set higher than is safe is cut to its cap, and the log says so.
+    @ParameterizedTest(name = "{0} at most {1}")
+    @CsvSource({"brush.maxRadius, 32", "selection.maxColumns, 1048576", "selection.maxCells, 32000000",
+            "selection.maxSeconds, 600"})
+    void aLimitAboveItsCapIsCutToItAndWarns(String path, long cap) {
+        for (long tooHigh : new long[] {cap + 1, 5_000_000_000L}) {
+            List<String> warnings = new ArrayList<>();
+            YamlConfiguration config = new YamlConfiguration();
+            config.set(path, tooHigh);
+            assertEquals(cap, limit(SlabSmoothSettings.from(config, warnings::add), path), tooHigh + " is cut to the cap");
+            assertEquals(1, warnings.size(), warnings.toString());
+            assertTrue(warnings.get(0).contains(path) && warnings.get(0).contains("at most " + cap), warnings.get(0));
+        }
+        List<String> warnings = new ArrayList<>();
+        YamlConfiguration config = new YamlConfiguration();
+        config.set(path, cap);
+        assertEquals(cap, limit(SlabSmoothSettings.from(config, warnings::add), path), "the cap itself is allowed");
+        assertEquals(List.of(), warnings);
     }
 
     @Test

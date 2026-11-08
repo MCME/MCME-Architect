@@ -87,7 +87,7 @@ final class SmoothBrush implements Brush {
         try {
             table = current.tables().table(choice, everyBlock);
             tableAll = everyBlock || !mayUseAll ? table : current.tables().table(choice, true);
-        } catch (IllegalStateException e) {
+        } catch (Refusal e) { // a pack still being read, or one that can't be used
             tell(player, Component.text("SlabSmooth: " + e.getMessage(), NamedTextColor.RED));
             return null;
         }

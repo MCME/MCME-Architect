@@ -111,11 +111,15 @@ final class ChunkAreaSource implements AreaSource {
                     release();
                 }
             } catch (Throwable e) {
+                Throwable failure = e instanceof CompletionException && e.getCause() != null ? e.getCause() : e;
                 try {
                     release();
-                } finally {
-                    result.completeExceptionally(e instanceof CompletionException && e.getCause() != null ? e.getCause() : e);
+                } catch (Throwable releasing) { // as in a world Paper has unloaded; nothing may reach the scheduler
+                    if (releasing != failure) {
+                        failure.addSuppressed(releasing);
+                    }
                 }
+                result.completeExceptionally(failure);
             }
         }
 
@@ -131,7 +135,7 @@ final class ChunkAreaSource implements AreaSource {
                     int cx = cx0 + i / chunksZ, cz = cz0 + i % chunksZ;
                     Chunk chunk = request.join();
                     if (chunk == null) {
-                        throw new IllegalArgumentException("Part of the area (chunk " + cx + ", " + cz
+                        throw new Refusal("Part of the area (chunk " + cx + ", " + cz
                                 + ") hasn't been generated; SlabSmooth only smooths existing terrain.");
                     }
                     if (!world.isChunkLoaded(cx, cz)) {

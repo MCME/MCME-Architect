@@ -2,6 +2,7 @@ package com.mcmiddleearth.architect.slabSmooth;
 
 import com.mcmiddleearth.architect.slabSmooth.core.Table;
 import com.sk89q.worldedit.math.BlockVector3;
+import com.sun.net.httpserver.HttpServer;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Proxy;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +37,7 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -64,6 +68,8 @@ class PacksTest {
     private Logger log;
     private Fake fake;
     private final AtomicLong clock = new AtomicLong(1_000_000);
+    /** Whether packs may be downloaded; the client jar is always the one in the test folder. */
+    private boolean download;
 
     /** The made-up source of packs: one pack, Human, whose zip is already in the data folder. */
     private final class Fake implements PackSources {
@@ -73,6 +79,7 @@ class PacksTest {
         volatile CountDownLatch entered; // counted down when something waits at the gate
         volatile String region, current;
         volatile Set<String> inBoxes = Set.of();
+        volatile Source source; // null: no download address
 
         @Override
         public List<String> packs() {
@@ -101,7 +108,7 @@ class PacksTest {
         public Source source(String pack) {
             sourceThreads.add(Thread.currentThread().getName());
             sourceCalls.incrementAndGet();
-            return null;
+            return source;
         }
 
         @Override
@@ -214,7 +221,7 @@ class PacksTest {
     }
 
     private SlabSmoothSettings settings() {
-        return new SlabSmoothSettings("Human", false, List.of("Terra"), List.of("Plant", "Crop"), 10, jar.toString(),
+        return new SlabSmoothSettings("Human", download, List.of("Terra"), List.of("Plant", "Crop"), 10, jar.toString(),
                 Map.of(), 12, 65536, 8_000_000L, 120, Map.of());
     }
 
@@ -250,12 +257,26 @@ class PacksTest {
                 if (wanted.test(t)) {
                     return t;
                 }
-            } catch (IllegalStateException e) {
+            } catch (Refusal e) {
                 last = e.getMessage();
             }
             sleep(10);
         }
         return fail("no table after 30 s; " + last + "; " + packs.status() + "; " + warnings);
+    }
+
+    /**
+     * Waits until no check of Human is under way. The worker publishes a table, or says a build failed, a moment before
+     * its check ends, and a check under way keeps another from starting.
+     */
+    private void awaitCheckEnded(Packs packs) {
+        long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        while (packs.checking("Human")) {
+            if (System.nanoTime() > end) {
+                fail("the check of Human didn't end in 30 s: " + packs.status() + "; " + warnings);
+            }
+            sleep(5);
+        }
     }
 
     private static void sleep(long ms) {
@@ -297,7 +318,7 @@ class PacksTest {
         packs.status();
         packs.choose(null, null, null);
         assertEquals(0, workerThreads(), "after the constructor and calls that read nothing");
-        assertThrows(IllegalStateException.class, () -> packs.table(human(), false));
+        assertThrows(Refusal.class, () -> packs.table(human(), false));
         await(packs);
         assertEquals(1, workerThreads(), "started by the first table");
     }
@@ -321,9 +342,9 @@ class PacksTest {
     void theFirstAskSaysToTryAgain() {
         fake.gate = new CountDownLatch(1); // the worker has started but can't get on
         Packs packs = packs();
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> packs.table(human(), false));
+        Refusal e = assertThrows(Refusal.class, () -> packs.table(human(), false));
         assertTrue(e.getMessage().contains("try again"), e.getMessage());
-        assertThrows(IllegalStateException.class, () -> packs.table(human(), true), "still reading");
+        assertThrows(Refusal.class, () -> packs.table(human(), true), "still reading");
         fake.gate.countDown();
         Table table = await(packs);
         assertEquals(1, table.materials.size());
@@ -370,6 +391,17 @@ class PacksTest {
         }
         assertEquals(1, count(infos, "Pack Human: loaded the saved table"), infos.toString());
         assertEquals(1, second.table(human(), false).materials.size());
+    }
+
+    @Test
+    void theReportSaysWhichConfigKeysChangeTheTable() throws IOException {
+        await(packs());
+
+        String report = Files.readString(data.resolve("tables").resolve("Human-report.txt"), StandardCharsets.UTF_8);
+        for (String key : List.of("slabSmooth.overrides.Human.terrain", "slabSmooth.overrides.Human.exclude",
+                "slabSmooth.overrides.Human.pairs")) {
+            assertTrue(report.contains(key), key + " in\n" + report);
+        }
     }
 
     @Test
@@ -433,7 +465,7 @@ class PacksTest {
     void aRebuildSaysWhetherItStartedOne() throws Exception {
         Packs packs = packs();
         await(packs);
-        sleep(100); // the first check ends
+        awaitCheckEnded(packs);
         fake.gate = new CountDownLatch(1);
         fake.entered = new CountDownLatch(1);
         try {
@@ -452,6 +484,41 @@ class PacksTest {
 
         packs.close();
         assertFalse(packs.rebuild("Human"), "closed: nothing starts");
+    }
+
+    // Another pack's name can start with this one's, as Human-Night's does with Human: a download of Human deletes only
+    // Human's own older zips. The pack is served from this machine only.
+    @Test
+    void aDownloadDeletesOnlyThisPacksOlderZips() throws Exception {
+        byte[] served = Files.readAllBytes(zip);
+        Files.delete(zip); // not in the data folder, so it is downloaded
+        Path cache = data.resolve("cache").resolve("packs");
+        Files.createDirectories(cache);
+        Path night = Files.writeString(cache.resolve("Human-Night-0123456789ab.zip"), "another pack's zip");
+        Path older = Files.writeString(cache.resolve("Human-aaaaaaaaaaaa.zip"), "an older Human zip");
+        HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        server.createContext("/Human.zip", exchange -> {
+            exchange.sendResponseHeaders(200, served.length);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(served);
+            }
+        });
+        server.start();
+        try {
+            fake.source = new PackSources.Source("http://127.0.0.1:" + server.getAddress().getPort() + "/Human.zip", "");
+            download = true;
+
+            assertEquals(1, await(packs()).materials.size(), "built from the download");
+
+            assertTrue(Files.exists(night), "another pack's zip stays");
+            assertFalse(Files.exists(older), "this pack's older zip goes");
+            try (Stream<Path> files = Files.list(cache)) {
+                assertEquals(1, files.filter(p -> p.getFileName().toString().matches("Human-[0-9a-f]{12}\\.zip")).count(),
+                        "and the new one is there");
+            }
+        } finally {
+            server.stop(0);
+        }
     }
 
     @Test
@@ -496,7 +563,7 @@ class PacksTest {
     void changesAreLookedForAtMostEveryFiveSeconds() throws Exception {
         Packs packs = packs();
         Table old = await(packs);
-        sleep(100); // the first check ends
+        awaitCheckEnded(packs);
         addBricks();
 
         for (int i = 0; i < 5; i++) {
@@ -512,7 +579,7 @@ class PacksTest {
     void aFailedBuildKeepsTheOldTable() throws Exception {
         Packs packs = packs();
         Table old = await(packs);
-        sleep(100);
+        awaitCheckEnded(packs);
         Files.write(zip, new byte[] {1, 2, 3}); // not a zip
 
         clock.addAndGet(6_000);
@@ -543,18 +610,15 @@ class PacksTest {
             }
             return true;
         }, s -> false);
-        assertThrows(IllegalStateException.class, () -> packs.table(human(), false));
-        long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
-        while (!packs.status().get(0).contains("failed") && System.nanoTime() < end) {
-            sleep(10);
-        }
+        assertThrows(Refusal.class, () -> packs.table(human(), false));
+        awaitCheckEnded(packs); // the status shows the error once the check has ended
         assertTrue(packs.status().get(0).contains("failed"), packs.status().toString());
         assertTrue(packs.status().get(0).contains("test"), packs.status().toString());
-        IllegalStateException e = assertThrows(IllegalStateException.class, () -> packs.table(human(), false));
+        Refusal e = assertThrows(Refusal.class, () -> packs.table(human(), false));
         assertTrue(e.getMessage().contains("can't be used"), e.getMessage());
 
         explode.set(false);
-        sleep(100);
+        awaitCheckEnded(packs);
         packs.rebuild("Human");
 
         assertEquals(1, await(packs).materials.size(), "the worker thread survived the error");
@@ -577,7 +641,7 @@ class PacksTest {
                 try {
                     start.await();
                     packs.table(human(), false);
-                } catch (IllegalStateException | InterruptedException e) {
+                } catch (Refusal | InterruptedException e) {
                     // the first ask: try again
                 }
             });
@@ -660,14 +724,14 @@ class PacksTest {
     void anUnknownPackSaysSo() {
         Packs packs = packs();
         Packs.Choice choice = new Packs.Choice("Nobody", "set");
-        assertThrows(IllegalStateException.class, () -> packs.table(choice, false));
+        assertThrows(Refusal.class, () -> packs.table(choice, false));
         long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
         String message = "";
         while (!message.contains("can't be used") && System.nanoTime() < end) {
             sleep(10);
             try {
                 packs.table(choice, false);
-            } catch (IllegalStateException e) {
+            } catch (Refusal e) {
                 message = e.getMessage();
             }
         }

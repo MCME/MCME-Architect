@@ -8,7 +8,9 @@ import com.mcmiddleearth.architect.slabSmooth.core.Options;
 import com.mcmiddleearth.architect.slabSmooth.core.Tiles;
 import com.mcmiddleearth.pluginutil.message.MessageUtil;
 import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.math.Vector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.regions.EllipsoidRegion;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -37,6 +39,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
@@ -46,6 +49,9 @@ import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -237,7 +243,7 @@ class SlabSmoothCommandTest {
                 Packs packs = SlabSmooth.parts().packs();
                 Packs.Choice human = new Packs.Choice(FakePackSources.PACK, "default");
                 return packs.table(human, false) != null && packs.table(human, true) != null;
-            } catch (IllegalStateException notYet) {
+            } catch (Refusal notYet) {
                 return false;
             }
         }, "the tables of the tiny pack: " + SlabSmooth.parts().packs().status());
@@ -529,6 +535,58 @@ class SlabSmoothCommandTest {
         List<String> packs = answer(admin, "sls packs");
         assertEquals("info: Default pack: Human. The packs and their tables:", packs.get(0));
         assertTrue(packs.size() == 2 && packs.get(1).startsWith("info: Human: "), packs.toString());
+    }
+
+    // ---------------------------------------------------------------------------------------------------------
+    // Failures
+
+    static Stream<Arguments> unexpectedFailures() {
+        return Stream.of(arguments(new RuntimeException("test: a failure")),
+                arguments(new IllegalArgumentException("test: words for the log, not for a player")),
+                arguments(new IllegalStateException("test: words for the log, not for a player")),
+                arguments(new Refusal(null))); // a refusal must say why; without words it is a mistake
+    }
+
+    // Anything but SlabSmooth's own refusals, such as an exception from WorldEdit or Bukkit: the player is told that it
+    // went wrong, and the log gets it with its stack trace.
+    @ParameterizedTest
+    @MethodSource("unexpectedFailures")
+    void anUnexpectedFailureIsLoggedAndNotShown(RuntimeException failure) {
+        worldEdit.failures.put("selection", failure);
+        PlayerMock builder = player(world, SLAB_SMOOTH);
+        List<LogRecord> logged = Collections.synchronizedList(new ArrayList<>());
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                logged.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        plugin.getLogger().addHandler(handler);
+        try {
+            assertEquals(List.of("error: Something went wrong; the server log has the details."), answer(builder, "sls selection"));
+        } finally {
+            plugin.getLogger().removeHandler(handler);
+        }
+        assertEquals(1, logged.stream().filter(r -> r.getThrown() == failure && r.getLevel() == Level.WARNING).count(),
+                "one log line, with the stack trace: " + logged.stream().map(r -> r.getLevel() + " " + r.getMessage()).toList());
+    }
+
+    @Test
+    void theJobsOwnRefusalsReachThePlayerAsTheyAre() {
+        PlayerMock builder = player(world, SLAB_SMOOTH);
+        answer(builder, "sls set surfaces top");
+        worldEdit.selection = new EllipsoidRegion(BlockVector3.at(4, 60, 4), Vector3.at(4, 4, 4));
+
+        assertEquals(List.of("error: With surfaces top, select a box, polygon or cylinder."), answer(builder, "sls selection"));
+        assertEquals(List.of(), areas.loads());
     }
 
     // ---------------------------------------------------------------------------------------------------------

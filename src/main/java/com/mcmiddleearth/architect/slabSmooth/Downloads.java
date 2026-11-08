@@ -18,6 +18,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 /** Fetches files into SlabSmooth's cache folder, checked against their SHA-1 where one is known. Off the main thread. */
@@ -25,6 +29,8 @@ final class Downloads {
 
     /** Packs are ~20-50 MB and the client jar ~30 MB; anything far bigger is a wrong URL. */
     static final long MAX_BYTES = 512L * 1024 * 1024;
+    /** The longest one download may take, from asking to the last byte of the body. */
+    static final Duration TIME_LIMIT = Duration.ofMinutes(10);
     private static final String MANIFEST = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 
     /** Made on the first download (its selector thread runs from then on), so a server that never downloads has none. */
@@ -51,11 +57,21 @@ final class Downloads {
         }
     }
 
-    /** Downloads url to target (replacing it only once the download is complete and checked). */
+    /** Downloads url to target (replacing it only once the download is complete and checked), within TIME_LIMIT. */
     void fetch(String url, Path target, String sha1) throws IOException {
+        fetch(url, target, sha1, TIME_LIMIT);
+    }
+
+    /**
+     * As above, within limit: the answer and the whole body. The request's own timeout ends with the answer's headers,
+     * and a server that then stops sending would block the read, and with it the packs' worker, for ever. At the limit
+     * the body is closed, which ends the read: the download fails like any other, and its partial file is deleted.
+     */
+    void fetch(String url, Path target, String sha1, Duration limit) throws IOException {
+        long deadline = System.nanoTime() + limit.toNanos();
         Files.createDirectories(target.getParent());
         Path part = target.resolveSibling(target.getFileName() + ".part");
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(10))
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url)).timeout(limit) // until the answer's headers
                 .header("User-Agent", "MCME-Architect (Minecraft server plugin)").GET().build();
         HttpResponse<InputStream> response;
         try {
@@ -66,7 +82,17 @@ final class Downloads {
         }
         MessageDigest digest = sha1();
         long total = 0;
-        try (InputStream in = response.body(); OutputStream out = Files.newOutputStream(part)) {
+        InputStream body = response.body();
+        AtomicReference<InputStream> watched = new AtomicReference<>(body); // cleared when the read has ended
+        AtomicBoolean late = new AtomicBoolean();
+        CompletableFuture<Void> watch = CompletableFuture.runAsync(() -> {
+            InputStream unfinished = watched.getAndSet(null);
+            if (unfinished != null) {
+                late.set(true);
+                closeQuietly(unfinished);
+            }
+        }, CompletableFuture.delayedExecutor(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
+        try (InputStream in = body; OutputStream out = Files.newOutputStream(part)) {
             if (response.statusCode() != 200) {
                 throw new IOException("HTTP " + response.statusCode() + " for " + url);
             }
@@ -81,7 +107,10 @@ final class Downloads {
             }
         } catch (IOException e) {
             Files.deleteIfExists(part);
-            throw e;
+            throw late.get() ? new IOException("the download took longer than " + describe(limit) + ": " + url, e) : e;
+        } finally {
+            watched.set(null);
+            watch.cancel(false);
         }
         String got = HexFormat.of().formatHex(digest.digest());
         if (sha1 != null && !sha1.isEmpty() && !sha1.equalsIgnoreCase(got)) {
@@ -132,6 +161,18 @@ final class Downloads {
             Thread.currentThread().interrupt();
             throw new IOException("interrupted");
         }
+    }
+
+    private static void closeQuietly(InputStream in) {
+        try {
+            in.close();
+        } catch (IOException ignored) {
+            // the read it ends fails anyway, and says why
+        }
+    }
+
+    private static String describe(Duration limit) {
+        return limit.toMillis() % 60_000 == 0 ? limit.toMinutes() + " minutes" : limit.toMillis() + " ms";
     }
 
     static String sha1Of(Path file) throws IOException {

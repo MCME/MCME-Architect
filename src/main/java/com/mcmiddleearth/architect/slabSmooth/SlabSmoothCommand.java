@@ -71,8 +71,12 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
             } else {
                 PluginData.getMessageUtil().sendPlayerOnlyCommandError(cs);
             }
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            error(cs, e.getMessage()); // a refusal, worded for the player
+        } catch (Refusal e) {
+            if (e.getMessage() == null) {
+                failed(cs, label, args, e); // a refusal without words for the player is a mistake here
+            } else {
+                error(cs, e.getMessage()); // worded for the player
+            }
         } catch (IncompleteRegionException e) {
             error(cs, "Make a WorldEdit selection first (//wand, or //pos1 and //pos2).");
         } catch (InvalidToolBindException e) {
@@ -80,11 +84,16 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
         } catch (LinkageError e) { // WorldEdit or the server isn't what this was built for: SlabSmooth switches off
             error(cs, SmoothJobs.FAILED);
             SlabSmooth.fail(e);
-        } catch (RuntimeException e) {
-            error(cs, SmoothJobs.FAILED);
-            Log.warn(cs.getName() + ": /" + label + " " + String.join(" ", args) + " failed", e);
+        } catch (RuntimeException e) { // unexpected, such as an IllegalArgumentException from WorldEdit or Bukkit
+            failed(cs, label, args, e);
         }
         return true;
+    }
+
+    /** Something unexpected: the player is told it went wrong, and the log gets it with its stack trace. */
+    private static void failed(CommandSender cs, String label, String[] args, RuntimeException e) {
+        error(cs, SmoothJobs.FAILED);
+        Log.warn(cs.getName() + ": /" + label + " " + String.join(" ", args) + " failed", e);
     }
 
     /** The subcommand a first word names, sel being short for selection. */
@@ -108,7 +117,7 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
     private static void own(Player player, String sub, String[] args, SlabSmooth.Parts parts)
             throws IncompleteRegionException, InvalidToolBindException {
         if (EDITS.contains(sub) && !SlabSmooth.worldEditRunning()) {
-            throw new IllegalStateException("WorldEdit isn't available on this server, so SlabSmooth can't edit.");
+            throw new Refusal("WorldEdit isn't available on this server, so SlabSmooth can't edit.");
         }
         switch (sub) {
             case "selection" -> selection(player, parts);
@@ -166,11 +175,11 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
         int max = parts.settings().maxBrushRadius();
         double radius = args.length > 1 ? number(args[1]) : Math.min(5, max);
         if (!(radius >= 1 && radius <= max)) { // also NaN
-            throw new IllegalArgumentException("The radius must be a number from 1 to " + max + ".");
+            throw new Refusal("The radius must be a number from 1 to " + max + ".");
         }
         Material item = player.getInventory().getItemInMainHand().getType();
         if (item.isAir() || item.isBlock()) {
-            throw new IllegalArgumentException("Hold a tool or another item that isn't a block, such as a stick or a "
+            throw new Refusal("Hold a tool or another item that isn't a block, such as a stick or a "
                     + "feather, to bind the brush to.");
         }
         // WorldEdit checks the node at every click; the brush asks SlabSmooth for its settings at every click too
@@ -183,11 +192,11 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
     /** /sls area: a box by its corners, in the world named or the player's own, as a job that writes there. */
     private static void area(Player player, String[] args, SlabSmooth.Parts parts) {
         if (args.length < 7 || args.length > 9) {
-            throw new IllegalArgumentException(AREA_USAGE);
+            throw new Refusal(AREA_USAGE);
         }
         World world = args.length > 7 ? Bukkit.getWorld(args[7]) : player.getWorld();
         if (world == null) {
-            throw new IllegalArgumentException("There is no world named " + args[7] + ".");
+            throw new Refusal("There is no world named " + args[7] + ".");
         }
         requireOn(world, world.getName(), parts);
         long[] corners = new long[6];
@@ -195,19 +204,19 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
             try {
                 corners[i] = Long.parseLong(args[i + 1]);
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Coordinates are whole numbers; " + args[i + 1] + " isn't one.");
+                throw new Refusal("Coordinates are whole numbers; " + args[i + 1] + " isn't one.");
             }
         }
         // bounded first, so the margin read around the box can't overflow
         for (int i : new int[] {0, 2, 3, 5}) {
             if (Math.abs(corners[i]) > EDGE) {
-                throw new IllegalArgumentException("x and z must be between -" + EDGE + " and " + EDGE + ".");
+                throw new Refusal("x and z must be between -" + EDGE + " and " + EDGE + ".");
             }
         }
         int bottom = world.getMinHeight(), top = world.getMaxHeight() - 1;
         for (int i : new int[] {1, 4}) {
             if (corners[i] < bottom || corners[i] > top) {
-                throw new IllegalArgumentException("y must be between " + bottom + " and " + top + " in " + world.getName() + ".");
+                throw new Refusal("y must be between " + bottom + " and " + top + " in " + world.getName() + ".");
             }
         }
         UUID id = player.getUniqueId();
@@ -219,14 +228,18 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
 
     private static void set(Player player, String[] args, SlabSmooth.Parts parts) {
         if (args.length != 3) {
-            throw new IllegalArgumentException("Usage: /sls set <option> <value>; options: " + String.join(", ", Options.NAMES));
+            throw new Refusal("Usage: /sls set <option> <value>; options: " + String.join(", ", Options.NAMES));
         }
         // checked here, and again whenever a job starts or a brush clicks, as the node can be taken away meanwhile
         if (args[1].equals("blocks") && args[2].equals("all") && !PluginData.hasPermission(player, Permission.SLAB_SMOOTH_ALL_BLOCKS)) {
-            throw new IllegalArgumentException("blocks all needs a permission of its own; blocks terrain is yours to use.");
+            throw new Refusal("blocks all needs a permission of its own; blocks terrain is yours to use.");
         }
         UUID id = player.getUniqueId();
-        parts.options().set(id, args[1], args[2]);
+        try {
+            parts.options().set(id, args[1], args[2]);
+        } catch (IllegalArgumentException e) { // an unknown option or a bad value, worded for the player
+            throw new Refusal(e.getMessage());
+        }
         info(player, args[1] + " = " + parts.options().of(id).values().get(args[1]) + ", for your selections, areas and brush.");
     }
 
@@ -240,7 +253,7 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
 
     private static void pack(Player player, String[] args, SlabSmooth.Parts parts) {
         if (args.length > 2) {
-            throw new IllegalArgumentException("Usage: /sls pack [name|auto]");
+            throw new Refusal("Usage: /sls pack [name|auto]");
         }
         UUID id = player.getUniqueId();
         if (args.length > 1) {
@@ -259,11 +272,11 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
             return;
         }
         if (!args[1].equalsIgnoreCase("rebuild") || args.length > 3) {
-            throw new IllegalArgumentException("Usage: /sls packs [rebuild [pack]]");
+            throw new Refusal("Usage: /sls packs [rebuild [pack]]");
         }
         List<String> names = args.length > 2 ? List.of(knownPack(packs, args[2])) : packs.names();
         if (names.isEmpty()) {
-            throw new IllegalStateException("There are no packs to read: Architect's config.yml lists no ServerResourcePacks.");
+            throw new Refusal("There are no packs to read: Architect's config.yml lists no ServerResourcePacks.");
         }
         List<String> started = new ArrayList<>(), checking = new ArrayList<>();
         for (String name : names) {
@@ -281,7 +294,7 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
     /** Refuses an edit in a world where SlabSmooth is off. */
     private static void requireOn(World world, String name, SlabSmooth.Parts parts) {
         if (!parts.module().enabledIn(world)) {
-            throw new IllegalStateException("SlabSmooth is off in " + name + ".");
+            throw new Refusal("SlabSmooth is off in " + name + ".");
         }
     }
 
@@ -289,7 +302,7 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
     private static String knownPack(Packs packs, String name) {
         List<String> names = packs.names();
         return names.stream().filter(known -> known.equalsIgnoreCase(name)).findFirst().orElseThrow(
-                () -> new IllegalArgumentException("No pack " + name + "; packs: " + String.join(", ", names) + "."));
+                () -> new Refusal("No pack " + name + "; packs: " + String.join(", ", names) + "."));
     }
 
     private static double number(String text) {
