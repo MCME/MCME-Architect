@@ -7,6 +7,7 @@ import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.world.NullWorld;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -16,6 +17,7 @@ import org.mockbukkit.mockbukkit.ServerMock;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -119,6 +121,33 @@ class ArchitectPacksTest {
             RpManager.removeRegion("ArchitectPacksTest-region");
             RpManager.removeRegion("ArchitectPacksTest-nopack");
         }
+    }
+
+    // A region counts if its bounding box meets the box, in the same world, and it has a pack.
+    @Test
+    void aRegionWhoseBoxMissesTheSelectionIsNotCounted() {
+        World world = server.addSimpleWorld("regionboxes");
+        BlockVector3 min = BlockVector3.at(0, 60, 0), max = BlockVector3.at(10, 70, 10);
+        List<String> added = List.of(
+                region("ArchitectPacksTest-meets", "Elf", "regionboxes", BlockVector3.at(10, 0, -5), BlockVector3.at(20, 60, 3)),
+                region("ArchitectPacksTest-beside", "Dwarf", "regionboxes", BlockVector3.at(11, 60, 0), BlockVector3.at(20, 70, 10)),
+                region("ArchitectPacksTest-below", "Orc", "regionboxes", BlockVector3.at(0, 0, 0), BlockVector3.at(10, 59, 10)),
+                region("ArchitectPacksTest-elsewhere", "Mordor", "otherworld", BlockVector3.at(0, 60, 0), BlockVector3.at(10, 70, 10)),
+                region("ArchitectPacksTest-nopack", "", "regionboxes", BlockVector3.at(0, 60, 0), BlockVector3.at(10, 70, 10)));
+        try {
+            assertEquals(Set.of("Elf"), packs.regionPacksIn(world, min, max),
+                    "only the region whose box meets it, at its edge, in its world, with a pack");
+        } finally {
+            added.forEach(RpManager::removeRegion);
+        }
+    }
+
+    /** Adds a cuboid RP region with a pack, and gives its name. */
+    private static String region(String name, String pack, String world, BlockVector3 from, BlockVector3 to) {
+        RpRegion region = new RpRegion(name, new CuboidRegion(new NamedWorld(world), from, to));
+        region.setRp(pack);
+        RpManager.addRegion(region);
+        return name;
     }
 
     // An RP entry without a url makes RpManager.getRpForUrl throw; that must not reach an edit.

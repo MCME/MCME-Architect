@@ -8,7 +8,9 @@ import com.mcmiddleearth.architect.slabSmooth.core.Models;
 import com.mcmiddleearth.architect.slabSmooth.core.Resources;
 import com.mcmiddleearth.architect.slabSmooth.core.Table;
 import com.mcmiddleearth.architect.slabSmooth.core.TableBuilder;
+import com.sk89q.worldedit.math.BlockVector3;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.io.Closeable;
@@ -154,6 +156,11 @@ final class Packs implements TableSource, Closeable {
     @Override
     public String regionPack(Location location) {
         return sources.regionPack(location);
+    }
+
+    @Override
+    public Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max) {
+        return sources.regionPacksIn(world, min, max);
     }
 
     String defaultPack() {

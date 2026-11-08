@@ -180,14 +180,16 @@ final class SmoothJobs {
 
     /**
      * The named pack; else the pack the normal choice gives at the region's centre, as Toti's plugin did, if that is
-     * the only pack the region covers (Rule 9). The centre counts as one of the samples of its footprint.
+     * the only pack the region covers (Rule 9). The centre counts as one of the samples of its footprint. Like the
+     * other samples, it is looked at within the world's height: above or below the world there is no region.
      */
     private static Packs.Choice pack(TableSource source, Player player, World world, Region shape, String named) {
+        int bottom = world.getMinHeight(), top = world.getMaxHeight() - 1;
         Vector3 centre = shape.getCenter();
-        Packs.Choice choice = source.choose(player, new Location(world, centre.x(), centre.y(), centre.z()), named);
+        Packs.Choice choice = source.choose(player,
+                new Location(world, centre.x(), Math.clamp(centre.y(), bottom, top), centre.z()), named);
         if (named == null) {
             BlockVector3 lo = shape.getMinimumPoint(), hi = shape.getMaximumPoint();
-            int bottom = world.getMinHeight(), top = world.getMaxHeight() - 1; // samples above or below the world find no region
             Set<String> packs = new TreeSet<>(PackFootprint.packsIn(world, lo.withY(Math.clamp(lo.y(), bottom, top)),
                     hi.withY(Math.clamp(hi.y(), bottom, top)), player, source));
             packs.add(choice.pack());

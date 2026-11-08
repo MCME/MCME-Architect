@@ -2,7 +2,10 @@ package com.mcmiddleearth.architect.slabSmooth;
 
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.regions.Region;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -10,13 +13,16 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
  * The packs of this server, read from Architect itself: its server resource packs (names and download addresses from
- * config.yml), each pack's block inventory folder, and the pack of an RP region or a player. A lookup that fails
- * answers null (and says so once), so a broken RP config leaves the default pack in use instead of stopping an edit.
+ * config.yml), each pack's block inventory folder, the pack of an RP region or a player, and the packs of the RP regions
+ * in a box. A lookup that fails answers null (and says so once), so a broken RP config leaves the default pack in use
+ * instead of stopping an edit.
  */
 final class ArchitectPacks implements PackSources {
 
@@ -83,6 +89,36 @@ final class ArchitectPacks implements PackSources {
             warnOnce(e);
             return null;
         }
+    }
+
+    /**
+     * Every region with a pack whose bounding box meets the box, whatever its weight. For a region that isn't a box, or
+     * one that a heavier region covers, that can name a pack no block of the box gets, which errs towards refusing: the
+     * player can name a pack.
+     */
+    @Override
+    public Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max) {
+        try {
+            Set<String> packs = new TreeSet<>();
+            for (RpRegion region : RpManager.getRegions().values()) {
+                Region area = region.getRegion();
+                String pack = nameOrNull(region.getRp());
+                if (pack != null && area.getWorld().getName().equals(world.getName())
+                        && meet(area.getMinimumPoint(), area.getMaximumPoint(), min, max)) {
+                    packs.add(pack);
+                }
+            }
+            return packs;
+        } catch (RuntimeException e) {
+            warnOnce(e);
+            return null;
+        }
+    }
+
+    /** Whether the boxes lo..hi and min..max (inclusive) have a block in common. */
+    private static boolean meet(BlockVector3 lo, BlockVector3 hi, BlockVector3 min, BlockVector3 max) {
+        return lo.x() <= max.x() && hi.x() >= min.x() && lo.y() <= max.y() && hi.y() >= min.y()
+                && lo.z() <= max.z() && hi.z() >= min.z();
     }
 
     @Override

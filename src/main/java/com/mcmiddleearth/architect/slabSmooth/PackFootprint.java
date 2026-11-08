@@ -9,10 +9,14 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * The packs a box covers, so a job can refuse to cross a border between packs (Rule 9). At each sample point the pack
- * is the RP region's there, or where no region has one, what the normal choice gives (the player's pack, else the
- * default). The samples are the box's corners and points at most {@link #SAMPLE_STEP} blocks apart between them, on x
- * and z, on the box's lowest and highest layers.
+ * The packs a box covers, so a job can refuse to cross a border between packs (Rule 9): the pack of every RP region
+ * whose bounding box meets the box, and the pack at each sample point. At a sample point the pack is the RP region's
+ * there, or where no region has one, what the normal choice gives (the player's pack, else the default). The samples
+ * are the box's corners and points at most {@link #SAMPLE_STEP} blocks apart between them, on x and z, on the box's
+ * lowest and highest layers; the job adds the box's centre.
+ *
+ * <p>The regions' boxes find a region that no sample is in, such as one underground in a tall box, since RP regions can
+ * have a height. The samples decide whether the normal choice counts, which applies wherever no region is.
  */
 final class PackFootprint {
 
@@ -21,11 +25,18 @@ final class PackFootprint {
     private PackFootprint() {
     }
 
-    /** The packs at the samples of min..max (inclusive), in alphabetical order. Any thread the tables allow. */
+    /**
+     * The packs of the RP regions in min..max (inclusive) and at its samples, in alphabetical order. If the regions
+     * can't be read, the samples alone. Any thread the tables allow.
+     */
     static Set<String> packsIn(World world, BlockVector3 min, BlockVector3 max, Player player, TableSource tables) {
         int[] xs = samples(min.x(), max.x()), zs = samples(min.z(), max.z());
         int[] ys = min.y() == max.y() ? new int[] {min.y()} : new int[] {min.y(), max.y()};
         Set<String> packs = new TreeSet<>();
+        Set<String> inRegions = tables.regionPacksIn(world, min, max);
+        if (inRegions != null) { // null: the regions can't be read, which the lookup has said
+            packs.addAll(inRegions);
+        }
         String normal = null; // asked once at most: the player's pack walks the whole RP config
         for (int y : ys) {
             for (int x : xs) {

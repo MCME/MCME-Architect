@@ -1,8 +1,12 @@
 package com.mcmiddleearth.architect.slabSmooth;
 
 import com.mcmiddleearth.architect.slabSmooth.core.Table;
+import com.sk89q.worldedit.math.BlockVector3;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
+
+import java.util.Set;
 
 /** What the smoothing commands and brushes ask for their material tables. All of it is safe from any thread. */
 interface TableSource {
@@ -15,6 +19,12 @@ interface TableSource {
 
     /** The pack of the RP region at a location, or null. */
     String regionPack(Location location);
+
+    /**
+     * The packs of the RP regions in a world whose bounding boxes meet min..max (inclusive), or null if the regions
+     * can't be read.
+     */
+    Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max);
 
     /**
      * The table to smooth with for a choice. allBlocks: with the other blocks that have pieces of their own, not just

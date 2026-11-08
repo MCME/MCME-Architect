@@ -1,7 +1,9 @@
 package com.mcmiddleearth.architect.slabSmooth;
 
 import com.mcmiddleearth.architect.slabSmooth.core.Table;
+import com.sk89q.worldedit.math.BlockVector3;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +72,7 @@ class PacksTest {
         volatile CountDownLatch gate; // while set, asking for the inventory waits for it
         volatile CountDownLatch entered; // counted down when something waits at the gate
         volatile String region, current;
+        volatile Set<String> inBoxes = Set.of();
 
         @Override
         public List<String> packs() {
@@ -105,6 +108,11 @@ class PacksTest {
         public String regionPack(Location location) {
             regionCalls.incrementAndGet();
             return region;
+        }
+
+        @Override
+        public Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max) {
+            return inBoxes;
         }
 
         @Override
@@ -635,6 +643,8 @@ class PacksTest {
         assertEquals(new Packs.Choice("Orc", "set"), packs.choose(player, somewhere, "Orc"));
         assertEquals(new Packs.Choice("Elven", "region"), packs.choose(player, somewhere, null));
         assertEquals("Elven", packs.regionPack(somewhere));
+        fake.inBoxes = Set.of("Elven", "Orc");
+        assertEquals(Set.of("Elven", "Orc"), packs.regionPacksIn(null, BlockVector3.at(0, 0, 0), BlockVector3.at(1, 1, 1)));
         int calls = fake.regionCalls.get();
         assertEquals(new Packs.Choice("Dwarf", "your pack"), packs.choose(player, null, null), "a null location looks up no region");
         assertEquals(calls, fake.regionCalls.get());

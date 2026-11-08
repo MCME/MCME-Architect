@@ -6,6 +6,8 @@ import com.google.gson.JsonParser;
 import com.mcmiddleearth.architect.ArchitectPlugin;
 import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
+import com.mcmiddleearth.architect.serverResoucePack.RpManager;
+import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.mcmiddleearth.architect.slabSmooth.core.GoldenScenes;
 import com.mcmiddleearth.architect.slabSmooth.core.Options;
 import com.mcmiddleearth.architect.slabSmooth.core.Table;
@@ -325,10 +327,19 @@ class SmoothJobsTest {
         }
     }
 
-    /** Tables by pack, and RP regions by location. Where no region has a pack, the normal choice is the default, Human. */
+    /** The packs of the RP regions whose boxes meet a box; null: the regions can't be read. */
+    private interface Boxes {
+        Set<String> packsIn(World world, BlockVector3 min, BlockVector3 max);
+    }
+
+    /**
+     * Tables by pack, and RP regions by location and by box. Where no region has a pack, the normal choice is the
+     * default, Human.
+     */
     private static final class Tables implements TableSource {
         final Map<String, Table> terrain = new HashMap<>(), all = new HashMap<>();
         Function<Location, String> regions = location -> null;
+        Boxes boxes = (world, min, max) -> Set.of();
         String normal = "Human";
         IllegalStateException notReady;
         final List<String> asked = new ArrayList<>();
@@ -351,6 +362,11 @@ class SmoothJobsTest {
         @Override
         public String regionPack(Location location) {
             return regions.apply(location);
+        }
+
+        @Override
+        public Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max) {
+            return boxes.packsIn(world, min, max);
         }
 
         @Override
@@ -922,6 +938,112 @@ class SmoothJobsTest {
         assertEquals(List.of("Human"), tables.asked);
         assertFalse(worldEdit.sets.isEmpty());
         assertTrue(toldOnce(builder).contains(" [Human pack] "));
+    }
+
+    /** The RP regions of Architect itself, through ArchitectPacks, instead of the fake's; its warnings, for the test. */
+    private List<String> useArchitectsRegions() {
+        List<String> warnings = Collections.synchronizedList(new ArrayList<>());
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        log.addHandler(new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getLevel().intValue() >= Level.WARNING.intValue()) {
+                    warnings.add(record.getMessage());
+                }
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        });
+        ArchitectPacks architect = new ArchitectPacks(plugin, log);
+        tables.regions = architect::regionPack;
+        tables.boxes = architect::regionPacksIn;
+        return warnings;
+    }
+
+    // An RP region underground in the middle of a selection: above its lowest layer, below its highest and away from its
+    // centre, so no sample point is in it. A full-height //expand vert over a cave region is such a selection.
+    @Test
+    void aRegionInsideTheHeightRangeIsFound() {
+        CuboidRegion selection = selection();
+        BlockVector3 lo = selection.getMinimumPoint(), hi = selection.getMaximumPoint();
+        CuboidRegion area = new CuboidRegion(new NamedWorld(world.getName()), lo.add(3, 4, 3), lo.add(7, 7, 7));
+        assertTrue(area.getMinimumPoint().y() > lo.y() && area.getMaximumPoint().y() < hi.y(), "between the top and the bottom layer");
+        assertFalse(area.contains(selection.getCenter().toBlockPoint()), "away from the centre");
+        RpRegion cave = new RpRegion("SmoothJobsTest-cave", area);
+        cave.setRp("Dwarven");
+        RpManager.addRegion(cave);
+        try {
+            useArchitectsRegions();
+
+            IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+                    () -> jobs.start(builder, world, selection, null, true, new Options()));
+
+            assertEquals("This selection covers more than one pack (Dwarven, Human). Pick one with /sls pack <name>, or select less.",
+                    refused.getMessage());
+            assertEquals(0, areas.loads);
+            assertFalse(jobs.running());
+        } finally {
+            RpManager.removeRegion("SmoothJobsTest-cave");
+        }
+    }
+
+    // A region whose box can't be read: the regions' boxes count for nothing then, the samples still find what they can,
+    // and the log says why, once.
+    @Test
+    void aFailedRegionLookupFallsBackToTheSamples() {
+        RpRegion broken = new RpRegion("SmoothJobsTest-broken", selection()) {
+            @Override
+            public Region getRegion() {
+                throw new IllegalStateException("test: a region that can't be read");
+            }
+
+            @Override
+            public boolean contains(Location location) {
+                return location.getBlockX() < OX + 20; // the west half, where the samples find it
+            }
+        };
+        broken.setRp("Dwarven");
+        RpManager.addRegion(broken);
+        try {
+            List<String> warnings = useArchitectsRegions();
+
+            IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+                    () -> jobs.start(builder, world, selection(), null, true, new Options()));
+
+            assertEquals("This selection covers more than one pack (Dwarven, Human). Pick one with /sls pack <name>, or select less.",
+                    refused.getMessage());
+            assertEquals(1, warnings.size(), warnings.toString());
+            assertTrue(warnings.get(0).contains("test: a region that can't be read"), warnings.get(0));
+        } finally {
+            RpManager.removeRegion("SmoothJobsTest-broken");
+        }
+    }
+
+    // A selection reaching above the world, in a region over the world's whole height: its centre is above the world,
+    // where no region is, so it is looked at where the world ends, as the corners are.
+    @Test
+    void theCentreSampleIsClampedToTheWorld() throws Exception {
+        tables.with("Dwarven", handMade, handMade);
+        int top = world.getMaxHeight() - 1;
+        tables.regions = l -> l.getBlockY() <= top ? "Dwarven" : null;
+        tables.boxes = (in, min, max) -> Set.of("Dwarven");
+        CuboidRegion box = selection();
+        CuboidRegion tall = new CuboidRegion(box.getMinimumPoint(), box.getMaximumPoint().withY(1000));
+        assertTrue(tall.getCenter().y() > top, "the centre is above the world");
+
+        jobs.start(builder, world, tall, null, true, new Options());
+
+        assertEquals(List.of("Dwarven"), tables.asked, "the region's pack, from the centre where the world ends");
+        assertEquals(1, areas.loads);
+        finish();
+        assertTrue(toldOnce(builder).contains(" [Dwarven pack] "));
     }
 
     // ---------------------------------------------------------------------------------------------------------

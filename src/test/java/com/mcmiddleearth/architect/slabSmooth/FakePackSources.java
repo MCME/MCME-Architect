@@ -1,6 +1,8 @@
 package com.mcmiddleearth.architect.slabSmooth;
 
+import com.sk89q.worldedit.math.BlockVector3;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.io.IOException;
@@ -13,6 +15,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
@@ -139,6 +142,11 @@ final class FakePackSources implements PackSources {
     @Override
     public String regionPack(Location location) {
         return null;
+    }
+
+    @Override
+    public Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max) {
+        return Set.of();
     }
 
     @Override

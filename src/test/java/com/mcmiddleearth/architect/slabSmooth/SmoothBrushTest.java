@@ -7,6 +7,7 @@ import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.slabSmooth.core.Options;
 import com.mcmiddleearth.architect.slabSmooth.core.Table;
 import com.mcmiddleearth.architect.slabSmooth.core.TestTables;
+import com.sk89q.worldedit.math.BlockVector3;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Location;
@@ -28,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -62,6 +64,11 @@ class SmoothBrushTest {
         @Override
         public String regionPack(Location location) {
             return null;
+        }
+
+        @Override
+        public Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max) {
+            return Set.of();
         }
 
         @Override

@@ -39,14 +39,27 @@ class PackFootprintTest {
     private final World world = fake(World.class, "world");
     private final Player player = fake(Player.class, "player");
 
-    /** RP regions by location; outside them the normal choice is the player's pack, Dwarven. */
+    /**
+     * RP regions by location; outside them the normal choice is the player's pack, Dwarven. The packs of the regions
+     * whose boxes meet a box are given by the test: none unless it says.
+     */
     private final class Tables implements TableSource {
         final Function<Location, String> regions;
         final List<Location> samples = new ArrayList<>();
         int normalChoices;
+        /** What regionPacksIn answers; null: the regions can't be read. */
+        Set<String> inBoxes = Set.of();
+        final List<List<BlockVector3>> boxesAsked = new ArrayList<>();
 
         Tables(Function<Location, String> regions) {
             this.regions = regions;
+        }
+
+        @Override
+        public Set<String> regionPacksIn(World in, BlockVector3 min, BlockVector3 max) {
+            assertSame(world, in);
+            boxesAsked.add(List.of(min, max));
+            return inBoxes;
         }
 
         @Override
@@ -113,12 +126,36 @@ class PackFootprintTest {
 
     @Test
     void theLowestAndHighestLayersAreBothSampled() {
-        // a region over the top of the box only, as a 3D RP region can be
+        // a region over the top of the box only, as a 3D RP region can be; its box isn't given here, so only the
+        // samples can find it
         Tables tables = new Tables(l -> l.getBlockY() >= 90 ? "Human" : null);
 
         Set<String> packs = PackFootprint.packsIn(world, BlockVector3.at(0, 10, 0), BlockVector3.at(20, 90, 20), player, tables);
 
         assertEquals(Set.of(10, 90), tables.on(Location::getBlockY));
+        assertEquals(Set.of("Dwarven", "Human"), packs);
+    }
+
+    // A region inside a tall box, above its lowest layer and below its highest, is between the samples: its box finds it.
+    @Test
+    void theRegionsWhoseBoxesMeetTheBoxAreCountedWithTheSamples() {
+        Tables tables = new Tables(l -> null);
+        tables.inBoxes = Set.of("Elvish");
+        BlockVector3 min = BlockVector3.at(0, -64, 0), max = BlockVector3.at(20, 319, 20);
+
+        Set<String> packs = PackFootprint.packsIn(world, min, max, player, tables);
+
+        assertEquals(Set.of("Dwarven", "Elvish"), packs, "the region's pack, and the normal choice the samples found");
+        assertEquals(List.of(List.of(min, max)), tables.boxesAsked, "asked once, for the whole box");
+    }
+
+    @Test
+    void withoutTheRegionsBoxesTheSamplesStillCount() {
+        Tables tables = new Tables(l -> l.getBlockX() < 10 ? "Human" : null);
+        tables.inBoxes = null; // the regions can't be read
+
+        Set<String> packs = PackFootprint.packsIn(world, BlockVector3.at(0, 0, 0), BlockVector3.at(20, 10, 20), player, tables);
+
         assertEquals(Set.of("Dwarven", "Human"), packs);
     }
 
