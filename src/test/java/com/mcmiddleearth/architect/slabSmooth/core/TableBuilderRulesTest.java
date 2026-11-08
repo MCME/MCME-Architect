@@ -240,12 +240,51 @@ class TableBuilderRulesTest {
         com.google.gson.JsonObject spec = result(settings, List.of(
                 entry("mushroom_head", "Plant", "BLOCK", Map.of("blockData", "minecraft:player_head[rotation=4]"), ""),
                 entry("pot", "Plant", "VANILLA", Map.of("block", "minecraft:decorated_pot"), ""))).table();
-        List<String> decor = new ArrayList<>();
-        spec.getAsJsonArray("decor").forEach(s -> decor.add(s.getAsString()));
+        List<String> decor = decor(spec);
         assertFalse(decor.contains("minecraft:player_head[rotation=4]"), decor.toString());
         assertFalse(decor.contains("minecraft:decorated_pot"), decor.toString());
         assertTrue(decor.contains("minecraft:poppy"), "the other plants stay");
         assertEquals(Table.OTHER, new Table(spec).kind3("minecraft:player_head[rotation=4]").category());
+    }
+
+    /** They only grow in water and have no waterlogged property: removing one as a plant would leave air in water. */
+    @Test
+    void aWaterPlantIsNeverDecor() {
+        List<String> water = List.of("minecraft:seagrass", "minecraft:kelp[age=3]", "minecraft:tall_seagrass[half=lower]");
+        List<String> decor = decor(result(new TableBuilder.Settings(), List.of(
+                entry("seagrass", "Plant", "VANILLA", Map.of("block", water.get(0)), ""),
+                entry("kelp", "Plant", "BLOCK", Map.of("blockData", water.get(1)), ""),
+                entry("tall_seagrass", "Crop", "BLOCK", Map.of("blockData", water.get(2)), ""))).table());
+        for (String state : water) {
+            assertFalse(decor.contains(state), state + " in " + decor);
+        }
+        assertTrue(decor.contains("minecraft:poppy"), "the other plants stay");
+    }
+
+    /** The server's block entity check (Bukkit.createBlockData) throws for a state it doesn't know, so it is only asked
+     *  about states the server knows. */
+    @Test
+    void aPlantTheServerDoesNotKnowIsNeverDecor() {
+        String unknown = "minecraft:popy";
+        TableBuilder.Settings settings = new TableBuilder.Settings();
+        settings.validState = state -> !BlockStates.parse(state).name().equals(unknown);
+        settings.hasBlockEntity = state -> {
+            if (BlockStates.parse(state).name().equals(unknown)) {
+                throw new IllegalArgumentException("Could not parse data: " + state);
+            }
+            return false;
+        };
+        TableBuilder.Result result = assertDoesNotThrow(() -> result(settings, List.of(
+                entry("typo", "Plant", "BLOCK", Map.of("blockData", unknown), ""))));
+        List<String> decor = decor(result.table());
+        assertFalse(decor.contains(unknown), decor.toString());
+        assertTrue(decor.contains("minecraft:poppy"), "the other plants stay");
+    }
+
+    private static List<String> decor(com.google.gson.JsonObject spec) {
+        List<String> decor = new ArrayList<>();
+        spec.getAsJsonArray("decor").forEach(s -> decor.add(s.getAsString()));
+        return decor;
     }
 
     /** Names of the materials that have the state as a full block or a piece. */

@@ -50,10 +50,12 @@ public final class TableBuilder {
         public Map<String, List<String>> pairs = Map.of();
         /** Inventory keys of full blocks that are terrain although their category isn't a terrain category. */
         public Set<String> terrain = Set.of();
-        /** Whether the server knows a block state. One it doesn't is left out of the table, with a line in the report. */
+        /** Whether the server knows a block state. One it doesn't is left out of the table, before hasBlockEntity or
+         *  the models are asked about it: a block or a piece with a line in the report, a plant without one. */
         public Predicate<String> validState = state -> true;
-        /** Whether a block state has a block entity (a barrel, a chest, a head). Such a full block never becomes a
-         *  material, and such a plant is never removed with the plants; such a piece (a comparator slab) is still used. */
+        /** Whether a block state has a block entity (a barrel, a chest, a head); only asked about states that passed
+         *  validState. Such a full block never becomes a material, and such a plant is never removed with the plants;
+         *  such a piece (a comparator slab) is still used. */
         public Predicate<String> hasBlockEntity = state -> false;
     }
 
@@ -270,7 +272,9 @@ public final class TableBuilder {
         }
         JsonArray decorJson = new JsonArray();
         decor.stream().map(BlockStates::normalize).filter(s -> !terrainStates.contains(s))
-                .filter(s -> !settings.hasBlockEntity.test(s)) // a head or a pot: removing it like a plant would lose it
+                .filter(s -> !Table.inWater(BlockStates.parse(s))) // seagrass, kelp: removing it would leave air in water
+                // unknown to the server, so never in the world; or a head or a pot, which removing would lose
+                .filter(s -> settings.validState.test(s) && !settings.hasBlockEntity.test(s))
                 .distinct().sorted().forEach(decorJson::add);
 
         JsonObject table = new JsonObject();

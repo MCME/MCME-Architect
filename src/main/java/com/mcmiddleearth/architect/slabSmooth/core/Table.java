@@ -109,7 +109,7 @@ public final class Table {
 
     private Kind3 classify3(String state) {
         BlockStates.Parsed parsed = BlockStates.parse(state);
-        if (waterlogged(parsed)) {
+        if (inWater(parsed)) {
             return new Kind3(OTHER, -1, 0);
         }
         Kind kind = kind(state);
@@ -148,7 +148,7 @@ public final class Table {
         BlockStates.Parsed parsed = BlockStates.parse(state);
         String id = parsed.name();
         Map<String, String> props = parsed.props();
-        if (waterlogged(parsed)) {
+        if (inWater(parsed)) {
             return OTHER_KIND;
         }
         if (air.contains(id)) {
@@ -189,10 +189,17 @@ public final class Table {
         return OTHER_KIND;
     }
 
-    /** A waterlogged block is left alone: any piece or air put in its place would lose the water, and a pattern
-     *  without properties (a coral, a stair block) matches it too. */
-    private static boolean waterlogged(BlockStates.Parsed parsed) {
-        return "true".equals(parsed.props().get("waterlogged"));
+    /** Water, and blocks that only exist in water but have no waterlogged property. */
+    private static final Set<String> WATER = Set.of("minecraft:water", "minecraft:bubble_column", "minecraft:seagrass",
+            "minecraft:tall_seagrass", "minecraft:kelp", "minecraft:kelp_plant");
+
+    /**
+     * A block in water is left alone: any piece or air put in its place would lose the water. That is a waterlogged
+     * state (a pattern without properties, such as a coral or a stair block, matches it too), water, and the blocks
+     * that only exist in water, such as seagrass and kelp.
+     */
+    static boolean inWater(BlockStates.Parsed parsed) {
+        return "true".equals(parsed.props().get("waterlogged")) || WATER.contains(parsed.name());
     }
 
     private static boolean matches(String id, Map<String, String> props, BlockStates.Parsed pattern) {

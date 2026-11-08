@@ -1,7 +1,10 @@
 package com.mcmiddleearth.architect.slabSmooth.core;
 
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -28,5 +31,17 @@ class TableSafetyTest {
     void waterloggedCoralIsLeftAlone() {
         assertEquals(Table.OTHER, table.kind("minecraft:brain_coral[waterlogged=true]").category());
         assertEquals(Table.DECOR, table.kind("minecraft:brain_coral[waterlogged=false]").category());
+    }
+
+    /** They only grow in water and have no waterlogged property: removing one as a plant would leave air in water. */
+    @Test
+    void waterPlantsAreLeftAlone() {
+        Table plants = new Table(JsonParser.parseString("""
+                {"decor": ["minecraft:seagrass", "minecraft:kelp", "minecraft:tall_seagrass"], "materials": {}}""")
+                .getAsJsonObject());
+        for (String state : List.of("minecraft:seagrass", "minecraft:kelp", "minecraft:tall_seagrass[half=lower]")) {
+            assertEquals(Table.OTHER, plants.kind(state).category(), state);
+            assertEquals(Table.OTHER, plants.kind3(state).category(), state);
+        }
     }
 }
