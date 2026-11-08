@@ -68,8 +68,11 @@ final class SmoothBrush implements Brush {
             return null;
         }
         Player player = online.apply(owner);
-        if (!current.module().enabledIn(world)) {
-            tell(player, Component.text("SlabSmooth is off in this world.", NamedTextColor.RED));
+        ModuleSwitch.Answer module = current.module().answerIn(world);
+        if (module != ModuleSwitch.Answer.ON) {
+            // not read yet: FAWE's thread can't read the switch, and the main thread reads it by the next click
+            tell(player, Component.text(module == ModuleSwitch.Answer.OFF ? "SlabSmooth is off in this world."
+                    : "SlabSmooth is still checking this world; click again.", NamedTextColor.RED));
             return null;
         }
         Options opts = current.options().of(owner);

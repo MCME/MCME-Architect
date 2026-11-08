@@ -32,6 +32,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
@@ -307,6 +309,32 @@ class SlabSmoothWiringTest {
                 "the default pack is read without anyone asking: " + SlabSmooth.parts().packs().status());
         assertFalse(sources.asked.isEmpty());
         assertTrue(sources.asked.stream().allMatch(call -> call.endsWith(" on " + PACKS_WORKER)), sources.asked.toString());
+    }
+
+    // A brush's first click comes from FAWE's thread, which can't read a world's switch itself. So one tick after a start
+    // or a reload, every loaded world's switch is read, not only those up to the first one that is on.
+    @Test
+    void oneTickAfterStartEveryLoadedWorldIsKnown() throws Exception {
+        for (String name : List.of("wiring-second", "wiring-third")) {
+            if (server.getWorld(name) == null) {
+                WorldMock added = new WorldMock(Material.STONE, -64, 320, 0);
+                added.setName(name);
+                server.addWorld(added);
+            }
+        }
+        PluginData.setModuleEnabled(world, Modules.SLAB_SMOOTH, true); // the first world the server lists
+
+        useFakes();
+        server.getScheduler().performOneTick();
+
+        ModuleSwitch module = SlabSmooth.parts().module();
+        Map<String, ModuleSwitch.Answer> known = new TreeMap<>();
+        Thread elsewhere = new Thread(() -> server.getWorlds().forEach(w -> known.put(w.getName(), module.answerIn(w))),
+                "fawe-like");
+        elsewhere.start();
+        elsewhere.join();
+        assertEquals(Map.of("world", ModuleSwitch.Answer.ON, "wiring-second", ModuleSwitch.Answer.OFF,
+                "wiring-third", ModuleSwitch.Answer.OFF), known);
     }
 
     @Test

@@ -249,8 +249,9 @@ public final class SlabSmooth {
     }
 
     /**
-     * One tick from now, once every plugin and world is up, the default pack is read, unless no loaded world has
-     * SlabSmooth on. The worlds' switches are read on the main thread, as ModuleSwitch must read them.
+     * One tick from now, once every plugin and world is up, every loaded world's switch is read, on the main thread as
+     * ModuleSwitch must read them, so a brush click from FAWE's thread knows them all. Then the default pack is read,
+     * unless no loaded world has SlabSmooth on.
      */
     private static void prewarmSoon(JavaPlugin owner) {
         Bukkit.getScheduler().runTask(owner, () -> {
@@ -259,11 +260,12 @@ public final class SlabSmooth {
                 return;
             }
             try {
+                boolean anyOn = false;
                 for (World world : Bukkit.getWorlds()) {
-                    if (current.module().enabledIn(world)) {
-                        current.packs().prewarm();
-                        return;
-                    }
+                    anyOn |= current.module().enabledIn(world); // every world, not only up to the first that is on
+                }
+                if (anyOn) {
+                    current.packs().prewarm();
                 }
             } catch (LinkageError e) {
                 fail(e);

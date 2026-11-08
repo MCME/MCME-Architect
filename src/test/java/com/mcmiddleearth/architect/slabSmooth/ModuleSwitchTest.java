@@ -18,8 +18,11 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static com.mcmiddleearth.architect.slabSmooth.ModuleSwitch.Answer.NOT_READ_YET;
+import static com.mcmiddleearth.architect.slabSmooth.ModuleSwitch.Answer.OFF;
+import static com.mcmiddleearth.architect.slabSmooth.ModuleSwitch.Answer.ON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -49,9 +52,9 @@ class ModuleSwitchTest {
     }
 
     /** Asks from a thread that isn't the main one. */
-    private static boolean askElsewhere(ModuleSwitch module, World world) throws InterruptedException {
-        AtomicBoolean answer = new AtomicBoolean();
-        Thread thread = new Thread(() -> answer.set(module.enabledIn(world)), "fawe-like");
+    private static ModuleSwitch.Answer askElsewhere(ModuleSwitch module, World world) throws InterruptedException {
+        AtomicReference<ModuleSwitch.Answer> answer = new AtomicReference<>();
+        Thread thread = new Thread(() -> answer.set(module.answerIn(world)), "fawe-like");
         thread.start();
         thread.join();
         return answer.get();
@@ -105,27 +108,27 @@ class ModuleSwitchTest {
         mainQueue.clear();
 
         PluginData.setModuleEnabled(world, Modules.SLAB_SMOOTH, false);
-        assertTrue(askElsewhere(module, world), "what the main thread read last, not a config read off the thread");
+        assertEquals(ON, askElsewhere(module, world), "what the main thread read last, not a config read off the thread");
         assertEquals(1, mainQueue.size(), "and a fresh read is queued for the main thread");
-        assertTrue(askElsewhere(module, world));
+        assertEquals(ON, askElsewhere(module, world));
         assertEquals(1, mainQueue.size(), "once, not at every ask");
 
         mainQueue.remove().run();
-        assertFalse(askElsewhere(module, world), "after the main thread has read it again");
+        assertEquals(OFF, askElsewhere(module, world), "after the main thread has read it again");
     }
 
     @Test
-    void offTheMainThreadAnUnknownWorldIsOffAndGetsReadSoon() throws Exception {
+    void offTheMainThreadAWorldNotReadYetSaysSoAndGetsReadSoon() throws Exception {
         World world = world("ms-unknown");
         PluginData.setModuleEnabled(world, Modules.SLAB_SMOOTH, true);
         Queue<Runnable> mainQueue = new ArrayDeque<>();
         ModuleSwitch module = new ModuleSwitch(mainQueue::add);
 
-        assertFalse(askElsewhere(module, world), "nothing is known yet, so off");
-        assertFalse(askElsewhere(module, world));
+        assertEquals(NOT_READ_YET, askElsewhere(module, world), "nothing is known yet: neither on nor off");
+        assertEquals(NOT_READ_YET, askElsewhere(module, world));
         assertEquals(1, mainQueue.size());
 
         mainQueue.remove().run();
-        assertTrue(askElsewhere(module, world), "the next click sees what the main thread read");
+        assertEquals(ON, askElsewhere(module, world), "the next click sees what the main thread read");
     }
 }
