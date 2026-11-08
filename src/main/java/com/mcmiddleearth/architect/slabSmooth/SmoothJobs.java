@@ -12,6 +12,8 @@ import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.math.Vector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.regions.CylinderRegion;
+import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.regions.Region;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -61,6 +63,7 @@ final class SmoothJobs {
 
     private static final String FAILED = "Something went wrong; the server log has the details.";
     private static final String TOO_MUCH_WORK = "This area is too much work to smooth, so nothing was changed. Try a smaller selection.";
+    private static final String WORLD_GONE = "That world is gone, so nothing was changed.";
 
     private final Logger log;
     private final Supplier<TableSource> tables;
@@ -110,6 +113,7 @@ final class SmoothJobs {
      *                      covers
      * @param followsPlayer true for a selection, which is dropped if its player has left the world when it writes;
      *                      false for an area, which names its world
+     * @param options       with surfaces top, region must be a box, polygon or cylinder: the same shape at every height
      * @throws IllegalArgumentException or IllegalStateException, with a message for the player, when the job is refused;
      *                                  nothing has been read then, and the lock isn't taken
      */
@@ -119,6 +123,11 @@ final class SmoothJobs {
         SlabSmoothSettings limits = settings.get();
         TableSource source = tables.get();
         boolean all = !"top".equals(opts.surfaces);
+        if (!all && !(shape instanceof CuboidRegion || shape instanceof Polygonal2DRegion || shape instanceof CylinderRegion)) {
+            // the top smoother finds a column's surface at any height and keeps to the selection per column, so the
+            // shape must be the same at every height
+            throw new IllegalArgumentException("With surfaces top, select a box, polygon or cylinder.");
+        }
         int margin = Tiles.margin(opts), up = all ? margin : 0;
         BlockVector3 lo = shape.getMinimumPoint(), hi = shape.getMaximumPoint();
         long columns = ((long) hi.x() - lo.x() + 1 + 2L * margin) * ((long) hi.z() - lo.z() + 1 + 2L * margin);
@@ -270,7 +279,9 @@ final class SmoothJobs {
                 return;
             }
             Throwable cause = unwrapped(error);
-            if (cause instanceof CancellationException) { // given up at the deadline, or by close()
+            if (worlds.apply(worldId) == null) { // unloaded while it was read: Paper may fail the read, or never end it
+                finish(() -> tellError(WORLD_GONE));
+            } else if (cause instanceof CancellationException) { // given up at the deadline, or by close()
                 finish(() -> {
                     log.info(playerName + "'s smoothing of " + columns
                             + " columns stopped: reading the area took longer than the time limit.");
@@ -318,7 +329,7 @@ final class SmoothJobs {
                 }
                 World world = worlds.apply(worldId);
                 if (world == null) {
-                    finish(() -> tellError("That world is gone, so nothing was changed."));
+                    finish(() -> tellError(WORLD_GONE));
                 } else if (followsPlayer && !worldId.equals(player.getWorld().getUID())) {
                     finish(() -> tellError("You left the world before the smoothing finished, so nothing was changed."));
                 } else if (result == null) {
@@ -468,11 +479,13 @@ final class SmoothJobs {
             letGo();
         }
 
-        /** Main thread: lets the area's chunks go, once. */
+        /** Main thread: lets the area's chunks go, once; not in a world that is gone, whose tickets Paper drops itself. */
         private void letGo() {
             if (area != null && !released) {
                 released = true;
-                area.release();
+                if (worlds.apply(worldId) != null) {
+                    area.release();
+                }
             }
         }
 

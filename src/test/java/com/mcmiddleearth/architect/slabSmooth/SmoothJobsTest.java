@@ -15,7 +15,11 @@ import com.mcmiddleearth.pluginutil.message.MessageUtil;
 import com.sk89q.worldedit.MaxChangedBlocksException;
 import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.math.Vector2;
+import com.sk89q.worldedit.math.Vector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.regions.CylinderRegion;
+import com.sk89q.worldedit.regions.EllipsoidRegion;
 import com.sk89q.worldedit.regions.Polygonal2DRegion;
 import com.sk89q.worldedit.regions.Region;
 import org.bukkit.ChatColor;
@@ -1078,6 +1082,58 @@ class SmoothJobsTest {
                 "changed outside the triangle");
     }
 
+    /** An ellipsoid inscribed in the usual selection: a shape whose cross-section changes with height. */
+    private static EllipsoidRegion ellipsoid() {
+        CuboidRegion box = selection();
+        BlockVector3 lo = box.getMinimumPoint(), hi = box.getMaximumPoint();
+        return new EllipsoidRegion(BlockVector3.at((lo.x() + hi.x()) / 2, (lo.y() + hi.y()) / 2, (lo.z() + hi.z()) / 2),
+                Vector3.at((hi.x() - lo.x()) / 2.0, (hi.y() - lo.y()) / 2.0, (hi.z() - lo.z()) / 2.0));
+    }
+
+    private static Options topSurfaces() {
+        Options top = new Options();
+        top.set("surfaces", "top");
+        return top;
+    }
+
+    // The top smoother finds each column's surface at any height and masks per column, so it would change blocks
+    // outside a shape that is narrower above or below.
+    @Test
+    void aShapeThatChangesWithHeightIsRefusedForTopSurfaces() {
+        IllegalArgumentException refused = assertThrows(IllegalArgumentException.class,
+                () -> jobs.start(builder, world, ellipsoid(), null, true, topSurfaces()));
+
+        assertEquals("With surfaces top, select a box, polygon or cylinder.", refused.getMessage());
+        assertEquals(0, areas.loads, "nothing is read");
+        assertFalse(jobs.running(), "no lock is taken");
+        assertEquals(List.of(), tables.asked);
+    }
+
+    @Test
+    void anEllipsoidWithAllSurfacesOnlyChangesInsideIt() throws Exception {
+        EllipsoidRegion ellipsoid = ellipsoid();
+        jobs.start(builder, world, ellipsoid, null, true, new Options());
+        finish();
+
+        assertFalse(worldEdit.sets.isEmpty());
+        assertEquals(List.of(), worldEdit.sets.keySet().stream().filter(p -> !ellipsoid.contains(p)).toList(),
+                "changed outside the ellipsoid");
+    }
+
+    @Test
+    void aCylinderWithTopSurfacesRunsAndOnlyChangesInsideIt() throws Exception {
+        CuboidRegion box = selection();
+        CylinderRegion cylinder = new CylinderRegion(BlockVector3.at(OX + 19, OY, OZ + 19), Vector2.at(14, 14),
+                box.getMinimumPoint().y(), box.getMaximumPoint().y());
+        jobs.start(builder, world, cylinder, null, true, topSurfaces());
+        finish();
+
+        assertFalse(worldEdit.sets.isEmpty(), "a cylinder may use surfaces top");
+        assertEquals(List.of(), worldEdit.sets.keySet().stream().filter(p -> !cylinder.contains(p)).toList(),
+                "changed outside the cylinder");
+        assertTrue(toldOnce(builder).startsWith("info: Smoothed "));
+    }
+
     @Test
     void aChangedSelectionDoesNotAffectARunningJob() throws Exception {
         Map<BlockVector3, String> expected = setsOfAJob(selection());
@@ -1186,18 +1242,42 @@ class SmoothJobsTest {
         assertEquals(List.of(), broken);
     }
 
-    @Test
-    void aWorldUnloadedDuringTheJobChangesNothing() throws Exception {
+    /** When the world unloads. Paper may fail the read, never finish it, or have copied the chunks already. */
+    enum Gone { WHEN_THE_LOAD_FAILS, WHEN_THE_LOAD_NEVER_ENDS, WHEN_THE_LOAD_COMPLETES, AFTER_THE_SMOOTHING }
+
+    @ParameterizedTest
+    @EnumSource(Gone.class)
+    void aWorldUnloadedDuringTheJobChangesNothing(Gone when) throws Exception {
         jobs.start(builder, world, selection(), null, true, new Options());
-        areas.finishLoading();
-        work();
-        unloaded.add(world.getUID());
+        switch (when) {
+            case WHEN_THE_LOAD_FAILS -> {
+                unloaded.add(world.getUID());
+                areas.pending.completeExceptionally(new IllegalStateException("test: the world was unloaded"));
+            }
+            case WHEN_THE_LOAD_NEVER_ENDS -> {
+                unloaded.add(world.getUID());
+                tick();
+                clock.addAndGet(TimeUnit.SECONDS.toNanos(settings.maxSeconds()) + SECOND);
+            }
+            case WHEN_THE_LOAD_COMPLETES -> {
+                unloaded.add(world.getUID());
+                areas.finishLoading();
+            }
+            case AFTER_THE_SMOOTHING -> {
+                areas.finishLoading();
+                work();
+                unloaded.add(world.getUID());
+            }
+        }
         runOut();
 
         assertEquals(List.of("error: That world is gone, so nothing was changed."), told(builder));
         assertEquals(List.of(), worldEdit.calls("open"));
-        assertEquals(List.of(), logged.stream().map(LogRecord::getMessage).toList(), "no exception");
-        assertEquals(1, areas.releases);
+        assertEquals(List.of(), logged.stream().filter(r -> r.getLevel().intValue() >= Level.WARNING.intValue())
+                .map(LogRecord::getMessage).toList(), "no warning");
+        assertNoStackTrace();
+        assertEquals(0, areas.releases, "no ticket is removed in a world that is gone: Paper drops them itself");
+        assertFalse(jobs.running());
     }
 
     @Test
