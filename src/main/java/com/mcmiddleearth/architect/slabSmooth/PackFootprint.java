@@ -10,10 +10,11 @@ import java.util.TreeSet;
 
 /**
  * The packs a box covers, so a job can refuse to cross a border between packs (Rule 9): the pack of every RP region
- * whose bounding box meets the box, and the pack at each sample point. At a sample point the pack is the RP region's
- * there, or where no region has one, what the normal choice gives (the player's pack, else the default). The samples
- * are the box's corners and points at most {@link #SAMPLE_STEP} blocks apart between them, on x and z, on the box's
- * lowest and highest layers; the job adds the box's centre.
+ * whose bounding box meets the box, unless a heavier box region overrides its part of the box, and the pack at each
+ * sample point. At a sample point the pack is the RP region's there (the heaviest one's), or where no region has one,
+ * what the normal choice gives (the player's pack, else the default). The samples are the box's corners and points at
+ * most {@link #SAMPLE_STEP} blocks apart between them, on x and z, on the box's lowest and highest layers; the job adds
+ * the box's centre.
  *
  * <p>The regions' boxes find a region that no sample is in, such as one underground in a tall box, since RP regions can
  * have a height. The samples decide whether the normal choice counts, which applies wherever no region is.

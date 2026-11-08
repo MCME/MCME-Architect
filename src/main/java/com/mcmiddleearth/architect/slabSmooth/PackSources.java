@@ -30,8 +30,9 @@ interface PackSources {
 
     /**
      * The packs of the RP regions in a world whose bounding boxes meet min..max (inclusive), or null if the regions
-     * can't be read. A region's bounding box can reach past its shape, so a pack can be named for a box the region
-     * itself doesn't reach. Any thread.
+     * can't be read. A region whose part of the box a heavier box region holds is left out, since that region decides
+     * those blocks. A region's bounding box can reach past its shape, so a pack can be named for a box the region itself
+     * doesn't reach. Any thread.
      */
     Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max);
 

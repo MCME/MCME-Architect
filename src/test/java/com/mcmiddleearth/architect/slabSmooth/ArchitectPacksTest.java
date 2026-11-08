@@ -5,6 +5,7 @@ import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
+import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.world.NullWorld;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -140,6 +141,55 @@ class ArchitectPacksTest {
         } finally {
             added.forEach(RpManager::removeRegion);
         }
+    }
+
+    // A box lookup that fails leaves a job with its sample points, which its warning says, and it warns once of its own:
+    // an earlier warning of another lookup doesn't hide it.
+    @Test
+    void aFailedBoxLookupWarnsOnceInItsOwnWords() {
+        List<String> warnings = new ArrayList<>();
+        Logger log = Logger.getLogger("ArchitectPacksTest-boxes");
+        log.setUseParentHandlers(false);
+        log.addHandler(new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                warnings.add(record.getMessage());
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        });
+        ArchitectPacks own = new ArchitectPacks(plugin, log);
+        World world = server.addSimpleWorld("brokenboxes");
+        RpRegion broken = new RpRegion("ArchitectPacksTest-broken",
+                new CuboidRegion(new NamedWorld("brokenboxes"), BlockVector3.at(0, 0, 0), BlockVector3.at(10, 10, 10))) {
+            @Override
+            public Region getRegion() {
+                throw new IllegalStateException("test: no box");
+            }
+
+            @Override
+            public boolean contains(Location location) {
+                throw new IllegalStateException("test: no shape");
+            }
+        };
+        RpManager.addRegion(broken);
+        try {
+            assertNull(own.regionPack(new Location(world, 5, 5, 5)), "another lookup fails, and warns, first");
+            assertNull(own.regionPacksIn(world, BlockVector3.at(0, 0, 0), BlockVector3.at(10, 10, 10)));
+            assertNull(own.regionPacksIn(world, BlockVector3.at(0, 0, 0), BlockVector3.at(10, 10, 10)));
+        } finally {
+            RpManager.removeRegion("ArchitectPacksTest-broken");
+        }
+        assertEquals(List.of(
+                "Reading MCME-Architect's RP data failed (java.lang.IllegalStateException: test: no shape); using the default pack there.",
+                "Could not check the RP regions inside a selection (java.lang.IllegalStateException: test: no box); "
+                        + "using the sample points only."), warnings);
     }
 
     /** Adds a cuboid RP region with a pack, and gives its name. */

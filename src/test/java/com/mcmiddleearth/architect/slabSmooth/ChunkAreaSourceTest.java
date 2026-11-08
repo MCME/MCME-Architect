@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -440,6 +441,26 @@ class ChunkAreaSourceTest {
         Throwable cause = failure(load);
         assertSame(broken, cause, "the load fails with what went wrong");
         assertEquals(List.of(gone), List.of(cause.getSuppressed()), "and the failed release is kept with it");
+    }
+
+    // One ticket that can't be removed mustn't keep the area's other chunks loaded for good: every chunk is let go, and
+    // the failure is passed on afterwards, for the job to log.
+    @Test
+    void everyChunkIsLetGoWhenOneTicketCannotBeRemoved() throws Exception {
+        RuntimeException gone = new IllegalStateException("test: that chunk's world is unloaded");
+        chunk(0, 0).removeFailure = gone; // the first chunk the area holds
+        CompletableFuture<AreaSource.LoadedArea> load = load(0, 0, 0, 31, 63, 31);
+        runTicks();
+        AreaSource.LoadedArea area = loaded(load);
+
+        assertSame(gone, assertThrows(IllegalStateException.class, area::release), "passed on, for the job to log");
+        for (FakeChunk chunk : chunksIn(0, 1, 0, 1)) {
+            assertEquals(1, chunk.removed, "every chunk's ticket is removed, or its removal tried: " + chunk.chunk);
+        }
+        assertDoesNotThrow(area::release, "a second release does nothing");
+        for (FakeChunk chunk : chunksIn(0, 1, 0, 1)) {
+            assertEquals(1, chunk.removed, "nothing more is removed: " + chunk.chunk);
+        }
     }
 
     @Test

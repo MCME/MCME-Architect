@@ -1006,6 +1006,93 @@ class SmoothJobsTest {
         }
     }
 
+    /** Adds a cuboid RP region of the test world, with a pack and a weight, to Architect's regions. */
+    private static void addRegion(String name, String pack, int weight, BlockVector3 from, BlockVector3 to) {
+        RpRegion region = new RpRegion(name, new CuboidRegion(new NamedWorld(world.getName()), from, to));
+        region.setRp(pack);
+        region.setWeight(weight);
+        RpManager.addRegion(region);
+    }
+
+    /** A Human mountain region as high as the world, reaching well past the selection on every side. */
+    private static void addMountain(String name, int weight) {
+        CuboidRegion box = selection();
+        BlockVector3 lo = box.getMinimumPoint(), hi = box.getMaximumPoint();
+        addRegion(name, "Human", weight, BlockVector3.at(lo.x() - 50, world.getMinHeight(), lo.z() - 50),
+                BlockVector3.at(hi.x() + 50, world.getMaxHeight() - 1, hi.z() + 50));
+    }
+
+    // RpManager gives a block the pack of the heaviest region it is in. A Dwarven cave region (weight 5) inside a Human
+    // mountain region (weight 1): a selection wholly inside the cave is all Dwarven terrain, and runs with Dwarven.
+    @Test
+    void aSelectionInsideAHeavierRegionIgnoresALighterOneAround() throws Exception {
+        tables.with("Dwarven", handMade, handMade);
+        CuboidRegion selection = selection();
+        addMountain("SmoothJobsTest-mountain", 1);
+        addRegion("SmoothJobsTest-cave", "Dwarven", 5, selection.getMinimumPoint().add(-2, -2, -2),
+                selection.getMaximumPoint().add(2, 2, 2));
+        try {
+            useArchitectsRegions();
+
+            jobs.start(builder, world, selection, null, true, new Options());
+
+            assertEquals(List.of("Dwarven"), tables.asked, "the cave's pack");
+            finish();
+            assertTrue(toldOnce(builder).contains(" [Dwarven pack] "));
+        } finally {
+            RpManager.removeRegion("SmoothJobsTest-mountain");
+            RpManager.removeRegion("SmoothJobsTest-cave");
+        }
+    }
+
+    // Two Dwarven cave regions (weight 5) with a gap of one block between them, in a Human mountain region (weight 1):
+    // the mountain's terrain shows through the gap. No sample point is in the gap, so only the mountain's box finds it,
+    // and neither cave alone holds the mountain's part of the selection.
+    @Test
+    void aSelectionAcrossTheHeavierRegionsEdgeIsStillRefused() {
+        CuboidRegion selection = selection();
+        BlockVector3 lo = selection.getMinimumPoint(), hi = selection.getMaximumPoint();
+        int gap = lo.x() + 5; // between the samples at lo.x() and lo.x() + 16
+        addMountain("SmoothJobsTest-mountain", 1);
+        addRegion("SmoothJobsTest-cave-west", "Dwarven", 5, lo.add(-2, -2, -2), BlockVector3.at(gap - 1, hi.y() + 2, hi.z() + 2));
+        addRegion("SmoothJobsTest-cave-east", "Dwarven", 5, BlockVector3.at(gap + 1, lo.y() - 2, lo.z() - 2), hi.add(2, 2, 2));
+        try {
+            useArchitectsRegions();
+
+            Refusal refused = assertThrows(Refusal.class,
+                    () -> jobs.start(builder, world, selection, null, true, new Options()));
+
+            assertEquals("This selection covers more than one pack (Dwarven, Human). Pick one with /sls pack <name>, or select less.",
+                    refused.getMessage());
+            assertEquals(0, areas.loads);
+        } finally {
+            RpManager.removeRegion("SmoothJobsTest-mountain");
+            RpManager.removeRegion("SmoothJobsTest-cave-west");
+            RpManager.removeRegion("SmoothJobsTest-cave-east");
+        }
+    }
+
+    // When two regions have the same weight, which one a block gets isn't defined: both count, on the safe side.
+    @Test
+    void equalWeightsStillCountBothPacks() {
+        CuboidRegion selection = selection();
+        addMountain("SmoothJobsTest-mountain", 1);
+        addRegion("SmoothJobsTest-cave", "Dwarven", 1, selection.getMinimumPoint().add(-2, -2, -2),
+                selection.getMaximumPoint().add(2, 2, 2));
+        try {
+            useArchitectsRegions();
+
+            Refusal refused = assertThrows(Refusal.class,
+                    () -> jobs.start(builder, world, selection, null, true, new Options()));
+
+            assertEquals("This selection covers more than one pack (Dwarven, Human). Pick one with /sls pack <name>, or select less.",
+                    refused.getMessage());
+        } finally {
+            RpManager.removeRegion("SmoothJobsTest-mountain");
+            RpManager.removeRegion("SmoothJobsTest-cave");
+        }
+    }
+
     // A region whose box can't be read: the regions' boxes count for nothing then, the samples still find what they can,
     // and the log says why, once.
     @Test
@@ -1031,8 +1118,8 @@ class SmoothJobsTest {
 
             assertEquals("This selection covers more than one pack (Dwarven, Human). Pick one with /sls pack <name>, or select less.",
                     refused.getMessage());
-            assertEquals(1, warnings.size(), warnings.toString());
-            assertTrue(warnings.get(0).contains("test: a region that can't be read"), warnings.get(0));
+            assertEquals(List.of("Could not check the RP regions inside a selection (java.lang.IllegalStateException: "
+                    + "test: a region that can't be read); using the sample points only."), warnings);
         } finally {
             RpManager.removeRegion("SmoothJobsTest-broken");
         }

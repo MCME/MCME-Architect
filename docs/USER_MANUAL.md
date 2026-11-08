@@ -2269,10 +2269,13 @@ smoothing, the reply shows the pack it used, for example `[Mordor]`.
   the reply names the packs it found: `This selection covers more than one pack (Human, Mordor). Pick one with /sls
   pack <name>, or select less.` Name a pack to go ahead, with `/sls pack <name>` or the pack argument of `area`. The
   check counts every RP region whose box meets the selection, also one inside it, such as a cave region in the middle
-  of a tall selection. A region that is not a box (a cylinder, a polygon) counts by the box around it, so next to one
-  a selection can be refused although it stays clear of the region itself: name a pack then. Where no region is, the
-  pack that applies there counts too (your own, or the default), looked at on the corners of the selection, at points
-  at most 16 blocks apart between them on its lowest and highest layers, and at its centre.
+  of a tall selection. Weights are respected as for players: where a heavier region that is a box holds a region's
+  whole part of the selection, that region does not count, so a selection wholly inside a cave region of weight 5 is
+  not refused for the mountain region of weight 1 around it. Regions of equal weight both count. A region that is not
+  a box (a cylinder, a polygon) counts by the box around it, so next to one a selection can be refused although it
+  stays clear of the region itself: name a pack then. Where no region is, the pack that applies there counts too (your
+  own, or the default), looked at on the corners of the selection, at points at most 16 blocks apart between them on
+  its lowest and highest layers, and at its centre.
 - `/sls pack Mordor` uses Mordor's blocks for your selections, areas and brush wherever you are. `/sls pack auto` goes
   back to following the RP region. `/sls pack` alone shows what applies where you stand.
 - `/sls packs` lists the packs and the state of each one's table.
@@ -3704,7 +3707,9 @@ Each entry gives what the player is told (or sees), the cause and the fix. See [
 - **`This selection covers more than one pack (…). Pick one with /sls pack <name>, or select less.`** Cause: the
   selection reaches over a border between RP regions of different packs, or into a region of another pack, also one
   that lies between the selection's top and bottom layers, or near a region that is not a box, which counts by the box
-  around it. Fix: `/sls pack <name>` for the pack the terrain is built in, or select less.
+  around it. A region counts unless a heavier region that is a box holds all of its part of the selection; two regions
+  of equal weight both count. Fix: `/sls pack <name>` for the pack the terrain is built in, or select less, or give
+  overlapping regions different weights.
 - **`Reading the <pack> pack (…) for the first time; try again in a few seconds.`** Cause: the pack's table is being
   read, or downloaded. Fix: wait, and repeat. `/sls packs` shows how far it is.
 - **`The <pack> pack (…) can't be used: …`.** Cause: the table could not be built. Typical causes: no download address under

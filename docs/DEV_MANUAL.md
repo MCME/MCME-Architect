@@ -1191,7 +1191,10 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
      Without a named pack, the selection must cover one pack only: `PackFootprint` counts every RP region whose bounding
      box meets it, since a region can have a height and lie between any two sample points, and the pack at sample points
      at most 16 blocks apart on the selection's lowest and highest layers, plus its centre, all within the world's
-     height. The samples decide whether the pack outside every region (the player's, or the default) counts.
+     height. The samples decide whether the pack outside every region (the player's, or the default) counts. Weights
+     count as in `RpManager.getRegion`, where the heaviest region wins: `ArchitectPacks.regionPacksIn` leaves out a
+     region whose part of the selection a strictly heavier cuboid region holds, so a selection wholly inside a cave
+     region is not refused for the lighter mountain region around it. Equal weights both count.
   2. The worker (`Architect SlabSmooth`, one daemon thread at the lowest priority): the smoothing, within the work budget.
   3. Main thread: looks the player and the world up again by their ids. The job is dropped if the player left the server,
      if the world is gone, or, for a selection, if the player left that world. Players are tracked by id, because a biome

@@ -3,6 +3,7 @@ package com.mcmiddleearth.architect.slabSmooth;
 import com.mcmiddleearth.architect.serverResoucePack.RpManager;
 import com.mcmiddleearth.architect.serverResoucePack.RpRegion;
 import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -28,7 +29,8 @@ final class ArchitectPacks implements PackSources {
 
     private final JavaPlugin plugin;
     private final Logger log;
-    private final AtomicBoolean warned = new AtomicBoolean();
+    /** Set once the lookups by place or player have warned; the box lookup has its own, as its fallback differs. */
+    private final AtomicBoolean warned = new AtomicBoolean(), boxesWarned = new AtomicBoolean();
 
     ArchitectPacks(JavaPlugin plugin, Logger log) {
         this.plugin = plugin;
@@ -92,27 +94,54 @@ final class ArchitectPacks implements PackSources {
     }
 
     /**
-     * Every region with a pack whose bounding box meets the box, whatever its weight. For a region that isn't a box, or
-     * one that a heavier region covers, that can name a pack no block of the box gets, which errs towards refusing: the
-     * player can name a pack.
+     * Every region with a pack whose bounding box meets the box, apart from one that a heavier region overrides there.
+     * RpManager gives a block the pack of the heaviest region it is in, so a region is left out when a cuboid region of
+     * strictly greater weight holds all of the region's box that lies in min..max: that cuboid, or a region heavier
+     * still, decides every block there. Equal weights don't count as heavier, since which of two such regions wins
+     * isn't defined. For a region that isn't a box, its bounding box can name a pack no block of the box gets, which
+     * errs towards refusing: the player can name a pack.
      */
     @Override
     public Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max) {
         try {
-            Set<String> packs = new TreeSet<>();
+            List<RpRegion> meeting = new ArrayList<>(); // with a pack or not: one without decides blocks too
             for (RpRegion region : RpManager.getRegions().values()) {
                 Region area = region.getRegion();
-                String pack = nameOrNull(region.getRp());
-                if (pack != null && area.getWorld().getName().equals(world.getName())
+                if (area.getWorld().getName().equals(world.getName())
                         && meet(area.getMinimumPoint(), area.getMaximumPoint(), min, max)) {
+                    meeting.add(region);
+                }
+            }
+            Set<String> packs = new TreeSet<>();
+            for (RpRegion region : meeting) {
+                String pack = nameOrNull(region.getRp());
+                if (pack != null && !decidedByAHeavierBox(region, meeting, min, max)) {
                     packs.add(pack);
                 }
             }
             return packs;
         } catch (RuntimeException e) {
-            warnOnce(e);
+            if (boxesWarned.compareAndSet(false, true)) {
+                log.warning("Could not check the RP regions inside a selection (" + e
+                        + "); using the sample points only.");
+            }
             return null;
         }
+    }
+
+    /** Whether a heavier cuboid region holds all of region's bounding box that lies in min..max. */
+    private static boolean decidedByAHeavierBox(RpRegion region, List<RpRegion> others, BlockVector3 min,
+                                                BlockVector3 max) {
+        Region area = region.getRegion();
+        BlockVector3 lo = area.getMinimumPoint().getMaximum(min), hi = area.getMaximumPoint().getMinimum(max);
+        for (RpRegion other : others) {
+            if (other.getWeight() > region.getWeight() && other.getRegion() instanceof CuboidRegion box
+                    && lo.containedWithin(box.getMinimumPoint(), box.getMaximumPoint())
+                    && hi.containedWithin(box.getMinimumPoint(), box.getMaximumPoint())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Whether the boxes lo..hi and min..max (inclusive) have a block in common. */

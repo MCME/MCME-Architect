@@ -152,16 +152,35 @@ final class ChunkAreaSource implements AreaSource {
             }
         }
 
-        /** Removes this load's tickets. A second call does nothing. */
+        /**
+         * Removes this load's tickets, every one of them even if one can't be removed, as in a world Paper has unloaded.
+         * Then the first failure is thrown, with any later ones kept with it, for the caller to log. A second call does
+         * nothing.
+         */
         private void release() {
             if (released) {
                 return;
             }
             released = true;
+            Throwable failed = null;
             for (Chunk chunk : held) {
                 if (chunk != null) {
-                    chunk.removePluginChunkTicket(plugin);
+                    try {
+                        chunk.removePluginChunkTicket(plugin);
+                    } catch (RuntimeException | Error e) {
+                        if (failed == null) {
+                            failed = e;
+                        } else if (failed != e) {
+                            failed.addSuppressed(e);
+                        }
+                    }
                 }
+            }
+            if (failed instanceof RuntimeException e) {
+                throw e;
+            }
+            if (failed instanceof Error e) {
+                throw e;
             }
         }
     }

@@ -21,8 +21,8 @@ interface TableSource {
     String regionPack(Location location);
 
     /**
-     * The packs of the RP regions in a world whose bounding boxes meet min..max (inclusive), or null if the regions
-     * can't be read.
+     * The packs of the RP regions in a world whose bounding boxes meet min..max (inclusive), apart from those a heavier
+     * box region overrides there, or null if the regions can't be read.
      */
     Set<String> regionPacksIn(World world, BlockVector3 min, BlockVector3 max);
 
