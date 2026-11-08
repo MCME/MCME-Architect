@@ -2268,7 +2268,11 @@ smoothing, the reply shows the pack it used, for example `[Mordor]`.
 - **A selection or an area** uses one pack. If it covers more than one pack, it is refused before anything is read, and
   the reply names the packs it found: `This selection covers more than one pack (Human, Mordor). Pick one with /sls
   pack <name>, or select less.` Name a pack to go ahead, with `/sls pack <name>` or the pack argument of `area`. The
-  check looks at the corners of the box and at points at most 16 blocks apart between them.
+  check counts every RP region whose box meets the selection, also one inside it, such as a cave region in the middle
+  of a tall selection. A region that is not a box (a cylinder, a polygon) counts by the box around it, so next to one
+  a selection can be refused although it stays clear of the region itself: name a pack then. Where no region is, the
+  pack that applies there counts too (your own, or the default), looked at on the corners of the selection, at points
+  at most 16 blocks apart between them on its lowest and highest layers, and at its centre.
 - `/sls pack Mordor` uses Mordor's blocks for your selections, areas and brush wherever you are. `/sls pack auto` goes
   back to following the RP region. `/sls pack` alone shows what applies where you stand.
 - `/sls packs` lists the packs and the state of each one's table.
@@ -2291,7 +2295,9 @@ smoothing, the reply shows the pack it used, for example `[Mordor]`.
   left alone.
 - **Tight crevices stay open.** Nothing is placed into a gap that is 1 block wide, except a plain slab on its floor.
 - **The brush is a sphere** with `surfaces all`, so working on a cliff face does not touch the top of the cliff. With
-  `surfaces top` it is a cylinder of the same radius that reaches about 8 blocks above and below your click.
+  `surfaces top` it is a cylinder of the same radius that reaches its radius plus 8 blocks above and below your click
+  (20 at radius 12). It smooths the top it finds in each column, so under an overhang it can reshape the overhang's top
+  above your click.
 - **A selection with `surfaces top`** must be a box, a polygon or a cylinder. Other shapes are refused with `With
   surfaces top, select a box, polygon or cylinder.`
 - **At the lower edge of a selection**, a cut top may sit on a block that keeps its own top colour. That is expected:
@@ -2373,6 +2379,10 @@ modules:
   time it checks it. Every other module starts as `true`.
 - The switch is read per world. In a world where it is off, `/sls selection`, `area` and the brush answer `SlabSmooth is
   off in this world.` (`area` names the world it was given).
+- On FastAsyncWorldEdit a brush click runs on a thread of its own, which cannot read the switch, so the server reads it
+  in the next tick. Right after a start or a reload, and in a world loaded since, the first click can answer `SlabSmooth
+  is still checking this world; click again.` and change nothing; the next click works. One tick after a start or a
+  reload, every loaded world's switch has been read.
 - A server where no world has the switch on starts no thread, reads no pack and downloads nothing.
 - `/architect reload` reads the switches and the `slabSmooth` section of `config.yml` again, and **resets every
   player's `/sls` settings and chosen pack**. A smoothing that is running finishes with the settings it started with.
@@ -2388,10 +2398,12 @@ modules:
 | `architect.slabSmooth.allBlocks` | op | `/sls set blocks all`. **Not included in `architect.slabSmooth`**, and checked again whenever a smoothing starts or the brush clicks, so taking it away takes effect at once, also when `blocks: all` is set under `defaults` in `config.yml`. |
 | `architect.slabSmooth.admin` | op | `/sls packs rebuild`. |
 
-None of them is in a rank bundle, so give them by name. Architect checks only Bukkit permissions, so this works with
-LuckPerms and any other permissions plugin, and a change applies at once. A sensible split gives builders
-`architect.slabSmooth`, senior builders also `architect.slabSmooth.area`, and the people who run the server
-`architect.slabSmooth.admin`. With LuckPerms, if your groups are called artist, designer and manager:
+None of them is in a rank bundle, so give them by name. A LuckPerms group with `architect.*` gets all six,
+`architect.slabSmooth.allBlocks` included, because LuckPerms applies wildcards unless `apply-wildcards` is off in its
+config. Architect checks only Bukkit permissions, so this works with LuckPerms and any other permissions plugin, and a
+change applies at once. A sensible split gives builders `architect.slabSmooth`, senior builders also
+`architect.slabSmooth.area`, and the people who run the server `architect.slabSmooth.admin`. With LuckPerms, if your
+groups are called artist, designer and manager:
 
 ```
 lp group artist permission set architect.slabSmooth true
@@ -2433,10 +2445,10 @@ commented lines are the defaults. Remove the `#` of the section line and of the 
 | `plantCategories` | `[Plant, Crop]` | The inventory categories of plants, which are removed or kept where the ground under them changes. |
 | `lookTolerance` | `10` | The largest difference in colour (0 to 441) between a terrain block and a piece with another texture that it may use. 0: only pieces with its own texture. |
 | `vanilla.clientJar` | empty | A Minecraft client jar to read instead of downloading one. |
-| `brush.maxRadius` | `12` | The largest brush radius. A larger `//size` is cut to it at every click. |
-| `selection.maxColumns` | `65536` | The most columns (x by z) a selection or area may read, with the margin that is read around it (5 blocks at the default settings). |
-| `selection.maxCells` | `8000000` | The most blocks it may read, with the margin and the height. Checked before anything is read. |
-| `selection.maxSeconds` | `120` | The longest a selection or area may take. One that runs out of time stops and changes nothing. |
+| `brush.maxRadius` | `12` | The largest brush radius, at most 32. A larger `//size` is cut to it at every click. |
+| `selection.maxColumns` | `65536` | The most columns (x by z) a selection or area may read, with the margin that is read around it (5 blocks at the default settings), at most 1048576. |
+| `selection.maxCells` | `8000000` | The most blocks it may read, with the margin and the height, at most 32000000. Checked before anything is read. |
+| `selection.maxSeconds` | `120` | The longest a selection or area may take, in seconds, at most 600. One that runs out of time stops and changes nothing. |
 | `overrides` | `{}` | Per pack, by inventory key: `terrain` (more blocks that count as terrain), `exclude` (blocks never used) and `pairs` (the pieces a block always uses). |
 | `defaults` | `{}` | The settings every player starts with, by the names `/sls set` uses. |
 
@@ -2453,7 +2465,8 @@ slabSmooth:
 ```
 
 A value that cannot be used is left out with a warning in the log (it starts `slabSmooth in config.yml:`), and the
-default applies. A smoothing that needs more work than 100,000 surfaces in one pass stops too, and changes nothing.
+default applies. A limit set above its highest value is cut to that value, with a warning too. A smoothing that needs
+more work than 100,000 surfaces in one pass stops too, and changes nothing.
 
 #### Packs, tables and downloads
 
@@ -2498,7 +2511,8 @@ default applies. A smoothing that needs more work than 100,000 surfaces in one p
 - **Brush clicks** are handled like any WorldEdit brush. On FastAsyncWorldEdit they run off the main thread.
 - **Selections and areas** are read in slices of about 10 ms per tick. Chunks that are not loaded are loaded by Paper
   in the background (never generated) and held with a chunk ticket until the result is written. The smoothing runs on
-  a worker thread of its own, in 64 by 64 tiles. On FastAsyncWorldEdit, the write runs off the main thread too.
+  a worker thread of its own, with `surfaces all` in 64 by 64 tiles. On FastAsyncWorldEdit, the write runs off the main
+  thread too.
 - **Limits.** One selection or area at a time on the server; `maxColumns`, `maxCells` and `maxSeconds`; and a cap on
   the work in one pass. Players who go over are told, and nothing changes.
 - **Memory.** Two tables per pack in use, and per-player settings, which are forgotten at a restart or a reload.
@@ -3661,6 +3675,9 @@ Each entry gives what the player is told (or sees), the cause and the fix. See [
 - **`SlabSmooth is off in this world.`** (or `… in <world>.` for `area`). Cause: `modules.command.slabSmooth` is not
   `true` there; it is off unless a world switches it on. Fix: switch it on in the world's file or in
   `defaultWorldConfig.yml`, and run `/architect reload`.
+- **`SlabSmooth is still checking this world; click again.`** (in the action bar after a brush click). Cause: on
+  FastAsyncWorldEdit the brush runs on a thread that cannot read the world's switch, and right after a start or a
+  reload, or in a world loaded since, the server has not read it yet. Nothing changed. Fix: click again.
 - **`SlabSmooth is unavailable: …`.** Cause: smoothing could not start, or switched itself off after WorldEdit or the
   server turned out to be different from what this build was made for; the rest of Architect keeps working. Fix: read
   the warning in the log. It stays off until the next restart, and may need a newer Architect after a WorldEdit or Paper
@@ -3685,13 +3702,14 @@ Each entry gives what the player is told (or sees), the cause and the fix. See [
 - **`Another smoothing is running; try again in a moment.`** Cause: only one selection or area runs at a time on the
   server. Fix: wait.
 - **`This selection covers more than one pack (…). Pick one with /sls pack <name>, or select less.`** Cause: the
-  selection reaches over a border between RP regions of different packs. Fix: `/sls pack <name>` for the pack the
-  terrain is built in, or select less.
+  selection reaches over a border between RP regions of different packs, or into a region of another pack, also one
+  that lies between the selection's top and bottom layers, or near a region that is not a box, which counts by the box
+  around it. Fix: `/sls pack <name>` for the pack the terrain is built in, or select less.
 - **`Reading the <pack> pack (…) for the first time; try again in a few seconds.`** Cause: the pack's table is being
   read, or downloaded. Fix: wait, and repeat. `/sls packs` shows how far it is.
 - **`The <pack> pack (…) can't be used: …`.** Cause: the table could not be built. Typical causes: no download address under
-  `ServerResourcePacks`, no inventory folder `inventories/block/<pack>/`, a download that failed or did not match its
-  SHA-1, or `download: false` without the zip in `slabSmooth/packs/`. The text after the colon says which. Fix: correct it, then `/sls packs rebuild <pack>`.
+  `ServerResourcePacks`, no inventory folder `inventories/block/<pack>/`, a download that failed, took longer than 10
+  minutes or did not match its SHA-1, or `download: false` without the zip in `slabSmooth/packs/`. The text after the colon says which. Fix: correct it, then `/sls packs rebuild <pack>`.
   A failed read is tried again later by itself.
 - **`No pack <name>; packs: …`.** Cause: the name is not one of the packs under `ServerResourcePacks`. Fix: use a name
   from the list.

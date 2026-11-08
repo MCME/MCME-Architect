@@ -461,10 +461,11 @@ or `MCME-Architect:<name>_<size>`. `load: STARTUP` lets Architect supply the gen
 ### onDisable
 
 In this order: `GamemodeSwitcher.stopRunning()` (non-op builders get op level 0 back), `MapLayers.stop()` (the budget
-saves its counts, and the Custom biomes layer saves its records and ends its threads), `BiomeTuning.disable()` (logs
-unsaved live edits), `SlabSmooth.disable()` (stops its jobs and threads), cancel `RPSwitchTask`, disconnect the RP database, stop the glow task, `EntityLogger.stop()`, and
-`LogFileManager.uninstall(this)` last. The steps have no try/catch, so a failing step skips the ones after it; the first
-two are first for that reason, as their comments say.
+saves its counts, and the Custom biomes layer saves its records and ends its threads), `SlabSmooth.disable()` (stops
+its jobs and threads; it cannot fail), `BiomeTuning.disable()` (logs unsaved live edits), cancel `RPSwitchTask`,
+disconnect the RP database, stop the glow task, `EntityLogger.stop()`, and `LogFileManager.uninstall(this)` last. The
+steps have no try/catch, so a failing step skips the ones after it; the first three are first for that reason, as their
+comments say.
 
 ### What /architect reload does
 
@@ -1068,8 +1069,8 @@ to the server.
 
 | Part | Classes | What it does |
 |---|---|---|
-| Wiring | `SlabSmooth`, `SlabSmoothSettings`, `ModuleSwitch`, `PlayerOptions` | `SlabSmooth.enable` starts inside a guard, as `BiomeTuning` does; `reload()` runs from `loadData()`; `disable()` from `onDisable`. A failure, or a `LinkageError` from a WorldEdit build this was not made for, switches off only this feature and `/sls` answers that it is unavailable. `SlabSmoothSettings` reads the `slabSmooth` section; `ModuleSwitch` answers whether a world has the module on; `PlayerOptions` keeps each player's settings and chosen pack. |
-| Command | `SlabSmoothCommand` | Every subcommand, in Architect's order of checks: a known subcommand, its permission, whether smoothing is available, and then, for an edit, WorldEdit and the world's switch. |
+| Wiring | `SlabSmooth`, `SlabSmoothSettings`, `ModuleSwitch`, `PlayerOptions` | `SlabSmooth.enable` starts inside a guard, as `BiomeTuning` does; `reload()` runs from `loadData()`; `disable()` from `onDisable`. A failure, or a `LinkageError` from a WorldEdit build this was not made for, switches off only this feature and `/sls` answers that it is unavailable. `SlabSmoothSettings` reads the `slabSmooth` section, and cuts a limit set too high to its cap (`MAX_BRUSH_RADIUS` 32, `MAX_COLUMNS` 1,048,576, `MAX_CELLS` 32,000,000, `MAX_SECONDS` 600); `ModuleSwitch` answers whether a world has the module on; `PlayerOptions` keeps each player's settings and chosen pack. |
+| Command | `SlabSmoothCommand` | Every subcommand, in Architect's order of checks: a known subcommand, its permission, whether smoothing is available, and then, for an edit, WorldEdit and the world's switch. A refusal of the command, the jobs or the packs is a `Refusal`, whose message the player sees as it is. Any other exception, an `IllegalArgumentException` from WorldEdit or Bukkit included, gets `Something went wrong; the server log has the details.` and one log line with its stack trace. |
 | Jobs | `SmoothJobs`, `WorldArea`, `SmoothSummary`, `PackFootprint` | A selection or an area, as a job in five stages (below). |
 | Brush | `SmoothBrush` | A WorldEdit `Brush`. It asks `SlabSmooth` for its context at every click, so a reload or a disable reaches brushes bound earlier. |
 | Packs | `Packs`, `ArchitectPacks`, `Downloads` | The table of each pack: change checks, downloads, saved tables, reports. |
@@ -1167,7 +1168,9 @@ if so, it reads the pack again and keeps the old table in use until the new one 
 the saved table's contents or meaning change), the Minecraft and Architect versions, the zip, the inventory files and the
 settings. After a restart, a pack whose fingerprint is unchanged loads its table and opens neither the zip nor the
 client jar. `Downloads` fetches the zips and the client jar with a checksum check, into `cache/`, and only when a pack
-needs it; with `download: false` a zip in `packs/<pack>.zip` is used.
+needs it; with `download: false` a zip in `packs/<pack>.zip` is used. A download has 10 minutes for its answer and its
+whole body, so a server that stops sending cannot hold up the one worker, and with it every pack. A new zip replaces
+only that pack's older ones (`<pack>-<12 hex digits>.zip`), not those of a pack whose name starts the same.
 
 #### Threads
 
@@ -1177,11 +1180,18 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
   `SmoothBrush.build` touches only what is safe from any thread: `Packs` (concurrent maps, atomic flags), `PlayerOptions`
   (copies; nothing handed out is changed afterwards), `RpManager`'s region lookups, and `ModuleSwitch`, which answers from
   what the main thread read last and asks the main thread to read again, because `PluginData` and `WorldConfig` are
-  main-thread only. One player's clicks run one after another on that queue, so a click needs no guard of its own. The
-  radius is cut to `brush.maxRadius` at every click, because `//size` can raise it.
+  main-thread only. Off the main thread it has three answers: on, off, or not read yet. For a world not read yet, which
+  every world is right after a start or a reload, the click says `SlabSmooth is still checking this world; click again.`
+  and changes nothing, rather than calling the world off. One tick after a start or a reload, `SlabSmooth` reads every
+  loaded world's switch on the main thread. One player's clicks run one after another on that queue, so a click needs
+  no guard of its own. The radius is cut to `brush.maxRadius` at every click, because `//size` can raise it.
 - **A job** (`SmoothJobs`) has five stages, and one job at a time runs on the whole server:
   1. Main thread, `start`: the limits (columns, cells), the pack, the tables, the lock. Then `AreaSource.load` starts
      reading, in slices of about 10 ms per tick, holding each chunk with a plugin chunk ticket. It never generates a chunk.
+     Without a named pack, the selection must cover one pack only: `PackFootprint` counts every RP region whose bounding
+     box meets it, since a region can have a height and lie between any two sample points, and the pack at sample points
+     at most 16 blocks apart on the selection's lowest and highest layers, plus its centre, all within the world's
+     height. The samples decide whether the pack outside every region (the player's, or the default) counts.
   2. The worker (`Architect SlabSmooth`, one daemon thread at the lowest priority): the smoothing, within the work budget.
   3. Main thread: looks the player and the world up again by their ids. The job is dropped if the player left the server,
      if the world is gone, or, for a selection, if the player left that world. Players are tracked by id, because a biome
@@ -1196,6 +1206,11 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
   closed, so what it wrote stays one undo step.
 - **The write is pinned to the world that was read.** `WorldEditSmoothing.open` sets the session's world override around
   `createEditSession` and puts it back. Without that, FAWE writes to the world the player is in at that moment.
+- **For a few milliseconds the player's session points at the job's world.** On FAWE, `WorldEditSmoothing.open` runs on
+  the job worker, and while it runs, a FAWE command the same player gives is made in the job's world. That matters only
+  for `/sls area` on another world, or for a teleport between the job's last check and its write. It is left so on
+  purpose: an edit session built by hand would lose what `createEditSession` takes from the session, such as its masks,
+  transform, side effects and block limit.
 
 #### The seams
 
@@ -1206,8 +1221,8 @@ Interfaces keep the jobs testable without a server. `SmoothJobs` and `SmoothBrus
 | `SmoothWorldEdit` | `WorldEditSmoothing` | The only code that calls WorldEdit's sessions: the selection, opening an edit for a player in a world, binding the brush, and whether the write belongs off the main thread (FAWE). |
 | `AreaSource` | `ChunkAreaSource` | Reads an area from chunk snapshots into a `LoadedArea` and holds its chunks until `release`. Fails with a message for the player when part of the area has not been generated. |
 | `BlockTarget` | `EditSessionTarget` | Where the result is written: `stateAt`, `set`, `close`. It sets blocks without block updates (neighbours and update side effects off), so stairs keep their shape and MCME's sugar-cane grass slab and repeater and comparator slabs stay as they are. A `FaweException` (no allowed region, or FAWE's own limit) becomes a `Refused` with its message, recognised by class name because FAWE is not a compile dependency. |
-| `TableSource` | `Packs` | The pack choice for an edit (the named pack, the RP region's, the player's, the default) and the table for it. |
-| `PackSources` | `ArchitectPacks` | Architect's packs: names, inventory folders, download addresses, `RpManager.getRegion` and `getCurrentRpName`. |
+| `TableSource` | `Packs` | The pack choice for an edit (the named pack, the RP region's, the player's, the default), the packs of the RP regions whose boxes meet a box, and the table for a choice. |
+| `PackSources` | `ArchitectPacks` | Architect's packs: names, inventory folders, download addresses, `RpManager.getRegion`, the RP regions whose bounding boxes meet a box (`RpManager.getRegions`), and `getCurrentRpName`. |
 
 The tests use fakes for all five (`FakeSmoothWorldEdit`, `FakeAreaSource`, `FakePackSources`), plus clocks and executors
 that they control.
@@ -1228,7 +1243,8 @@ that they control.
   `ModelsTest` and `ResourcesTest` cover the model reader.
 - **Rules and wiring** (`SmoothJobsTest`, `SmoothBrushTest`, `PacksTest`, `ArchitectPacksTest`, `ChunkAreaSourceTest`,
   `EditSessionTargetTest`, `WorldEditSmoothingTest`, `WorldAreaWriteTest`, `PackFootprintTest`, `ModuleSwitchTest`,
-  `SlabSmoothCommandTest`, `SlabSmoothSettingsTest` and `SlabSmoothWiringTest`) run on the fakes and on MockBukkit and
+  `SlabSmoothCommandTest`, `SlabSmoothSettingsTest`, `SlabSmoothWiringTest`, `SlabSmoothShutdownTest` and
+  `DownloadsTest`, whose server listens on 127.0.0.1 only) run on the fakes and on MockBukkit and
   check, among other things: a player who changed world, a block changed after the snapshot, a second job refused, a job
   over its limits, an error in each stage releasing the lock and the tickets, startup with a `LinkageError`, a selection
   across a pack border, `blocks all` without its permission, and `/architect reload`.
