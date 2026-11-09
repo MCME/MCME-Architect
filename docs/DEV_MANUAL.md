@@ -314,6 +314,12 @@ These come from comments and patterns in the test suite:
   fake `tellraw` in `server.getCommandMap()` to capture them, as `NoPhysicsCommandTest` does.
 - Where Paper would log an exception, MockBukkit passes it on: a task's exception comes back out of `performTicks`,
   and a failure in `onDisable` out of the disable call. A repeating task that threw is dropped, not run again.
+- Its scheduler runs every task a tick later at the earliest: it counts a delay below 1 as 1. Paper runs a task given no
+  delay (`runTask`, or `runTaskLater` with 0) in the same tick when a running task schedules it. So a main-thread task
+  that hands itself on with `runTask`, to wait for something or to spread work over ticks, passes under MockBukkit but
+  loops within one tick on a server, until the watchdog stops it. No test on MockBukkit's scheduler can tell the two
+  apart, so terrain smoothing's main-thread tasks go through `SlabSmooth.nextTick` (`runTaskLater` with 1), and
+  `SlabSmoothWiringTest` pins that on `FakeScheduler`, a fake scheduler that runs tasks as Paper does.
 - Its block states have no legacy data values. Asking for one throws an exception that **skips** the test instead of
   failing it, so check the Skipped count of a run.
 - It keeps a block's state apart from the block's data, and it cannot make some block data from text.
@@ -1203,12 +1209,21 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
      refresh replaces the `Player` object.
   4. The write, as one edit of the player's WorldEdit session, on the worker on FAWE (which runs the edit off the main
      thread) and on the main thread on plain WorldEdit. Blocks that changed after the read are left alone and counted.
+     Each block is compared just before it is set. On FAWE, which writes off the main thread, a block placed after its
+     compare, in the last moment of the write (while the edit's buffer is written at close), is still overwritten, and
+     is then part of the job's `//undo`. On plain WorldEdit the whole write is one main-thread task, so nothing comes
+     between.
   5. Main thread: the chunk tickets are let go, the lock opens, and the player is told.
 
   Every stage catches everything it can, errors included, and ends the job the same way (`finish`), so the lock and the
   chunk tickets are always released. A job keeps the settings and tables it started with, so a reload lets it finish.
   `SmoothJobs.close()` at disable stops a job: no more blocks are set and nothing is said, and an edit already open is
   closed, so what it wrote stays one undo step.
+- **Every main-thread task waits for a later tick.** The chunk reader, the jobs, the module switch and the prewarm hand
+  their tasks to `SlabSmooth.nextTick`, the scheduler's `runTaskLater(plugin, task, 1)`. Paper runs a task given no
+  delay (`runTask`) in the same tick when a running task schedules it, and hands a chunk over only once a tick has
+  ended. Handed on with `runTask`, a read waiting for its chunks never let its tick end, until the watchdog stopped the
+  server.
 - **Tables are built on the packs' worker** (`Architect SlabSmooth packs`), a daemon thread at the lowest priority like
   the job worker. A build takes seconds of CPU, and a new thread would take the priority of the thread that starts it:
   Paper's main thread, which runs above normal.
@@ -1232,8 +1247,8 @@ Interfaces keep the jobs testable without a server. `SmoothJobs` and `SmoothBrus
 | `TableSource` | `Packs` | The pack choice for an edit (the named pack, the RP region's, the player's, the default), the packs of the RP regions whose boxes meet a box, and the table for a choice. |
 | `PackSources` | `ArchitectPacks` | Architect's packs: names, inventory folders, download addresses, `RpManager.getRegion`, the RP regions whose bounding boxes meet a box (`RpManager.getRegions`), and `getCurrentRpName`. |
 
-The tests use fakes for all five (`FakeSmoothWorldEdit`, `FakeAreaSource`, `FakePackSources`), plus clocks and executors
-that they control.
+The tests use fakes for all five (`FakeSmoothWorldEdit`, `FakeAreaSource`, `FakePackSources`), plus clocks, executors
+and a scheduler (`FakeScheduler`) that they control.
 
 #### Tests
 
@@ -1255,7 +1270,8 @@ that they control.
   `DownloadsTest`, whose server listens on 127.0.0.1 only) run on the fakes and on MockBukkit and
   check, among other things: a player who changed world, a block changed after the snapshot, a second job refused, a job
   over its limits, an error in each stage releasing the lock and the tickets, startup with a `LinkageError`, a selection
-  across a pack border, `blocks all` without its permission, and `/architect reload`.
+  across a pack border, `blocks all` without its permission, `/architect reload`, and that every main-thread task waits
+  for a later tick, on `FakeScheduler` (see [MockBukkit lessons](#mockbukkit-lessons)).
 - **`TableBuilderTest` and `BuildTable` with a local pack.** These read real packs, so they run only where the files
   exist and are skipped elsewhere. `TableBuilderTest` looks for `RP-Human` in `.minecraft/resourcepacks` (under
   `%APPDATA%`), for the inventories in `RP-Inventories/inventories` next to it, and for the client jar in

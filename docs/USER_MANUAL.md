@@ -2308,7 +2308,8 @@ smoothing, the reply shows the pack it used, for example `[Mordor]`.
 - **One smoothing at a time on the whole server.** A selection or area that starts while another runs is told `Another
   smoothing is running; try again in a moment.` A big one takes a few seconds; the reply tells you when it is done.
 - **Changes made while it runs are left alone.** Smoothing reads the area, works out the result, and then writes it.
-  Blocks that you or someone else changed in between are not overwritten, and the reply says how many.
+  Blocks that you or someone else changed in between are not overwritten, and the reply says how many. A block placed
+  in the last fraction of a second of the write can still be overwritten, and is then part of that smoothing's `//undo`.
 - **A smoothing is dropped** if you leave the world (for a selection) or the server before it writes, because you could
   not undo it. Nothing changes then.
 - **Every smoothing is one `//undo` step**, also when it stopped at your WorldEdit block limit (`Too many blocks for
