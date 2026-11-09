@@ -1,6 +1,6 @@
 # MCME-Architect — User Manual
 
-For builders, staff and server admins of MCME-Architect 3.3.1 on Paper 26.2. For the architecture, building, testing
+For builders, staff and server admins of MCME-Architect 3.4.0 on Paper 26.2. For the architecture, building, testing
 and releasing, see the [Developer Manual](DEV_MANUAL.md).
 
 ## Contents
@@ -14,6 +14,7 @@ and releasing, see the [Developer Manual](DEV_MANUAL.md).
 - [Seeing and moving](#seeing-and-moving)
 - [Resource packs](#resource-packs)
 - [Biome tuning](#biome-tuning)
+- [Terrain smoothing](#terrain-smoothing)
 - [Map layers](#map-layers)
 - [Running Architect](#running-architect)
 - [Command reference](#command-reference)
@@ -242,7 +243,7 @@ When it is off, `/inv` answers `Custom build inventories are not enabled in this
 
 - `/inv search` opens the saved inventories, because every word that starts with `s` or `c` does. Search with
   `/inv b s:<text>`. The letters are case-sensitive: `/inv B` is refused.
-- `/inv i` answers `Not implemented yet!`: no command opens item inventories in 3.3.1.
+- `/inv i` answers `Not implemented yet!`: no command opens item inventories in 3.4.0.
 
 #### Using the window
 
@@ -320,7 +321,7 @@ builders take from it.
 
 **Good to know**
 
-- In 3.3.1 every saved inventory is public: everyone who can use `/inv` can open it and take from it. The file says
+- In 3.4.0 every saved inventory is public: everyone who can use `/inv` can open it and take from it. The file says
   `isPrivate: true`, which Architect reads the other way round.
 - A saved inventory's name may not contain `/` or `\`: such a name is refused with `Invalid name. A name may not
   contain / or \.` Otherwise `/inv create` answers `Inventory saved.`, even when saving failed; check the window.
@@ -354,7 +355,7 @@ A private set is only hidden: `/get list` shows it to its owner alone, but anyon
 **Limits**
 
 - A player can have at most 11 private sets; the twelfth is refused.
-- In 3.3.1, private sets can be lost once their owner has been offline for about 14 hours: the next save of the set
+- In 3.4.0, private sets can be lost once their owner has been offline for about 14 hours: the next save of the set
   file leaves them out, and after the next restart they are gone. Use a public set
   for anything you want to keep.
 - Set names are case-sensitive, but `list`, `armor` and `help` cannot be used as set names in any case (`List` and
@@ -465,7 +466,7 @@ This part is for staff and for the server admin. The blocks of each pack live in
 them with a git repository.
 
 > [!WARNING]
-> In 3.3.1, two editor paths write values that Bukkit cannot read back. The whole tab file then fails to load, and all
+> In 3.4.0, two editor paths write values that Bukkit cannot read back. The whole tab file then fails to load, and all
 > its blocks disappear from the build inventory, although the editor reports the save and `Inventory reload done!`.
 >
 > - **Changing the item during an edit.** At `To change the inventory item hold in main hand a new item and type 'ok'`,
@@ -637,7 +638,7 @@ E4  E3  E2  E1  E0     J1  J2  J3  J4
 - A file with a YAML error is skipped as a whole, and Architect's log names it. Single skipped entries (unknown type,
   duplicate key, invalid state) are only reported at debug level 2: run `/architect dev 2` and `/architect dev`, then
   `/inv reload`, to see them in chat.
-- These types cannot be loaded in 3.3.1, so their entries are skipped: `OPEN_HALF_DOOR`, `BRANCH_TWIGS_UPPER`,
+- These types cannot be loaded in 3.4.0, so their entries are skipped: `OPEN_HALF_DOOR`, `BRANCH_TWIGS_UPPER`,
   `BRANCH_TWIGS_LOWER`, `BRANCH_TWIGS_UPPER_EIGHT_DIRECTIONS` and `BRANCH_TWIGS_LOWER_EIGHT_DIRECTIONS`.
   `MATCH_ORIENTATION` behaves like `FOUR_DIRECTIONS`, and `MOB_SPAWNER_BLOCK` places nothing.
 - An item's id is `<pack>/<key>`. Renaming a key or a pack folder makes the existing items of it outdated.
@@ -730,7 +731,7 @@ bundle.
 |---|---|---|---|---|
 | Oak, spruce, birch, jungle, acacia, dark oak or iron door | `Half` | Right-click a block: only the lower half of the door is placed, turned the way you look. | `architect.place.halfDoor` | `modules.specialBlocks.halfDoors` |
 | Red bed | `Half` | Right-click a block: one half of a bed is placed, turned the way you look. You get the foot, or the head if the name ends in `(head)`. | `architect.place.halfBed` | `modules.specialBlocks.halfBeds` |
-| Redstone torch | `Unlit` | Right-click a block: a redstone torch is placed on the face you clicked. In 3.3.1 it comes out lit, despite the key word; set `lit=false` with the stick. | `architect.place.torch` | `modules.specialBlocks.redstoneTorch` |
+| Redstone torch | `Unlit` | Right-click a block: a redstone torch is placed on the face you clicked. In 3.4.0 it comes out lit, despite the key word; set `lit=false` with the stick. | `architect.place.torch` | `modules.specialBlocks.redstoneTorch` |
 | Wheat, melon seeds, pumpkin seeds, brown or red mushroom, cactus, rose bush, dead bush, nether wart or lily pad | `Placeable` | Right-click a block: the plant is placed without the soil or water it needs. Right-click a crop of the same kind to lower its growth stage by one instead; below the lowest it starts again at the highest. | `architect.place.plant` | `modules.specialBlocks.plants` |
 | Piston | `Table` or `Wheel` | Place it: you get a sticky piston head on its own, facing you. | `architect.place.pistonExtension` | `modules.specialBlocks.pistonExtenstions` (spelt this way) |
 | Furnace | `Burning` | Place it: you get a lit furnace that faces you and stays lit. | `architect.place.burningFurnace` | `modules.specialBlocks.burningFurnace` |
@@ -1067,7 +1068,7 @@ Three switches take items, or their powers, away. On a new install all three are
 **Good to know**
 
 - `modules.protection.blockOpItems` is read from the server's first world only, and then applies in every world.
-- The world setting `allowedEnchantments` has no effect in 3.3.1: its names never match, so every enchantment is
+- The world setting `allowedEnchantments` has no effect in 3.4.0: its names never match, so every enchantment is
   removed. Enchanted books keep the enchantments stored in them.
 
 ---
@@ -1208,7 +1209,7 @@ banner. `architect.bannerEditor.save` (Artist bundle) to save. You may delete yo
 
 **Good to know**
 
-- Orientation, the starting mode, does nothing in 3.3.1: the stick cannot turn a banner.
+- Orientation, the starting mode, does nothing in 3.4.0: the stick cannot turn a banner.
 - The pattern number stays set. After a remove, the patterns above it move down one number.
 - Any word works as a mode if its first letter fits: `/banner colour` selects colour mode.
 - Your mode and pattern number are forgotten when the server restarts.
@@ -1601,7 +1602,7 @@ resends just that block. Only you get these updates. Clicks with the stick and t
 | Command | What it does |
 |---|---|
 | `/chunkupdate auto <world>\|-default [true\|false]` | Turns automatic updates on (`true`) or off (anything else, or nothing) in a world, or in `defaultWorldConfig.yml`. It takes effect at once. |
-| `/chunkupdate [radius]` | Does nothing in 3.3.1; it answers "Manual chunk updates are not available. Rejoin to reload your chunks." |
+| `/chunkupdate [radius]` | Does nothing in 3.4.0; it answers "Manual chunk updates are not available. Rejoin to reload your chunks." |
 
 **Permissions:** `architect.chunkupdate` (Artist bundle) for `/chunkupdate`. `/chunkupdate auto` also needs
 `architect.chunkupdate.auto`, which is in no bundle and defaults to op, so only ops have it unless you grant it.
@@ -1699,7 +1700,7 @@ New players start with automatic switching on, client type `vanilla`, variant `l
 
 1. **Pack:** your region's pack, or the one you loaded.
 2. **Client type:** yours, if the pack has it. Otherwise the first client type the pack lists.
-3. **Resolution:** `16px`, or else the first one listed. 3.3.1 has no command to change the resolution.
+3. **Resolution:** `16px`, or else the first one listed. 3.4.0 has no command to change the resolution.
 4. **Variant:** yours, if the pack has it. Otherwise the first one listed.
 5. **Version:** the newest version of the pack that is not newer than your Minecraft version. A client older than all
    of them gets the oldest. Architect reads your version from your connection, or from ViaVersion when the server has
@@ -2023,7 +2024,7 @@ hex box that overrides the sliders. `Show` shows the new colour in the window on
 `Copy from biome…` takes the colour from another biome, vanilla biomes included. `Clear` removes the value, so the
 default or the climate's colour applies.
 
-**Music, sounds and particles** are edited as raw JSON in 3.3.1. The JSON editor shows the live value in a text box.
+**Music, sounds and particles** are edited as raw JSON in 3.4.0. The JSON editor shows the live value in a text box.
 The game checks your JSON when you click `Apply`, and `Clear` removes the value. In the Audio & particles section,
 `Copy from biome…` copies the music and sounds, the particles, or both, from another biome, such as
 `minecraft:basalt_deltas`. Values that biome leaves unset are removed here too.
@@ -2077,8 +2078,8 @@ across a save. **Revert** goes back to the saved file and clears the undo steps.
 
 - A restart loses every unsaved edit, so save first. Architect's log lists the unsaved biomes at shutdown.
 - Edits change this server only. Other servers keep their own biomes.
-- If a plugin on the server listens to Paper's old login event, a refresh can be refused: "Paper refused to
-  reconfigure <name>…". Rejoin to see the live values.
+- If a refresh cannot run on a server, chat says "Live preview is not available on this server right now".
+  Switching servers and back, or rejoining, shows the live values.
 - Only colours, atmosphere and climate go live. Changes to features, carvers or mob spawns made by hand in a biome file
   need a restart.
 - Save rewrites the whole file in a standard JSON layout. Values that biome tuning does not handle are kept.
@@ -2207,6 +2208,352 @@ uses its default.
 Biome tuning writes its log lines (saves, claims, labels, refreshes) to Architect's own log file in
 `plugins/MCME-Architect/logs/`, not to the server console, unless `logging.file.alsoServerLog` is `true`. When the
 editor says "see Architect's log", look in that file.
+
+---
+
+## Terrain smoothing
+
+Terrain smoothing rounds off stair-stepped terrain with the pieces of a resource pack: slabs and stairs on tops,
+vertical slabs on cliff faces, and top slabs and upside-down stairs under overhangs. You use it on a WorldEdit
+selection, on a box given by its corners, or as a WorldEdit brush. Every change goes through WorldEdit, so `//undo`
+takes it back. The command is `/slabsmooth`, or `/sls` for short.
+
+Toti Gonzales wrote it as a separate plugin, SlabSmooth. It is part of Architect from 3.4.0. It is **off in every
+world** until an admin switches it on for that world (see [Setting up smoothing](#setting-up-smoothing)).
+
+### Quick start
+
+| | |
+|---|---|
+| `/sls brush 6` | Hold a feather, a bone or any other item that is not a block, and not your WorldEdit wand or navigation wand. Right-click terrain to smooth everything within 6 blocks. |
+| `/sls selection` | Smooths your WorldEdit selection (`//wand`). Select the terrain plus a little air above it. |
+| `/sls area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]` | Smooths a box by its corners, in any world, without being there. For trusted staff. |
+| `//undo` | Takes back the last brush click, selection or area. On FastAsyncWorldEdit, undo an area from inside the world it changed. |
+| `//mask` | Works with the brush as usual: `//mask stone` smooths only stone. |
+
+You do not need `//perf`: the pieces are placed without block updates, so they keep their shape.
+
+If a command answers that you have no permission, ask an admin for the node it needs (see [Permissions for
+smoothing](#permissions-for-smoothing)).
+
+### What smoothing changes
+
+- **Terrain blocks and their pieces.** By default that means the blocks that your pack's build inventory keeps under
+  its `Terra` category. Smoothing places the slabs, stairs and vertical slabs that go with them, and removes blocks
+  where it cuts into the ground.
+- **Air and plants next to them.** Grass and flowers on ground that changes are removed, unless you set
+  `plants keep`.
+- **Nothing outside your selection or brush.** The blocks around it are read, so the smoothed part blends in (5 blocks
+  at the default settings), but they do not change.
+- **Never** water, waterlogged blocks, or blocks with block data, such as chests, signs and heads. The only exception
+  is a piece that the pack itself uses as a slab and that is a block entity, such as MCME's comparator slabs.
+- **A block with something built on it keeps its shape**, also at a cliff edge: the block under a chest, a fence, a
+  wall or a tree trunk. A block with something hanging under it, such as a lantern, keeps its bottom whole, and only
+  its top is smoothed. With `blocks all`, logs, bricks and other blocks that have pieces of their own count as ground,
+  not as built: they are smoothed like the terrain, and do not keep the block under them as it is. Something fixed to
+  the side of a terrain block, such as a ladder or a sign, is not protected this way: part of that side can still be
+  cut away.
+- **Plants that hang under a block or grow on its side are not protected the same way.** This covers vines and weeping
+  vines. Smoothing a cliff can leave them floating. `//undo` reverts that smoothing, and selecting less avoids them.
+
+> [!WARNING]
+> **Buildings made of terrain blocks get smoothed too.** Smoothing does not know what a block is part of. A wall or a
+> flight of steps made of a terrain block (stone, polished andesite, and so on) that touches the ground counts as
+> ground, however thin it is. Inside your selection or brush, its steps under 3 blocks high are reshaped: sills,
+> battlements and stairs can change. Near buildings, use `//mask` to name the blocks to smooth, or a smaller selection
+> that stays clear of them. `//undo` takes it back. Blocks outside the `Terra` category are safe by default (see
+> `blocks` below).
+
+### Which pack it uses
+
+Smoothing places the pieces of the pack the terrain is built in: the pack of the RP region you are working in. The
+same block looks different in each pack, so each pack has its own table of which block goes with which piece. After a
+smoothing, the reply shows the pack it used, for example `[Mordor]`.
+
+- **Outside every RP region**, it uses your own pack, and then the default pack (`defaultPack`, `Human` unless the
+  admin changed it).
+- **The brush** uses the pack at the block you click.
+- **A selection or an area** uses one pack. If it covers more than one pack, it is refused before anything is read, and
+  the reply names the packs it found: `This selection covers more than one pack (Human, Mordor). Pick one with /sls
+  pack <name>, or select less.` Name a pack to go ahead, with `/sls pack <name>` or the pack argument of `area`. The
+  check counts every RP region whose box meets the selection, also one inside it, such as a cave region in the middle
+  of a tall selection. Weights are respected as for players: where a heavier region that is a box holds a region's
+  whole part of the selection, that region does not count, so a selection wholly inside a cave region of weight 5 is
+  not refused for the mountain region of weight 1 around it. Regions of equal weight both count. A region that is not
+  a box (a cylinder, a polygon) counts by the box around it, so next to one a selection can be refused although it
+  stays clear of the region itself: name a pack then. Where no region is, the pack that applies there counts too (your
+  own, or the default), looked at on the corners of the selection, at points at most 16 blocks apart between them on
+  its lowest and highest layers, and at its centre.
+- `/sls pack Mordor` uses Mordor's blocks for your selections, areas and brush wherever you are. `/sls pack auto` goes
+  back to following the RP region. `/sls pack` alone shows what applies where you stand.
+- `/sls packs` lists the packs and the state of each one's table.
+- The first time anyone smooths in a pack's region after a restart, you may see `Reading the Mordor pack (region) for
+  the first time; try again in a few seconds.` once, while it reads that pack. Where smoothing is on, the default pack is read in the background after every start.
+
+### Good to know
+
+- **Terrain blocks only, unless you ask.** Other blocks that have slabs and stairs of their own, such as bricks, roof
+  tiles or a rock that a pack keeps under another category, are left alone. `/sls set blocks all` smooths those too,
+  with your brush, selections and areas. It needs the permission `architect.slabSmooth.allBlocks`, which `architect.slabSmooth`
+  does not include. When an edit finds nothing to do but such a block is nearby, the reply says so, if you may use
+  `blocks all`.
+- **Repeated passes smooth more.** Brushing the same spot again and again slowly flattens it, like WorldEdit's smooth
+  brush.
+- **What it can do depends on the block.** A block with vertical slabs, stairs and top slabs in the inventory gets its
+  cliffs and overhangs smoothed. A block with only a slab (such as grass in RP-Human) gets only its tops smoothed. A
+  block with no pieces at all is left alone.
+- **Sharp edges stay sharp.** The edge between a flat top and a cliff of 3 or more blocks (`cliff 6` half blocks) is
+  left alone.
+- **Tight crevices stay open.** Nothing is placed into a gap that is 1 block wide, except a plain slab on its floor.
+- **The brush is a sphere** with `surfaces all`, so working on a cliff face does not touch the top of the cliff. With
+  `surfaces top` it is a cylinder of the same radius that reaches its radius plus 8 blocks above and below your click
+  (20 at radius 12). It smooths the top it finds in each column, so under an overhang it can reshape the overhang's top
+  above your click.
+- **A selection with `surfaces top`** must be a box, a polygon or a cylinder. Other shapes are refused with `With
+  surfaces top, select a box, polygon or cylinder.`
+- **At the lower edge of a selection**, a cut top may sit on a block that keeps its own top colour. That is expected:
+  nothing outside the selection changes.
+- **One smoothing at a time on the whole server.** A selection or area that starts while another runs is told `Another
+  smoothing is running; try again in a moment.` A big one takes a few seconds; the reply tells you when it is done.
+- **Changes made while it runs are left alone.** Smoothing reads the area, works out the result, and then writes it.
+  Blocks that you or someone else changed in between are not overwritten, and the reply says how many. Each block is
+  checked just before it is set. On FastAsyncWorldEdit, a block placed after its check and before FastAsyncWorldEdit
+  writes the edit can still be overwritten, and is then part of that smoothing's `//undo`. On plain WorldEdit nothing
+  comes between.
+- **A smoothing is dropped** if you leave the world (for a selection) or the server before it writes, because you could
+  not undo it. Nothing changes then.
+- **Every smoothing is one `//undo` step**, also when it stopped at your WorldEdit block limit (`Too many blocks for
+  your WorldEdit limit; partly done, //undo reverts it.`). FastAsyncWorldEdit keeps the undo history per world: undo an
+  area from inside the world it changed, even when you ran `/sls area` from another one. On plain WorldEdit the history
+  is per player, so `//undo` works from any world.
+- **It never generates the land it smooths.** A selection or box that reaches land that has not been generated is
+  refused, and nothing is generated for it. While a smoothing runs, the server loads the land up to two chunks around
+  the area, as it would around a player standing there: next to land that has not been generated, it generates that
+  strip.
+- **Wrong pieces?** If a block gets pieces that do not belong to it, tell an admin which block and which piece. They
+  can correct it in the config (see [Packs, tables and downloads](#packs-tables-and-downloads)).
+- **The console** can run only `/sls help`, `/sls packs` and `/sls packs rebuild`. `area` is for players, because
+  console edits have no `//undo`.
+
+### Your smoothing settings
+
+`/sls set <name> <value>` changes your own settings. They apply to your selections, areas and brush right away.
+`/sls options` shows them (a `*` marks a changed one), and `/sls reset` goes back to the defaults and to the automatic
+pack. Your settings are forgotten when the server restarts, and at `/architect reload`.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `surfaces` | `all` | `top`: only tops, no walls or overhangs. |
+| `mode` | `both` | `cut`: only remove blocks, never add. `fill`: only add. |
+| `plants` | `remove` | `keep`: leave every spot that has a plant on it alone. |
+| `blocks` | `terrain` | `all`: also smooth blocks outside the terrain category that have slabs or stairs of their own. Needs `architect.slabSmooth.allBlocks`. |
+| `band` | `2` | How far the surface may move, in half blocks, 0 to 4 (1 is more careful). |
+| `sigma` | `1.5` | How widely it smooths, in blocks, 0 to 8. Bigger gives broader, gentler shapes. |
+| `cliff` | `6` | Steps of this many half blocks or more count as cliffs and keep their edge, 1 to 64. |
+| `cost_stairs`, `cost_corner`, `cost_vslab` | `0.2`, `0.1`, `1.0` | Raise to use fewer stairs, corner stairs or vertical slabs; lower for more. 0 to 100. |
+| `cost_fill` | `0.05` | The price of any piece placed above the original surface. Raise it to add less. 0 to 100. |
+| `w_data`, `w_diag` | `0.5`, `0.5` | How strongly the result stays close to the original terrain, and how much corner-sharing neighbours count next to edge neighbours. 0 to 100. |
+| `border` | `1` | Columns this close to the edge of the area stay as they are, 0 to 16. |
+| `min_thickness` | `5` | Ground runs thinner than this, and not reaching the bottom of the area, are ignored, 1 to 64. |
+| `anneal` | `12` | Sweeps of the search before its final descent, 0 to 100. More can find a better shape and takes longer. |
+| `seed` | `1` | The random seed. The same seed gives the same result. |
+
+The rows from `cost_fill` on are for fine tuning. Leave them alone unless an admin asks you to change them.
+
+### Smoothing commands
+
+`<pack>` is a pack name; case does not matter. Subcommands are not case-sensitive, and `sel` is short for `selection`.
+
+| Command | What it does | Permission |
+|---|---|---|
+| `/sls help` | Lists what you may use. | `architect.slabSmooth` |
+| `/sls selection` | Smooths your WorldEdit selection. | `architect.slabSmooth.selection` |
+| `/sls brush [radius]` | Binds the smoothing brush to the item in your hand, which must not be a block or your WorldEdit wand or navigation wand. Radius 1 to `brush.maxRadius` (12), default 5. WorldEdit checks the node at every click, so taking it away also stops a brush that is already bound. | `architect.slabSmooth.brush` |
+| `/sls area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]` | Smooths a box by its corners, in the world you name or your own. It writes to that world wherever you stand. On FastAsyncWorldEdit, `//undo` it from inside that world. | `architect.slabSmooth.area` |
+| `/sls set <name> <value>` | Changes one of your settings. | `architect.slabSmooth` |
+| `/sls options`, `/sls reset` | Shows your settings; goes back to the defaults. | `architect.slabSmooth` |
+| `/sls pack [name\|auto]` | Names the pack your edits use, or `auto` to follow the RP region. Without an argument it shows the pack that applies here. | `architect.slabSmooth` |
+| `/sls packs` | Lists the packs and the state of their tables. | `architect.slabSmooth` |
+| `/sls packs rebuild [pack]` | Reads the packs again now (the table of one pack, or of all). | `architect.slabSmooth.admin` |
+
+Tab completion and `/sls help` show only what you may use. Selections, areas and the brush also need the module switch
+of the world they work in; `set`, `options`, `reset`, `pack` and `packs` work in any world.
+
+### Setting up smoothing
+
+This part is for server admins.
+
+#### Switching it on
+
+Smoothing is the one module that is **off unless a world switches it on**. Set `modules.command.slabSmooth` to `true`
+in the world's file in `WorldConfig/` (or in `defaultWorldConfig.yml` for every world), and run `/architect reload`:
+
+```yaml
+modules:
+  command:
+    slabSmooth: true
+```
+
+- A new `defaultWorldConfig.yml` writes the switch as `false`. After an upgrade, Architect adds it as `false` the first
+  time it checks it. Every other module starts as `true`.
+- The switch is read per world. In a world where it is off, `/sls selection`, `area` and the brush answer `SlabSmooth is
+  off in this world.` (`area` names the world it was given).
+- On FastAsyncWorldEdit a brush click runs on a thread of its own, which cannot read the switch, so the server reads it
+  in the next tick. Right after a start or a reload, and in a world loaded since, the first click can answer `SlabSmooth
+  is still checking this world; click again.` and change nothing; the next click works. One tick after a start or a
+  reload, every loaded world's switch has been read.
+- A server where no world has the switch on starts no thread, reads no pack and downloads nothing.
+- `/architect reload` reads the switches and the `slabSmooth` section of `config.yml` again, and **resets every
+  player's `/sls` settings and chosen pack**. A smoothing that is running finishes with the settings it started with.
+
+#### Permissions for smoothing
+
+| Node | Default | Allows |
+|---|---|---|
+| `architect.slabSmooth` | op | `/sls` itself: `help`, your own settings (`set`, `options`, `reset`), `pack` and `packs`. **Includes `architect.slabSmooth.selection` and `architect.slabSmooth.brush`.** Without it the command is hidden. |
+| `architect.slabSmooth.selection` | op | `/sls selection`. |
+| `architect.slabSmooth.brush` | op | `/sls brush`, and every click of a bound brush. |
+| `architect.slabSmooth.area` | op | `/sls area`: a box in any world. For trusted staff. |
+| `architect.slabSmooth.allBlocks` | op | `/sls set blocks all`. **Not included in `architect.slabSmooth`**, and checked again whenever a smoothing starts or the brush clicks, so taking it away takes effect at once, also when `blocks: all` is set under `defaults` in `config.yml`. |
+| `architect.slabSmooth.admin` | op | `/sls packs rebuild`. |
+
+None of them is in a rank bundle, so give them by name. A LuckPerms group with `architect.*` gets all six,
+`architect.slabSmooth.allBlocks` included, because LuckPerms applies wildcards unless `apply-wildcards` is off in its
+config. Architect checks only Bukkit permissions, so this works with LuckPerms and any other permissions plugin, and a
+change applies at once. A sensible split gives builders `architect.slabSmooth`, senior builders also
+`architect.slabSmooth.area`, and the people who run the server `architect.slabSmooth.admin`. With LuckPerms, if your
+groups are called artist, designer and manager:
+
+```
+lp group artist permission set architect.slabSmooth true
+lp group designer permission set architect.slabSmooth.area true
+lp group manager permission set architect.slabSmooth.admin true
+```
+
+This assumes that higher ranks inherit from lower ones. If yours do not, give each rank every node it should have.
+
+- **Only on some servers or worlds.** Add a context: `lp group artist permission set architect.slabSmooth true
+  server=build`, or `world=world_build`.
+- **Selection but no brush**, or the other way round: give `architect.slabSmooth` and set the other node to false, for
+  example `lp group artist permission set architect.slabSmooth.brush false`.
+- **To keep ops out of it**, set the nodes to false for them. Ops have every node unless LuckPerms ignores Bukkit's
+  defaults (`apply-bukkit-default-permissions: false`).
+- **To check**, run `lp user <name> permission check architect.slabSmooth.brush`. `lp verbose on architect.slabSmooth`
+  prints what is checked while someone uses it.
+
+Builders also need the WorldEdit nodes they use with it. They usually have them already, and Architect grants none:
+
+| WorldEdit node | For |
+|---|---|
+| `worldedit.wand`, `worldedit.selection.*` | Making the selection for `/sls selection`. |
+| `worldedit.history.undo`, `worldedit.history.redo` | `//undo` and `//redo` of a smoothing. |
+| `worldedit.brush.options.mask` | `//mask` on the brush (optional). |
+
+Binding the smoothing brush needs no `worldedit.brush.*` node; `architect.slabSmooth.brush` is the only check.
+
+#### The slabSmooth section
+
+The `slabSmooth` section of `config.yml`. The bundled file has it commented out: every key is optional, and the
+commented lines are the defaults. Remove the `#` of the section line and of the keys you change.
+
+| Key | Default | What it does |
+|---|---|---|
+| `defaultPack` | `Human` | The pack for places outside every RP region, when the player's own pack is not known. Set it if your default pack has another name in `ServerResourcePacks`. |
+| `download` | `true` | Download the packs and the client jar (see [Packs, tables and downloads](#packs-tables-and-downloads)). |
+| `terrainCategories` | `[Terra]` | The inventory categories (`inventories/block/<pack>/*.yml`) that hold terrain. |
+| `plantCategories` | `[Plant, Crop]` | The inventory categories of plants, which are removed or kept where the ground under them changes. |
+| `lookTolerance` | `10` | The largest difference in colour (0 to 441) between a terrain block and a piece with another texture that it may use. 0: only pieces with its own texture. |
+| `vanilla.clientJar` | empty | A Minecraft client jar to read instead of downloading one. |
+| `brush.maxRadius` | `12` | The largest brush radius, at most 32. A larger `//size` is cut to it at every click. |
+| `selection.maxColumns` | `65536` | The most columns (x by z) a selection or area may read, with the margin that is read around it (5 blocks at the default settings), at most 1048576. |
+| `selection.maxCells` | `8000000` | The most blocks it may read, with the margin and the height, at most 32000000. Checked before anything is read. |
+| `selection.maxSeconds` | `120` | The longest a selection or area may take, in seconds, at most 600. One that runs out of time stops and changes nothing. |
+| `overrides` | `{}` | Per pack, by inventory key: `terrain` (more blocks that count as terrain), `exclude` (blocks never used) and `pairs` (the pieces a block always uses). |
+| `defaults` | `{}` | The settings every player starts with, by the names `/sls set` uses. |
+
+```yaml
+slabSmooth:
+    defaultPack: Human
+    selection:
+        maxColumns: 16384
+    overrides:
+        Dwarven: {terrain: [quartz_block]}
+        Human: {exclude: [lava_rock], pairs: {grass: [grass_slab]}}
+    defaults:
+        band: 3
+```
+
+A value that cannot be used is left out with a warning in the log (it starts `slabSmooth in config.yml:`), and the
+default applies. A limit set above its highest value is cut to that value, with a warning too. A smoothing that needs
+more work than 100,000 surfaces in one pass stops too, and changes nothing.
+
+#### Packs, tables and downloads
+
+- **Packs and regions** come from Architect: the packs under `ServerResourcePacks`, and the RP regions. Outside every
+  region it uses the player's current pack, then `defaultPack`.
+- **The inventory** of each pack is read from the files in `plugins/MCME-Architect/inventories/block/<pack>/`, exactly
+  as Architect loads them. Terrain is whatever the `terrainCategories` place, plus the blocks listed under
+  `overrides.<pack>.terrain`.
+- **Shapes** come from the pack's own block models, never from names. A block is a slab only if its model really is the
+  lower half of a block, and so on. Odd shapes (thin slabs, wedges, OBJ models) are never touched.
+- **Pairs.** A piece goes with a full block when it shows the same texture on its outward side, or is named after it
+  (`Dirt Slab (lower)` for `Dirt Block`), or looks nearly the same (`lookTolerance`).
+- **Other blocks.** Blocks of the other categories that have slabs or stairs of their own are left alone unless a
+  builder with `architect.slabSmooth.allBlocks` sets `blocks all`. To make one of them terrain for everyone, list its
+  inventory key under `overrides.<pack>.terrain`.
+- **A report** for each pack, `plugins/MCME-Architect/slabSmooth/tables/<pack>-report.txt`, lists every terrain
+  material, its blocks and where its pieces came from, then the other blocks with pieces, and any state that the
+  server does not know and so was left out. If a pairing is wrong, correct it with `overrides`, run
+  `/architect reload`, then `/sls packs rebuild <pack>`.
+- **Changes.** When someone smooths, Architect compares the inventory files' contents, the pack's address and SHA-1,
+  and the size and date of a zip in `slabSmooth/packs/` and of the `vanilla.clientJar`, with what it read last (at most
+  every 5 seconds per pack). For the inventory files only the content counts, because Architect writes them again at
+  every start. If something changed, it reads the pack again in the background and keeps using the previous table until
+  the new one is ready. A table that was built before is saved, so after a restart a pack that has not changed loads in
+  a moment and opens no zip.
+
+**Downloads.** Pack zips are about 25 MB each, and Mojang's client jar for the server's Minecraft version is about
+37 MB. They are cached in `plugins/MCME-Architect/slabSmooth/cache/` and checked against their SHA-1: the pack's from
+`ServerResourcePacks`, the jar's from Mojang's version manifest (`piston-meta.mojang.com` and
+`piston-data.mojang.com`). Nothing else is downloaded and nothing is uploaded.
+
+- Where a loaded world has the module on, the **default pack's zip and the client jar are fetched one tick after every
+  start or reload**, if they are not cached yet. Any other pack is fetched the first time someone smooths with it.
+- A pack is downloaded again only when its address or SHA-1 in `ServerResourcePacks` changes.
+- **To run without downloads**, set `download: false`. Put each pack's zip at
+  `plugins/MCME-Architect/slabSmooth/packs/<pack>.zip` (a zip there is used whatever `download` says), and set `vanilla.clientJar` to the client jar of the server's
+  Minecraft version (for 26.2, `.minecraft/versions/26.2/26.2.jar`). The cache can be deleted at any time; it is
+  downloaded again when needed.
+
+#### What smoothing does to the server
+
+- **Files.** It writes only inside `plugins/MCME-Architect/slabSmooth/`: `tables/` (each pack's table, fingerprint and
+  report, a few hundred KB) and `cache/`. It keeps nothing about players on disk.
+- **Brush clicks** are handled like any WorldEdit brush. On FastAsyncWorldEdit they run off the main thread.
+- **Selections and areas** are read in slices of about 10 ms per tick. Chunks that are not loaded are loaded by Paper
+  in the background, never generated, and an area with any ungenerated chunk is refused first. Then its chunks are held
+  with a chunk ticket until the result is written, which makes Paper load the land up to two chunks around them, as for
+  a player standing there, and generate it where needed. The smoothing runs on a worker thread of its own, with
+  `surfaces all` in 64 by 64 tiles. On FastAsyncWorldEdit, the write runs off the main thread too.
+- **Land nobody has visited.** The first time an area of land that nobody has visited is smoothed, such as freshly
+  generated or imported terrain, the server can have one or two slow ticks of around a tenth of a second. That is
+  Minecraft finishing the land's generation, which a player walking there would set off too. Land that has been visited
+  before does not do this.
+- **Limits.** One selection or area at a time on the server; `maxColumns`, `maxCells` and `maxSeconds`; and a cap on
+  the work in one pass. Players who go over are told, and nothing changes.
+- **Memory.** Two tables per pack in use, and per-player settings, which are forgotten at a restart or a reload.
+- **Errors.** Players see a short message; the details go to Architect's log. If WorldEdit or the server is not what
+  this build was made for, smoothing switches itself off with one warning in the log, leaves the rest of Architect
+  running, and `/sls` answers `SlabSmooth is unavailable: …` until the next restart.
+
+#### FastAsyncWorldEdit and region restrictions
+
+MCME's servers run FastAsyncWorldEdit, and smoothing works on it and on plain WorldEdit. Every smoothing is an edit of
+the player's own WorldEdit session, so FAWE's region restrictions apply: a builder needs what they already need for
+FAWE, which is a WorldGuard region they may build in, or `fawe.bypass`. Without either, FAWE refuses the edit, and the
+player is told: `FastAsyncWorldEdit refused the edit: No allowed region …`. The player's WorldEdit limits, `//gmask`
+and brush masks apply as well, and protection plugins that hook into WorldEdit see a smoothing like any other WorldEdit
+edit.
 
 ---
 
@@ -2479,6 +2826,7 @@ it logs, how to reload it, and the `/architect` command.
 | TheGaffer (3.0.0 or later for job statistics) | Build permission: before many edits, Architect asks TheGaffer whether the player may build at that spot. TheGaffer 3.0.0 and later also count the blocks Architect places in the job statistics. | Architect does not limit where players build, and records no statistics. |
 | A MySQL database | Players' resource pack settings (automatic switching, client type, resolution, variant, current pack and its status) in the table `architect_rp`, shared by every server that uses the database. Set it up in `rpSettingsDatabase`. | With the shipped placeholders (`xxx`), players get the default settings at every join, and nothing is saved. |
 | VoxelSniper | Its stencil folders, which `/vv` and `/sl` list and edit. | Those commands find no files. |
+| FastAsyncWorldEdit | Used on MCME's servers in place of WorldEdit. [Terrain smoothing](#terrain-smoothing) works on it and on plain WorldEdit; on FAWE it writes off the main thread, and FAWE's region restrictions apply to it. | Plain WorldEdit does the same work on the main thread. |
 | Multiverse | `/architect world` suggests its `/mvtp` command. | The suggestion does nothing. |
 
 - Architect does not bundle a MySQL JDBC driver: the server or another plugin must provide one. If the database does
@@ -2490,12 +2838,12 @@ it logs, how to reload it, and the `/architect` command.
 
 #### Getting the jar
 
-- **GitHub:** the releases of `MCME/MCME-Architect` on github.com. Release `v3.3.1` has `MCME-Architect-3.3.1.jar` and
-  `MCME-Architect-3.3.1.jar.sha256`. Compare the jar's SHA-256 checksum with the `.sha256` file before you install it.
-- **Maven repository:** `com.mcmiddleearth:MCME-Architect:3.3.1` in `https://repo.mcmiddleearth.com/releases`.
+- **GitHub:** the releases of `MCME/MCME-Architect` on github.com. Release `v3.4.0` has `MCME-Architect-3.4.0.jar` and
+  `MCME-Architect-3.4.0.jar.sha256`. Compare the jar's SHA-256 checksum with the `.sha256` file before you install it.
+- **Maven repository:** `com.mcmiddleearth:MCME-Architect:3.4.0` in `https://repo.mcmiddleearth.com/releases`.
 
 Jars built from source carry the build type and the commit in their name, for example
-`MCME-Architect-3.3.1-DEV-<commit>.jar`. `/architect version` shows only `3.3.1`, so the file name is the only way to
+`MCME-Architect-3.4.0-DEV-<commit>.jar`. `/architect version` shows only `3.4.0`, so the file name is the only way to
 tell such builds apart.
 
 #### First start
@@ -2510,7 +2858,8 @@ tell such builds apart.
    - `View distances file not found (expected on first run)`;
    - a note that `rpSettingsDatabase` still holds the placeholders.
 4. Stop the server, and set Architect up before builders log in:
-   - `WorldConfig/defaultWorldConfig.yml` has every switch on. Review it (see [Per-world settings](#per-world-settings)).
+   - `WorldConfig/defaultWorldConfig.yml` has every switch on, except `modules.command.slabSmooth`: terrain smoothing is
+     off until you switch it on per world. Review the file (see [Per-world settings](#per-world-settings)).
    - `config.yml` holds examples. Replace the example pack under `ServerResourcePacks`, fill in `rpSettingsDatabase`
      (or keep `xxx` for no database), and replace the example entries under `gitHubRpReleases` and
      `inventoryDownload`, which point at example repositories and folders.
@@ -2531,8 +2880,9 @@ tell such builds apart.
    - `config.yml`: Architect never adds new keys to an existing file. A missing key uses its default, so new features
      start with default settings. Compare your file with the `config.yml` inside the new jar (the jar is a zip archive)
      and add what you want to change.
-   - `defaultWorldConfig.yml`: the switch of a new feature is added as `true` the first time Architect checks it.
-     Review the file after the upgrade.
+   - `defaultWorldConfig.yml`: the switch of a new feature is added as `true` the first time Architect checks it. The
+     one exception is `modules.command.slabSmooth` (terrain smoothing), which is added as `false`. Review the file after
+     the upgrade.
    - `protocolVersions.yml`: Architect writes it only when it is missing, so an existing file does not learn newer
      Minecraft versions. Delete it before the start, so the new jar writes it, or copy the new lines from the jar.
    - Permissions: the nodes of new features may be in no bundle (biome tuning, for example).
@@ -2557,7 +2907,8 @@ its layout (such as the indentation) can change.
 | `inventoryDownload`, `inventoryUpload` | `script` and `path` of the scripts that `/inv download` and `/inv upload` run. The bundled file has only `inventoryDownload`. | [Blocks and inventories](#blocks-and-inventories) |
 | `logging.file` | Architect's own log files (below). | [Logs and debugging](#logs-and-debugging) |
 | `biomeTuning` | Live biome tuning: undo depth, backups, spare biomes, target pack and refresh timing. | [Biome tuning](#biome-tuning) |
-| `EntityLimit` | `number` and `radius`. Read, but used by nothing in 3.3.1. | — |
+| `slabSmooth` | Terrain smoothing: default pack, downloads, categories, limits, per-pack overrides and players' starting settings. Commented out in the bundled file: every key is optional. `/architect reload` applies it. | [Terrain smoothing](#terrain-smoothing) |
+| `EntityLimit` | `number` and `radius`. Read, but used by nothing in 3.4.0. | — |
 | `CopyPasteUndoLimit` | Undo steps kept per player for `/undo` and `/redo` (default `30`). Not in the bundled file: add it to change it. | [Copy, paste and shaping](#copy-paste-and-shaping) |
 | `CustomHeadUploadPath` | The web address that `/chead upload` reads head lists from. Architect adds it at the first `/chead upload`. | [Custom heads](#custom-heads) |
 
@@ -2600,7 +2951,8 @@ its layout (such as the indentation) can change.
 Most of Architect's behaviour is switched per world, in the `WorldConfig` folder.
 
 > [!WARNING]
-> A fresh install turns every switch on, in every world. That includes `noPhysicsListInverted` (with the empty
+> A fresh install turns every switch on, in every world, except terrain smoothing, which stays off until you switch it
+> on (see [Terrain smoothing](#terrain-smoothing)). The switches that are on include `noPhysicsListInverted` (with the empty
 > default list, no block gets physics updates), `dropBlocking` (items players drop are deleted) and `blockOpItems`
 > (every enchantment and attribute modifier is stripped from items). That suits a build server, but few others.
 > Review `defaultWorldConfig.yml` before builders log in.
@@ -2609,7 +2961,7 @@ Most of Architect's behaviour is switched per world, in the `WorldConfig` folder
 
 | File | What it holds |
 |---|---|
-| `WorldConfig/defaultWorldConfig.yml` | The defaults for every world. Created at the first start, with every switch on and the built-in default of every list. |
+| `WorldConfig/defaultWorldConfig.yml` | The defaults for every world. Created at the first start, with every switch on (except `slabSmooth`, which is off) and the built-in default of every list. |
 | `WorldConfig/<world>.yml` | Overrides for one world. Created when the world loads, holding only the header line `WorldConfiguration`. Every `*.yml` file in the folder counts as a world's file. |
 | `WorldConfig/server.yml` | Not a world. Architect reads one key from it, at start: `modules.command.fullBrightness` decides whether `/fbt` exists at all. |
 
@@ -2636,7 +2988,7 @@ overrides depends on the key:
 > [!WARNING]
 > `defaultWorldConfig.yml` has no such protection. If it is not valid YAML at a start or a reload, the next world
 > file Architect loads can save a fresh skeleton over it: your settings in it are lost, and every switch reads as on
-> again. Keep a backup, and check the YAML before you reload.
+> again (terrain smoothing as off). Keep a backup, and check the YAML before you reload.
 
 The switches sit under `modules`, by group:
 
@@ -2650,7 +3002,8 @@ modules:
 
 #### Module switches
 
-All 64 switches default to `true`. The tables say what each does when it is on.
+65 switches exist. All but one default to `true`; `modules.command.slabSmooth` defaults to `false`. The tables say what each does
+when it is on.
 
 **Special blocks (`modules.specialBlocks.*`)**
 
@@ -2663,13 +3016,13 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `poweredDoors` | Architect places doors taken from the creative inventory itself: oak, spruce, jungle, acacia and dark oak doors powered, birch and iron doors unpowered. Doors of newer wood types stay as the game places them. |
 | `halfDoors` | A door item named `Half…` places only the lower half (`architect.place.halfDoor`). A lone half door cannot be opened in any world, whatever this switch says. |
 | `halfBeds` | A red bed named `Half…` places one half of a bed (`architect.place.halfBed`). |
-| `redstoneTorch` | A redstone torch named `Unlit…` places a torch on the clicked face; in 3.3.1 it comes out lit (`architect.place.torch`). |
+| `redstoneTorch` | A redstone torch named `Unlit…` places a torch on the clicked face; in 3.4.0 it comes out lit (`architect.place.torch`). |
 | `plants` | Plant items named `Placeable…` can be placed on any block (`architect.place.plant`). |
 | `pistonExtenstions` (spelt this way) | A piston named `Table…` or `Wheel…` places a piston head (`architect.place.pistonExtension`). |
 | `burningFurnace` | Furnaces that finish smelting are refilled, so they burn for ever. Clicking the input slot lights a furnace or puts it out, where the player may build. A furnace named `Burning…` is placed lit (`architect.place.burningFurnace`). |
 | `dragonEgg` | Dragon eggs never teleport. Only players in creative mode with `architect.interactDragonEgg` and build permission can break one. |
-| `doubleSlabs` | No effect in 3.3.1. |
-| `sixSidedLogs` | No effect in 3.3.1. |
+| `doubleSlabs` | No effect in 3.4.0. |
+| `sixSidedLogs` | No effect in 3.4.0. |
 
 **Environment (`modules.environment.*`)**
 
@@ -2703,7 +3056,7 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `bannerEditor` | `/banner`, and editing banners with a stick. |
 | `paintingEditor` | Changing a painting's motif with a stick. |
 | `armorStandEditor` | `/armor`, and editing armor stands with a stick. New armor stands in the world get no gravity and cannot be damaged. |
-| `armorStandRollback` | `/armor rollback`, which is unfinished in 3.3.1. |
+| `armorStandRollback` | `/armor rollback`, which is unfinished in 3.4.0. |
 | `customHeadManager` | `/chead`, and taking a copy of a head by clicking it with a stick. |
 | `resourcePackSwitcher` | The `/rp` player commands and region commands in this world. `/rp check` and the admin commands that also run from the console keep working, and RP regions switch packs whatever this switch says. |
 | `fullBrightness` | `/fbt` gives night vision in this world. When off, players who arrive in the world lose their night vision. In `server.yml`, it decides at start whether `/fbt` exists at all. |
@@ -2711,13 +3064,14 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | `weSchemViewer` | `/schlist`. |
 | `voxelViewer` | `/vv`. |
 | `stencilListEditor` | `/sl`. |
-| `modules.commmand.itemTexture` (three m, a group of its own) | No effect in 3.3.1. |
+| `slabSmooth` | **Off unless you switch it on.** `/slabsmooth` (`/sls`): terrain smoothing with the pack's slabs, stairs and vertical slabs, on a selection, a box or with a brush. See [Terrain smoothing](#terrain-smoothing). |
+| `modules.commmand.itemTexture` (three m, a group of its own) | No effect in 3.4.0. |
 
 **Protection (`modules.protection.*`)**
 
 | Key | When on |
 |---|---|
-| `blockOpItems` | Items lose every enchantment and every attribute modifier when a player picks them up, drops them, selects them or moves them in an inventory. Read from the first loaded world only, for the whole server. In 3.3.1 no enchantment is kept (see `allowedEnchantments` below). |
+| `blockOpItems` | Items lose every enchantment and every attribute modifier when a player picks them up, drops them, selects them or moves them in an inventory. Read from the first loaded world only, for the whole server. In 3.4.0 no enchantment is kept (see `allowedEnchantments` below). |
 | `removeContainerItemsOnBreak` | A broken container drops nothing: its contents are deleted. Jukeboxes and decorated pots lose their contents too. |
 | `blockArrowShooting` | Nobody can shoot a bow or crossbow, mobs included. |
 | `tnt` | TNT cannot be lit. |
@@ -2732,8 +3086,8 @@ All 64 switches default to `true`. The tables say what each does when it is on.
 | Key | When on |
 |---|---|
 | `modules.chunkupdate.auto` | After every block click, placement or break, Architect sends the nearby blocks again to the player who acted, so their client shows connections (fences, walls, panes, gates, doors) correctly. |
-| `modules.chunkupdate.manual` | Allows `/chunkupdate`, which does nothing in 3.3.1. Also needed in your current world to use `/chunkupdate auto`. |
-| `modules.voxelBiomeBrushFix` | No effect in 3.3.1. |
+| `modules.chunkupdate.manual` | Allows `/chunkupdate`, which does nothing in 3.4.0. Also needed in your current world to use `/chunkupdate auto`. |
+| `modules.voxelBiomeBrushFix` | No effect in 3.4.0. |
 
 #### Other keys
 
@@ -2748,7 +3102,7 @@ see its row.
 | `noInteraction` | 11 entries: acacia, jungle, dark oak and spruce fence gates; `minecraft:birch_fence_gate[powered=true]`; acacia, jungle, dark oak and spruce doors with `powered=false`; `minecraft:repeater`; `minecraft:comparator` | Block states nobody may right-click, while `specialBlocks.blockPlayerInteraction` is on. Doors on the list are also left out of Architect's double-door opening, and right-clicking such a block with a special block item places the item instead of using the block. |
 | `disabledBlockStates` | `minecraft:blue_stained_glass_pane[east=false,north=false,south=false,west=false]` | Block states the stick never switches to, and that special blocks never connect into. |
 | `inventoryAccess.<TYPE>` | see below | Who may open each type of container. |
-| `allowedEnchantments.<Name>` | `Durability: 1` | Meant as the enchantments, each with a highest level, that `blockOpItems` keeps. In 3.3.1 no entry ever matches, so `blockOpItems` removes every enchantment: switch `blockOpItems` off to keep enchantments. Read from the first loaded world only. |
+| `allowedEnchantments.<Name>` | `Durability: 1` | Meant as the enchantments, each with a highest level, that `blockOpItems` keeps. In 3.4.0 no entry ever matches, so `blockOpItems` removes every enchantment: switch `blockOpItems` off to keep enchantments. Read from the first loaded world only. |
 | `doubleSlabReplacements.<pack>.<name>` | an example for the pack `gondor` | `from` and `to`, both block data. When a player stacks two slabs into a double slab, and the slab that was there matches `from` exactly, the double slab becomes `to`. `<pack>` is the player's resource pack (or the RP region's), written in lower case. Needs `specialBlocks.place`. |
 | `viewDistance` | `255` | The view distance Architect tells players in this world who have not set their own with `/viewdistance`; 255 means no limit in practice. With the defaults, every player in the world is told 255 and keeps every chunk it has received. Needs ProtocolLib and `command.viewdistance`. |
 | `armorStand.minScale`, `armorStand.maxScale` | `0.0625`, `16.0` | Smallest and largest scale of the armor stand editor's scale mode. In a world file, set both keys: a missing one reads as 0. |
@@ -2847,7 +3201,7 @@ Architect keeps its files in `plugins/MCME-Architect/`. Back up the whole folder
 | `regions/<name>.reg` | RP regions | One file per region. Older `.json` region files found here are converted once, then deleted. |
 | `rp-release-times.yml` | `/rp release` | How long the last successful release of each pack took. |
 | `inventories/block/<pack>/` | build inventories | `categories.yml` and the block files of one pack. The folder name must equal the pack's key under `ServerResourcePacks`, including case. Architect creates `inventories/block/` but not the pack folders, and it rewrites the block files when it loads them. |
-| `inventories/item/<pack>/` | item inventories | Loaded, but no command opens them in 3.3.1. |
+| `inventories/item/<pack>/` | item inventories | Loaded, but no command opens them in 3.4.0. |
 | `inventories/saved/<pack>/<name>.yml` | `/inv create` | Saved inventories. |
 | `itemSets.yml` | `/get` | Kits. |
 | `itemBlockRegions/<name>.reg` | `/itemblock` | Item block limit regions. |
@@ -2863,6 +3217,9 @@ Architect keeps its files in `plugins/MCME-Architect/`. Back up the whole folder
 | `SwitchStick/switchStickConfig.yml` | `/switchstick` | The players who switched their stick on. |
 | `viewDistances.dat` | `/viewdistance` | One `<player UUID> <distance>` line per player. Do not edit it by hand: a broken line stops Architect from enabling. |
 | `biomeTuning/backups/` | biome tuning | A backup of a biome's file at every save. |
+| `slabSmooth/tables/` | terrain smoothing | Each pack's table (`<pack>.json`), the fingerprint it was built from, and a report of what it holds (`<pack>-report.txt`). |
+| `slabSmooth/cache/` | terrain smoothing | The downloaded pack zips (the latest of each pack) and Mojang's client jar. It can be deleted at any time. |
+| `slabSmooth/packs/` | terrain smoothing | Pack zips that you put there by hand, as `<pack>.zip`, to run without downloads. |
 | `entityLog.dat` | entity logger | The latest entity counts per chunk. |
 
 Outside its folder, Architect also uses:
@@ -2955,7 +3312,9 @@ paintings and item frames per chunk; the `all` column, which also sets the map c
   item block regions (the regions come back after about 10 seconds);
 - `viewDistances.dat`;
 - the map layers, which leave the map and are drawn again;
-- the game mode switcher, for every online player.
+- the game mode switcher, for every online player;
+- terrain smoothing: its `slabSmooth` section and the worlds' switches. A reload **resets every player's `/sls` settings and chosen pack**;
+  a smoothing that is running finishes with the settings it started with.
 
 It answers `Reload complete!`. If it meets a broken file on the way, such as a bad `doubleSlabReplacements` entry or a
 bad line in `viewDistances.dat`, it stops part-way with an internal error. Fix the file and reload again, or restart.
@@ -3000,14 +3359,14 @@ completion: `refresh` and `scan`, then the loaded worlds and `off`.
 | Syntax | Who may use it | What it does |
 |---|---|---|
 | `/architect`, `/architect help [page]` | players with `architect.help` (everyone by default) | Lists the Architect commands you may use, ten per page, with clickable lines. Careful: clicking the lines of `/copy`, `/cut`, `/paste`, `/undo`, `/redo` and `/flip` runs that command at once. |
-| `/architect version` | the console, `architect.reload` | Shows Architect's version, for example `Version: 3.3.1`. |
+| `/architect version` | the console, `architect.reload` | Shows Architect's version, for example `Version: 3.4.0`. |
 | `/architect reload` | the console, `architect.reload` | Reloads Architect's settings and data; see [Reloading](#reloading). |
 | `/architect reloaddata` | the console, `architect.reload` | Reloads the server's data packs (loot tables, advancements and the like). Not Architect's own data. |
 | `/architect world` | the console, `architect.info` or `architect.reload` | Lists the loaded worlds. In game, clicking a name puts `/mvtp <world>` (a Multiverse command) in your chat box. |
 | `/architect blockdata` | players with `architect.info` or `architect.reload` | Shows the full block data of the block you look at, up to 100 blocks away. |
 | `/architect dev [true\|false\|<level>\|-r]` | the console, `architect.info` or `architect.reload` | Architect's debug output; see [Logs and debugging](#logs-and-debugging). |
 | `/architect checkNBT [player]` | the console, `architect.checknbt` | Shows the stored data of the item in your main hand, or of every item an online player carries. From the console, name a player. |
-| `/architect weather clear\|rain\|thunder` | players with `architect.weather` | Changes the weather in your world once, past `weatherBlocking`. In 3.3.1 `thunder` gives rain only. |
+| `/architect weather clear\|rain\|thunder` | players with `architect.weather` | Changes the weather in your world once, past `weatherBlocking`. In 3.4.0 `thunder` gives rain only. |
 | `/architect maplayers refresh` | the console, `architect.maplayers` | Draws Architect's map layers again and recounts the loaded chunks; see [Map layers](#map-layers). |
 | `/architect maplayers scan [<world> [off]]` | the console, `architect.maplayers` | Lists the worlds on the Custom biomes layer; with a world, puts it on the layer and reads its saved files; with `off`, takes it off. See [Custom biomes](#custom-biomes). |
 | `/architect eLog true`, `/architect eLog` | the console, `architect.reload` | Starts or stops the entity logger; see [Logs and debugging](#logs-and-debugging). |
@@ -3021,7 +3380,7 @@ completion: `refresh` and `scan`, then the loaded worlds and `off`.
 
 ## Command reference
 
-Every command Architect registers in 3.3.1. Permissions are per subcommand where they differ; the
+Every command Architect registers in 3.4.0. Permissions are per subcommand where they differ; the
 [Permissions](#permissions) chapter explains each node. Every command also works with the prefix `mcme-architect:`,
 for example `/mcme-architect:undo`, which helps when another plugin has a command of the same name.
 
@@ -3039,7 +3398,7 @@ for example `/mcme-architect:undo`, which helps when another plugin has a comman
 | `/inv` (admin) | `/inv reload`, `/inv download <pack>`, `/inv upload <pack> <description>` | Reloads the inventory files; runs the download or upload script. | `architect.inventory.reload`, `architect.inventory.download`, `architect.inventory.upload` | [Blocks and inventories](#blocks-and-inventories) |
 | `/itemblock` | `/itemblock help`, `stats <radius> [height]`, `glow <radius>\|off`, `remove <radius> [height]`, `list`, `create <name>`, `delete <name>`, `limit <name> <n>`, `limit -base <n>` | Item block counts, glow and clean-up (`remove` removes every named armor stand in the box), and item block limit regions. | `architect.itemBlock`, plus `architect.itemBlock.remove` for `remove`, `architect.itemBlock.region.create` for `create` and `delete`, and `architect.itemBlock.region.limit` for `limit` | [Blocks and inventories](#blocks-and-inventories) |
 | `/nophy` | `/nophy list <world\|-default>`, `/nophy add\|remove <world\|-default> <block>`, `/nophy exception redstone\|water <name>`, `/nophy exception delete <name>`, `/nophy exception list [page]`, `/nophy help [page]` | Shows and edits the no-physics list; manages exception areas. | `architect.noPhysicsList.view`, plus `architect.noPhysicsList.edit` for `add` and `remove`, and `architect.noPhysicsList.exception` for `exception` | [Placing and physics](#placing-and-physics) |
-| `/chunkupdate` | `/chunkupdate [radius]`, `/chunkupdate auto <world\|-default> [true]` | The radius form does nothing in 3.3.1. `auto` switches automatic block resends on (with `true`) or off. | `architect.chunkupdate`, plus `architect.chunkupdate.auto` for `auto` | [Seeing and moving](#seeing-and-moving) |
+| `/chunkupdate` | `/chunkupdate [radius]`, `/chunkupdate auto <world\|-default> [true]` | The radius form does nothing in 3.4.0. `auto` switches automatic block resends on (with `true`) or off. | `architect.chunkupdate`, plus `architect.chunkupdate.auto` for `auto` | [Seeing and moving](#seeing-and-moving) |
 | `/switchstick` (`/swst`, `/ss`) | `/switchstick [help]` | Switches your stick's block-state editing on or off. It is off until you first run this. | `architect.switchstick` | [Placing and physics](#placing-and-physics) |
 | `/weselect` (`/wes`) | `/weselect <command>`, `/weselect shift <command>`, `/weselect show`, `/weselect reset`, `/weselect help [page]` | Sets the command that flint clicks put in your chat box, for a click and a sneak-click; `#` becomes the block data. | `architect.weselect` | [Placing and physics](#placing-and-physics) |
 | `/sign` | `/sign <1-4> <text>`, `/sign glow true\|false` | Changes a line of the sign you selected with a stick; switches glowing text. | `architect.signEditor` | [Editing tools](#editing-tools) |
@@ -3065,6 +3424,8 @@ for example `/mcme-architect:undo`, which helps when another plugin has a comman
 | `/rp` (admin) | `/rp server <pack> <tag> <mcVersion>`, `/rp server remove <pack> <mcVersion>`, `/rp calcsha <pack> [all]`, `/rp release <pack> <tag> <title>`, `/rp dropdb [confirm]`, `/rp list [filter]`, `/rp create\|edit\|remove <region>` | Points pack slots at a GitHub release, hashes packs, runs a release, clears the settings table, manages RP regions. | `architect.resourcePackAdmin` | [Resource packs](#resource-packs) |
 | `/biometune` | `/biometune [edit] [biome\|here]`, `info`, `set`, `unset`, `copy`, `undo`, `revert`, `status`, `preview`, `spares`, `claim`, `label` | Live biome tuning: the editor and its commands. | `architect.biomeTune` | [Biome tuning](#biome-tuning) |
 | `/biometune` (save, publish, admin) | `/biometune save <biome>`; `/biometune publish [world\|server]`, `/biometune preview <player>`; `/biometune spares add <count>`, `selftest [biome]`, `debug …` | Writes a biome to its datapack file; refreshes other players; admin tools. | `architect.biomeTune.save` for `save`; `architect.biomeTune.publish` for `publish` and `preview <player>`; `architect.biomeTune.admin` for the rest | [Biome tuning](#biome-tuning) |
+| `/slabsmooth` (`/sls`) | `/sls selection`, `brush [radius]`, `area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]`, `set <option> <value>`, `options`, `reset`, `pack [name\|auto]`, `packs`, `help` | Terrain smoothing: rounds off stair-stepped terrain with the pack's slabs, stairs and vertical slabs, on your WorldEdit selection, on a box or with a brush. `//undo` reverts it, on FastAsyncWorldEdit from inside the world it changed. Off unless the world's `slabSmooth` switch is on. | `architect.slabSmooth`, plus `architect.slabSmooth.selection` for `selection`, `.brush` for `brush`, `.area` for `area`, and `.allBlocks` for `set blocks all` | [Terrain smoothing](#terrain-smoothing) |
+| `/slabsmooth packs rebuild` | `/sls packs rebuild [pack]` | Reads the packs again now. Works from the console too, like `help` and `packs`. | `architect.slabSmooth.admin` | [Terrain smoothing](#terrain-smoothing) |
 
 - If `/undo` or `/redo` reaches WorldEdit instead of Architect, use Architect's aliases (`/un`, `/re`) or
   `/mcme-architect:undo`.
@@ -3094,6 +3455,8 @@ No bundle grants these nodes:
 
 - biome tuning: `architect.biomeTune`, `architect.biomeTune.save`, `architect.biomeTune.publish`,
   `architect.biomeTune.admin`;
+- terrain smoothing: `architect.slabSmooth`, `architect.slabSmooth.selection`, `architect.slabSmooth.brush`,
+  `architect.slabSmooth.area`, `architect.slabSmooth.allBlocks`, `architect.slabSmooth.admin`;
 - the game mode switcher: `architect.gamemodeSwitcher` and its four children (default nobody, not even ops);
 - `architect.invisibleBlocks`, `architect.lecternEditor`, `architect.inventory.ignoreProtection`,
   `architect.checknbt`;
@@ -3113,7 +3476,7 @@ Notes:
 
 ### All nodes
 
-What each node allows in 3.3.1, as the code checks it. "Build permission" means TheGaffer's permission to build at
+What each node allows in 3.4.0, as the code checks it. "Build permission" means TheGaffer's permission to build at
 that spot. Bundle names are short: adventurer, artist, designer, head designer.
 
 | Node | Default | Bundle | What it allows |
@@ -3122,7 +3485,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.armorStandEditor` | op | adventurer | `/armor`: every mode, copy and paste, listing and loading saved stands. Where armor stand protection is on, also hitting armor stands, and placing and using them (with build permission). |
 | `architect.armorStandEditor.delete` | op | head designer | Renaming and deleting other players' saved armor stands. |
 | `architect.armorStandEditor.trusted` | op | artist | Saving armor stands to files, renaming and deleting your own files. Includes `architect.armorStandEditor`. |
-| `architect.armorStandRollback` | op | — | `/armor rollback`, which is unfinished in 3.3.1: it does not roll anything back. |
+| `architect.armorStandRollback` | op | — | `/armor rollback`, which is unfinished in 3.4.0: it does not roll anything back. |
 | `architect.bannerEditor` | op | adventurer | `/banner`, editing banners with a stick (with build permission), and deleting your own banner files. |
 | `architect.bannerEditor.delete` | op | head designer | Deleting other players' banner files. |
 | `architect.bannerEditor.save` | op | artist | `/banner save`. Includes `architect.bannerEditor`. |
@@ -3131,7 +3494,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.biomeTune.publish` | op | — | `/biometune publish`, and `/biometune preview <player>`. |
 | `architect.biomeTune.save` | op | — | `/biometune save`: writing a biome to its datapack file. |
 | `architect.checknbt` | op | — | `/architect checkNBT`. |
-| `architect.chunkupdate` | op | artist | `/chunkupdate`, which does nothing in 3.3.1. Also needed for `/chunkupdate auto`. |
+| `architect.chunkupdate` | op | artist | `/chunkupdate`, which does nothing in 3.4.0. Also needed for `/chunkupdate auto`. |
 | `architect.chunkupdate.auto` | op | — | `/chunkupdate auto`, together with `architect.chunkupdate`. |
 | `architect.copypaste` | op | designer | `/copy`, `/cut`, `/paste`, `/undo`, `/redo`, `/flip` and `/rot`. |
 | `architect.copypaste.unlimited` | op | — | Copying and cutting selections of any size. |
@@ -3143,7 +3506,7 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.gamemodeSwitcher.adventure`, `architect.gamemodeSwitcher.creative`, `architect.gamemodeSwitcher.survival` | false | — | That game mode with the F3+F4 switcher, without op. |
 | `architect.gamemodeSwitcher.spectator` | false | — | Spectator mode with F3+F4 or F3+N, without op. Give another mode's node with it: without one, a player cannot switch out of spectator mode. |
 | `architect.get.armor` | op | adventurer | `/get armor`. |
-| `architect.get.doors`, `architect.get.food`, `architect.get.logs`, `architect.get.misc`, `architect.get.plants`, `architect.get.slabs` | op | adventurer | No effect in 3.3.1. |
+| `architect.get.doors`, `architect.get.food`, `architect.get.logs`, `architect.get.misc`, `architect.get.plants`, `architect.get.slabs` | op | adventurer | No effect in 3.4.0. |
 | `architect.get.head` | op | adventurer | `/get head`. |
 | `architect.get.other` | op | head designer | Publishing, unpublishing and deleting other players' kits. |
 | `architect.get.private` | op | artist | `/get pcreate`: private kits. |
@@ -3168,8 +3531,8 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.itemBlock.region.ignore` | op | head designer | Placing item blocks in a chunk that has reached its limit. |
 | `architect.itemBlock.region.limit` | op | head designer | `/itemblock limit`, for regions and for the world's base limit. |
 | `architect.itemBlock.remove` | op | head designer | `/itemblock remove`. |
-| `architect.itemTexture` | op | — | No effect in 3.3.1. |
-| `architect.itemTexture.manager` | op | — | No effect in 3.3.1. |
+| `architect.itemTexture` | op | — | No effect in 3.4.0. |
+| `architect.itemTexture.manager` | op | — | No effect in 3.4.0. |
 | `architect.lecternEditor` | op | — | Taking a lectern's book (not a copy) and putting books on lecterns, without build permission. |
 | `architect.maplayers` | op | head designer | `/architect maplayers refresh` and `/architect maplayers scan`. |
 | `architect.noPhysicsList.edit` | op | head designer | `/nophy add` and `/nophy remove`. Includes `architect.noPhysicsList.view`. |
@@ -3177,13 +3540,13 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.noPhysicsList.view` | op | adventurer | `/nophy`, `/nophy list` and `/nophy help`. |
 | `architect.paintingEditor` | op | adventurer | Changing a painting's motif with a stick (with build permission). |
 | `architect.place.burningFurnace` | op | adventurer | Placing a lit furnace from a furnace named `Burning…`. |
-| `architect.place.doubleSlab` | op | adventurer | No effect in 3.3.1. |
+| `architect.place.doubleSlab` | op | adventurer | No effect in 3.4.0. |
 | `architect.place.halfBed` | op | adventurer | Placing half beds from a red bed named `Half…`. |
 | `architect.place.halfDoor` | op | adventurer | Placing half doors from a door named `Half…`. |
 | `architect.place.pistonExtension` | op | adventurer | Placing piston heads from a piston named `Table…` or `Wheel…`. |
 | `architect.place.plant` | op | adventurer | Placing plants named `Placeable…` on any block. |
-| `architect.place.sixSidedLog` | op | adventurer | No effect in 3.3.1. |
-| `architect.place.torch` | op | adventurer | Placing redstone torches from a torch named `Unlit…` (they come out lit in 3.3.1). |
+| `architect.place.sixSidedLog` | op | adventurer | No effect in 3.4.0. |
+| `architect.place.torch` | op | adventurer | Placing redstone torches from a torch named `Unlit…` (they come out lit in 3.4.0). |
 | `architect.randomiser.allowMaterials` | op | head designer | `/random allow` and `/random deny`. Includes `architect.randomiser.user`. |
 | `architect.randomiser.user` | op | designer | `/random`, except `allow` and `deny`. |
 | `architect.ranks.adventurer`, `architect.ranks.artist`, `architect.ranks.designer`, `architect.ranks.headDesigner` | op | — | The rank bundles; see [Rank bundles](#rank-bundles). |
@@ -3191,6 +3554,12 @@ that spot. Bundle names are short: adventurer, artist, designer, head designer.
 | `architect.resourcePackAdmin` | op | head designer | `/rp server`, `calcsha`, `release` and `dropdb`, and the region commands `list`, `create`, `edit` and `remove`. Includes `architect.resourcePackSwitcher`. |
 | `architect.resourcePackSwitcher` | op | adventurer | `/rp <pack>`, `auto`, `reset`, `client`, `variant` and `help`. |
 | `architect.signEditor` | op | adventurer | `/sign`, and selecting a sign by left-clicking it with a stick (with build permission). |
+| `architect.slabSmooth` | op | — | `/sls`: `help`, `set`, `options`, `reset`, `pack` and `packs`. Includes `architect.slabSmooth.selection` and `architect.slabSmooth.brush`, but not the nodes below. |
+| `architect.slabSmooth.admin` | op | — | `/sls packs rebuild`. |
+| `architect.slabSmooth.allBlocks` | op | — | `/sls set blocks all`, and so smoothing blocks that are not terrain; checked again at every smoothing and brush click. |
+| `architect.slabSmooth.area` | op | — | `/sls area`: smoothing a box by its corners, in any world. |
+| `architect.slabSmooth.brush` | op | — | `/sls brush`, and every click of a bound brush. |
+| `architect.slabSmooth.selection` | op | — | `/sls selection`. |
 | `architect.switchstick` | op | adventurer | `/switchstick`. |
 | `architect.viewdistance` | op | adventurer | `/viewdistance`. |
 | `architect.voxel.delete` | op | head designer | `/vv delete`. Includes `architect.voxel.viewer`. |
@@ -3238,7 +3607,7 @@ Each entry gives the symptom, the cause and the fix.
 
 - **Dropped items vanish.** Cause: `modules.environment.dropBlocking` is on, which deletes dropped items. Fix: set it
   to `false` in that world's file (or in `defaultWorldConfig.yml`) and run `/architect reload`.
-- **Enchantments disappear from items.** Cause: `modules.protection.blockOpItems` is on, and in 3.3.1
+- **Enchantments disappear from items.** Cause: `modules.protection.blockOpItems` is on, and in 3.4.0
   `allowedEnchantments` never matches, so every enchantment is removed. It is read from the first loaded world only.
   Fix: set `blockOpItems: false` in the main world's file or in `defaultWorldConfig.yml`, and run `/architect reload`.
 - **Blocks ignore their neighbours after a fresh install: torches, plants and sand stay put when the block below them
@@ -3247,7 +3616,7 @@ Each entry gives the symptom, the cause and the fix.
   without physics), or `noPhysicsListEnabled: false`, and run `/architect reload`. Or list the blocks that should keep
   physics.
 - **Levers, buttons, lamps and doors ignore redstone power.** Cause: Architect freezes redstone power on the whole
-  server, on purpose: the resource packs use redstone block states as decoration. Fix: none in 3.3.1.
+  server, on purpose: the resource packs use redstone block states as decoration. Fix: none in 3.4.0.
 - **No mobs, no weather changes, no fire spread, no leaf decay.** Cause: the environment switches are on by default.
   Fix: switch off the ones you do not want; see [Module switches](#module-switches).
 - **Players cannot open furnaces, smokers, blast furnaces, brewing stands, hoppers or dispensers.** Cause:
@@ -3269,7 +3638,7 @@ Each entry gives the symptom, the cause and the fix.
 - **With a stick in hand, doors, buttons and block breaking do nothing.** Cause: where `modules.command.cycleBlocks` is
   on, every block click made with a stick is cancelled. Fix: hold something else, or switch the module off in that
   world.
-- **A build inventory tab is empty or gone after an edit in the in-game editor.** Cause: in 3.3.1 the editor can write
+- **A build inventory tab is empty or gone after an edit in the in-game editor.** Cause: in 3.4.0 the editor can write
   a value that cannot be read back. Changing an entry's item writes `itemMaterial: !!org.bukkit.Material {}`, and
   answering `yes` to listing a collection entry in its tab writes a `!!…SpecialBlock {}` value under
   `collection.indirect`. At the reload that follows, Architect skips the whole file and logs an error for it. Fix: open
@@ -3278,7 +3647,7 @@ Each entry gives the symptom, the cause and the fix.
   than in the editor.
 - **Item blocks are refused everywhere in a new item block region.** Cause: `/itemblock create` makes a region with
   limit 0. Fix: `/itemblock limit <name> <n>`.
-- **`/chunkupdate` says "Manual chunk updates are not available."** Cause: the radius form does nothing in 3.3.1.
+- **`/chunkupdate` says "Manual chunk updates are not available."** Cause: the radius form does nothing in 3.4.0.
   Automatic resends (`modules.chunkupdate.auto`) still work. Fix: rejoin, so the client loads the chunks again.
 - **`/inv upload` fails at once with `exitCode=-1`.** Cause: `config.yml` has no `inventoryUpload` section (the bundled
   file has none), or the server runs Windows. Fix: add `inventoryUpload` with `script` and `path`, on a Linux server.
@@ -3305,7 +3674,7 @@ Each entry gives the symptom, the cause and the fix.
 - **Biome changes do not show.** Cause: edits are live on the server, but a client sees them only after a refresh.
   Fix: `/biometune preview` for your own view, `/biometune publish` for everyone in your world, or rejoin. Save with
   `/biometune save <biome>`: unsaved edits are lost at restart. Other servers are not changed. If preview answers that
-  Paper refused to reconfigure you, rejoin.
+  live preview is not available on this server, switch servers and back, or rejoin.
 - **`/biometune` answers "Biome tuning is unavailable on this server version".** Cause: biome tuning could not start on
   this Paper build; the rest of Architect keeps working. Fix: read the problem in Architect's log. Biome tuning reads
   Minecraft's internals, so after a Paper update it may need a newer Architect.
@@ -3324,3 +3693,92 @@ Each entry gives the symptom, the cause and the fix.
   once a minute). Fix: put the world on with `/architect maplayers scan <world>`, and wait for `up to date`. The same
   command reads a world that is on again from the start, which catches missed paint. A world that is `not drawn` comes
   back by itself when its markers fit; see [Custom biomes](#custom-biomes).
+
+### Terrain smoothing
+
+Each entry gives what the player is told (or sees), the cause and the fix. See [Terrain smoothing](#terrain-smoothing).
+
+- **`SlabSmooth is off in this world.`** (or `… in <world>.` for `area`). Cause: `modules.command.slabSmooth` is not
+  `true` there; it is off unless a world switches it on. Fix: switch it on in the world's file or in
+  `defaultWorldConfig.yml`, and run `/architect reload`.
+- **`SlabSmooth is still checking this world; click again.`** (in the action bar after a brush click). Cause: on
+  FastAsyncWorldEdit the brush runs on a thread that cannot read the world's switch, and right after a start or a
+  reload, or in a world loaded since, the server has not read it yet. Nothing changed. Fix: click again.
+- **`SlabSmooth is unavailable: …`.** Cause: smoothing could not start, or switched itself off after WorldEdit or the
+  server turned out to be different from what this build was made for; the rest of Architect keeps working. Fix: read
+  the warning in the log. It stays off until the next restart, and may need a newer Architect after a WorldEdit or Paper
+  update.
+- **`WorldEdit isn't available on this server, so SlabSmooth can't edit.`** Cause: neither WorldEdit nor
+  FastAsyncWorldEdit is enabled. Fix: install one and restart.
+- **No permission, or `/sls` is not in the tab list.** Cause: the player lacks the node. Fix: see
+  [Permissions for smoothing](#permissions-for-smoothing). `architect.slabSmooth` alone is enough for the selection and
+  the brush; `area`, `blocks all` and `packs rebuild` have nodes of their own.
+- **`Make a WorldEdit selection first (//wand, or //pos1 and //pos2).`** Cause: no selection. Fix: select first.
+- **`Hold a tool or another item that isn't a block, such as a feather or a bone, to bind the brush to.`** Cause: the
+  item in the hand is a block or the hand is empty. Fix: hold a feather or a bone. A stick is Architect's own
+  block-cycling tool, so it is a poor choice.
+- **`That's your WorldEdit wand; hold another item that isn't a block, such as a feather, to bind the brush to.`**
+  Cause: the item in the hand is WorldEdit's wand (or, in the same message, its navigation wand), as set in
+  WorldEdit's configuration, or as your WorldEdit session has it since `/tool selwand` or `/tool navwand`. Fix: hold
+  another item, such as a feather.
+- **`WorldEdit isn't ready for that item yet; try /sls brush again.`** Cause: on FastAsyncWorldEdit, `/sls brush` came
+  before WorldEdit had set up your session, for example as the first thing you did after a restart. Nothing was bound.
+  Fix: run `/sls brush` again.
+- **Your selection wand does nothing after `WorldEdit isn't ready for that item yet; try /sls brush again.`** Cause: on
+  FastAsyncWorldEdit, that answer can leave your selection wand unbound. Fix: run `//wand` once. Rejoining or changing
+  your game mode also fixes it.
+- **`The radius must be a number from 1 to 12.`** Cause: the radius is outside `brush.maxRadius`. A larger `//size`
+  is cut to that limit at every click without a message.
+- **`With surfaces top, select a box, polygon or cylinder.`** Cause: a selection of another shape with `surfaces top`.
+  Fix: select a box, polygon or cylinder, or use `surfaces all`.
+- **`Selection too big: … columns with the margin, max …` or `… blocks with the margin, max …`.** Cause: the selection
+  and its margin are over `selection.maxColumns` or `selection.maxCells`. Fix: select less, or raise the limit.
+- **`This area is too much work to smooth, so nothing was changed. Try a smaller selection.`** Cause: the smoothing ran
+  past `selection.maxSeconds` or past the cap on surfaces in one pass, for example on a sponge-like terrain. Nothing
+  changed. Fix: select less. The log says which limit it was.
+- **`Another smoothing is running; try again in a moment.`** Cause: only one selection or area runs at a time on the
+  server. Fix: wait.
+- **`This selection covers more than one pack (…). Pick one with /sls pack <name>, or select less.`** Cause: the
+  selection reaches over a border between RP regions of different packs, or into a region of another pack, also one
+  that lies between the selection's top and bottom layers, or near a region that is not a box, which counts by the box
+  around it. A region counts unless a heavier region that is a box holds all of its part of the selection; two regions
+  of equal weight both count. Fix: `/sls pack <name>` for the pack the terrain is built in, or select less, or give
+  overlapping regions different weights.
+- **`Reading the <pack> pack (…) for the first time; try again in a few seconds.`** Cause: the pack's table is being
+  read, or downloaded. Fix: wait, and repeat. `/sls packs` shows how far it is.
+- **`The <pack> pack (…) can't be used: …`.** Cause: the table could not be built. Typical causes: no download address under
+  `ServerResourcePacks`, no inventory folder `inventories/block/<pack>/`, a download that failed, took longer than 10
+  minutes or did not match its SHA-1, or `download: false` without the zip in `slabSmooth/packs/`. The text after the colon says which. Fix: correct it, then `/sls packs rebuild <pack>`.
+  A failed read is tried again later by itself.
+- **`No pack <name>; packs: …`.** Cause: the name is not one of the packs under `ServerResourcePacks`. Fix: use a name
+  from the list.
+- **`blocks all needs a permission of its own; blocks terrain is yours to use.`** Cause: the player lacks
+  `architect.slabSmooth.allBlocks`. Without it, `blocks all` has no effect, even when it comes from `defaults`.
+- **`Part of the area (chunk x, z) hasn't been generated; SlabSmooth only smooths existing terrain.`** Cause: the box
+  reaches land that was never generated. Fix: select less, or visit the land first.
+- **`You left the world before the smoothing finished, so nothing was changed.`** and **`That world is gone, so nothing
+  was changed.`** Cause: the selection's player changed world while it ran, or the world was unloaded. Fix: stay put
+  until it answers, and repeat.
+- **`FastAsyncWorldEdit refused the edit: No allowed region …`.** Cause: FAWE's region restrictions: the player has no
+  WorldGuard region to build in, and no `fawe.bypass`. Fix: give the player what they need for FAWE. Whatever was
+  written before the refusal can be undone with `//undo`.
+- **`Too many blocks for your WorldEdit limit; partly done, //undo reverts it.`** Cause: the player's WorldEdit block
+  limit. Fix: `//undo`, and raise the limit or select less.
+- **`//undo` says `Nothing left to undo.` after `/sls area` in another world.** Cause: FastAsyncWorldEdit keeps its
+  undo history per world. Fix: go to the world the area is in, and run `//undo` there.
+- **`N blocks changed while it ran were left alone.`** Not an error: someone placed or broke blocks in the area while
+  it ran, and smoothing did not overwrite them. The world itself can change blocks during a smoothing too, most often
+  in terrain nobody has visited yet: the area stays loaded while smoothing works, and the game keeps running there, so
+  water flows, leaves decay and grass spreads. So the message can appear with nobody building. Running the same
+  smoothing again smooths those blocks as well.
+- **`Nothing to change here`, `Nothing to change: … could change, none needed to.`** Cause: the terrain is already as
+  smooth as the settings allow, or its blocks have no pieces in this pack. With `blocks all` allowed, the reply adds
+  `<block> isn't terrain in this pack; /sls set blocks all smooths it too.` when that is the reason.
+- **`Something went wrong; the server log has the details.`** Cause: an error that smoothing did not expect. Fix: read
+  Architect's log and report it.
+- **`SlabSmooth has stopped working: ask an admin to check the server log.`** (in the action bar after a brush click).
+  Cause: as `SlabSmooth is unavailable`.
+- **A cut top sits on a block with its own top colour at the bottom edge of a selection.** Not an error: nothing
+  outside the selection changes, so the block below the edge keeps its colour.
+- **A building made of stone changed shape.** Cause: it is made of a terrain block, and smoothing treats a terrain
+  block that touches the ground as ground. Fix: `//undo`, then use `//mask` or a smaller selection next time.

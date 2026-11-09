@@ -12,7 +12,7 @@ behave on the build server and gives builders the tools to build Middle-earth:
 
 ## Status
 
-**3.3.1** (October 2026) is the current release, for Paper 26.2, and it runs on MCME's servers. `master` holds the
+**3.4.0** (November 2026) is the current release, for Paper 26.2, and it runs on MCME's servers. `master` holds the
 releases; the next version is built on `development`.
 
 ## Features
@@ -43,13 +43,16 @@ releases; the next version is built on `development`.
   - `/rp release` builds and publishes a pack, and reports how it went in chat.
 - **Live biome tuning:** `/biometune` and an in-game editor change a biome's colours and atmosphere while players watch,
   without a restart. Saving writes the biome into its datapack.
+- **Terrain smoothing:** `/sls` rounds off stair-stepped terrain with a resource pack's slabs, stairs and vertical slabs,
+  on a WorldEdit selection or with a brush, and `//undo` takes it back. Off until a world switches it on. Written by
+  Toti Gonzales.
 - **Map layers:** resource-pack regions, item-block limits and budgets, no-physics exception areas, and where custom
   biomes are painted, drawn on the dynmap web map.
 - **Comfort:**
   - full brightness (`/fbt`);
   - a client view distance (`/viewdistance`);
   - an F3+F4 game-mode switcher for builders who are not op.
-- **Per-world switches:** 64 modules, each of which can be turned off for one world.
+- **Per-world switches:** 65 modules, each of which can be switched for one world (terrain smoothing starts off).
 
 ## Requirements
 
@@ -104,6 +107,7 @@ releases; the next version is built on `development`.
 | `/chead` | Custom heads and the head gallery |
 | `/rp` | Resource packs: switching, settings, regions, releases |
 | `/biometune` | Live biome tuning |
+| `/slabsmooth` (`/sls`) | Terrain smoothing with a pack's slabs, stairs and vertical slabs |
 | `/fbt`, `/viewdistance` | Full brightness and the client view distance |
 | `/architect` | Version, reload, map layers, help |
 

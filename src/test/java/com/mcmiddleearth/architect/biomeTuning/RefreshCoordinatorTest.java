@@ -1,7 +1,13 @@
 package com.mcmiddleearth.architect.biomeTuning;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import io.papermc.paper.connection.PlayerConfigurationConnection;
 import io.papermc.paper.connection.PlayerConnection;
+import io.papermc.paper.event.connection.configuration.PlayerConnectionReconfigureEvent;
+import java.lang.reflect.Proxy;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.function.Function;
 import java.util.logging.Logger;
@@ -24,13 +30,15 @@ class RefreshCoordinatorTest {
     private ServerMock server;
     private long now = 1_000;
     private final List<String> reentered = new ArrayList<>();
+    /** Tasks handed to the main thread; a test runs them when it means "the next tick". */
+    private final Deque<Runnable> mainThread = new ArrayDeque<>();
+    private FakeNmsBridge bridge;
     private RefreshCoordinator coordinator;
 
     /** Behaves like Paper: leaving the world fires the player's quit event inside the call. */
     private final Function<Player, PlayerConnection> paperLike = player -> {
         reentered.add(player.getName());
-        coordinator.onQuit(new PlayerQuitEvent(player, Component.text(player.getName() + " left"),
-                PlayerQuitEvent.QuitReason.DISCONNECTED));
+        leaveTheWorld(player);
         return null;
     };
 
@@ -40,8 +48,9 @@ class RefreshCoordinatorTest {
     @BeforeEach
     void setUp() {
         server = MockBukkit.mock();
-        coordinator = new RefreshCoordinator(new FakeNmsBridge(), () -> now, Logger.getLogger("test"), paperLike,
-                BiomeTuningSettings.DEFAULTS);
+        bridge = new FakeNmsBridge();
+        bridge.onSwitchPastGuard = this::leaveTheWorld; // switching past the guard leaves the world too
+        coordinator = coordinator(paperLike);
     }
 
     @AfterEach
@@ -49,8 +58,46 @@ class RefreshCoordinatorTest {
         MockBukkit.unmock();
     }
 
+    private RefreshCoordinator coordinator(Function<Player, PlayerConnection> reenter) {
+        return new RefreshCoordinator(bridge, () -> now, Logger.getLogger("test"), reenter,
+                BiomeTuningSettings.DEFAULTS, mainThread::add);
+    }
+
+    private void leaveTheWorld(Player player) {
+        coordinator.onQuit(new PlayerQuitEvent(player, Component.text(player.getName() + " left"),
+                PlayerQuitEvent.QuitReason.DISCONNECTED));
+    }
+
     private void backInTheWorld(PlayerMock player) {
         coordinator.onJoin(new PlayerJoinEvent(player, Component.text(player.getName() + " joined")));
+    }
+
+    private void nextTick() {
+        while (!mainThread.isEmpty()) {
+            mainThread.poll().run();
+        }
+    }
+
+    /** The configuration connection Paper hands over when the player's client acknowledges; it records its calls. */
+    private PlayerConfigurationConnection reconfiguring(Player player, boolean connected) {
+        PlayerProfile profile = server.createProfile(player.getUniqueId(), player.getName());
+        Class<?>[] type = {PlayerConfigurationConnection.class};
+        return (PlayerConfigurationConnection) Proxy.newProxyInstance(type[0].getClassLoader(), type,
+                (proxy, method, arguments) -> switch (method.getName()) {
+                    case "getProfile" -> profile;
+                    case "isConnected" -> connected;
+                    case "completeReconfiguration" -> bridge.steps.add("complete " + player.getName());
+                    case "disconnect" -> bridge.steps.add("disconnect " + player.getName() + ": "
+                            + PlainTextComponentSerializer.plainText().serialize((Component) arguments[0]));
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "equals" -> proxy == arguments[0];
+                    case "toString" -> "configuration connection of " + player.getName();
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+    }
+
+    private void acknowledged(Player player, boolean connected) {
+        coordinator.onReconfigure(new PlayerConnectionReconfigureEvent(reconfiguring(player, connected)));
     }
 
     @Test
@@ -64,21 +111,22 @@ class RefreshCoordinatorTest {
 
     @Test
     void reportsARefusedReconfigurationAndForgetsIt() {
+        coordinator = coordinator(refusing);
         PlayerMock alice = server.addPlayer("Alice");
-        assertEquals(RefreshCoordinator.Outcome.REFUSED, coordinator.refresh(alice, true, refusing));
+        assertEquals(RefreshCoordinator.Outcome.REFUSED, coordinator.refresh(alice, true));
         assertFalse(coordinator.isRefreshing(alice.getUniqueId()));
     }
 
     @Test
     void theQuitMessageOfARefreshingPlayerIsSuppressed() {
-        PlayerMock alice = server.addPlayer("Alice");
         List<PlayerQuitEvent> fired = new ArrayList<>();
-        coordinator.refresh(alice, true, player -> {
+        coordinator = coordinator(player -> {
             PlayerQuitEvent quit = new PlayerQuitEvent(player, Component.text("Alice left"), PlayerQuitEvent.QuitReason.DISCONNECTED);
             coordinator.onQuit(quit);
             fired.add(quit);
             return null;
         });
+        coordinator.refresh(server.addPlayer("Alice"), true);
         assertNull(fired.get(0).quitMessage());
     }
 
@@ -138,5 +186,151 @@ class RefreshCoordinatorTest {
         assertFalse(coordinator.publish(players, Component.text("again")), "publish has a cooldown");
         now += BiomeTuningSettings.DEFAULTS.publishCooldownMillis();
         assertTrue(coordinator.publish(players, Component.text("again")));
+    }
+
+    // Paper refuses its own route for a player whose login ran PlayerLoginEvent (on MCME's servers: everyone, since
+    // LuckPerms listens to it), so such a player is switched past Paper's guard instead
+    @Test
+    void aPlayerWhoseLoginRanTheOldLoginEventIsSwitchedPastPaperSGuard() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        assertEquals(RefreshCoordinator.Outcome.STARTED, coordinator.refresh(alice, true));
+        assertEquals(List.of(), reentered, "Paper's route would be refused, so it is not tried");
+        assertEquals(List.of("switch Alice"), bridge.steps);
+        assertTrue(coordinator.isRefreshing(alice.getUniqueId()));
+    }
+
+    @Test
+    void aPlayerWhoseLoginDidNotRunItTakesPaperSRoute() {
+        PlayerMock alice = server.addPlayer("Alice");
+        coordinator.refresh(alice, true);
+        assertEquals(List.of("Alice"), reentered);
+        assertEquals(List.of(), bridge.steps);
+    }
+
+    @Test
+    void withoutWhatTheReplayNeedsEveryoneTakesPaperSRoute() {
+        bridge.loginReplayProblems = List.of("missing class io.papermc.paper.connection.HorriblePlayerLoginEventHack");
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        coordinator.refresh(alice, true);
+        assertEquals(List.of("Alice"), reentered, "switching past the guard without the replay would cost permissions");
+        assertEquals(List.of(), bridge.steps);
+    }
+
+    @Test
+    void aSwitchPastTheGuardThatFailsIsReportedAsRefused() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        bridge.switchFailure = new BiomeTuningException("could not switch Alice to configuration: boom");
+        assertEquals(RefreshCoordinator.Outcome.REFUSED, coordinator.refresh(alice, true));
+        assertFalse(coordinator.isRefreshing(alice.getUniqueId()));
+    }
+
+    // once the player has left the world, a failing switch cannot be undone: the refresh is kept, so the client's
+    // acknowledgement still completes it (or the timeout ends it) instead of nobody ever completing it
+    @Test
+    void aSwitchThatFailsAfterThePlayerLeftTheWorldIsStillSeenThrough() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        bridge.switchFailureAfterLeaving = new BiomeTuningException("could not switch Alice to configuration: boom");
+        assertEquals(RefreshCoordinator.Outcome.STARTED, coordinator.refresh(alice, true));
+        assertTrue(coordinator.isRefreshing(alice.getUniqueId()));
+        bridge.steps.clear();
+        acknowledged(alice, true);
+        nextTick();
+        assertEquals(List.of("replay Alice", "sync Alice", "complete Alice"), bridge.steps);
+    }
+
+    @Test
+    void theDebugBypassSwitchesPastTheGuardEvenAfterAPlainLogin() {
+        PlayerMock alice = server.addPlayer("Alice");
+        assertEquals(RefreshCoordinator.Outcome.STARTED, coordinator.refresh(alice, true, true));
+        assertEquals(List.of(), reentered);
+        assertEquals(List.of("switch Alice"), bridge.steps);
+    }
+
+    @Test
+    void theReconfigurationWaitsForTheMainThread() {
+        PlayerMock alice = server.addPlayer("Alice");
+        coordinator.refresh(alice, true);
+        acknowledged(alice, true);
+        assertEquals(List.of(), bridge.steps, "Paper fires the event on a network thread; nothing happens there");
+        nextTick();
+        assertEquals(List.of("sync Alice", "complete Alice"), bridge.steps);
+        backInTheWorld(alice);
+        assertFalse(coordinator.isRefreshing(alice.getUniqueId()));
+    }
+
+    @Test
+    void aRefreshPastTheGuardReplaysTheLoginBeforeTheSyncAndTheReturn() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        coordinator.refresh(alice, true);
+        bridge.steps.clear();
+        acknowledged(alice, true);
+        nextTick();
+        assertEquals(List.of("replay Alice", "sync Alice", "complete Alice"), bridge.steps,
+                "plugins set the new player up in the replayed login, before the client is sent anything");
+        backInTheWorld(alice);
+        assertFalse(coordinator.isRefreshing(alice.getUniqueId()));
+    }
+
+    @Test
+    void aRefreshWithoutTheSyncStillReplaysTheLogin() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        coordinator.refresh(alice, false);
+        bridge.steps.clear();
+        acknowledged(alice, true);
+        nextTick();
+        assertEquals(List.of("replay Alice", "complete Alice"), bridge.steps);
+    }
+
+    @Test
+    void aLoginThatAPluginRefusesEndsTheRefreshThere() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        bridge.replayRefuses = true;
+        coordinator.refresh(alice, true);
+        bridge.steps.clear();
+        acknowledged(alice, true);
+        nextTick();
+        assertEquals(List.of("replay Alice (refused)"), bridge.steps, "the bridge disconnected them; nothing follows");
+        assertFalse(coordinator.isRefreshing(alice.getUniqueId()));
+    }
+
+    @Test
+    void aReplayThatFailsDisconnectsRatherThanReturningWithoutTheLogin() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        bridge.replayFailure = new BiomeTuningException("could not replay the login: boom");
+        coordinator.refresh(alice, true);
+        bridge.steps.clear();
+        acknowledged(alice, true);
+        nextTick();
+        assertEquals(List.of("disconnect Alice: Biome refresh did not finish - please rejoin."), bridge.steps,
+                "without the replayed login, plugins such as LuckPerms would not have set up the new player");
+        assertFalse(coordinator.isRefreshing(alice.getUniqueId()));
+    }
+
+    @Test
+    void aConnectionThatClosedWhileWaitingIsLeftAlone() {
+        PlayerMock alice = server.addPlayer("Alice");
+        bridge.legacyLogins.add(alice.getUniqueId());
+        coordinator.refresh(alice, true);
+        bridge.steps.clear();
+        acknowledged(alice, false);
+        nextTick();
+        assertEquals(List.of(), bridge.steps, "no login is replayed for a client that is gone");
+        assertFalse(coordinator.isRefreshing(alice.getUniqueId()));
+    }
+
+    @Test
+    void aReconfigurationThatIsNotOursIsLeftAlone() {
+        PlayerMock alice = server.addPlayer("Alice");
+        acknowledged(alice, true);
+        nextTick();
+        assertEquals(List.of(), bridge.steps, "another plugin's reconfiguration is that plugin's to complete");
     }
 }

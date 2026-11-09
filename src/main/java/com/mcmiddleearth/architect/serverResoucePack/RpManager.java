@@ -65,7 +65,7 @@ public class RpManager {
 
     private static final String rpDatabaseConfig = "rpSettingsDatabase";
 
-    private static final Map<String, RpRegion> regions = new HashMap<>();
+    private static final Map<String, RpRegion> regions = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final Map<UUID,RpPlayerData> playerRpData = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -143,7 +143,7 @@ public class RpManager {
     }
     
     public static RpRegion getRegion(String name) {
-        return regions.get(name);
+        return name == null ? null : regions.get(name); // a ConcurrentHashMap refuses a null key
     }
 
     /** Whether a player-given name can name a region file: a file directly in the region folder. */
@@ -162,7 +162,7 @@ public class RpManager {
     }
     
     public static boolean removeRegion(String name) {
-        RpRegion region = regions.get(name);
+        RpRegion region = name == null ? null : regions.get(name);
         if(region!=null) {
             regions.remove(name);
             new File(regionFolder,name+".reg").delete();

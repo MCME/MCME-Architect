@@ -739,8 +739,7 @@ public final class BiomeEditor implements Listener {
             case COOLDOWN -> after.build(player, error("Wait "
                     + (refresher.previewCooldownLeft(player.getUniqueId()) + 999) / 1000 + " s before the next preview."));
             case ALREADY_REFRESHING -> after.build(player, error("Your view is already being refreshed."));
-            case REFUSED -> after.build(player, error("Paper refused to refresh you: a plugin on this server listens "
-                    + "to PlayerLoginEvent. Rejoin to see the live values."));
+            case REFUSED -> after.build(player, error(RefreshCoordinator.NO_LIVE_PREVIEW));
         };
     }
 

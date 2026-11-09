@@ -87,3 +87,39 @@ biomeTuning:
         # Publish refreshes this many players per second, and can run again after publishCooldownSeconds.
         publishPlayersPerSecond: 5
         publishCooldownSeconds: 30
+# Terrain smoothing with a resource pack's slabs, stairs and vertical slabs (/slabsmooth, /sls). It is off in every
+# world until that world's config switches modules.command.slabSmooth on. Every key is optional; the lines below,
+# without their #, are the defaults. Where a loaded world has the module on, one tick after every start or reload it
+# downloads the default pack's zip (the url under ServerResourcePacks, about 25 MB) and Mojang's client jar for the
+# server's Minecraft version (about 37 MB), if they are not cached yet. Any other pack is downloaded the first time
+# someone smooths with it. Downloads go into plugins/MCME-Architect/slabSmooth/cache/.
+# To run without downloads, set download: false, put each pack's zip at
+# plugins/MCME-Architect/slabSmooth/packs/<pack>.zip, and set vanilla.clientJar to the client jar of the server's
+# Minecraft version. What each pack's table holds is in plugins/MCME-Architect/slabSmooth/tables/<pack>-report.txt.
+#slabSmooth:
+#    # The pack used where neither an RP region nor the player's own pack decides.
+#    defaultPack: Human
+#    download: true
+#    # The inventory categories (inventories/block/<pack>/*.yml) of terrain, and of plants, which are removed or
+#    # kept where the ground under them changes.
+#    terrainCategories: [Terra]
+#    plantCategories: [Plant, Crop]
+#    # The largest difference in colour (0 to 441) between a terrain block and a piece with another texture that it
+#    # may use; 0: only pieces with its own texture.
+#    lookTolerance: 10
+#    vanilla:
+#        # A client jar to read instead of downloading one.
+#        clientJar: ''
+#    brush:
+#        maxRadius: 12
+#    selection:
+#        # The most columns (x by z) and blocks a selection or area may read, with the margin read around it, and
+#        # the longest it may take: a smoothing that runs out of time stops and changes nothing.
+#        maxColumns: 65536
+#        maxCells: 8000000
+#        maxSeconds: 120
+#    # Per pack, by inventory key: more blocks that count as terrain, blocks never used, and the pieces a block
+#    # always uses, for example  Human: {terrain: [moss], exclude: [lava_rock], pairs: {grass: [grass_slab]}}
+#    overrides: {}
+#    # The settings every player starts with, by the names /sls set uses, for example  band: 3
+#    defaults: {}

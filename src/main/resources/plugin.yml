@@ -121,6 +121,12 @@ commands:
       usage: >-
         /biometune [edit] [biome|here] | info|set|unset|copy|undo|revert|save|status|preview|publish|spares|claim|label
         ... (tab completes)
+   slabsmooth:
+      description: Smooths stair-stepped terrain with the slabs, stairs and vertical slabs of a resource pack.
+      usage: >-
+        /slabsmooth selection | brush [radius] | area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack] |
+        set <option> <value> | options | reset | pack [name|auto] | packs [rebuild [pack]] | help
+      aliases: [sls]
 permissions:
     architect.*:
         description: All of Architect's rank bundles (the Head Designer bundle and everything below it).
@@ -490,6 +496,29 @@ permissions:
         default: op
     architect.biomeTune.publish:
         description: Refresh other players after tuning (publish, and preview for someone else).
+        default: op
+    architect.slabSmooth:
+        description: >-
+            Smooth terrain with /slabsmooth (/sls): your WorldEdit selection and the brush, with your own settings
+            for them. It doesn't include architect.slabSmooth.allBlocks.
+        default: op
+        children:
+            architect.slabSmooth.selection: true
+            architect.slabSmooth.brush: true
+    architect.slabSmooth.selection:
+        description: Smooth your WorldEdit selection with /sls selection.
+        default: op
+    architect.slabSmooth.brush:
+        description: Bind the smoothing brush to the item in your hand with /sls brush.
+        default: op
+    architect.slabSmooth.area:
+        description: Smooth a box given by its corners, in any world, with /sls area.
+        default: op
+    architect.slabSmooth.allBlocks:
+        description: Smooth every block that has pieces of its own, not just terrain, with /sls set blocks all.
+        default: op
+    architect.slabSmooth.admin:
+        description: Read the resource packs' block tables again with /sls packs rebuild.
         default: op
     architect.weselect:
         description: Use /weselect.

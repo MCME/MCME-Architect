@@ -75,6 +75,7 @@ public enum Modules {
     RANDOMISER             ("modules.command.randomiser"),
     COPY_PASTE             ("modules.command.copypaste"),
     VIEW_DISTANCE          ("modules.command.viewdistance"),
+    SLAB_SMOOTH            ("modules.command.slabSmooth"),
 
     VOXEL_BIOME_BRUSH_FIX  ("modules.voxelBiomeBrushFix"),
     
