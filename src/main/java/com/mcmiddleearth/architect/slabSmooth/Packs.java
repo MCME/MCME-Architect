@@ -15,11 +15,16 @@ import org.bukkit.entity.Player;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -46,8 +51,9 @@ import java.util.stream.Stream;
  * The material table of each resource pack, built from the pack's block inventory and its models, and built again
  * when either changes. Packs and inventories come from {@link PackSources} (MCME-Architect).
  *
- * <p>Everything here is safe from any thread, and no call touches a file or the network: the change check (file
- * sizes and dates, at most every few seconds per pack), the download and the build all run on one background thread.
+ * <p>Everything here is safe from any thread, and no call touches a file or the network: the change check (the
+ * inventory files' contents, the zip's and the client jar's sizes and dates, at most every few seconds per pack), the
+ * download and the build all run on one background thread.
  * A table built before is saved under tables/, with the fingerprint of what it was built from; after a restart a pack
  * whose fingerprint is unchanged loads that table and opens neither the pack's zip nor the vanilla jar. Until a rebuilt
  * table is ready the previous one stays in use.
@@ -55,8 +61,11 @@ import java.util.stream.Stream;
 final class Packs implements TableSource, Closeable {
 
     private static final long CHECK_EVERY_MS = 5_000, RETRY_AFTER_ERROR_MS = 300_000;
-    /** Part of every fingerprint: raise it when the saved table's contents or meaning change. */
-    private static final int TABLE_FORMAT = 1;
+    /**
+     * Part of every fingerprint: raise it when the saved table's contents or meaning change, or the fingerprint's
+     * layout, so a fingerprint saved before never matches by chance. 2: the inventory files by their content.
+     */
+    private static final int TABLE_FORMAT = 2;
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     static final class Pack {
@@ -326,7 +335,8 @@ final class Packs implements TableSource, Closeable {
     /**
      * What a table is built from: the pack's address and file, the inventory files, the settings that shape the table,
      * the server's and Architect's versions, the table format and the configured client jar. Equal fingerprints mean
-     * an equal table.
+     * an equal table. The zip and the jar count by their size and date: they are large, and nothing rewrites them. The
+     * inventory files count by their content: Architect writes each one again at every start, with a new date.
      */
     private String fingerprint(String name, Source source) {
         StringBuilder sb = new StringBuilder("format ").append(TABLE_FORMAT).append("|versions minecraft ")
@@ -342,7 +352,7 @@ final class Packs implements TableSource, Closeable {
         }
         sb.append('|');
         try (Stream<Path> files = Files.list(source.inventory())) {
-            files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".yml")).sorted().forEach(p -> stamp(p, sb));
+            files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".yml")).sorted().forEach(p -> hash(p, sb));
         } catch (IOException e) {
             sb.append("unreadable");
         }
@@ -353,12 +363,24 @@ final class Packs implements TableSource, Closeable {
         return sb.toString();
     }
 
+    /** A file by its size and date. */
     private static void stamp(Path p, StringBuilder sb) {
         try {
             BasicFileAttributes a = Files.readAttributes(p, BasicFileAttributes.class);
             sb.append(p.getFileName()).append(':').append(a.size()).append(':').append(a.lastModifiedTime().toMillis()).append(';');
         } catch (IOException e) {
             sb.append(p.getFileName()).append(":missing;");
+        }
+    }
+
+    /** A file by its content: the SHA-1 of its bytes. */
+    private static void hash(Path p, StringBuilder sb) {
+        MessageDigest sha1 = sha1();
+        try (InputStream in = new DigestInputStream(Files.newInputStream(p), sha1)) {
+            in.transferTo(OutputStream.nullOutputStream());
+            sb.append(p.getFileName()).append(':').append(HexFormat.of().formatHex(sha1.digest())).append(';');
+        } catch (IOException e) {
+            sb.append(p.getFileName()).append(":unreadable;");
         }
     }
 
@@ -522,10 +544,14 @@ final class Packs implements TableSource, Closeable {
 
     /** A pack without a known checksum is cached under its URL (a new release has a new URL). */
     private static String urlHash(String url) {
+        return HexFormat.of().formatHex(sha1().digest(url.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private static MessageDigest sha1() {
         try {
-            return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-1").digest(url.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
+            return MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e); // every Java has SHA-1
         }
     }
 

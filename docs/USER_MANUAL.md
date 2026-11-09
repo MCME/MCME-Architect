@@ -2489,10 +2489,12 @@ more work than 100,000 surfaces in one pass stops too, and changes nothing.
   material, its blocks and where its pieces came from, then the other blocks with pieces, and any state that the
   server does not know and so was left out. If a pairing is wrong, correct it with `overrides`, run
   `/architect reload`, then `/sls packs rebuild <pack>`.
-- **Changes.** When someone smooths, Architect compares the inventory files' sizes and dates, and the pack's address and
-  SHA-1, with what it read last (at most every 5 seconds per pack). If something changed, it reads the pack again in
-  the background and keeps using the previous table until the new one is ready. A table that was built before is saved,
-  so after a restart a pack that has not changed loads in a moment and opens no zip.
+- **Changes.** When someone smooths, Architect compares the inventory files' contents, the pack's address and SHA-1,
+  and the size and date of a zip in `slabSmooth/packs/` and of the `vanilla.clientJar`, with what it read last (at most
+  every 5 seconds per pack). For the inventory files only the content counts, because Architect writes them again at
+  every start. If something changed, it reads the pack again in the background and keeps using the previous table until
+  the new one is ready. A table that was built before is saved, so after a restart a pack that has not changed loads in
+  a moment and opens no zip.
 
 **Downloads.** Pack zips are about 25 MB each, and Mojang's client jar for the server's Minecraft version is about
 37 MB. They are cached in `plugins/MCME-Architect/slabSmooth/cache/` and checked against their SHA-1: the pack's from

@@ -305,6 +305,17 @@ class PacksTest {
         Files.setLastModifiedTime(file, time);
     }
 
+    /** Writes every inventory file again with the bytes it has, as Architect does at every start, and a later date. */
+    private void rewriteUnchanged() throws IOException {
+        try (Stream<Path> files = Files.list(inventory)) {
+            for (Path file : files.toList()) {
+                FileTime before = Files.getLastModifiedTime(file);
+                Files.write(file, Files.readAllBytes(file));
+                Files.setLastModifiedTime(file, FileTime.fromMillis(before.toMillis() + 60_000));
+            }
+        }
+    }
+
     // ---------------------------------------------------------------------------------------------------------
 
     @Test
@@ -374,6 +385,65 @@ class PacksTest {
         assertEquals(1, count(infos, "Pack Human:"), infos.toString());
         assertTrue(warnings.isEmpty(), warnings.toString());
         assertEquals(built, names(second.table(human(), true)), "the blocks-all table too");
+    }
+
+    // Architect writes every inventory file again at each start, with a later date and the same bytes. A restart still
+    // loads the saved table, and opens neither the zip nor the jar.
+    @Test
+    void aRewrittenButUnchangedInventoryLoadsTheSavedTable() throws IOException {
+        Packs first = packs();
+        List<String> built = names(await(first));
+        first.close();
+        rewriteUnchanged();
+        spoil(zip);
+        spoil(jar); // opening either now would fail
+
+        infos.clear();
+        warnings.clear();
+        Table table = await(packs());
+
+        assertEquals(built, names(table));
+        assertTrue(infos.stream().anyMatch(l -> l.startsWith("Pack Human: loaded the saved table (")), infos.toString());
+        assertEquals(1, count(infos, "Pack Human:"), infos.toString());
+        assertTrue(warnings.isEmpty(), warnings.toString());
+    }
+
+    // The same size and date, but other bytes: only the content tells, and the table is built again.
+    @Test
+    void aChangedInventoryContentStillBuildsAgain() throws IOException {
+        Packs first = packs();
+        await(first);
+        first.close();
+        Path terra = inventory.resolve("terra.yml");
+        FileTime time = Files.getLastModifiedTime(terra);
+        String text = Files.readString(terra, StandardCharsets.UTF_8);
+        String changed = text.replace("display: Rock slab", "display: Rock half");
+        assertFalse(changed.equals(text));
+        assertEquals(text.length(), changed.length(), "the same size");
+        Files.writeString(terra, changed, StandardCharsets.UTF_8);
+        Files.setLastModifiedTime(terra, time);
+        infos.clear();
+
+        assertEquals(1, await(packs()).materials.size());
+
+        assertEquals(1, count(infos, "Pack Human: 1 terrain materials"), infos.toString());
+        assertEquals(0, count(infos, "Pack Human: loaded"), infos.toString());
+    }
+
+    // The check every few seconds uses the same fingerprint, so a rewrite with the same bytes is no change.
+    @Test
+    void aRewriteWithTheSameContentIsNoChange() throws Exception {
+        Packs packs = packs();
+        Table old = await(packs);
+        awaitCheckEnded(packs);
+        rewriteUnchanged();
+
+        clock.addAndGet(6_000); // past the pause between change checks
+        assertSame(old, packs.table(human(), false), "this ask starts a check");
+        awaitCheckEnded(packs);
+
+        assertEquals(1, count(infos, "Pack Human:"), "built once, not again: " + infos);
+        assertSame(old, packs.table(human(), false));
     }
 
     @Test

@@ -1162,15 +1162,17 @@ pack's block inventory and its models, with no hand-made recipe:
 
 `Packs` runs all of this on one background thread (`Architect SlabSmooth packs`), one pack at a time, and no call from
 outside touches a file or the network. When someone asks for a table, `Packs` checks at most every 5 seconds per pack
-whether the inventory files (size and date), the pack's address and SHA-1, or the settings that shape the table changed;
-if so, it reads the pack again and keeps the old table in use until the new one is ready. A saved table
-(`tables/<pack>.json`) and a fingerprint file hold what it was built from: the table format (`TABLE_FORMAT`, raised when
-the saved table's contents or meaning change), the Minecraft and Architect versions, the zip, the inventory files and the
-settings. After a restart, a pack whose fingerprint is unchanged loads its table and opens neither the zip nor the
-client jar. `Downloads` fetches the zips and the client jar with a checksum check, into `cache/`, and only when a pack
-needs it; with `download: false` a zip in `packs/<pack>.zip` is used. A download has 10 minutes for its answer and its
-whole body, so a server that stops sending cannot hold up the one worker, and with it every pack. A new zip replaces
-only that pack's older ones (`<pack>-<12 hex digits>.zip`), not those of a pack whose name starts the same.
+whether the inventory files, the pack's address and SHA-1, the size and date of a local zip or a configured client jar,
+or the settings that shape the table changed; if so, it reads the pack again and keeps the old table in use until the
+new one is ready. The inventory files count by their content, a SHA-1 of each, never by their dates: Architect writes
+them again at every start. A saved table (`tables/<pack>.json`) and a fingerprint file hold what it was built from: the
+table format (`TABLE_FORMAT`, raised when the saved table's contents or meaning change, or the fingerprint's layout),
+the Minecraft and Architect versions, the zip, the inventory files and the settings. After a restart, a pack whose
+fingerprint is unchanged loads its table and opens neither the zip nor the client jar. `Downloads` fetches the zips and
+the client jar with a checksum check, into `cache/`, and only when a pack needs it; with `download: false` a zip in
+`packs/<pack>.zip` is used. A download has 10 minutes for its answer and its whole body, so a server that stops sending
+cannot hold up the one worker, and with it every pack. A new zip replaces only that pack's older ones
+(`<pack>-<12 hex digits>.zip`), not those of a pack whose name starts the same.
 
 #### Threads
 
