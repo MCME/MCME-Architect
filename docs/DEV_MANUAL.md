@@ -1227,11 +1227,11 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
      to two around it.
      Measured on Paper 26.2 with FAWE 2.16.1 at the largest default area (246 by 246 columns): over land whose chunks
      have ticked before, the longest tick was 21.9 ms and none went over 25 ms. Over land that was generated and never
-     ticked, the longest ticks were 76 and 80 ms (one over 50 ms, five to eight over 25 ms). The cause is the holds: a
-     held chunk ticks, so a never-visited chunk ticks for the first time, and Minecraft runs its one-time
-     post-generation updates (fluids and block shapes) in that tick. Architect's no-physics listener then reacts to the
-     block updates these cause. A player walking into that land sets off the same updates. One 34 ms garbage-collection
-     pause came from a large array allocation on a 3 GB test heap.
+     ticked, two runs each had one tick over 50 ms (76 ms in one run, 80 ms in the other) and five to eight over 25 ms.
+     The cause is the holds: a held chunk ticks, so a never-visited chunk ticks for the first time, and Minecraft runs
+     its one-time post-generation updates (fluids and block shapes) in that tick. Architect's no-physics listener then
+     reacts to the block updates these cause. A player walking into that land sets off the same updates. One 34 ms
+     garbage-collection pause came from a large array allocation on a 3 GB test heap.
      Without a named pack, the selection must cover one pack only: `PackFootprint` counts every RP region whose bounding
      box meets it, since a region can have a height and lie between any two sample points, and the pack at sample points
      at most 16 blocks apart on the selection's lowest and highest layers, plus its centre, all within the world's
@@ -1296,7 +1296,9 @@ and a scheduler (`FakeScheduler`) that they control.
   change it in a commit of its own, say so, and explain the new files in that commit.
 - **Property tests** (`AlgorithmPropertiesTest`, `DirectionalTest`, `TableSafetyTest`). On the golden scenes and on random
   terrain: nothing changes outside the mask; block entities (apart from pieces in the table), water, waterlogged states
-  and unknown blocks never change; the same seed gives the same result.
+  and unknown blocks never change; the same seed gives the same result. In `directional`, `tiles` and `top`: no block
+  under a chest changes, every block over a hanging lantern keeps its four bottom octants, and plants follow the
+  `plants` option.
 - **Table builder** (`TableBuilderRulesTest`) builds a table from a tiny made-up pack and checks the pairing rules.
   `ModelsTest` and `ResourcesTest` cover the model reader.
 - **Rules and wiring** (`SmoothJobsTest`, `SmoothBrushTest`, `PacksTest`, `ArchitectPacksTest`, `ChunkAreaSourceTest`,

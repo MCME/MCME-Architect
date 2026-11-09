@@ -148,44 +148,64 @@ class AlgorithmPropertiesTest {
     }
 
     /**
-     * What is built keeps its support. On each golden scene, once with chests on the tops of every third column and
-     * once with lanterns under every block of ground with air under it in every third column: no block under a chest
-     * and no block over a lantern changes.
+     * What is built keeps its support, in every path. With chests on the tops of every third column of each golden
+     * scene, no block under a chest changes. With hanging lanterns under every block of ground with air under it in
+     * every third column of each golden scene, and in place of the block under the top of every third column of the
+     * random hills, every block over a lantern keeps its four bottom octants: the tops may still smooth it. The
+     * top-only smoother sees a top over a lantern, one block of ground, only with min_thickness 1, so it runs that way
+     * too.
      */
     @Test
-    void noBlockUnderAChestOrOverALanternChanges() throws IOException {
+    void whatIsBuiltKeepsItsSupportInEveryPath() throws IOException {
+        Options thin = new Options();
+        thin.set("min_thickness", "1");
+        List<Map.Entry<String, Options>> paths = List.of(Map.entry("directional", new Options()),
+                Map.entry("tiles", new Options()), Map.entry("top", new Options()), Map.entry("top", thin));
         List<String> underChests = new ArrayList<>(), overLanterns = new ArrayList<>();
-        int chests = 0, lanterns = 0, changedColumns = 0;
+        List<GoldenScenes.Scene> withLanterns = new ArrayList<>();
+        int chests = 0, lanterns = 0, changedColumns = 0, smoothedOverALantern = 0;
         for (String name : GoldenScenes.NAMES) {
-            GoldenScenes.Scene ground = GoldenScenes.scene(name);
-            int cols = ground.length() * ground.width();
-            GoldenScenes.Scene s = withChestsOnTops(ground);
-            int[] withChests = s.blocks();
-            int chest = s.palette().indexOf(CHEST);
-            IntPredicate underAChest = i -> i + cols < withChests.length && withChests[i + cols] == chest;
-            Smoother.Result r = run(s, "directional", new Options(), null);
-            changedColumns += r.report().changedColumns();
-            chests += count(withChests.length, underAChest);
-            underChests.addAll(changes(s, r, underAChest, s.name()));
-
-            s = withLanternsUnder(ground);
-            int[] withLanterns = s.blocks();
-            int lantern = s.palette().indexOf(LANTERN);
-            IntPredicate overALantern = i -> i >= cols && withLanterns[i - cols] == lantern;
-            r = run(s, "directional", new Options(), null);
-            changedColumns += r.report().changedColumns();
-            lanterns += count(withLanterns.length, overALantern);
-            overLanterns.addAll(changes(s, r, overALantern, s.name()));
+            GoldenScenes.Scene ground = GoldenScenes.scene(name), s = withChestsOnTops(ground);
+            int cols = s.length() * s.width(), chest = s.palette().indexOf(CHEST);
+            IntPredicate underAChest = i -> i + cols < s.blocks().length && s.blocks()[i + cols] == chest;
+            chests += count(s.blocks().length, underAChest);
+            for (Map.Entry<String, Options> path : paths.subList(0, 3)) {
+                Smoother.Result r = run(s, path.getKey(), path.getValue(), null);
+                changedColumns += r.report().changedColumns();
+                underChests.addAll(changes(s, r, underAChest, s.name() + "/" + path.getKey()));
+            }
+            withLanterns.add(withLanternsUnder(ground));
         }
-        int chestCount = chests, lanternCount = lanterns;
+        for (long seed = 1; seed <= 3; seed++) {
+            withLanterns.add(withLanternsUnderTops(randomHills(seed)));
+        }
+        for (GoldenScenes.Scene s : withLanterns) {
+            int cols = s.length() * s.width(), lantern = s.palette().indexOf(LANTERN);
+            IntPredicate overALantern = i -> i >= cols && s.blocks()[i - cols] == lantern;
+            lanterns += count(s.blocks().length, overALantern);
+            for (Map.Entry<String, Options> path : paths) {
+                Smoother.Result r = run(s, path.getKey(), path.getValue(), null);
+                String label = s.name() + "/" + path.getKey() + (path.getValue() == thin ? " min_thickness 1" : "");
+                List<String> changed = changes(s, r, overALantern, label);
+                smoothedOverALantern += changed.size();
+                overLanterns.addAll(changes(s, r, overALantern.and(i -> !wholeBottom(r, i)), label));
+            }
+        }
+        int chestCount = chests, lanternCount = lanterns, smoothed = smoothedOverALantern;
         assertTrue(chestCount > 0 && lanternCount > 0,
                 chestCount + " blocks under chests, " + lanternCount + " over lanterns");
         assertTrue(changedColumns > 0, "nothing changed at all");
         assertAll(
-                () -> assertTrue(underChests.isEmpty(), underChests.size() + " of " + chestCount
-                        + " blocks under a chest changed, such as " + first(underChests)),
-                () -> assertTrue(overLanterns.isEmpty(), overLanterns.size() + " of " + lanternCount
-                        + " blocks over a lantern changed, such as " + first(overLanterns)));
+                () -> assertTrue(underChests.isEmpty(), underChests.size() + " changes to the " + chestCount
+                        + " blocks under a chest, over the paths, such as " + first(underChests)),
+                () -> assertTrue(overLanterns.isEmpty(), overLanterns.size() + " blocks over a lantern lost part of "
+                        + "their bottom, such as " + first(overLanterns)),
+                () -> assertTrue(smoothed > 0, "the tops still smooth blocks over a lantern"));
+    }
+
+    /** Whether the block at i in the result fills its four bottom octants. */
+    private static boolean wholeBottom(Smoother.Result r, int i) {
+        return (table.kind3(r.palette().get(r.blocks()[i])).mask() & Octants.SLAB) == Octants.SLAB;
     }
 
     @Test
@@ -341,6 +361,21 @@ class AlgorithmPropertiesTest {
                 if (isGround(s, i) && AIR.equals(s.palette().get(s.blocks()[i - cols]))) {
                     blocks[i - cols] = lantern;
                 }
+            }
+        }
+        return new GoldenScenes.Scene(s.name() + "+lanterns", s.height(), s.length(), s.width(), palette, blocks);
+    }
+
+    /** A hanging lantern in place of the block under the top of every third column, so the top hangs over it. */
+    private static GoldenScenes.Scene withLanternsUnderTops(GoldenScenes.Scene s) {
+        List<String> palette = new ArrayList<>(s.palette());
+        int lantern = palette.size();
+        palette.add(LANTERN);
+        int[] blocks = s.blocks().clone(), tops = tops(s);
+        int cols = s.length() * s.width();
+        for (int c = 0; c < cols; c++) {
+            if (everyThird(s, c) && tops[c] >= 1) {
+                blocks[(tops[c] - 1) * cols + c] = lantern;
             }
         }
         return new GoldenScenes.Scene(s.name() + "+lanterns", s.height(), s.length(), s.width(), palette, blocks);

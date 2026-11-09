@@ -2248,9 +2248,11 @@ smoothing](#permissions-for-smoothing)).
 - **Never** water, waterlogged blocks, or blocks with block data, such as chests, signs and heads. The only exception
   is a piece that the pack itself uses as a slab and that is a block entity, such as MCME's comparator slabs.
 - **A block with something built on it keeps its shape**, also at a cliff edge: the block under a chest, a fence, a
-  wall or a tree trunk. A block with something hanging under it, such as a lantern, gets only its top smoothed.
-  Something fixed to the side of a terrain block, such as a ladder or a sign, is not protected this way: part of that
-  side can still be cut away.
+  wall or a tree trunk. A block with something hanging under it, such as a lantern, keeps its bottom whole, and only
+  its top is smoothed. With `blocks all`, logs, bricks and other blocks that have pieces of their own count as ground,
+  not as built: they are smoothed like the terrain, and do not keep the block under them as it is. Something fixed to
+  the side of a terrain block, such as a ladder or a sign, is not protected this way: part of that side can still be
+  cut away.
 
 > [!WARNING]
 > **Buildings made of terrain blocks get smoothed too.** Smoothing does not know what a block is part of. A wall or a
