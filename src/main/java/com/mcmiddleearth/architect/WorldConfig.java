@@ -141,7 +141,7 @@ public class WorldConfig {
         YamlConfiguration config = new YamlConfiguration();
         config.set("DefaultConfiguration", "Values in this file will be used for all worlds if not overriden in <worldName>.yml configuration file.");
         for (Modules modul : Modules.values()) {
-            config.set(modul.getModuleKey(), true);
+            config.set(modul.getModuleKey(), modul != Modules.SLAB_SMOOTH);
         }
         config.set(NO_PHYSICS_LIST, new ArrayList<>());
         config.set(VIEW_DISTANCE,255);
