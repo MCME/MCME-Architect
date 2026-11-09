@@ -1206,10 +1206,17 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
   no guard of its own. The radius is cut to `brush.maxRadius` at every click, because `//size` can raise it.
 - **A job** (`SmoothJobs`) has five stages, and one job at a time runs on the whole server:
   1. Main thread, `start`: the limits (columns, cells), the pack, the tables, the lock. Then `AreaSource.load` starts
-     reading, in slices of about 10 ms per tick, holding each chunk with a plugin chunk ticket. It never generates a chunk.
-     It waits for at most 16 chunks at a time (`ChunkAreaSource.MAX_IN_FLIGHT`) and asks for more as it holds them:
+     reading, in slices of about 10 ms per tick. It never asks Paper to generate a chunk, and it refuses an area with
+     any ungenerated chunk before it holds anything: first it asks Paper for every chunk of the area, holding none, and
+     only then holds each chunk with a plugin chunk ticket and copies it. A chunk Paper has let go in between is asked
+     for again. Holding the area's chunks makes Paper load the land up to two chunks around them, and generate it where
+     needed, as a player standing there would. So next to ungenerated land, Paper may generate that ring; and held as
+     they arrived, the chunks next to an ungenerated part of the area would have had that part generated before the
+     read reached it.
+     It waits for at most 16 chunks at a time (`ChunkAreaSource.MAX_IN_FLIGHT`) and asks for more as Paper answers:
      Paper finishes each chunk it loads on the main thread, and asked for a whole area at once, it finished the chunks
-     in a few heavy ticks.
+     in a few heavy ticks. It holds at most 16 chunks per tick too: each held chunk also makes Paper load the chunks up
+     to two around it.
      Without a named pack, the selection must cover one pack only: `PackFootprint` counts every RP region whose bounding
      box meets it, since a region can have a height and lie between any two sample points, and the pack at sample points
      at most 16 blocks apart on the selection's lowest and highest layers, plus its centre, all within the world's

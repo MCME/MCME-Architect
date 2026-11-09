@@ -2322,7 +2322,10 @@ smoothing, the reply shows the pack it used, for example `[Mordor]`.
   your WorldEdit limit; partly done, //undo reverts it.`). FastAsyncWorldEdit keeps the undo history per world: undo an
   area from inside the world it changed, even when you ran `/sls area` from another one. On plain WorldEdit the history
   is per player, so `//undo` works from any world.
-- **It never generates terrain.** A selection or box that reaches land that has not been generated is refused.
+- **It never generates the land it smooths.** A selection or box that reaches land that has not been generated is
+  refused, and nothing is generated for it. While a smoothing runs, the server loads the land up to two chunks around
+  the area, as it would around a player standing there: next to land that has not been generated, it generates that
+  strip.
 - **Wrong pieces?** If a block gets pieces that do not belong to it, tell an admin which block and which piece. They
   can correct it in the config (see [Packs, tables and downloads](#packs-tables-and-downloads)).
 - **The console** can run only `/sls help`, `/sls packs` and `/sls packs rebuild`. `area` is for players, because
@@ -2524,9 +2527,10 @@ more work than 100,000 surfaces in one pass stops too, and changes nothing.
   report, a few hundred KB) and `cache/`. It keeps nothing about players on disk.
 - **Brush clicks** are handled like any WorldEdit brush. On FastAsyncWorldEdit they run off the main thread.
 - **Selections and areas** are read in slices of about 10 ms per tick. Chunks that are not loaded are loaded by Paper
-  in the background (never generated) and held with a chunk ticket until the result is written. The smoothing runs on
-  a worker thread of its own, with `surfaces all` in 64 by 64 tiles. On FastAsyncWorldEdit, the write runs off the main
-  thread too.
+  in the background, never generated, and an area with any ungenerated chunk is refused first. Then its chunks are held
+  with a chunk ticket until the result is written, which makes Paper load the land up to two chunks around them, as for
+  a player standing there, and generate it where needed. The smoothing runs on a worker thread of its own, with
+  `surfaces all` in 64 by 64 tiles. On FastAsyncWorldEdit, the write runs off the main thread too.
 - **Limits.** One selection or area at a time on the server; `maxColumns`, `maxCells` and `maxSeconds`; and a cap on
   the work in one pass. Players who go over are told, and nothing changes.
 - **Memory.** Two tables per pack in use, and per-player settings, which are forgotten at a restart or a reload.
@@ -3745,8 +3749,8 @@ Each entry gives what the player is told (or sees), the cause and the fix. See [
   written before the refusal can be undone with `//undo`.
 - **`Too many blocks for your WorldEdit limit; partly done, //undo reverts it.`** Cause: the player's WorldEdit block
   limit. Fix: `//undo`, and raise the limit or select less.
-- **`//undo` finds nothing to undo after `/sls area` in another world.** Cause: FastAsyncWorldEdit keeps its undo
-  history per world. Fix: go to the world the area is in, and run `//undo` there.
+- **`//undo` says `Nothing left to undo.` after `/sls area` in another world.** Cause: FastAsyncWorldEdit keeps its
+  undo history per world. Fix: go to the world the area is in, and run `//undo` there.
 - **`N blocks changed while it ran were left alone.`** Not an error: someone placed or broke blocks in the area while
   it ran, and smoothing did not overwrite them. The world itself can change blocks during a smoothing too, most often
   in terrain nobody has visited yet: the area stays loaded while smoothing works, and the game keeps running there, so
