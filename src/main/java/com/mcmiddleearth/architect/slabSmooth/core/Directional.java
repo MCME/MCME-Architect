@@ -316,9 +316,10 @@ public final class Directional {
      * table doesn't make terrain: a cut under water lets it flow, and a cut over or under an ore leaves a hole in a
      * cliff face. Outside the area nothing counts as built. Toti's 1.3.0 could give either block to a wall pass.
      *
-     * <p>A block with a plant on it (a block of the table's decor) belongs to no wall pass either. Only the tops pass
-     * applies the plants option: it removes the plant where it lowers the block, and with plants keep leaves the block
-     * alone. A wall pass looks only at the block beside the wall, so it could cut the block's top half and leave the
+     * <p>A block with a plant on it (a block of the table's decor) belongs to no wall pass either. The tops pass
+     * applies the plants option to a plant on the block it changes: it removes the plant where it lowers the block, and
+     * with plants keep leaves the block alone. A wall or underside pass applies it to a plant in the cell beside the
+     * face it shapes. In 1.3.0 a wall pass looked only at the block beside the wall, so it could cut the block's top half and leave the
      * plant floating with either option. Above the area there is no plant.
      */
     static byte[] owners(World world, Options opts) {

@@ -2253,6 +2253,8 @@ smoothing](#permissions-for-smoothing)).
   not as built: they are smoothed like the terrain, and do not keep the block under them as it is. Something fixed to
   the side of a terrain block, such as a ladder or a sign, is not protected this way: part of that side can still be
   cut away.
+- **Plants that hang under a block or grow on its side are not protected the same way.** This covers vines and weeping
+  vines. Smoothing a cliff can leave them floating. `//undo` reverts that smoothing, and selecting less avoids them.
 
 > [!WARNING]
 > **Buildings made of terrain blocks get smoothed too.** Smoothing does not know what a block is part of. A wall or a
@@ -3722,6 +3724,9 @@ Each entry gives what the player is told (or sees), the cause and the fix. See [
 - **`WorldEdit isn't ready for that item yet; try /sls brush again.`** Cause: on FastAsyncWorldEdit, `/sls brush` came
   before WorldEdit had set up your session, for example as the first thing you did after a restart. Nothing was bound.
   Fix: run `/sls brush` again.
+- **Your selection wand does nothing after `WorldEdit isn't ready for that item yet; try /sls brush again.`** Cause: on
+  FastAsyncWorldEdit, that answer can leave your selection wand unbound. Fix: run `//wand` once. Rejoining or changing
+  your game mode also fixes it.
 - **`The radius must be a number from 1 to 12.`** Cause: the radius is outside `brush.maxRadius`. A larger `//size`
   is cut to that limit at every click without a message.
 - **`With surfaces top, select a box, polygon or cylinder.`** Cause: a selection of another shape with `surfaces top`.

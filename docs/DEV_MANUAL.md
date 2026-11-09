@@ -1129,9 +1129,10 @@ energy and solver, in six directions, by turning the area so that "up" points th
   The other category also holds blocks nobody built: water, and ores or logs where the pack does not make them
   terrain. The rule holds for them on purpose: a cut over or under an ore leaves a hole in a cliff face, and a cut
   under water lets it flow. The golden scenes hold no such blocks, so they still match 1.3.0.
-- **Plants follow the plants option.** A block with a plant on it belongs to no wall direction either. Only the tops
-  apply the plants option: they remove the plant where they lower the block under it, and with `plants keep` they
-  leave that block alone. A wall direction looks only at the block beside the wall, so in 1.3.0 a wall that took a
+- **Plants follow the plants option.** A block with a plant on it belongs to no wall direction either. The tops
+  apply the plants option to a plant on the block they change: they remove the plant where they lower the block under
+  it, and with `plants keep` they leave that block alone. A wall or underside direction applies it to a plant in the
+  cell beside the face it shapes. In 1.3.0 a wall direction looked only at the block beside the wall, so a wall that took a
   grass block on a steep face could cut its top half and leave the plant on it floating, with either option. The
   golden scenes hold no plants, so they still match 1.3.0.
 - **Sharp edges.** A top seen from the side is a step of `cliff` or more, so a wall direction leaves it alone, and the
