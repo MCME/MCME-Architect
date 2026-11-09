@@ -14,7 +14,6 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -94,7 +93,7 @@ class ChunkAreaSourceTest {
                         loaded = true;
                     }
                     tickets++;
-                    waiting.remove(FakeChunk.this);
+                    ticketsThisRun++;
                     yield true;
                 }
                 case "removePluginChunkTicket" -> {
@@ -136,8 +135,10 @@ class ChunkAreaSourceTest {
         throw unexpected(method);
     });
     private final Map<Long, FakeChunk> chunks = new HashMap<>();
-    /** Answers to a chunk's first request that differ from the world's: a load Paper hasn't finished, or one that failed. */
+    /** Answers to a chunk's next request that differ from the world's: a load Paper hasn't finished, or one that failed. */
     private final Map<Long, CompletableFuture<Chunk>> answers = new HashMap<>();
+    /** When set, Paper answers a request that answers has nothing for only when the test calls paperHandsOver. */
+    private boolean answersByHand;
     private final Map<String, BlockData> blockData = new HashMap<>();
     private final AtomicLong clock = new AtomicLong();
     private long requestCost, copyCost; // how far the clock moves per request and per copy
@@ -146,9 +147,9 @@ class ChunkAreaSourceTest {
     private int ticksAllowed = Integer.MAX_VALUE; // how many more tasks the next tick takes
     private final IllegalStateException tickRefusal = new IllegalStateException("the plugin is disabled");
     private boolean inRun, askedWhetherGenerated;
-    private int requests, callsThisRun, mostCallsInARun;
-    /** The chunks asked for and not held yet, and the most there were at once. */
-    private final Set<FakeChunk> waiting = new HashSet<>();
+    private int requests, callsThisRun, mostCallsInARun, ticketsThisRun, mostTicketsInARun;
+    /** The chunks asked for that Paper hasn't answered yet, each with its request, and the most there were at once. */
+    private final Map<FakeChunk, CompletableFuture<Chunk>> waiting = new HashMap<>();
     private int mostWaiting;
     private final List<String> outsideRuns = new ArrayList<>();
     private final World world;
@@ -180,10 +181,15 @@ class ChunkAreaSourceTest {
                 FakeChunk chunk = chunks.get(key);
                 chunk.asked++;
                 chunk.loaded = true; // by the time Paper hands it over
-                waiting.add(chunk);
-                mostWaiting = Math.max(mostWaiting, waiting.size());
-                CompletableFuture<Chunk> answer = answers.remove(key); // for the first request only
-                yield answer != null ? answer : CompletableFuture.completedFuture(chunk.generated ? chunk.chunk : null);
+                CompletableFuture<Chunk> given = answers.remove(key); // for this request only
+                CompletableFuture<Chunk> answer = given != null ? given : answersByHand ? new CompletableFuture<>()
+                        : CompletableFuture.completedFuture(chunk.generated ? chunk.chunk : null);
+                if (!answer.isDone()) { // a chunk Paper has to load first
+                    waiting.put(chunk, answer);
+                    mostWaiting = Math.max(mostWaiting, waiting.size());
+                    answer.whenComplete((handedOver, failed) -> waiting.remove(chunk, answer));
+                }
+                yield answer;
             }
             default -> throw unexpected(method);
         });
@@ -240,6 +246,7 @@ class ChunkAreaSourceTest {
         Runnable task = ticks.poll();
         assertTrue(task != null, "nothing waits for the next tick");
         callsThisRun = 0;
+        ticketsThisRun = 0;
         inRun = true;
         try {
             task.run();
@@ -247,6 +254,20 @@ class ChunkAreaSourceTest {
             inRun = false;
         }
         mostCallsInARun = Math.max(mostCallsInARun, callsThisRun);
+        mostTicketsInARun = Math.max(mostTicketsInARun, ticketsThisRun);
+    }
+
+    /** Between ticks: Paper hands over the chunk its waiting request is for, or null if it isn't generated. */
+    private void paperHandsOver(FakeChunk chunk) {
+        CompletableFuture<Chunk> request = waiting.get(chunk);
+        assertTrue(request != null, "no request waits for " + chunk.chunk);
+        request.complete(chunk.generated ? chunk.chunk : null);
+    }
+
+    /** Between ticks: Paper lets a chunk go, as it does a while after it has loaded one that nothing holds. */
+    private void paperLetsGo(FakeChunk chunk) {
+        assertEquals(chunk.removed, chunk.tickets, "Paper lets a chunk go only while it has no ticket: " + chunk.chunk);
+        chunk.loaded = false;
     }
 
     /** Runs ticks until nothing waits for the next one. */
@@ -298,6 +319,27 @@ class ChunkAreaSourceTest {
         assertTrue(refusal.getMessage().contains("1, -3"), refusal.getMessage());
     }
 
+    // A ticket makes Paper load the land up to two chunks around the chunk it holds, and generate it where needed. Holding
+    // chunks while the rest of the area was still asked for, a load would have Paper generate an ungenerated part of the
+    // area before it got there, and then smooth it.
+    @Test
+    void anUngeneratedChunkIsRefusedBeforeAnyChunkIsHeld() {
+        List<FakeChunk> area = chunksIn(-4, 4, -4, 4); // the whole fake world
+        assertTrue(area.size() > ChunkAreaSource.MAX_IN_FLIGHT, "more chunks than may wait at once");
+        chunk(4, 4).generated = false; // the last chunk the load asks for
+
+        CompletableFuture<AreaSource.LoadedArea> load = load(-64, 0, -64, 79, 0, 79);
+        runTicks();
+
+        Refusal refusal = assertInstanceOf(Refusal.class, failure(load));
+        assertTrue(refusal.getMessage().contains("hasn't been generated"), refusal.getMessage());
+        assertTrue(refusal.getMessage().contains("4, 4"), refusal.getMessage());
+        for (FakeChunk chunk : area) {
+            assertEquals(0, chunk.tickets, "no ticket was ever added: " + chunk.chunk);
+        }
+        assertEquals(area.size(), requests, "each chunk was asked for once");
+    }
+
     @Test
     void requestingAndCopyingSpreadOverTicks() throws Exception {
         requestCost = 6 * MS;
@@ -320,34 +362,41 @@ class ChunkAreaSourceTest {
     }
 
     // Paper loads a chunk in the background but finishes it on the main thread. Asked for all of a big area's chunks at
-    // once, it finished them in a few heavy ticks, up to 184 ms on the server.
+    // once, it finished them in a few heavy ticks, up to 184 ms on the server. Each chunk held makes Paper load the land
+    // around it as well, so one run holds no more chunks than may wait at once.
     @Test
     void noMoreThanSixteenChunksAreWaitingAtOnce() throws Exception {
         List<FakeChunk> area = chunksIn(-4, 4, -4, 4); // the whole fake world
         assertTrue(area.size() > ChunkAreaSource.MAX_IN_FLIGHT, "more chunks than may wait at once");
-        Map<FakeChunk, CompletableFuture<Chunk>> paper = new HashMap<>(); // Paper's answers, completed by hand
-        for (FakeChunk chunk : area) {
-            CompletableFuture<Chunk> later = new CompletableFuture<>();
-            answers.put(key(chunk.x, chunk.z), later);
-            paper.put(chunk, later);
-        }
+        // Paper lets these go before the load holds them: the first chunks it asks for, more than may wait at once, so
+        // once the whole area has answered, the load has more chunks to ask for again than may wait.
+        Set<FakeChunk> letGo = Set.copyOf(chunksIn(-4, -3, -4, 4));
+        assertTrue(letGo.size() > ChunkAreaSource.MAX_IN_FLIGHT, "more chunks are let go than may wait at once");
+        answersByHand = true;
 
         CompletableFuture<AreaSource.LoadedArea> load = load(-64, 0, -64, 79, 0, 79);
         for (int runs = 1; !load.isDone(); runs++) {
             assertTrue(runs <= 1_000, "it keeps asking for another tick");
             runOneTick();
-            // Between ticks, Paper hands over five of the chunks that wait, not in the order they were asked for.
-            area.reversed().stream()
-                    .filter(chunk -> waiting.contains(chunk) && !paper.get(chunk).isDone())
-                    .limit(5)
-                    .forEach(chunk -> paper.get(chunk).complete(chunk.chunk));
+            // Between ticks, Paper hands over five of the chunks that wait, not in the order they were asked for. Those
+            // in letGo it lets go again at once, the first time it hands them over, as it does a chunk nothing holds.
+            for (FakeChunk chunk : area.reversed().stream().filter(waiting::containsKey).limit(5).toList()) {
+                paperHandsOver(chunk);
+                if (letGo.contains(chunk) && chunk.asked == 1) {
+                    paperLetsGo(chunk);
+                }
+            }
         }
 
         assertTrue(mostWaiting <= ChunkAreaSource.MAX_IN_FLIGHT, mostWaiting + " chunks were waiting at once");
         assertEquals(ChunkAreaSource.MAX_IN_FLIGHT, mostWaiting, "and the load used all of that room");
+        assertTrue(mostTicketsInARun <= ChunkAreaSource.MAX_IN_FLIGHT, mostTicketsInARun + " chunks were held in one run");
         for (FakeChunk chunk : area) {
-            assertEquals(1, chunk.asked, chunk.chunk.toString());
+            assertEquals(letGo.contains(chunk) ? 2 : 1, chunk.asked,
+                    (letGo.contains(chunk) ? "let go before it was held, so asked for again: " : "asked for once: ")
+                            + chunk.chunk);
             assertEquals(1, chunk.tickets, chunk.chunk.toString());
+            assertEquals(0, chunk.blockingLoads, "never held while it wasn't loaded: " + chunk.chunk);
             assertEquals(1, chunk.copies, chunk.chunk.toString());
         }
         assertEquals(List.of(), outsideRuns);
@@ -398,6 +447,33 @@ class ChunkAreaSourceTest {
         loaded(load).read();
     }
 
+    // The chunks are held once the whole area has answered. Paper keeps a chunk it has just loaded for a while, so most
+    // are still loaded then; one it has let go meanwhile is asked for again.
+    @Test
+    void phaseTwoHoldsTheChunksPaperKept() throws Exception {
+        CompletableFuture<Chunk> late = new CompletableFuture<>();
+        answers.put(key(1, 1), late); // the area's last chunk to answer
+
+        CompletableFuture<AreaSource.LoadedArea> load = load(0, 0, 0, 31, 63, 31);
+        runOneTick(); // asks for the whole area; Paper hands three of its chunks over at once
+        late.complete(chunk(1, 1).chunk); // between ticks, Paper hands the last one over...
+        paperLetsGo(chunk(0, 1)); // ...and has let (0, 1) go meanwhile
+        runTicks();
+
+        for (FakeChunk kept : List.of(chunk(0, 0), chunk(1, 0), chunk(1, 1))) {
+            assertEquals(1, kept.asked, "still loaded, so held without being asked for again: " + kept.chunk);
+        }
+        assertEquals(2, chunk(0, 1).asked, "let go, so asked for again");
+        for (FakeChunk chunk : chunksIn(0, 1, 0, 1)) {
+            assertEquals(1, chunk.tickets, "held once: " + chunk.chunk);
+            assertEquals(0, chunk.blockingLoads, "never held while it wasn't loaded: " + chunk.chunk);
+            assertEquals(1, chunk.copies, "copied once: " + chunk.chunk);
+        }
+        assertEquals(List.of(), outsideRuns);
+        WorldArea read = loaded(load).read();
+        assertEquals(block(0, 0, 16), read.palette.get(read.blocks[16 * read.width]), "(0, 1) is read too");
+    }
+
     @Test
     void eachChunkIsHeldUntilRelease() throws Exception {
         CompletableFuture<Chunk> late = new CompletableFuture<>();
@@ -430,20 +506,17 @@ class ChunkAreaSourceTest {
 
     enum Failure { NOT_GENERATED, LOAD_FAILED, COPY_FAILED, COPY_OUT_OF_MEMORY, CANCELLED, NEXT_TICK_REFUSED }
 
+    // Until the whole area has answered, a load holds nothing, so whatever ends it then has no ticket to remove.
     @ParameterizedTest
-    @EnumSource(Failure.class)
-    void aFailedLoadReleasesWhatItHeld(Failure failure) {
-        requestCost = 6 * MS; // two calls per run, so it goes wrong part way through
-        copyCost = 6 * MS;
+    @EnumSource(value = Failure.class, names = {"NOT_GENERATED", "LOAD_FAILED", "CANCELLED", "NEXT_TICK_REFUSED"})
+    void aLoadThatEndsBeforeTheWholeAreaHasAnsweredHoldsNothing(Failure failure) {
+        requestCost = 6 * MS; // two requests per run, so it ends part way through asking
         RuntimeException broken = new IllegalStateException("a broken region file");
-        OutOfMemoryError memory = new OutOfMemoryError("test");
         switch (failure) {
             case NOT_GENERATED -> chunk(1, 1).generated = false;
             case LOAD_FAILED -> answers.put(key(1, 1), CompletableFuture.failedFuture(broken));
-            case COPY_FAILED -> chunk(1, 1).copyFailure = broken;
-            case COPY_OUT_OF_MEMORY -> chunk(1, 1).copyFailure = memory;
             case NEXT_TICK_REFUSED -> ticksAllowed = 1; // the first run, then no more
-            case CANCELLED -> {
+            default -> {
             }
         }
 
@@ -457,11 +530,65 @@ class ChunkAreaSourceTest {
         Throwable cause = failure(load);
         switch (failure) {
             case NOT_GENERATED -> assertInstanceOf(Refusal.class, cause);
+            case LOAD_FAILED -> assertSame(broken, cause);
+            case CANCELLED -> {
+                assertInstanceOf(CancellationException.class, cause);
+                assertEquals(2, requests, "it stops in the next run");
+            }
+            case NEXT_TICK_REFUSED -> assertSame(tickRefusal, cause);
+            default -> fail(failure.name());
+        }
+        for (FakeChunk chunk : chunksIn(0, 1, 0, 1)) {
+            assertEquals(0, chunk.tickets, "nothing is held before the whole area has answered: " + chunk.chunk);
+        }
+    }
+
+    // Each failure comes once the whole area has answered and the load holds chunks. NOT_GENERATED is then a chunk that
+    // Paper let go and that was gone when it was asked for again, as when it was deleted meanwhile.
+    @ParameterizedTest
+    @EnumSource(Failure.class)
+    void aFailedLoadReleasesWhatItHeld(Failure failure) {
+        requestCost = 6 * MS; // two calls per run, so it goes wrong part way through
+        copyCost = 6 * MS;
+        RuntimeException broken = new IllegalStateException("a broken region file");
+        OutOfMemoryError memory = new OutOfMemoryError("test");
+        CompletableFuture<Chunk> late = new CompletableFuture<>();
+        answers.put(key(1, 1), late); // the area's last chunk to answer
+
+        CompletableFuture<AreaSource.LoadedArea> load = load(0, 0, 0, 31, 63, 31);
+        runOneTick();
+        runOneTick(); // the whole area is asked for, and all but (1, 1) has answered
+        late.complete(chunk(1, 1).chunk);
+        switch (failure) {
+            case NOT_GENERATED -> {
+                paperLetsGo(chunk(1, 1));
+                chunk(1, 1).generated = false;
+            }
+            case LOAD_FAILED -> {
+                paperLetsGo(chunk(1, 1));
+                answers.put(key(1, 1), CompletableFuture.failedFuture(broken));
+            }
+            case COPY_FAILED -> chunk(1, 1).copyFailure = broken;
+            case COPY_OUT_OF_MEMORY -> chunk(1, 1).copyFailure = memory;
+            case NEXT_TICK_REFUSED -> ticksAllowed = 0; // the run already waiting, which holds the chunks, then no more
+            case CANCELLED -> {
+            }
+        }
+        runOneTick(); // holds the chunks Paper still has
+        if (failure == Failure.CANCELLED) {
+            load.cancel(false);
+        }
+        runTicks();
+
+        Throwable cause = failure(load);
+        switch (failure) {
+            case NOT_GENERATED -> assertInstanceOf(Refusal.class, cause);
             case LOAD_FAILED, COPY_FAILED -> assertSame(broken, cause);
             case COPY_OUT_OF_MEMORY -> assertSame(memory, cause);
             case CANCELLED -> {
                 assertInstanceOf(CancellationException.class, cause);
-                assertEquals(2, requests, "it stops in the next run");
+                assertEquals(2, chunksIn(0, 1, 0, 1).stream().mapToInt(chunk -> chunk.copies).sum(),
+                        "it stops in the next run");
             }
             case NEXT_TICK_REFUSED -> assertSame(tickRefusal, cause);
         }

@@ -18,19 +18,29 @@ import java.util.concurrent.Executor;
 import java.util.function.LongSupplier;
 
 /**
- * Reads an area from chunk snapshots. Paper loads the chunks that aren't loaded in the background, and never generates
- * one: a chunk Paper hands over as null hasn't been generated, and the load fails. It doesn't ask isChunkGenerated
- * first, because on Paper that reads each unloaded chunk from disk on the main thread.
+ * Reads an area from chunk snapshots. It never asks Paper to generate a chunk, and it refuses an area with any
+ * ungenerated chunk before it holds anything. A load has two phases:
+ * <ol>
+ *   <li>It asks Paper for every chunk of the area, and holds none. Paper loads the ones that aren't loaded in the
+ *       background, and hands over a chunk that hasn't been generated as null, which refuses the load. It doesn't ask
+ *       isChunkGenerated, because on Paper that reads each unloaded chunk from disk on the main thread.</li>
+ *   <li>Once every chunk has answered, it holds each one with a plugin chunk ticket, and copies it. Paper keeps a chunk
+ *       it has just loaded for a while (delay-chunk-unloads-by, 10 seconds by default), so most are still loaded. One it
+ *       has let go is asked for again and held when it arrives, because a ticket on a chunk that isn't loaded loads it
+ *       from disk, on the main thread. One that isn't generated any more refuses the load too. The tickets stay until
+ *       release, so writing the result doesn't load the chunks again.</li>
+ * </ol>
+ * Holding the area's chunks makes Paper load the land up to two chunks around them, and generate it where needed, as a
+ * player standing there would. That is why nothing is held before the whole area has answered: held while the rest
+ * was still asked for, chunks next to an ungenerated part of the area would have Paper generate it, and the load would
+ * then read it. Next to ungenerated land around the area, Paper may still generate that ring.
  * <p>
  * Everything a load does on the main thread happens in nextTick runs of about SLICE_NANOS each: asking Paper for the
- * chunks, holding each one with a plugin chunk ticket, and copying it. A big area spreads over several ticks instead of
- * stalling one. Paper finishes each chunk it loads on the main thread, so that work is spread out too: a load has at
- * most MAX_IN_FLIGHT chunks asked for and not held yet, and as it holds them, it asks for more in its next run. Every
- * run holds all that Paper has handed over so far, however much of the run's time is used up: Paper lets a chunk it
- * has just loaded go at that world's next ticket purge, which can come before the next run. A chunk that has gone by
- * then is asked for again instead of held, because a ticket on a chunk that isn't loaded loads it from disk, on the
- * main thread. Holding a loaded chunk is quick next to copying it. The tickets stay until release, so writing the
- * result doesn't load the chunks again.
+ * chunks, holding them, and copying them. A big area spreads over several ticks instead of stalling one. MAX_IN_FLIGHT
+ * paces the load's own requests and holds: at most that many requests wait for Paper's answer, and a run holds at
+ * most that many chunks, however much of its time is used up: holding a loaded chunk is quick next to copying it, and
+ * Paper may let go of a chunk that isn't held yet. Each held chunk also makes Paper load the chunks up to two around
+ * it.
  * <p>
  * Loads must not overlap. A plugin has one ticket per chunk, so the first release would let the other load's chunks go;
  * the jobs run one at a time.
@@ -41,8 +51,9 @@ final class ChunkAreaSource implements AreaSource {
     static final long SLICE_NANOS = 10_000_000L;
 
     /**
-     * The most chunks a load has asked Paper for and doesn't hold yet. Paper loads a chunk in the background but
-     * finishes it on the main thread: asked for a whole big area at once, it finished its chunks in a few heavy ticks.
+     * The most requests of a load that wait for Paper's answer, and the most chunks one run holds. Paper loads a chunk
+     * in the background but finishes it on the main thread: asked for a whole big area at once, it finished its chunks
+     * in a few heavy ticks. A chunk held makes Paper load the land around it too.
      */
     static final int MAX_IN_FLIGHT = 16;
 
@@ -76,12 +87,16 @@ final class ChunkAreaSource implements AreaSource {
         private final World world;
         private final BlockVector3 min, max;
         private final int minY, maxY, cx0, cz0, chunksZ;
-        /** Chunk i is chunk (cx0 + i / chunksZ, cz0 + i % chunksZ). */
+        /** Chunk i is chunk (cx0 + i / chunksZ, cz0 + i % chunksZ). Its latest request; phase one adds them in order. */
         private final List<CompletableFuture<Chunk>> requested = new ArrayList<>();
+        /** Whether chunk i's latest request waits: asked for, and its answer not looked at yet. */
+        private final boolean[] unanswered;
         private final Chunk[] held;
         private final ChunkSnapshot[] copies;
         private final ArrayDeque<Integer> toCopy = new ArrayDeque<>();
-        private int firstNotHeld, waiting, copied; // waiting: asked for and not held yet, at most MAX_IN_FLIGHT
+        private int waiting; // how many requests wait, at most MAX_IN_FLIGHT
+        private int firstNotAnswered, firstNotHeld, copied;
+        private boolean allAnswered; // phase two: every chunk of the area has answered
         private boolean released;
 
         Load(World world, BlockVector3 min, BlockVector3 max) {
@@ -94,6 +109,7 @@ final class ChunkAreaSource implements AreaSource {
             cz0 = min.z() >> 4;
             chunksZ = (max.z() >> 4) - cz0 + 1;
             int chunks = ((max.x() >> 4) - cx0 + 1) * chunksZ;
+            unanswered = new boolean[chunks];
             held = new Chunk[chunks];
             copies = new ChunkSnapshot[chunks];
         }
@@ -106,17 +122,17 @@ final class ChunkAreaSource implements AreaSource {
                     release();
                     return;
                 }
-                while (requested.size() < held.length && waiting < MAX_IN_FLIGHT
-                        && nanoClock.getAsLong() - start < SLICE_NANOS) {
-                    int i = requested.size();
-                    requested.add(world.getChunkAtAsync(cx0 + i / chunksZ, cz0 + i % chunksZ, false));
-                    waiting++;
+                if (!allAnswered) {
+                    ask(start);
+                    allAnswered = requested.size() == held.length && waiting == 0;
                 }
-                hold(); // whatever the clock says
-                while (!toCopy.isEmpty() && nanoClock.getAsLong() - start < SLICE_NANOS) {
-                    int i = toCopy.poll();
-                    copies[i] = held[i].getChunkSnapshot(false, false, false, false); // blocks only, no light
-                    copied++;
+                if (allAnswered) {
+                    hold(); // whatever the clock says
+                    while (!toCopy.isEmpty() && nanoClock.getAsLong() - start < SLICE_NANOS) {
+                        int i = toCopy.poll();
+                        copies[i] = held[i].getChunkSnapshot(false, false, false, false); // blocks only, no light
+                        copied++;
+                    }
                 }
                 if (copied < copies.length) {
                     nextTick.execute(this);
@@ -137,31 +153,69 @@ final class ChunkAreaSource implements AreaSource {
         }
 
         /**
-         * Holds every chunk Paper has handed over and this load hasn't held yet, and asks again for one that Paper has
-         * let go since: a ticket on a chunk that isn't loaded loads it from disk at once. Throws for a chunk that isn't
-         * generated.
+         * Phase one: looks at what Paper has answered since the last run, and asks for more chunks while the run has
+         * time and fewer than MAX_IN_FLIGHT wait. Holds none. Throws at the first chunk that isn't generated, or whose
+         * load failed.
          */
-        private void hold() {
-            for (int i = firstNotHeld; i < requested.size(); i++) {
-                CompletableFuture<Chunk> request = requested.get(i);
-                if (held[i] == null && request.isDone()) {
-                    int cx = cx0 + i / chunksZ, cz = cz0 + i % chunksZ;
-                    Chunk chunk = request.join();
-                    if (chunk == null) {
-                        throw new Refusal("Part of the area (chunk " + cx + ", " + cz
-                                + ") hasn't been generated; SlabSmooth only smooths existing terrain.");
-                    }
-                    if (!world.isChunkLoaded(cx, cz)) {
-                        requested.set(i, world.getChunkAtAsync(cx, cz, false)); // held in a later run
-                        continue;
-                    }
-                    chunk.addPluginChunkTicket(plugin);
-                    held[i] = chunk;
-                    waiting--;
-                    toCopy.add(i);
+        private void ask(long start) {
+            for (int i = firstNotAnswered; i < requested.size(); i++) {
+                if (unanswered[i] && requested.get(i).isDone()) {
+                    answer(i);
                 }
             }
-            while (firstNotHeld < requested.size() && held[firstNotHeld] != null) {
+            while (requested.size() < held.length && waiting < MAX_IN_FLIGHT
+                    && nanoClock.getAsLong() - start < SLICE_NANOS) {
+                int i = requested.size();
+                requested.add(world.getChunkAtAsync(cx0 + i / chunksZ, cz0 + i % chunksZ, false));
+                unanswered[i] = true;
+                waiting++;
+                if (requested.get(i).isDone()) { // as for a chunk Paper has loaded already
+                    answer(i);
+                }
+            }
+            while (firstNotAnswered < requested.size() && !unanswered[firstNotAnswered]) {
+                firstNotAnswered++;
+            }
+        }
+
+        /** Looks at the answer to chunk i's latest request: the chunk, or a throw if it isn't generated or failed. */
+        private Chunk answer(int i) {
+            unanswered[i] = false;
+            waiting--;
+            Chunk chunk = requested.get(i).join();
+            if (chunk == null) {
+                throw new Refusal("Part of the area (chunk " + (cx0 + i / chunksZ) + ", " + (cz0 + i % chunksZ)
+                        + ") hasn't been generated; SlabSmooth only smooths existing terrain.");
+            }
+            return chunk;
+        }
+
+        /**
+         * Phase two: holds up to MAX_IN_FLIGHT chunks that are loaded, the first ones in the area's order that this load
+         * doesn't hold yet. A chunk Paper has let go is asked for again, with fewer than MAX_IN_FLIGHT waiting, and held
+         * in a later run: a ticket on a chunk that isn't loaded loads it from disk at once. Throws for a chunk that isn't
+         * generated any more, or whose load failed.
+         */
+        private void hold() {
+            int holds = 0;
+            for (int i = firstNotHeld; i < held.length && holds < MAX_IN_FLIGHT; i++) {
+                if (held[i] != null || unanswered[i] && !requested.get(i).isDone()) {
+                    continue;
+                }
+                Chunk chunk = unanswered[i] ? answer(i) : requested.get(i).join();
+                int cx = cx0 + i / chunksZ, cz = cz0 + i % chunksZ;
+                if (world.isChunkLoaded(cx, cz)) {
+                    chunk.addPluginChunkTicket(plugin);
+                    held[i] = chunk;
+                    holds++;
+                    toCopy.add(i);
+                } else if (waiting < MAX_IN_FLIGHT) {
+                    requested.set(i, world.getChunkAtAsync(cx, cz, false));
+                    unanswered[i] = true;
+                    waiting++;
+                }
+            }
+            while (firstNotHeld < held.length && held[firstNotHeld] != null) {
                 firstNotHeld++;
             }
         }
