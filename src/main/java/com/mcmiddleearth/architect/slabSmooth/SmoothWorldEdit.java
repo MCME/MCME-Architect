@@ -4,6 +4,7 @@ import com.sk89q.worldedit.IncompleteRegionException;
 import com.sk89q.worldedit.command.tool.InvalidToolBindException;
 import com.sk89q.worldedit.command.tool.brush.Brush;
 import com.sk89q.worldedit.regions.Region;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -24,6 +25,12 @@ interface SmoothWorldEdit {
 
     /** Binds the brush to the item in the player's main hand. WorldEdit checks the permission at every click. */
     void bindBrush(Player player, double radius, Brush brush, String permission) throws InvalidToolBindException;
+
+    /**
+     * "WorldEdit wand" or "WorldEdit navigation wand" if item is the one WorldEdit's configuration names as that, else
+     * null. A brush can't be bound to either: WorldEdit's sessions fail on an item that is already a wand.
+     */
+    String wandName(Material item);
 
     /** True on FAWE, which writes edits off the main thread; plain WorldEdit writes on it. */
     boolean writesOffTheMainThread();

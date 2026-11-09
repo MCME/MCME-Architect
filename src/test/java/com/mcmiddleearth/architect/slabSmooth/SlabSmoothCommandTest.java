@@ -81,8 +81,8 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 class SlabSmoothCommandTest {
 
     private static final String NO_PERMISSION = "error: Sorry, you don't have permission.";
-    private static final String HOLD = "error: Hold a tool or another item that isn't a block, such as a stick or a "
-            + "feather, to bind the brush to.";
+    private static final String HOLD = "error: Hold a tool or another item that isn't a block, such as a feather or a "
+            + "bone, to bind the brush to.";
     private static final String RADIUS = "error: The radius must be a number from 1 to 12.";
     private static final Set<Permission> NODES = EnumSet.of(SLAB_SMOOTH, SLAB_SMOOTH_SELECTION, SLAB_SMOOTH_BRUSH,
             SLAB_SMOOTH_AREA, SLAB_SMOOTH_ALL_BLOCKS, SLAB_SMOOTH_ADMIN);
@@ -602,6 +602,36 @@ class SlabSmoothCommandTest {
 
         assertEquals(List.of("info: SlabSmooth brush (radius 5) bound to stick. Right-click terrain to smooth it; "
                 + "//mask and //undo work as usual."), answer(holding(builder, Material.STICK), "sls brush"));
+        assertEquals(1, worldEdit.brushes.size());
+    }
+
+    @Test
+    void brushRefusesTheWorldEditWand() {
+        worldEdit.wandItem = Material.WOODEN_AXE;
+        PlayerMock builder = holding(player(world, SLAB_SMOOTH), Material.WOODEN_AXE);
+
+        assertEquals(List.of("error: That's your WorldEdit wand; hold another item that isn't a block, such as a "
+                + "feather, to bind the brush to."), answer(builder, "sls brush"));
+        assertEquals(List.of(), worldEdit.calls("bindBrush"), "WorldEdit's sessions are never asked");
+        assertEquals(List.of(), worldEdit.brushes);
+    }
+
+    @Test
+    void brushRefusesTheWorldEditNavigationWand() {
+        worldEdit.navigationWandItem = Material.COMPASS;
+        PlayerMock builder = holding(player(world, SLAB_SMOOTH), Material.COMPASS);
+
+        assertEquals(List.of("error: That's your WorldEdit navigation wand; hold another item that isn't a block, "
+                + "such as a feather, to bind the brush to."), answer(builder, "sls brush"));
+        assertEquals(List.of(), worldEdit.calls("bindBrush"), "WorldEdit's sessions are never asked");
+    }
+
+    @Test
+    void anotherItemStillBindsWhileWandsAreConfigured() {
+        worldEdit.wandItem = Material.WOODEN_AXE;
+        worldEdit.navigationWandItem = Material.COMPASS;
+
+        answer(holding(player(world, SLAB_SMOOTH), Material.FEATHER), "sls brush");
         assertEquals(1, worldEdit.brushes.size());
     }
 

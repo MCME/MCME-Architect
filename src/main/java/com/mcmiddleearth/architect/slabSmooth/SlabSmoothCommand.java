@@ -179,8 +179,14 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
         }
         Material item = player.getInventory().getItemInMainHand().getType();
         if (item.isAir() || item.isBlock()) {
-            throw new Refusal("Hold a tool or another item that isn't a block, such as a stick or a "
-                    + "feather, to bind the brush to.");
+            throw new Refusal("Hold a tool or another item that isn't a block, such as a feather or a "
+                    + "bone, to bind the brush to.");
+        }
+        // before any WorldEdit session call: FAWE fails on an item that is already a wand
+        String wand = SlabSmooth.worldEdit().wandName(item);
+        if (wand != null) {
+            throw new Refusal("That's your " + wand + "; hold another item that isn't a block, such as a feather, "
+                    + "to bind the brush to.");
         }
         // WorldEdit checks the node at every click; the brush asks SlabSmooth for its settings at every click too
         SlabSmooth.worldEdit().bindBrush(player, radius, new SmoothBrush(player.getUniqueId(), SlabSmooth::brushContext,

@@ -6,6 +6,7 @@ import com.sk89q.worldedit.command.tool.InvalidToolBindException;
 import com.sk89q.worldedit.command.tool.brush.Brush;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.Region;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -47,6 +48,9 @@ final class FakeSmoothWorldEdit implements SmoothWorldEdit {
     final Map<BlockVector3, String> sets = Collections.synchronizedMap(new LinkedHashMap<>());
     final Set<String> setThreads = ConcurrentHashMap.newKeySet(), readThreads = ConcurrentHashMap.newKeySet();
     final List<Bound> brushes = Collections.synchronizedList(new ArrayList<>());
+
+    /** The items WorldEdit's configuration names as its wand and navigation wand; null: none. */
+    volatile Material wandItem, navigationWandItem;
 
     /** True: like FAWE, which writes off the main thread. */
     volatile boolean offTheMainThread;
@@ -96,6 +100,14 @@ final class FakeSmoothWorldEdit implements SmoothWorldEdit {
         calls.add(new Call("bindBrush", Thread.currentThread().getName(), null, player));
         fail("bindBrush");
         brushes.add(new Bound(player, radius, brush, permission));
+    }
+
+    @Override
+    public String wandName(Material item) {
+        if (item == wandItem) {
+            return "WorldEdit wand";
+        }
+        return item == navigationWandItem ? "WorldEdit navigation wand" : null;
     }
 
     @Override

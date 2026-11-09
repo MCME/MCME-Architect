@@ -11,6 +11,7 @@ import com.sk89q.worldedit.command.tool.brush.Brush;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.regions.Region;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -76,6 +77,25 @@ final class WorldEditSmoothing implements SmoothWorldEdit {
         BrushTool tool = session(actor).getBrushTool(BukkitAdapter.asItemType(player.getInventory().getItemInMainHand().getType()));
         tool.setBrush(brush, permission);
         tool.setSize(radius);
+    }
+
+    @Override
+    public String wandName(Material item) {
+        var configuration = WorldEdit.getInstance().getConfiguration();
+        String key = item.getKey().toString();
+        if (key.equals(itemId(configuration.wandItem))) {
+            return "WorldEdit wand";
+        }
+        return key.equals(itemId(configuration.navigationWand)) ? "WorldEdit navigation wand" : null;
+    }
+
+    /** A configured item id in full ("wooden_axe" is minecraft:wooden_axe), or null if none is set. */
+    static String itemId(String configured) {
+        if (configured == null || configured.isBlank()) {
+            return null;
+        }
+        String id = configured.strip().toLowerCase(java.util.Locale.ROOT);
+        return id.contains(":") ? id : "minecraft:" + id;
     }
 
     @Override

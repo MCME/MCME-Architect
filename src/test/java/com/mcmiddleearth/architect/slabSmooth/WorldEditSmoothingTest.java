@@ -69,4 +69,13 @@ class WorldEditSmoothingTest {
         assertSame(bug, assertThrows(IllegalStateException.class, () -> WorldEditSmoothing.open(session, null, world("the job's world"))));
         assertNull(session.getWorldOverride(), "no override was set before, and none is left");
     }
+
+    @Test
+    void aConfiguredItemIdIsReadInFull() {
+        assertEquals("minecraft:wooden_axe", WorldEditSmoothing.itemId("minecraft:wooden_axe"));
+        assertEquals("minecraft:wooden_axe", WorldEditSmoothing.itemId(" Wooden_Axe "));
+        assertEquals("other:wand", WorldEditSmoothing.itemId("other:wand"));
+        assertNull(WorldEditSmoothing.itemId(null));
+        assertNull(WorldEditSmoothing.itemId("  "));
+    }
 }
