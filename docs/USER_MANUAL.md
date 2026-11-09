@@ -2225,7 +2225,7 @@ world** until an admin switches it on for that world (see [Setting up smoothing]
 
 | | |
 |---|---|
-| `/sls brush 6` | Hold a stick, a feather or any other item that is not a block. Right-click terrain to smooth everything within 6 blocks. |
+| `/sls brush 6` | Hold a feather, a bone or any other item that is not a block, and not your WorldEdit wand or navigation wand. Right-click terrain to smooth everything within 6 blocks. |
 | `/sls selection` | Smooths your WorldEdit selection (`//wand`). Select the terrain plus a little air above it. |
 | `/sls area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]` | Smooths a box by its corners, in any world, without being there. For trusted staff. |
 | `//undo` | Takes back the last brush click, selection or area. On FastAsyncWorldEdit, undo an area from inside the world it changed. |
@@ -2360,7 +2360,7 @@ The rows from `cost_fill` on are for fine tuning. Leave them alone unless an adm
 |---|---|---|
 | `/sls help` | Lists what you may use. | `architect.slabSmooth` |
 | `/sls selection` | Smooths your WorldEdit selection. | `architect.slabSmooth.selection` |
-| `/sls brush [radius]` | Binds the smoothing brush to the item in your hand, which must not be a block. Radius 1 to `brush.maxRadius` (12), default 5. WorldEdit checks the node at every click, so taking it away also stops a brush that is already bound. | `architect.slabSmooth.brush` |
+| `/sls brush [radius]` | Binds the smoothing brush to the item in your hand, which must not be a block or your WorldEdit wand or navigation wand. Radius 1 to `brush.maxRadius` (12), default 5. WorldEdit checks the node at every click, so taking it away also stops a brush that is already bound. | `architect.slabSmooth.brush` |
 | `/sls area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]` | Smooths a box by its corners, in the world you name or your own. It writes to that world wherever you stand. On FastAsyncWorldEdit, `//undo` it from inside that world. | `architect.slabSmooth.area` |
 | `/sls set <name> <value>` | Changes one of your settings. | `architect.slabSmooth` |
 | `/sls options`, `/sls reset` | Shows your settings; goes back to the defaults. | `architect.slabSmooth` |
@@ -3701,8 +3701,12 @@ Each entry gives what the player is told (or sees), the cause and the fix. See [
   [Permissions for smoothing](#permissions-for-smoothing). `architect.slabSmooth` alone is enough for the selection and
   the brush; `area`, `blocks all` and `packs rebuild` have nodes of their own.
 - **`Make a WorldEdit selection first (//wand, or //pos1 and //pos2).`** Cause: no selection. Fix: select first.
-- **`Hold a tool or another item that isn't a block, such as a stick or a feather, to bind the brush to.`** Cause: the
-  item in the hand is a block or the hand is empty. Fix: hold a stick.
+- **`Hold a tool or another item that isn't a block, such as a feather or a bone, to bind the brush to.`** Cause: the
+  item in the hand is a block or the hand is empty. Fix: hold a feather or a bone. A stick is Architect's own
+  block-cycling tool, so it is a poor choice.
+- **`That's your WorldEdit wand; hold another item that isn't a block, such as a feather, to bind the brush to.`**
+  Cause: the item in the hand is WorldEdit's wand (or, in the same message, its navigation wand), as set in
+  WorldEdit's configuration. Fix: hold another item, such as a feather.
 - **`The radius must be a number from 1 to 12.`** Cause: the radius is outside `brush.maxRadius`. A larger `//size`
   is cut to that limit at every click without a message.
 - **`With surfaces top, select a box, polygon or cylinder.`** Cause: a selection of another shape with `surfaces top`.
