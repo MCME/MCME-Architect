@@ -18,14 +18,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * What the smoother promises builders, on the golden scenes' inputs and on random hills: only blocks inside the
- * selection or brush change; only terrain, its pieces, and the air and plants next to it change; what is built keeps
- * the blocks it stands on and hangs from; and the same seed gives the same result.
+ * selection or brush change; only terrain, its pieces, and the air and plants next to it change; a plant goes with
+ * the ground under it, or keeps it, as the plants option says; what is built keeps the blocks it stands on and hangs
+ * from; and the same seed gives the same result.
  */
 class AlgorithmPropertiesTest {
 
     private static final String AIR = "minecraft:air";
-    /** A two-high plant from the table's decor list. */
-    private static final String PLANT_LOWER = "minecraft:large_fern[half=lower]", PLANT_UPPER = "minecraft:large_fern[half=upper]";
+    /** A two-high plant from the table's decor list, and a one-high one. */
+    private static final String PLANT_LOWER = "minecraft:large_fern[half=lower]", PLANT_UPPER = "minecraft:large_fern[half=upper]",
+            POPPY = "minecraft:poppy";
     /** Built blocks: something standing on the ground, and something hanging under it. */
     private static final String CHEST = "minecraft:chest[facing=north,type=single,waterlogged=false]",
             LANTERN = "minecraft:lantern[hanging=true,waterlogged=false]";
@@ -92,6 +94,40 @@ class AlgorithmPropertiesTest {
         }
         assertTrue(changed > 0, "nothing changed at all");
         assertTrue(broken.isEmpty(), broken.size() + " plant halves changed, such as " + first(broken));
+    }
+
+    /**
+     * Plants follow the plants option in every path. On each golden scene with a poppy on every block of grass with
+     * air above it: with plants remove, no poppy is left on ground that changed; with plants keep, no ground under a
+     * poppy changes. A wall pass cutting the top half of the grass under a poppy breaks both.
+     */
+    @Test
+    void plantsFollowThePlantsOptionInEveryPath() throws IOException {
+        assertEquals(Table.DECOR, table.kind3(POPPY).category());
+        Options keep = new Options();
+        keep.set("plants", "keep");
+        List<String> floating = new ArrayList<>(), changedUnderAPoppy = new ArrayList<>();
+        int poppies = 0, removed = 0;
+        for (String name : GoldenScenes.NAMES) {
+            GoldenScenes.Scene s = withPoppiesOnGrass(GoldenScenes.scene(name));
+            int cols = s.length() * s.width(), poppy = s.palette().indexOf(POPPY);
+            IntPredicate underAPoppy = i -> i + cols < s.blocks().length && s.blocks()[i + cols] == poppy;
+            poppies += count(s.blocks().length, underAPoppy);
+            for (String mode : List.of("directional", "tiles", "top")) {
+                Smoother.Result r = run(s, mode, new Options(), null);
+                removed += r.report().plantsRemoved();
+                IntPredicate poppyStays = i -> underAPoppy.test(i) && POPPY.equals(r.palette().get(r.blocks()[i + cols]));
+                floating.addAll(changes(s, r, poppyStays, s.name() + "/" + mode));
+                changedUnderAPoppy.addAll(changes(s, run(s, mode, keep, null), underAPoppy, s.name() + "/" + mode));
+            }
+        }
+        int poppyCount = poppies, removedCount = removed;
+        assertTrue(poppyCount > 0 && removedCount > 0, poppyCount + " poppies, " + removedCount + " removed");
+        assertAll(
+                () -> assertTrue(floating.isEmpty(), "plants remove: " + floating.size()
+                        + " poppies left on ground that changed, such as " + first(floating)),
+                () -> assertTrue(changedUnderAPoppy.isEmpty(), "plants keep: " + changedUnderAPoppy.size()
+                        + " blocks under a poppy changed, such as " + first(changedUnderAPoppy)));
     }
 
     @Test
@@ -231,6 +267,21 @@ class AlgorithmPropertiesTest {
             }
         }
         return new GoldenScenes.Scene(s.name() + "+plants", s.height(), s.length(), s.width(), palette, blocks);
+    }
+
+    /** A poppy on every block of grass with air above it. */
+    private static GoldenScenes.Scene withPoppiesOnGrass(GoldenScenes.Scene s) {
+        List<String> palette = new ArrayList<>(s.palette());
+        int poppy = palette.size(), grass = s.palette().indexOf("minecraft:grass_block");
+        palette.add(POPPY);
+        int[] blocks = s.blocks().clone();
+        int cols = s.length() * s.width();
+        for (int i = 0; i + cols < blocks.length; i++) {
+            if (s.blocks()[i] == grass && AIR.equals(s.palette().get(s.blocks()[i + cols]))) {
+                blocks[i + cols] = poppy;
+            }
+        }
+        return new GoldenScenes.Scene(s.name() + "+poppies", s.height(), s.length(), s.width(), palette, blocks);
     }
 
     /** The blocks of LEFT_ALONE on a quarter of the tops: chests and water on them, logs and waterlogged stairs in

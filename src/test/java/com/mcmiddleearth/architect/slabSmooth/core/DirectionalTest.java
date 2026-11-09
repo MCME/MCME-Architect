@@ -24,10 +24,12 @@ class DirectionalTest {
 
     private static final String AIR = "minecraft:air", GRASS = "minecraft:grass_block", STONE = "minecraft:stone",
             CHEST = "minecraft:chest[facing=north,type=single,waterlogged=false]",
-            LANTERN = "minecraft:lantern[hanging=true,waterlogged=false]";
-    /** The small scenes below: W x H x L blocks (x, y, z), as indices into SCENE. */
-    private static final int W = 14, H = 12, L = 9;
-    private static final List<String> SCENE = List.of(AIR, GRASS, STONE, CHEST, LANTERN);
+            LANTERN = "minecraft:lantern[hanging=true,waterlogged=false]", POPPY = "minecraft:poppy";
+    /** The small scenes below: W x H x L blocks (x, y, z), as indices into SCENE; the hill is W x H x HILL. */
+    private static final int W = 14, H = 12, L = 9, HILL = 14;
+    private static final List<String> SCENE = List.of(AIR, GRASS, STONE, CHEST, LANTERN, POPPY);
+    private static final String[] DIRECTIONS = {"tops", "undersides", "east walls", "west walls", "south walls",
+            "north walls"};
 
     /** octants.json: masks of the table's states (and derived top slabs and upside-down stairs), read from the
      *  RP-Human pack and the 26.2 client jar by the prototype's model probe. */
@@ -251,6 +253,48 @@ class DirectionalTest {
     }
 
     /**
+     * A grass hill that rises two blocks for every block, with a poppy on every top. A wall pass that took a block on
+     * its flanks could cut the block's top half and leave the poppy floating half a block up, whatever the plants
+     * option says, so no wall pass takes a block with a plant on it. The tops may: with plants remove, the poppy goes
+     * where they lower its block; with plants keep, every block with a poppy on it stays.
+     */
+    @Test
+    void aBlockWithAPlantOnItBelongsToNoWallPass() throws Exception {
+        Table table = TestTables.handMade();
+        int[] blocks = hill();
+        byte[] owner = Directional.owners(new Directional.World(blocks, H, HILL, W, SCENE, table), new Options());
+        Options keep = new Options();
+        keep.set("plants", "keep");
+        Smoother.Result removing = Directional.smooth(blocks, H, HILL, W, SCENE, table, new Options(), null, null);
+        Smoother.Result keeping = Directional.smooth(blocks, H, HILL, W, SCENE, table, keep, null, null);
+        List<String> walls = new ArrayList<>(), floating = new ArrayList<>(), changed = new ArrayList<>();
+        int lowered = 0;
+        for (int z = 0; z < HILL; z++) {
+            for (int x = 0; x < W; x++) {
+                int top = hillTop(x, z), ground = hillAt(x, top, z), plant = hillAt(x, top + 1, z);
+                String where = x + "," + top + "," + z;
+                if (owner[ground] >= Directional.EAST) {
+                    walls.add(where + " " + DIRECTIONS[owner[ground]]);
+                }
+                boolean cut = !GRASS.equals(state(removing, ground)), poppy = POPPY.equals(state(removing, plant));
+                if (cut && poppy) {
+                    floating.add(where + ": " + state(removing, ground));
+                }
+                lowered += cut && !poppy ? 1 : 0;
+                if (!GRASS.equals(state(keeping, ground)) || !POPPY.equals(state(keeping, plant))) {
+                    changed.add(where + ": " + state(keeping, ground));
+                }
+            }
+        }
+        int loweredWithTheirPoppies = lowered;
+        assertAll(
+                () -> assertEquals(List.of(), walls, "blocks with a poppy on them that a wall pass may change"),
+                () -> assertEquals(List.of(), floating, "plants remove: poppies left on ground that changed"),
+                () -> assertTrue(loweredWithTheirPoppies > 0, "plants remove: the tops lower blocks and take their poppies"),
+                () -> assertEquals(List.of(), changed, "plants keep: blocks with a poppy on them that changed"));
+    }
+
+    /**
      * That overhang without the lantern, and a chest on its lower layer: on the thin front, or on the block behind it
      * in place of the overhang's upper block, where only the underside is open. The undersides pass may not have
      * either block: no pass changes a block with something built on it.
@@ -335,6 +379,32 @@ class DirectionalTest {
         }
         blocks[at(3, 6, 4)] = SCENE.indexOf(LANTERN);
         return blocks;
+    }
+
+    /**
+     * A hill of stone under grass, W x H x HILL, a cone around the middle of the area: its top is at y 1 at the foot
+     * and rises two blocks for every block towards the middle, up to y 8 ({@link #hillTop}). A poppy grows on every top.
+     */
+    private static int[] hill() {
+        int[] blocks = new int[W * H * HILL];
+        for (int z = 0; z < HILL; z++) {
+            for (int x = 0; x < W; x++) {
+                int top = hillTop(x, z);
+                for (int y = 0; y <= top; y++) {
+                    blocks[hillAt(x, y, z)] = SCENE.indexOf(y == top ? GRASS : STONE);
+                }
+                blocks[hillAt(x, top + 1, z)] = SCENE.indexOf(POPPY);
+            }
+        }
+        return blocks;
+    }
+
+    private static int hillTop(int x, int z) {
+        return (int) Math.max(1, Math.round(9 - 2 * Math.hypot(x - (W - 1) / 2.0, z - (HILL - 1) / 2.0)));
+    }
+
+    private static int hillAt(int x, int y, int z) {
+        return (y * HILL + z) * W + x;
     }
 
     /** Stone filling the whole area, its top layer included, around a cave at x 2 to 11, y 3 to 8 and z 1 to 7, whose

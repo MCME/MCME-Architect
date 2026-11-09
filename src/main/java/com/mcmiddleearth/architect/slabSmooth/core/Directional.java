@@ -27,10 +27,10 @@ import static com.mcmiddleearth.architect.slabSmooth.core.Table.TERRAIN;
  *
  * <p>Every surface block belongs to one direction: the one it faces most (from the blurred terrain), among the
  * directions its material has pieces for, with tops preferred on 45 degree slopes. A block with something built on
- * it belongs to none, and one with something built under it to no wall ({@link #owners}); the tops keep its bottom
- * whole. Grass has only a slab, so a wall that takes a grass block (at a cliff edge, or on a face steeper than 45
- * degrees) can only cut its top half away or put a slab beside it. The directions run one after another, tops first,
- * each on the result of the last.
+ * it belongs to none ({@link #owners}). One with something built under it, or with a plant on it, belongs to no wall:
+ * the tops keep the first one's bottom whole, and apply the plants option to the second. Grass has only a slab, so a
+ * wall that takes a grass block (at a cliff edge, or on a face steeper than 45 degrees) can only cut its top half
+ * away or put a slab beside it. The directions run one after another, tops first, each on the result of the last.
  *
  * <p>A line along a direction can cross several surfaces (the ground under an overhang, and the overhang's top).
  * Each surface is a node; nodes in neighbouring lines are neighbours when they are the nearest in height.
@@ -143,6 +143,11 @@ public final class Directional {
          *  neither air, a plant nor ground. */
         boolean built(int i) {
             return kind(i).category() == OTHER;
+        }
+
+        /** Whether block i is a plant: one of the table's decor blocks. */
+        boolean plant(int i) {
+            return kind(i).category() == DECOR;
         }
 
         /**
@@ -310,6 +315,11 @@ public final class Directional {
      * Built means any block of the table's other category, so water counts too, and so do ores and logs that the
      * table doesn't make terrain: a cut under water lets it flow, and a cut over or under an ore leaves a hole in a
      * cliff face. Outside the area nothing counts as built. Toti's 1.3.0 could give either block to a wall pass.
+     *
+     * <p>A block with a plant on it (a block of the table's decor) belongs to no wall pass either. Only the tops pass
+     * applies the plants option: it removes the plant where it lowers the block, and with plants keep leaves the block
+     * alone. A wall pass looks only at the block beside the wall, so it could cut the block's top half and leave the
+     * plant floating with either option. Above the area there is no plant.
      */
     static byte[] owners(World world, Options opts) {
         int h = world.h, l = world.l, w = world.w, n = world.n;
@@ -364,6 +374,7 @@ public final class Directional {
                         continue;
                     }
                     boolean builtBelow = y > 0 && world.built(world.at(x, y - 1, z));
+                    boolean plantOn = y + 1 < h && world.plant(world.at(x, y + 1, z));
                     int mat = world.kind(i).material();
                     // Outward normal: down the occupancy gradient.
                     double gx = p[world.at(Math.max(x - 1, 0), y, z)] - p[world.at(Math.min(x + 1, w - 1), y, z)];
@@ -371,7 +382,7 @@ public final class Directional {
                     double gz = p[world.at(x, y, Math.max(z - 1, 0))] - p[world.at(x, y, Math.min(z + 1, l - 1))];
                     double best = Double.NEGATIVE_INFINITY;
                     for (int dir = 0; dir < 6; dir++) {
-                        if (builtBelow && dir != UP && dir != DOWN) {
+                        if ((builtBelow || plantOn) && dir != UP && dir != DOWN) {
                             continue;
                         }
                         int wd = frames[dir].worldDirection();
