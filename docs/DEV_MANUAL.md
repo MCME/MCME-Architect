@@ -1119,13 +1119,16 @@ energy and solver, in six directions, by turning the area so that "up" points th
 - **What is built keeps its support.** Here `Directional.owners` differs from Toti's 1.3.0 on purpose. Built means a
   block of the table's other category: neither air, a plant nor ground. A block with something built on it belongs to
   no direction, and a block with something built under it (a hanging lantern, a roof) to no wall direction; the tops
-  may still have it. A neighbour outside the area does not count. In 1.3.0 the tops left a block with something on it
-  alone, but a wall direction could take it: at a cliff edge the west walls cut the top half of the grass under a
-  chest, and the chest floated half a block. A wall direction could also cut into a block that a lantern hangs from.
-  Smoothing must not damage what was built, so neither may happen. The other category also holds blocks nobody built:
-  water, and ores or logs where the pack does not make them terrain. The rule holds for them on purpose: a cut over or
-  under an ore leaves a hole in a cliff face, and a cut under water lets it flow. The golden scenes hold no such
-  blocks, so they still match 1.3.0.
+  may still have it, but smooth only its top. A shape with an empty quadrant (a vertical slab or a vertical stair)
+  empties that quadrant down to the block's bottom, so the tops of both smoothers give such a block none
+  (`builtBelow` in `Directional.Pass` and in `Smoother.Terrain`). A neighbour outside the area does not count. In 1.3.0
+  the tops left a block with something on it alone, but a wall direction could take it: at a cliff edge the west walls
+  cut the top half of the grass under a chest, and the chest floated half a block. A wall direction could also cut
+  into a block that a lantern hangs from, and the tops could turn that block into a vertical slab, which takes away the
+  middle of its bottom, where the lantern hangs. Smoothing must not damage what was built, so none of this may happen.
+  The other category also holds blocks nobody built: water, and ores or logs where the pack does not make them
+  terrain. The rule holds for them on purpose: a cut over or under an ore leaves a hole in a cliff face, and a cut
+  under water lets it flow. The golden scenes hold no such blocks, so they still match 1.3.0.
 - **Sharp edges.** A top seen from the side is a step of `cliff` or more, so a wall direction leaves it alone, and the
   reverse. The edge between a plateau and its cliff is not rounded off.
 - **Several surfaces per line.** A line along a direction can cross more than one surface, such as the ground under an

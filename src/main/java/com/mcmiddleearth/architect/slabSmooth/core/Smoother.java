@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 
 import static com.mcmiddleearth.architect.slabSmooth.core.Table.AIR;
 import static com.mcmiddleearth.architect.slabSmooth.core.Table.DECOR;
+import static com.mcmiddleearth.architect.slabSmooth.core.Table.OTHER;
 import static com.mcmiddleearth.architect.slabSmooth.core.Table.PIECE;
 import static com.mcmiddleearth.architect.slabSmooth.core.Table.TERRAIN;
 
@@ -104,6 +105,7 @@ public final class Smoother {
         final int[] material;  // material index of the surface, -1 = none
         final int[] cur;       // quadrant tops in half blocks, cols x 4
         final boolean[] plantAbove;
+        final boolean[] builtBelow; // something built under the surface, so no shape may empty a quadrant
 
         Terrain(int[] blocks, int height, int length, int width, List<String> palette, Table table, Options opts,
                 boolean[] editable) {
@@ -136,6 +138,7 @@ public final class Smoother {
             material = new int[cols];
             cur = new int[cols * 4];
             plantAbove = new boolean[cols];
+            builtBelow = new boolean[cols];
             for (int c = 0; c < cols; c++) {
                 int top = -1;
                 for (int y = height - 1; y >= 0; y--) {
@@ -171,6 +174,9 @@ public final class Smoother {
                     }
                 }
                 plantAbove[c] = status[c] != NONE && sClip + 1 < height && cat[(sClip + 1) * cols + c] == DECOR;
+                // A shape that empties a quadrant empties it down to the bottom, where a lantern hangs from the block.
+                // Below the area nothing counts as built.
+                builtBelow[c] = status[c] != NONE && sClip > 0 && cat[(sClip - 1) * cols + c] == OTHER;
                 if ("keep".equals(opts.plants) && plantAbove[c] && status[c] == FREE) {
                     status[c] = FIXED;
                 }
@@ -342,6 +348,10 @@ public final class Smoother {
                 }
             }
             can[materials][keep] = true;
+            boolean[] emptiesQuadrant = new boolean[k];
+            for (int i = 0; i < k; i++) {
+                emptiesQuadrant[i] = configs.get(i).hasZero();
+            }
 
             double[] target = target(t, opts);
             budget.checkSurfaces(t.cols);
@@ -372,6 +382,9 @@ public final class Smoother {
                         allowed &= allCut;
                     } else if ("fill".equals(opts.mode)) {
                         allowed &= allFill;
+                    }
+                    if (t.builtBelow[c] && emptiesQuadrant[i]) {
+                        allowed = false; // the block's bottom stays whole: only its top is smoothed
                     }
                     allowed |= current; // the column as it is (also covers pieces from an earlier run)
                     if (current && currentChoice[c] < 0) {

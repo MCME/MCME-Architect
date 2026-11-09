@@ -8,8 +8,10 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -196,6 +198,59 @@ class DirectionalTest {
     }
 
     /**
+     * A stone step two blocks down, with a row of lanterns hanging under its lip. Only the tops may have the lip, and
+     * a vertical slab there would empty its west half down to its bottom, which holds the lanterns up at its centre.
+     * In every path the lip keeps its four bottom octants, while its top may still be smoothed. The top-only smoother
+     * sees the lip, a run of one block of ground, only with min_thickness 1, and in this scene it would rather make a
+     * slab of it, so the shapes it may choose there are checked as well.
+     */
+    @Test
+    void aBlockOverABuiltBlockKeepsItsBottomInEveryPath() throws Exception {
+        Table table = TestTables.handMade();
+        int[] blocks = lip();
+        Options thin = new Options();
+        thin.set("min_thickness", "1");
+        Map<String, Smoother.Result> runs = Map.of(
+                "directional", smooth(blocks, table),
+                "tiles", Tiles.smooth(blocks, H, L, W, SCENE, table, new Options(), null, 4, Tiles.margin(new Options()), null),
+                "top", Smoother.smooth(blocks, H, L, W, SCENE, table, thin, null, null));
+        List<String> cut = new ArrayList<>();
+        runs.forEach((path, r) -> {
+            for (int z = 0; z < L; z++) {
+                String lip = state(r, at(5, 6, z));
+                if ((table.kind3(lip).mask() & Octants.SLAB) != Octants.SLAB) {
+                    cut.add(path + " z " + z + ": " + lip);
+                }
+            }
+        });
+        Smoother.Terrain terrain = new Smoother.Terrain(blocks, H, L, W, SCENE, table, thin, null);
+        Smoother.Problem problem = new Smoother.Problem(terrain, thin, WorkBudget.NONE);
+        List<String> mayEmpty = new ArrayList<>();
+        int free = 0;
+        for (int z = 0; z < L; z++) {
+            int c = z * W + 5;
+            if (terrain.status[c] != Smoother.FREE) {
+                continue; // at the area's border: kept, and given no energies
+            }
+            free++;
+            for (int i = 0; i < problem.k; i++) {
+                if (problem.configs.get(i).hasZero() && i != problem.currentChoice[c]
+                        && problem.unary[c * problem.k + i] != Double.POSITIVE_INFINITY) {
+                    mayEmpty.add("z " + z + ": " + Arrays.toString(problem.configs.get(i).d()));
+                }
+            }
+        }
+        int freeLips = free;
+        assertAll(
+                () -> assertTrue(cut.isEmpty(), cut.size() + " lips lost part of their bottom: " + cut),
+                () -> assertTrue(freeLips > 0, "the top-only smoother sees the lip as a top it may change"),
+                () -> assertTrue(mayEmpty.isEmpty(), "the top-only smoother may empty a quadrant of the lip: "
+                        + mayEmpty.subList(0, Math.min(4, mayEmpty.size()))),
+                () -> assertTrue(IntStream.range(0, L).anyMatch(z -> !STONE.equals(state(runs.get("directional"), at(5, 6, z)))),
+                        "the lip's top is smoothed"));
+    }
+
+    /**
      * That overhang without the lantern, and a chest on its lower layer: on the thin front, or on the block behind it
      * in place of the overhang's upper block, where only the underside is open. The undersides pass may not have
      * either block: no pass changes a block with something built on it.
@@ -241,6 +296,23 @@ class DirectionalTest {
                     blocks[at(x, y, z)] = SCENE.indexOf(GRASS);
                 }
             }
+        }
+        return blocks;
+    }
+
+    /**
+     * Stone on a two-block step, the same at every z: west of x 5 its top is at y 4, from x 5 east at y 6. The lip,
+     * at x 5 and y 6, has air above it and to its west, and a lantern hangs under it in place of the stone at y 5.
+     */
+    private static int[] lip() {
+        int[] blocks = new int[W * H * L];
+        for (int z = 0; z < L; z++) {
+            for (int x = 0; x < W; x++) {
+                for (int y = 0; y <= (x < 5 ? 4 : 6); y++) {
+                    blocks[at(x, y, z)] = SCENE.indexOf(STONE);
+                }
+            }
+            blocks[at(5, 5, z)] = SCENE.indexOf(LANTERN);
         }
         return blocks;
     }

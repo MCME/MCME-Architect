@@ -27,9 +27,10 @@ import static com.mcmiddleearth.architect.slabSmooth.core.Table.TERRAIN;
  *
  * <p>Every surface block belongs to one direction: the one it faces most (from the blurred terrain), among the
  * directions its material has pieces for, with tops preferred on 45 degree slopes. A block with something built on
- * it belongs to none, and one with something built under it to no wall ({@link #owners}). Grass has only a slab, so
- * a wall that takes a grass block (at a cliff edge, or on a face steeper than 45 degrees) can only cut its top half
- * away or put a slab beside it. The directions run one after another, tops first, each on the result of the last.
+ * it belongs to none, and one with something built under it to no wall ({@link #owners}); the tops keep its bottom
+ * whole. Grass has only a slab, so a wall that takes a grass block (at a cliff edge, or on a face steeper than 45
+ * degrees) can only cut its top half away or put a slab beside it. The directions run one after another, tops first,
+ * each on the result of the last.
  *
  * <p>A line along a direction can cross several surfaces (the ground under an overhang, and the overhang's top).
  * Each surface is a node; nodes in neighbouring lines are neighbours when they are the nearest in height.
@@ -304,7 +305,8 @@ public final class Directional {
      *
      * <p>A block with something built on it (a chest, a wall, a tree trunk) belongs to no direction: the tops pass
      * already leaves it, and a wall pass could cut its top half. A block with something built under it (a hanging
-     * lantern, a roof) belongs to no wall pass, which could cut its lower half; the tops pass may still have it.
+     * lantern, a roof) belongs to no wall pass, which could cut its lower half; the tops pass may still have it, and
+     * smooths only its top: no shape there empties a quadrant down to the bottom.
      * Built means any block of the table's other category, so water counts too, and so do ores and logs that the
      * table doesn't make terrain: a cut under water lets it flow, and a cut over or under an ore leaves a hole in a
      * cliff face. Outside the area nothing counts as built. Toti's 1.3.0 could give either block to a wall pass.
@@ -474,6 +476,7 @@ public final class Directional {
         byte[] status;
         int[] cur;            // 4 quadrant tops per node, in half blocks
         boolean[] plantAbove;
+        boolean[] builtBelow; // tops only: something built under the surface block, so no shape may empty a quadrant
         byte[] mayAdd;        // what may go into the air block beyond the surface: ADD_NONE, ADD_SLAB or ADD_ANY
         int[][] lineNodes;    // nodes per line, highest first
         int[][] links;        // per node, per neighbour offset (dz, dx index): neighbour node or -1
@@ -554,6 +557,7 @@ public final class Directional {
             status = new byte[count];
             cur = new int[count * 4];
             plantAbove = new boolean[count];
+            builtBelow = new boolean[count];
             mayAdd = new byte[count];
             for (int k = 0; k < count; k++) {
                 int c = found.get(k)[0], top = found.get(k)[1];
@@ -587,6 +591,9 @@ public final class Directional {
                     cur[k * 4 + q] = 2 * top + fill[q];
                 }
                 plantAbove[k] = f.dir == UP && top + 1 < f.fh && cat[block(top + 1, c)] == DECOR;
+                // A shape that empties a quadrant empties it down to the bottom, where a lantern hangs from the block.
+                // Below the area nothing counts as built.
+                builtBelow[k] = f.dir == UP && top > 0 && cat[block(top - 1, c)] == OTHER;
                 mayAdd[k] = prototype ? ADD_ANY : top + 1 < f.fh ? roomFor(frameToWorld[block(top + 1, c)]) : ADD_NONE;
                 if ("keep".equals(opts.plants) && top + 1 < f.fh && cat[block(top + 1, c)] == DECOR) {
                     status[k] = FIXED;
@@ -770,10 +777,11 @@ public final class Directional {
             }
             can[materials][keep] = true;
 
-            boolean[] hasUpper = new boolean[kc], upperSlab = new boolean[kc];
+            boolean[] hasUpper = new boolean[kc], upperSlab = new boolean[kc], emptiesQuadrant = new boolean[kc];
             for (int i = 0; i < kc; i++) {
                 hasUpper[i] = !configs.get(i).upper().equals(Shapes.AIR);
                 upperSlab[i] = configs.get(i).upper().equals(Shapes.SLAB);
+                emptiesQuadrant[i] = configs.get(i).hasZero();
             }
             double[] target = target();
             unary = new double[count * kc];
@@ -806,6 +814,9 @@ public final class Directional {
                         allowed &= allCut;
                     } else if ("fill".equals(opts.mode)) {
                         allowed &= allFill;
+                    }
+                    if (builtBelow[k] && emptiesQuadrant[i]) {
+                        allowed = false; // the block's bottom stays whole: only its top is smoothed
                     }
                     allowed |= current;
                     if (current && currentChoice[k] < 0) {
