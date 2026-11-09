@@ -1212,10 +1212,9 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
      refresh replaces the `Player` object.
   4. The write, as one edit of the player's WorldEdit session, on the worker on FAWE (which runs the edit off the main
      thread) and on the main thread on plain WorldEdit. Blocks that changed after the read are left alone and counted.
-     Each block is compared just before it is set. On FAWE, which writes off the main thread, a block placed after its
-     compare, in the last moment of the write (while the edit's buffer is written at close), is still overwritten, and
-     is then part of the job's `//undo`. On plain WorldEdit the whole write is one main-thread task, so nothing comes
-     between.
+     Each block is compared just before it is set. On FAWE, which writes off the main thread, a block placed after that
+     comparison and before FAWE writes the edit is still overwritten, and is then part of the job's `//undo`. On plain
+     WorldEdit the whole write is one main-thread task, so nothing comes between.
   5. Main thread: the chunk tickets are let go, the lock opens, and the player is told.
 
   Every stage catches everything it can, errors included, and ends the job the same way (`finish`), so the lock and the

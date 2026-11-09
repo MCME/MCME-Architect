@@ -2228,7 +2228,7 @@ world** until an admin switches it on for that world (see [Setting up smoothing]
 | `/sls brush 6` | Hold a stick, a feather or any other item that is not a block. Right-click terrain to smooth everything within 6 blocks. |
 | `/sls selection` | Smooths your WorldEdit selection (`//wand`). Select the terrain plus a little air above it. |
 | `/sls area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]` | Smooths a box by its corners, in any world, without being there. For trusted staff. |
-| `//undo` | Takes back the last brush click, selection or area. |
+| `//undo` | Takes back the last brush click, selection or area. On FastAsyncWorldEdit, undo an area from inside the world it changed. |
 | `//mask` | Works with the brush as usual: `//mask stone` smooths only stone. |
 
 You do not need `//perf`: the pieces are placed without block updates, so they keep their shape.
@@ -2313,7 +2313,9 @@ smoothing, the reply shows the pack it used, for example `[Mordor]`.
 - **A smoothing is dropped** if you leave the world (for a selection) or the server before it writes, because you could
   not undo it. Nothing changes then.
 - **Every smoothing is one `//undo` step**, also when it stopped at your WorldEdit block limit (`Too many blocks for
-  your WorldEdit limit; partly done, //undo reverts it.`).
+  your WorldEdit limit; partly done, //undo reverts it.`). FastAsyncWorldEdit keeps the undo history per world: undo an
+  area from inside the world it changed, even when you ran `/sls area` from another one. On plain WorldEdit the history
+  is per player, so `//undo` works from any world.
 - **It never generates terrain.** A selection or box that reaches land that has not been generated is refused.
 - **Wrong pieces?** If a block gets pieces that do not belong to it, tell an admin which block and which piece. They
   can correct it in the config (see [Packs, tables and downloads](#packs-tables-and-downloads)).
@@ -2354,7 +2356,7 @@ The rows from `cost_fill` on are for fine tuning. Leave them alone unless an adm
 | `/sls help` | Lists what you may use. | `architect.slabSmooth` |
 | `/sls selection` | Smooths your WorldEdit selection. | `architect.slabSmooth.selection` |
 | `/sls brush [radius]` | Binds the smoothing brush to the item in your hand, which must not be a block. Radius 1 to `brush.maxRadius` (12), default 5. WorldEdit checks the node at every click, so taking it away also stops a brush that is already bound. | `architect.slabSmooth.brush` |
-| `/sls area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]` | Smooths a box by its corners, in the world you name or your own. It writes to that world wherever you stand. | `architect.slabSmooth.area` |
+| `/sls area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]` | Smooths a box by its corners, in the world you name or your own. It writes to that world wherever you stand. On FastAsyncWorldEdit, `//undo` it from inside that world. | `architect.slabSmooth.area` |
 | `/sls set <name> <value>` | Changes one of your settings. | `architect.slabSmooth` |
 | `/sls options`, `/sls reset` | Shows your settings; goes back to the defaults. | `architect.slabSmooth` |
 | `/sls pack [name\|auto]` | Names the pack your edits use, or `auto` to follow the RP region. Without an argument it shows the pack that applies here. | `architect.slabSmooth` |
@@ -3404,7 +3406,7 @@ for example `/mcme-architect:undo`, which helps when another plugin has a comman
 | `/rp` (admin) | `/rp server <pack> <tag> <mcVersion>`, `/rp server remove <pack> <mcVersion>`, `/rp calcsha <pack> [all]`, `/rp release <pack> <tag> <title>`, `/rp dropdb [confirm]`, `/rp list [filter]`, `/rp create\|edit\|remove <region>` | Points pack slots at a GitHub release, hashes packs, runs a release, clears the settings table, manages RP regions. | `architect.resourcePackAdmin` | [Resource packs](#resource-packs) |
 | `/biometune` | `/biometune [edit] [biome\|here]`, `info`, `set`, `unset`, `copy`, `undo`, `revert`, `status`, `preview`, `spares`, `claim`, `label` | Live biome tuning: the editor and its commands. | `architect.biomeTune` | [Biome tuning](#biome-tuning) |
 | `/biometune` (save, publish, admin) | `/biometune save <biome>`; `/biometune publish [world\|server]`, `/biometune preview <player>`; `/biometune spares add <count>`, `selftest [biome]`, `debug …` | Writes a biome to its datapack file; refreshes other players; admin tools. | `architect.biomeTune.save` for `save`; `architect.biomeTune.publish` for `publish` and `preview <player>`; `architect.biomeTune.admin` for the rest | [Biome tuning](#biome-tuning) |
-| `/slabsmooth` (`/sls`) | `/sls selection`, `brush [radius]`, `area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]`, `set <option> <value>`, `options`, `reset`, `pack [name\|auto]`, `packs`, `help` | Terrain smoothing: rounds off stair-stepped terrain with the pack's slabs, stairs and vertical slabs, on your WorldEdit selection, on a box or with a brush. `//undo` reverts it. Off unless the world's `slabSmooth` switch is on. | `architect.slabSmooth`, plus `architect.slabSmooth.selection` for `selection`, `.brush` for `brush`, `.area` for `area`, and `.allBlocks` for `set blocks all` | [Terrain smoothing](#terrain-smoothing) |
+| `/slabsmooth` (`/sls`) | `/sls selection`, `brush [radius]`, `area <x1> <y1> <z1> <x2> <y2> <z2> [world] [pack]`, `set <option> <value>`, `options`, `reset`, `pack [name\|auto]`, `packs`, `help` | Terrain smoothing: rounds off stair-stepped terrain with the pack's slabs, stairs and vertical slabs, on your WorldEdit selection, on a box or with a brush. `//undo` reverts it, on FastAsyncWorldEdit from inside the world it changed. Off unless the world's `slabSmooth` switch is on. | `architect.slabSmooth`, plus `architect.slabSmooth.selection` for `selection`, `.brush` for `brush`, `.area` for `area`, and `.allBlocks` for `set blocks all` | [Terrain smoothing](#terrain-smoothing) |
 | `/slabsmooth packs rebuild` | `/sls packs rebuild [pack]` | Reads the packs again now. Works from the console too, like `help` and `packs`. | `architect.slabSmooth.admin` | [Terrain smoothing](#terrain-smoothing) |
 
 - If `/undo` or `/redo` reaches WorldEdit instead of Architect, use Architect's aliases (`/un`, `/re`) or
@@ -3733,8 +3735,13 @@ Each entry gives what the player is told (or sees), the cause and the fix. See [
   written before the refusal can be undone with `//undo`.
 - **`Too many blocks for your WorldEdit limit; partly done, //undo reverts it.`** Cause: the player's WorldEdit block
   limit. Fix: `//undo`, and raise the limit or select less.
+- **`//undo` finds nothing to undo after `/sls area` in another world.** Cause: FastAsyncWorldEdit keeps its undo
+  history per world. Fix: go to the world the area is in, and run `//undo` there.
 - **`N blocks changed while it ran were left alone.`** Not an error: someone placed or broke blocks in the area while
-  it ran, and smoothing did not overwrite them.
+  it ran, and smoothing did not overwrite them. The world itself can change blocks during a smoothing too, most often
+  in terrain nobody has visited yet: the area stays loaded while smoothing works, and the game keeps running there, so
+  water flows, leaves decay and grass spreads. So the message can appear with nobody building. Running the same
+  smoothing again smooths those blocks as well.
 - **`Nothing to change here`, `Nothing to change: … could change, none needed to.`** Cause: the terrain is already as
   smooth as the settings allow, or its blocks have no pieces in this pack. With `blocks all` allowed, the reply adds
   `<block> isn't terrain in this pack; /sls set blocks all smooths it too.` when that is the reason.
