@@ -7,6 +7,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import io.papermc.paper.connection.PlayerConfigurationConnection;
+import io.papermc.paper.connection.PlayerConnection;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -22,9 +23,11 @@ import org.bukkit.entity.Player;
 
 /**
  * The only code that touches Minecraft internals. Paper 26.x runs them unobfuscated, so these are plain
- * Mojang names, checked against Paper 26.2 (server classes of build 111, API of build 126).
+ * Mojang names, checked against Paper 26.2 (server classes of build 111, API of build 126; the login replay's
+ * against server build 126).
  * Every handle is resolved once in the constructor; a failure is recorded, never thrown, and
- * {@link #selfCheck()} reports it so biome tuning can switch itself off.
+ * {@link #selfCheck()} reports it so biome tuning can switch itself off. The login replay's handles are reported
+ * apart, by {@link #loginReplayCheck()}: without them only the replay is off.
  */
 public final class ReflectionNmsBridge implements NmsBridge {
 
@@ -34,6 +37,9 @@ public final class ReflectionNmsBridge implements NmsBridge {
     }
 
     private final List<String> problems = new ArrayList<>();
+    private final List<String> replayProblems = new ArrayList<>();
+    /** Where a handle that cannot be found is recorded while the constructor resolves them. */
+    private List<String> unresolved = problems;
 
     private final Method getServer;
     private final Method registryAccess;
@@ -61,6 +67,12 @@ public final class ReflectionNmsBridge implements NmsBridge {
     private final Method registrationKnownPack;
     private final Method getWorldPath;
     private final Object datapackDir;
+    private final Field commonConnection;
+    private final Field handledLegacyLoginEvent;
+    private final Field configurationProfile;
+    private final Method legacyLogin;
+    private final Object loginAllowed;
+    private final Method disconnect;
 
     public ReflectionNmsBridge() {
         Class<?> server = type("net.minecraft.server.MinecraftServer");
@@ -110,6 +122,23 @@ public final class ReflectionNmsBridge implements NmsBridge {
         registrationKnownPack = method(registrationInfoType, "knownPackInfo");
         getWorldPath = method(server, "getWorldPath", levelResource);
         datapackDir = lookup("LevelResource.DATAPACK_DIR", levelResource, () -> levelResource.getField("DATAPACK_DIR").get(null));
+
+        // Paper's legacy login step (HorriblePlayerLoginEventHack.execute), replayed for players past its guard
+        unresolved = replayProblems;
+        Class<?> connection = type("net.minecraft.network.Connection");
+        Class<?> commonListener = type("net.minecraft.server.network.ServerCommonPacketListenerImpl");
+        Class<?> gameProfile = type("com.mojang.authlib.GameProfile");
+        Class<?> loginResult = type("net.minecraft.server.players.PlayerList$LoginResult");
+        Class<?> component = type("net.minecraft.network.chat.Component");
+        Class<?> loginHack = type("io.papermc.paper.connection.HorriblePlayerLoginEventHack");
+        commonConnection = field(commonListener, "connection");
+        handledLegacyLoginEvent = field(connection, "handledLegacyLoginEvent");
+        configurationProfile = field(configListener, "gameProfile");
+        legacyLogin = method(loginHack, "execute", connection, server, gameProfile, loginResult);
+        loginAllowed = lookup("PlayerList.LoginResult.ALLOW", loginResult,
+                () -> loginResult.getField("ALLOW").get(null));
+        disconnect = method(commonListener, "disconnect", component);
+        unresolved = problems;
     }
 
     @Override
@@ -210,11 +239,50 @@ public final class ReflectionNmsBridge implements NmsBridge {
     }
 
     @Override
-    public void switchToConfigurationIgnoringLoginGuard(Player player) throws BiomeTuningException {
+    public List<String> loginReplayCheck() {
+        return List.copyOf(replayProblems);
+    }
+
+    @Override
+    public boolean loggedInWithLegacyEvent(Player player) throws BiomeTuningException {
+        requireReady();
+        requireReplayReady();
         try {
+            Object listener = packetListener.get(player.getConnection());
+            return handledLegacyLoginEvent.getBoolean(commonConnection.get(listener));
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            throw new BiomeTuningException("could not tell how " + player.getName() + " logged in: " + rootMessage(e),
+                    e);
+        }
+    }
+
+    @Override
+    public boolean replayLegacyLogin(PlayerConfigurationConnection connection) throws BiomeTuningException {
+        requireReady();
+        requireReplayReady();
+        try {
+            Object listener = packetListener.get(connection);
+            Object kick = legacyLogin.invoke(null, commonConnection.get(listener), getServer.invoke(null),
+                    configurationProfile.get(listener), loginAllowed);
+            if (kick == null) {
+                return true;
+            }
+            disconnect.invoke(listener, kick); // a plugin disallowed the login: leave with its message, as at a login
+            return false;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            throw new BiomeTuningException("could not replay the login: " + rootMessage(e), e);
+        }
+    }
+
+    @Override
+    public PlayerConnection switchToConfigurationIgnoringLoginGuard(Player player) throws BiomeTuningException {
+        try {
+            // asked first: the switch takes the player out of the world
+            PlayerConnection connection = player.getConnection();
             Object handle = player.getClass().getMethod("getHandle").invoke(player);
             Object gameListener = handle.getClass().getField("connection").get(handle);
             gameListener.getClass().getMethod("switchToConfig").invoke(gameListener);
+            return connection;
         } catch (ReflectiveOperationException | RuntimeException e) {
             throw new BiomeTuningException("could not switch " + player.getName() + " to configuration: " + rootMessage(e), e);
         }
@@ -223,6 +291,13 @@ public final class ReflectionNmsBridge implements NmsBridge {
     private void requireReady() throws BiomeTuningException {
         if (!problems.isEmpty()) {
             throw new BiomeTuningException("biome tuning is unavailable on this server version (" + problems.get(0) + ")");
+        }
+    }
+
+    private void requireReplayReady() throws BiomeTuningException {
+        if (!replayProblems.isEmpty()) {
+            throw new BiomeTuningException("the login replay is unavailable on this server version ("
+                    + replayProblems.get(0) + ")");
         }
     }
 
@@ -273,7 +348,7 @@ public final class ReflectionNmsBridge implements NmsBridge {
         try {
             return Class.forName(name);
         } catch (ClassNotFoundException | LinkageError e) {
-            problems.add("missing class " + name);
+            unresolved.add("missing class " + name);
             return null;
         }
     }
@@ -300,7 +375,7 @@ public final class ReflectionNmsBridge implements NmsBridge {
         try {
             return lookup.get();
         } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
-            problems.add("missing " + what + " (" + e.getClass().getSimpleName() + ")");
+            unresolved.add("missing " + what + " (" + e.getClass().getSimpleName() + ")");
             return null;
         }
     }

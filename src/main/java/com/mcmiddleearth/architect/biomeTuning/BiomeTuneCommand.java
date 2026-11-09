@@ -4,7 +4,6 @@ import com.mcmiddleearth.architect.Permission;
 import com.mcmiddleearth.architect.PluginData;
 import com.mcmiddleearth.architect.additionalCommands.AbstractArchitectCommand;
 import com.mcmiddleearth.architect.biomeTuning.TuningProperty.Group;
-import io.papermc.paper.connection.PlayerConnection;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import java.util.ArrayList;
@@ -222,7 +221,7 @@ public class BiomeTuneCommand extends AbstractArchitectCommand {
         }
         // Chat goes out before the refresh: once a player is reconfiguring, messages cannot reach them.
         PluginData.getMessageUtil().sendInfoMessage(cs, "Refreshing " + target.getName() + "...");
-        report(cs, target.getName(), refresher.preview(target));
+        report(cs, refresher.preview(target));
     }
 
     private void publish(CommandSender cs, String[] args) {
@@ -333,31 +332,21 @@ public class BiomeTuneCommand extends AbstractArchitectCommand {
                     "Usage: /biometune debug refresh <online player> noinject|bypass | debug legacylogin on|off");
             return;
         }
-        PluginData.getMessageUtil().sendInfoMessage(cs, "Refreshing " + target.getName()
-                + (mode.equals("noinject") ? " without the registry sync..." : " (bypassing Paper's login guard)..."));
+        PluginData.getMessageUtil().sendInfoMessage(cs, "Refreshing " + target.getName() + (mode.equals("noinject")
+                ? " without the registry sync..." : " past Paper's login guard, replaying their login..."));
         try {
-            report(cs, target.getName(), mode.equals("noinject")
+            report(cs, mode.equals("noinject")
                     ? BiomeTuning.refresher().refresh(target, false)
-                    : BiomeTuning.refresher().refresh(target, true, BiomeTuneCommand::switchIgnoringLoginGuard));
+                    : BiomeTuning.refresher().refresh(target, true, true));
         } catch (IllegalStateException e) {
             PluginData.getMessageUtil().sendErrorMessage(cs, "Refresh failed: " + e.getMessage());
         }
     }
 
-    private static void report(CommandSender cs, String name, RefreshCoordinator.Outcome outcome) {
+    private static void report(CommandSender cs, RefreshCoordinator.Outcome outcome) {
         if (outcome == RefreshCoordinator.Outcome.REFUSED) {
-            PluginData.getMessageUtil().sendErrorMessage(cs, "Paper refused to reconfigure " + name + ": a plugin on "
-                    + "this server listens to PlayerLoginEvent (Paper's line about it is in the server log). Rejoin to see the live values.");
+            PluginData.getMessageUtil().sendErrorMessage(cs, RefreshCoordinator.NO_LIVE_PREVIEW);
         }
-    }
-
-    private static PlayerConnection switchIgnoringLoginGuard(Player player) {
-        try {
-            BiomeTuning.bridge().switchToConfigurationIgnoringLoginGuard(player);
-        } catch (BiomeTuningException e) {
-            throw new IllegalStateException(e.getMessage(), e);
-        }
-        return player.getConnection();
     }
 
     /** A biome id, or "here" for the biome at the player's feet. */

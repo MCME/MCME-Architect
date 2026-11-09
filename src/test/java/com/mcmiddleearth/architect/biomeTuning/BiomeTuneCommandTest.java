@@ -1,8 +1,11 @@
 package com.mcmiddleearth.architect.biomeTuning;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import com.google.gson.JsonParser;
 import com.mcmiddleearth.architect.ArchitectPlugin;
+import io.papermc.paper.connection.PlayerConfigurationConnection;
 import io.papermc.paper.connection.PlayerGameConnection;
+import io.papermc.paper.event.connection.configuration.PlayerConnectionReconfigureEvent;
 import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
@@ -220,6 +223,76 @@ class BiomeTuneCommandTest {
         }
     }
 
+    // without what the login replay needs, tuning still starts; the log says once what players miss on such a server
+    @Test
+    void withoutTheLoginReplayTuningStartsAndTheLogSaysWhatPlayersMiss() {
+        List<LogRecord> logged = new ArrayList<>();
+        Handler handler = recordingInto(logged);
+        fake.loginReplayProblems = List.of("missing class io.papermc.paper.connection.HorriblePlayerLoginEventHack");
+        plugin.getLogger().addHandler(handler);
+        try {
+            useFake();
+            assertTrue(BiomeTuning.isAvailable(), "a missing replay leaves the rest of biome tuning on");
+            List<String> said = logged.stream().filter(record -> record.getLevel() == Level.WARNING
+                            && record.getMessage().contains("HorriblePlayerLoginEventHack"))
+                    .map(LogRecord::getMessage).toList();
+            assertEquals(1, said.size(), "the log says it once: " + said);
+            assertTrue(said.get(0).contains("switching servers"), "what players do instead: " + said.get(0));
+        } finally {
+            plugin.getLogger().removeHandler(handler);
+        }
+    }
+
+    // the debug bypass goes past Paper's guard the safe way: the login is replayed while the player reconfigures, on
+    // the next tick, as BiomeTuning wires it
+    @Test
+    void theDebugBypassReplaysTheLoginOnTheNextTick() {
+        useFake();
+        PlayerMock alice = server.addPlayer("Alice");
+        fake.onSwitchPastGuard = player -> server.getPluginManager().callEvent(
+                new PlayerQuitEvent(player, Component.text("left"), PlayerQuitEvent.QuitReason.DISCONNECTED));
+        server.dispatchCommand(console, "biometune debug refresh Alice bypass");
+        assertTrue(BiomeTuning.isRefreshing(alice.getUniqueId()));
+
+        server.getPluginManager().callEvent(new PlayerConnectionReconfigureEvent(reconfiguring(alice)));
+        assertEquals(List.of("switch Alice"), fake.steps,
+                "Paper fires the event on a network thread; nothing happens there");
+        server.getScheduler().performOneTick();
+        assertEquals(List.of("switch Alice", "replay Alice", "sync Alice", "complete Alice"), fake.steps);
+    }
+
+    /** The configuration connection Paper hands over when the player's client acknowledges; it records its calls. */
+    private PlayerConfigurationConnection reconfiguring(PlayerMock player) {
+        PlayerProfile profile = server.createProfile(player.getUniqueId(), player.getName());
+        Class<?>[] type = {PlayerConfigurationConnection.class};
+        return (PlayerConfigurationConnection) Proxy.newProxyInstance(type[0].getClassLoader(), type,
+                (proxy, method, arguments) -> switch (method.getName()) {
+                    case "getProfile" -> profile;
+                    case "isConnected" -> true;
+                    case "completeReconfiguration" -> fake.steps.add("complete " + player.getName());
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "equals" -> proxy == arguments[0];
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+    }
+
+    private static Handler recordingInto(List<LogRecord> logged) {
+        return new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                logged.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+    }
+
     @Test
     void playersWithoutPermissionAreRefusedFirst() {
         PlayerMock guest = server.addPlayer("Guest");
@@ -322,8 +395,8 @@ class BiomeTuneCommandTest {
         assertFalse(BiomeTuning.isRefreshing(alice.getUniqueId()));
     }
 
-    // Paper refuses to refresh a player who logged in while a plugin listened to PlayerLoginEvent: chat says what a
-    // rejoin shows, in the editor's words
+    // Paper can still refuse its own route, for instance where the login replay is unavailable: chat says what shows
+    // the live values instead, in the editor's words
     @Test
     void aRefusedPreviewSaysARejoinShowsTheLiveValues() {
         useFake();
@@ -349,7 +422,8 @@ class BiomeTuneCommandTest {
             replies.add(reply);
         }
         assertFalse(BiomeTuning.isRefreshing(refused.getUniqueId()), "Paper refused it");
-        assertTrue(!replies.isEmpty() && replies.get(replies.size() - 1).contains("Rejoin to see the live values."),
+        assertTrue(!replies.isEmpty() && replies.get(replies.size() - 1)
+                        .contains("Switching servers and back, or rejoining, shows the live values."),
                 "as the editor says it: " + replies);
     }
 

@@ -23,4 +23,22 @@ class ReflectionNmsBridgeTest {
                 () -> bridge.encode(NamespacedKey.fromString("cbc:111g380-5p")));
         assertTrue(error.getMessage().contains("unavailable"), error.getMessage());
     }
+
+    @Test
+    void theLoginReplayIsCheckedApartFromTheRestOfTuning() {
+        ReflectionNmsBridge bridge = new ReflectionNmsBridge();
+        assertTrue(bridge.loginReplayCheck()
+                        .contains("missing class io.papermc.paper.connection.HorriblePlayerLoginEventHack"),
+                () -> "replay problems: " + bridge.loginReplayCheck());
+        assertTrue(bridge.selfCheck().stream().noneMatch(problem -> problem.contains("HorriblePlayerLoginEventHack")),
+                () -> "a missing replay switches only the replay off, not biome tuning: " + bridge.selfCheck());
+    }
+
+    @Test
+    void theLoginReplayExplainsThatItIsUnavailable() {
+        ReflectionNmsBridge bridge = new ReflectionNmsBridge();
+        BiomeTuningException error = assertThrows(BiomeTuningException.class,
+                () -> bridge.loggedInWithLegacyEvent(null));
+        assertTrue(error.getMessage().contains("unavailable"), error.getMessage());
+    }
 }
