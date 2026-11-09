@@ -1217,6 +1217,13 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
      Paper finishes each chunk it loads on the main thread, and asked for a whole area at once, it finished the chunks
      in a few heavy ticks. It holds at most 16 chunks per tick too: each held chunk also makes Paper load the chunks up
      to two around it.
+     Measured on Paper 26.2 with FAWE 2.16.1 at the largest default area (246 by 246 columns): over land whose chunks
+     have ticked before, the longest tick was 21.9 ms and none went over 25 ms. Over land that was generated and never
+     ticked, the longest ticks were 76 and 80 ms (one over 50 ms, five to eight over 25 ms). The cause is the holds: a
+     held chunk ticks, so a never-visited chunk ticks for the first time, and Minecraft runs its one-time
+     post-generation updates (fluids and block shapes) in that tick. Architect's no-physics listener then reacts to the
+     block updates these cause. A player walking into that land sets off the same updates. One 34 ms garbage-collection
+     pause came from a large array allocation on a 3 GB test heap.
      Without a named pack, the selection must cover one pack only: `PackFootprint` counts every RP region whose bounding
      box meets it, since a region can have a height and lie between any two sample points, and the pack at sample points
      at most 16 blocks apart on the selection's lowest and highest layers, plus its centre, all within the world's

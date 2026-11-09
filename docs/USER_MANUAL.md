@@ -2531,6 +2531,10 @@ more work than 100,000 surfaces in one pass stops too, and changes nothing.
   with a chunk ticket until the result is written, which makes Paper load the land up to two chunks around them, as for
   a player standing there, and generate it where needed. The smoothing runs on a worker thread of its own, with
   `surfaces all` in 64 by 64 tiles. On FastAsyncWorldEdit, the write runs off the main thread too.
+- **Land nobody has visited.** The first time an area of land that nobody has visited is smoothed, such as freshly
+  generated or imported terrain, the server can have one or two slow ticks of around a tenth of a second. That is
+  Minecraft finishing the land's generation, which a player walking there would set off too. Land that has been visited
+  before does not do this.
 - **Limits.** One selection or area at a time on the server; `maxColumns`, `maxCells` and `maxSeconds`; and a cap on
   the work in one pass. Players who go over are told, and nothing changes.
 - **Memory.** Two tables per pack in use, and per-player settings, which are forgotten at a restart or a reload.
