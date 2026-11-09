@@ -1196,6 +1196,9 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
 - **A job** (`SmoothJobs`) has five stages, and one job at a time runs on the whole server:
   1. Main thread, `start`: the limits (columns, cells), the pack, the tables, the lock. Then `AreaSource.load` starts
      reading, in slices of about 10 ms per tick, holding each chunk with a plugin chunk ticket. It never generates a chunk.
+     It waits for at most 16 chunks at a time (`ChunkAreaSource.MAX_IN_FLIGHT`) and asks for more as it holds them:
+     Paper finishes each chunk it loads on the main thread, and asked for a whole area at once, it finished the chunks
+     in a few heavy ticks.
      Without a named pack, the selection must cover one pack only: `PackFootprint` counts every RP region whose bounding
      box meets it, since a region can have a height and lie between any two sample points, and the pack at sample points
      at most 16 blocks apart on the selection's lowest and highest layers, plus its centre, all within the world's

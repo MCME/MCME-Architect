@@ -14,8 +14,10 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -92,6 +94,7 @@ class ChunkAreaSourceTest {
                         loaded = true;
                     }
                     tickets++;
+                    waiting.remove(FakeChunk.this);
                     yield true;
                 }
                 case "removePluginChunkTicket" -> {
@@ -144,6 +147,9 @@ class ChunkAreaSourceTest {
     private final IllegalStateException tickRefusal = new IllegalStateException("the plugin is disabled");
     private boolean inRun, askedWhetherGenerated;
     private int requests, callsThisRun, mostCallsInARun;
+    /** The chunks asked for and not held yet, and the most there were at once. */
+    private final Set<FakeChunk> waiting = new HashSet<>();
+    private int mostWaiting;
     private final List<String> outsideRuns = new ArrayList<>();
     private final World world;
 
@@ -174,6 +180,8 @@ class ChunkAreaSourceTest {
                 FakeChunk chunk = chunks.get(key);
                 chunk.asked++;
                 chunk.loaded = true; // by the time Paper hands it over
+                waiting.add(chunk);
+                mostWaiting = Math.max(mostWaiting, waiting.size());
                 CompletableFuture<Chunk> answer = answers.remove(key); // for the first request only
                 yield answer != null ? answer : CompletableFuture.completedFuture(chunk.generated ? chunk.chunk : null);
             }
@@ -309,6 +317,47 @@ class ChunkAreaSourceTest {
         assertEquals(List.of(), outsideRuns, "every request, ticket and copy happens in a run");
         assertTrue(finishedInARun[0], "the future completes in a run, on the main thread");
         loaded(load).read();
+    }
+
+    // Paper loads a chunk in the background but finishes it on the main thread. Asked for all of a big area's chunks at
+    // once, it finished them in a few heavy ticks, up to 184 ms on the server.
+    @Test
+    void noMoreThanSixteenChunksAreWaitingAtOnce() throws Exception {
+        List<FakeChunk> area = chunksIn(-4, 4, -4, 4); // the whole fake world
+        assertTrue(area.size() > ChunkAreaSource.MAX_IN_FLIGHT, "more chunks than may wait at once");
+        Map<FakeChunk, CompletableFuture<Chunk>> paper = new HashMap<>(); // Paper's answers, completed by hand
+        for (FakeChunk chunk : area) {
+            CompletableFuture<Chunk> later = new CompletableFuture<>();
+            answers.put(key(chunk.x, chunk.z), later);
+            paper.put(chunk, later);
+        }
+
+        CompletableFuture<AreaSource.LoadedArea> load = load(-64, 0, -64, 79, 0, 79);
+        for (int runs = 1; !load.isDone(); runs++) {
+            assertTrue(runs <= 1_000, "it keeps asking for another tick");
+            runOneTick();
+            // Between ticks, Paper hands over five of the chunks that wait, not in the order they were asked for.
+            area.reversed().stream()
+                    .filter(chunk -> waiting.contains(chunk) && !paper.get(chunk).isDone())
+                    .limit(5)
+                    .forEach(chunk -> paper.get(chunk).complete(chunk.chunk));
+        }
+
+        assertTrue(mostWaiting <= ChunkAreaSource.MAX_IN_FLIGHT, mostWaiting + " chunks were waiting at once");
+        assertEquals(ChunkAreaSource.MAX_IN_FLIGHT, mostWaiting, "and the load used all of that room");
+        for (FakeChunk chunk : area) {
+            assertEquals(1, chunk.asked, chunk.chunk.toString());
+            assertEquals(1, chunk.tickets, chunk.chunk.toString());
+            assertEquals(1, chunk.copies, chunk.chunk.toString());
+        }
+        assertEquals(List.of(), outsideRuns);
+        WorldArea read = loaded(load).read();
+        int i = 0;
+        for (int z = -64; z <= 79; z++) {
+            for (int x = -64; x <= 79; x++) {
+                assertEquals(block(x, 0, z), read.palette.get(read.blocks[i++]));
+            }
+        }
     }
 
     @Test

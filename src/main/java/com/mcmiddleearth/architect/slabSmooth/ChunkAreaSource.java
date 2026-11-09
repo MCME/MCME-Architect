@@ -24,11 +24,13 @@ import java.util.function.LongSupplier;
  * <p>
  * Everything a load does on the main thread happens in nextTick runs of about SLICE_NANOS each: asking Paper for the
  * chunks, holding each one with a plugin chunk ticket, and copying it. A big area spreads over several ticks instead of
- * stalling one. Every run holds all that Paper has handed over so far, however much of the run's time is used up:
- * Paper lets a chunk it has just loaded go at that world's next ticket purge, which can come before the next run. A
- * chunk that has gone by then is asked for again instead of held, because a ticket on a chunk that isn't loaded loads
- * it from disk, on the main thread. Holding a loaded chunk is quick next to copying it. The tickets stay until release,
- * so writing the result doesn't load the chunks again.
+ * stalling one. Paper finishes each chunk it loads on the main thread, so that work is spread out too: a load has at
+ * most MAX_IN_FLIGHT chunks asked for and not held yet, and as it holds them, it asks for more in its next run. Every
+ * run holds all that Paper has handed over so far, however much of the run's time is used up: Paper lets a chunk it
+ * has just loaded go at that world's next ticket purge, which can come before the next run. A chunk that has gone by
+ * then is asked for again instead of held, because a ticket on a chunk that isn't loaded loads it from disk, on the
+ * main thread. Holding a loaded chunk is quick next to copying it. The tickets stay until release, so writing the
+ * result doesn't load the chunks again.
  * <p>
  * Loads must not overlap. A plugin has one ticket per chunk, so the first release would let the other load's chunks go;
  * the jobs run one at a time.
@@ -37,6 +39,12 @@ final class ChunkAreaSource implements AreaSource {
 
     /** How long one load spends on the main thread per run, give or take its last call. */
     static final long SLICE_NANOS = 10_000_000L;
+
+    /**
+     * The most chunks a load has asked Paper for and doesn't hold yet. Paper loads a chunk in the background but
+     * finishes it on the main thread: asked for a whole big area at once, it finished its chunks in a few heavy ticks.
+     */
+    static final int MAX_IN_FLIGHT = 16;
 
     private final Plugin plugin;
     private final Executor nextTick;
@@ -73,7 +81,7 @@ final class ChunkAreaSource implements AreaSource {
         private final Chunk[] held;
         private final ChunkSnapshot[] copies;
         private final ArrayDeque<Integer> toCopy = new ArrayDeque<>();
-        private int firstNotHeld, copied;
+        private int firstNotHeld, waiting, copied; // waiting: asked for and not held yet, at most MAX_IN_FLIGHT
         private boolean released;
 
         Load(World world, BlockVector3 min, BlockVector3 max) {
@@ -98,9 +106,11 @@ final class ChunkAreaSource implements AreaSource {
                     release();
                     return;
                 }
-                while (requested.size() < held.length && nanoClock.getAsLong() - start < SLICE_NANOS) {
+                while (requested.size() < held.length && waiting < MAX_IN_FLIGHT
+                        && nanoClock.getAsLong() - start < SLICE_NANOS) {
                     int i = requested.size();
                     requested.add(world.getChunkAtAsync(cx0 + i / chunksZ, cz0 + i % chunksZ, false));
+                    waiting++;
                 }
                 hold(); // whatever the clock says
                 while (!toCopy.isEmpty() && nanoClock.getAsLong() - start < SLICE_NANOS) {
@@ -147,6 +157,7 @@ final class ChunkAreaSource implements AreaSource {
                     }
                     chunk.addPluginChunkTicket(plugin);
                     held[i] = chunk;
+                    waiting--;
                     toCopy.add(i);
                 }
             }
