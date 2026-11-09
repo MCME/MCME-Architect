@@ -11,11 +11,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DirectionalTest {
+
+    private static final String AIR = "minecraft:air", GRASS = "minecraft:grass_block", STONE = "minecraft:stone",
+            CHEST = "minecraft:chest[facing=north,type=single,waterlogged=false]",
+            LANTERN = "minecraft:lantern[hanging=true,waterlogged=false]";
+    /** The small scenes below: W x H x L blocks (x, y, z), as indices into SCENE. */
+    private static final int W = 14, H = 12, L = 9;
+    private static final List<String> SCENE = List.of(AIR, GRASS, STONE, CHEST, LANTERN);
 
     /** octants.json: masks of the table's states (and derived top slabs and upside-down stairs), read from the
      *  RP-Human pack and the 26.2 client jar by the prototype's model probe. */
@@ -138,6 +147,104 @@ class DirectionalTest {
                 assertTrue(table.kind3(r.palette().get(r.blocks()[below])).mask() == Octants.FULL, "slab on solid ground");
             }
         }
+    }
+
+    /**
+     * Seen in game: a chest on the edge of a two-block step of grass, with air west of the grass block it stands on.
+     * The cell above that block isn't open, so the tops pass leaves the block alone; the west walls pass took it and
+     * cut its top half, and the chest floated half a block. A block that holds up something built belongs to no
+     * direction, so no pass changes it.
+     */
+    @Test
+    void aBlockUnderABuiltBlockKeepsItsShapeAtACliffEdge() throws Exception {
+        Table table = TestTables.handMade();
+        int edge = at(5, 6, 4), above = at(5, 7, 4);
+        int[] withChest = step();
+        withChest[above] = SCENE.indexOf(CHEST);
+        Smoother.Result r = smooth(withChest, table);
+        assertEquals(GRASS, state(r, edge), "the block under the chest");
+        assertEquals(CHEST, state(r, above));
+        assertEquals(-1, owners(withChest, table)[edge], "the direction of the block under the chest");
+
+        // Control: without the chest, the same block does change; the tops pass cuts it to a slab.
+        assertNotEquals(GRASS, state(smooth(step(), table), edge), "the same block without the chest");
+        // And the west walls pass, given the block as it was before this rule, cuts its top half: a side pass would
+        // have cut it.
+        Directional.World world = new Directional.World(withChest, H, L, W, SCENE, table);
+        byte[] owner = Directional.owners(world, new Options());
+        owner[edge] = Directional.WEST;
+        new Directional.Pass(world, new Directional.Frame(Directional.WEST, W, H, L), new Options(), null, owner, false,
+                WorkBudget.NONE).run(null, new Directional.Totals());
+        assertEquals(Octants.SLAB, table.kind3(world.palette.get(world.blocks[edge])).mask(),
+                "the block under the chest, after the west walls pass owning it");
+    }
+
+    /**
+     * A lantern hanging under the front of an overhang, on a stone cliff that faces west. A wall pass can cut a
+     * block's lower half (or its west half), which would leave the lantern hanging under air, so no wall pass gets a
+     * block with something built under it. The tops pass still may.
+     */
+    @Test
+    void aBlockOverABuiltBlockIsNotCutFromTheSide() throws Exception {
+        Table table = TestTables.handMade();
+        int front = at(3, 7, 4);
+        byte[] thinFront = owners(overhang(true), table), thickFront = owners(overhang(false), table);
+        assertAll(
+                () -> assertEquals(Directional.UP, thinFront[front], "open above and west: the tops pass may have it"),
+                () -> assertEquals(-1, thickFront[front], "open only to the west: no pass may have it"));
+    }
+
+    /**
+     * Grass on a two-block step, the same at every z: west of x 5 its top is at y 4; from x 5 east it is at y 6 and
+     * one block higher every two blocks. The step's edge is the grass block at x 5, y 6.
+     */
+    private static int[] step() {
+        int[] blocks = new int[W * H * L];
+        for (int z = 0; z < L; z++) {
+            for (int x = 0; x < W; x++) {
+                int top = x < 5 ? 4 : 6 + (x - 5) / 2;
+                for (int y = 0; y <= top; y++) {
+                    blocks[at(x, y, z)] = SCENE.indexOf(GRASS);
+                }
+            }
+        }
+        return blocks;
+    }
+
+    /**
+     * Stone: a floor at y 0 to 2, a cliff facing west from x 6 east, up to y 9, and an overhang at y 7 and 8 that
+     * reaches out to x 3, the same at every z. With a thin front, the overhang is one block thick at x 3 (y 7 only).
+     * A lantern hangs under the overhang's front at (3, 6, 4).
+     */
+    private static int[] overhang(boolean thinFront) {
+        int[] blocks = new int[W * H * L];
+        for (int y = 0; y < H; y++) {
+            for (int z = 0; z < L; z++) {
+                for (int x = 0; x < W; x++) {
+                    boolean stone = y <= 2 || x >= 6 && y <= 9
+                            || x >= 3 && x < 6 && (y == 7 || y == 8 && (!thinFront || x > 3));
+                    blocks[at(x, y, z)] = SCENE.indexOf(stone ? STONE : AIR);
+                }
+            }
+        }
+        blocks[at(3, 6, 4)] = SCENE.indexOf(LANTERN);
+        return blocks;
+    }
+
+    private static int at(int x, int y, int z) {
+        return (y * L + z) * W + x;
+    }
+
+    private static Smoother.Result smooth(int[] blocks, Table table) {
+        return Directional.smooth(blocks, H, L, W, SCENE, table, new Options(), null, null);
+    }
+
+    private static byte[] owners(int[] blocks, Table table) {
+        return Directional.owners(new Directional.World(blocks, H, L, W, SCENE, table), new Options());
+    }
+
+    private static String state(Smoother.Result r, int i) {
+        return r.palette().get(r.blocks()[i]);
     }
 
     private static int surface(int[] blocks, int h, int l, int w, int x, int z) {

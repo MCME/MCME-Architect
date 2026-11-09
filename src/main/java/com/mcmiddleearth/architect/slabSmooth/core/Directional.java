@@ -26,8 +26,10 @@ import static com.mcmiddleearth.architect.slabSmooth.core.Table.TERRAIN;
  * it faces. Undersides use top slabs and upside-down stairs.
  *
  * <p>Every surface block belongs to one direction: the one it faces most (from the blurred terrain), among the
- * directions its material has pieces for, with tops preferred on 45 degree slopes. Grass, which only has a slab, so
- * stays with the tops as before. The directions run one after another, tops first, each on the result of the last.
+ * directions its material has pieces for, with tops preferred on 45 degree slopes. A block with something built on
+ * it belongs to none, and one with something built under it to no wall ({@link #owners}). Grass, which only has a
+ * slab, so stays with the tops as before. The directions run one after another, tops first, each on the result of
+ * the last.
  *
  * <p>A line along a direction can cross several surfaces (the ground under an overhang, and the overhang's top).
  * Each surface is a node; nodes in neighbouring lines are neighbours when they are the nearest in height.
@@ -134,6 +136,12 @@ public final class Directional {
         boolean ground(int i) {
             int c = kind(i).category();
             return c == TERRAIN || c == PIECE;
+        }
+
+        /** Whether block i is something built, or anything else the smoother leaves alone (a log, an ore, water):
+         *  neither air, a plant nor ground. */
+        boolean built(int i) {
+            return kind(i).category() == OTHER;
         }
 
         /**
@@ -293,6 +301,13 @@ public final class Directional {
      * Which direction may change each ground block (-1: none). A block can only belong to a direction it is open
      * to and whose pieces its material has; of those it takes the one it faces most, judged from the gradient of
      * the blurred terrain.
+     *
+     * <p>A block with something built on it (a chest, a wall, a tree trunk) belongs to no direction: the tops pass
+     * already leaves it, and a wall pass could cut its top half. A block with something built under it (a hanging
+     * lantern, a roof) belongs to no wall pass, which could cut its lower half; the tops pass may still have it.
+     * Built means any block of the table's other category, so water counts too, and so do ores and logs that the
+     * table doesn't make terrain: a cut next to them lets water flow, or leaves a hole in a cliff face. Outside the
+     * area nothing counts as built. Toti's 1.3.0 could give either block to a wall pass.
      */
     static byte[] owners(World world, Options opts) {
         int h = world.h, l = world.l, w = world.w, n = world.n;
@@ -343,9 +358,10 @@ public final class Directional {
             for (int z = 0; z < l; z++) {
                 for (int x = 0; x < w; x++) {
                     int i = world.at(x, y, z);
-                    if (!supported[i]) {
+                    if (!supported[i] || y + 1 < h && world.built(world.at(x, y + 1, z))) {
                         continue;
                     }
+                    boolean builtBelow = y > 0 && world.built(world.at(x, y - 1, z));
                     int mat = world.kind(i).material();
                     // Outward normal: down the occupancy gradient.
                     double gx = p[world.at(Math.max(x - 1, 0), y, z)] - p[world.at(Math.min(x + 1, w - 1), y, z)];
@@ -353,6 +369,9 @@ public final class Directional {
                     double gz = p[world.at(x, y, Math.max(z - 1, 0))] - p[world.at(x, y, Math.min(z + 1, l - 1))];
                     double best = Double.NEGATIVE_INFINITY;
                     for (int dir = 0; dir < 6; dir++) {
+                        if (builtBelow && dir != UP && dir != DOWN) {
+                            continue;
+                        }
                         int wd = frames[dir].worldDirection();
                         int nx = x + Octants.DX[wd], ny = y + Octants.DY[wd], nz = z + Octants.DZ[wd];
                         if (nx < 0 || nx >= w || ny < 0 || ny >= h || nz < 0 || nz >= l || !world.free(world.at(nx, ny, nz))
