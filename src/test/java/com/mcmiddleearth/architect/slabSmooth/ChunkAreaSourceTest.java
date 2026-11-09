@@ -340,6 +340,33 @@ class ChunkAreaSourceTest {
         assertEquals(area.size(), requests, "each chunk was asked for once");
     }
 
+    // Paper may answer a chunk that isn't generated only in a later run, while other requests still wait. Its null
+    // refuses the load in the run it arrives in, before any chunk is held, as a null Paper gives at once does.
+    @Test
+    void anUngeneratedChunkAnsweredInALaterRunIsRefusedBeforeAnyChunkIsHeld() {
+        List<FakeChunk> area = chunksIn(-4, 4, -4, 4); // the whole fake world
+        CompletableFuture<Chunk> stillLoading = new CompletableFuture<>();
+        CompletableFuture<Chunk> notGenerated = new CompletableFuture<>();
+        answers.put(key(4, 3), stillLoading); // Paper hasn't answered it by the end of the test
+        answers.put(key(4, 4), notGenerated); // the last chunk the load asks for
+
+        CompletableFuture<AreaSource.LoadedArea> load = load(-64, 0, -64, 79, 0, 79);
+        runOneTick(); // asks for the whole area; all but (4, 3) and (4, 4) answer at once
+        runOneTick(); // both still wait
+        assertFalse(load.isDone(), "it waits for (4, 3) and (4, 4)");
+        notGenerated.complete(null); // between ticks, Paper answers that (4, 4) isn't generated
+        runOneTick();
+
+        assertTrue(load.isDone(), "refused in the run the null arrived in");
+        Refusal refusal = assertInstanceOf(Refusal.class, failure(load));
+        assertTrue(refusal.getMessage().contains("hasn't been generated"), refusal.getMessage());
+        assertTrue(refusal.getMessage().contains("4, 4"), refusal.getMessage());
+        assertTrue(ticks.isEmpty(), "and no later run is asked for, though (4, 3) still waits");
+        for (FakeChunk chunk : area) {
+            assertEquals(0, chunk.tickets, "no ticket was ever added: " + chunk.chunk);
+        }
+    }
+
     @Test
     void requestingAndCopyingSpreadOverTicks() throws Exception {
         requestCost = 6 * MS;
@@ -409,8 +436,10 @@ class ChunkAreaSourceTest {
         }
     }
 
+    // Phase two starts in the run in which the area's last answer arrives, and that run holds the area however much of
+    // its time is used up.
     @Test
-    void aChunkIsHeldInTheFirstRunAfterPaperHandsItOver() {
+    void theRunInWhichTheLastAnswerArrivesHoldsTheArea() {
         requestCost = 6 * MS; // the requests use up each run's time
         copyCost = 6 * MS;
         CompletableFuture<Chunk> late = new CompletableFuture<>();
@@ -419,12 +448,14 @@ class ChunkAreaSourceTest {
         load(0, 0, 0, 47, 63, 31);
         runOneTick();
         runOneTick();
+        assertEquals(0, chunksIn(0, 2, 0, 1).stream().mapToInt(chunk -> chunk.tickets).sum(),
+                "nothing is held before the whole area has answered");
         late.complete(chunk(0, 0).chunk);
         runOneTick();
 
         assertEquals(6, requests);
         for (FakeChunk chunk : chunksIn(0, 2, 0, 1)) {
-            assertEquals(1, chunk.tickets, "Paper lets a chunk it has just loaded go at the world's next ticket purge: "
+            assertEquals(1, chunk.tickets, "held in the run in which the last answer arrived, its time used up: "
                     + chunk.chunk);
         }
     }
