@@ -1113,8 +1113,9 @@ energy and solver, in six directions, by turning the area so that "up" points th
 
 - **Ownership.** Every surface block belongs to one direction: the one it faces most, judged from the blurred terrain,
   among the directions its material has pieces for. Tops win on 45 degree slopes (`TOP_PREFERENCE`). Grass has only a
-  slab, so grass slopes stay with the tops. Stone has vertical slabs, top slabs and stairs, so its cliffs, walls and
-  overhangs are smoothed too.
+  slab, so a wall direction that takes a grass block (at a cliff edge, or on a face steeper than 45 degrees) can only
+  cut its top half away or put a slab beside it. Stone has vertical slabs, top slabs and stairs, so its cliffs, walls
+  and overhangs are smoothed too.
 - **What is built keeps its support.** Here `Directional.owners` differs from Toti's 1.3.0 on purpose. Built means a
   block of the table's other category: neither air, a plant nor ground. A block with something built on it belongs to
   no direction, and a block with something built under it (a hanging lantern, a roof) to no wall direction; the tops
@@ -1122,9 +1123,9 @@ energy and solver, in six directions, by turning the area so that "up" points th
   alone, but a wall direction could take it: at a cliff edge the west walls cut the top half of the grass under a
   chest, and the chest floated half a block. A wall direction could also cut into a block that a lantern hangs from.
   Smoothing must not damage what was built, so neither may happen. The other category also holds blocks nobody built:
-  water, and ores or logs where the pack does not make them terrain. The rule holds for them on purpose: a cut next to
-  an ore leaves a hole in a cliff face, and a cut under water lets it flow. The golden scenes hold no such blocks, so
-  they still match 1.3.0.
+  water, and ores or logs where the pack does not make them terrain. The rule holds for them on purpose: a cut over or
+  under an ore leaves a hole in a cliff face, and a cut under water lets it flow. The golden scenes hold no such
+  blocks, so they still match 1.3.0.
 - **Sharp edges.** A top seen from the side is a step of `cliff` or more, so a wall direction leaves it alone, and the
   reverse. The edge between a plateau and its cliff is not rounded off.
 - **Several surfaces per line.** A line along a direction can cross more than one surface, such as the ground under an

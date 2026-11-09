@@ -27,9 +27,9 @@ import static com.mcmiddleearth.architect.slabSmooth.core.Table.TERRAIN;
  *
  * <p>Every surface block belongs to one direction: the one it faces most (from the blurred terrain), among the
  * directions its material has pieces for, with tops preferred on 45 degree slopes. A block with something built on
- * it belongs to none, and one with something built under it to no wall ({@link #owners}). Grass, which only has a
- * slab, so stays with the tops as before. The directions run one after another, tops first, each on the result of
- * the last.
+ * it belongs to none, and one with something built under it to no wall ({@link #owners}). Grass has only a slab, so
+ * a wall that takes a grass block (at a cliff edge, or on a face steeper than 45 degrees) can only cut its top half
+ * away or put a slab beside it. The directions run one after another, tops first, each on the result of the last.
  *
  * <p>A line along a direction can cross several surfaces (the ground under an overhang, and the overhang's top).
  * Each surface is a node; nodes in neighbouring lines are neighbours when they are the nearest in height.
@@ -306,8 +306,8 @@ public final class Directional {
      * already leaves it, and a wall pass could cut its top half. A block with something built under it (a hanging
      * lantern, a roof) belongs to no wall pass, which could cut its lower half; the tops pass may still have it.
      * Built means any block of the table's other category, so water counts too, and so do ores and logs that the
-     * table doesn't make terrain: a cut next to them lets water flow, or leaves a hole in a cliff face. Outside the
-     * area nothing counts as built. Toti's 1.3.0 could give either block to a wall pass.
+     * table doesn't make terrain: a cut under water lets it flow, and a cut over or under an ore leaves a hole in a
+     * cliff face. Outside the area nothing counts as built. Toti's 1.3.0 could give either block to a wall pass.
      */
     static byte[] owners(World world, Options opts) {
         int h = world.h, l = world.l, w = world.w, n = world.n;
