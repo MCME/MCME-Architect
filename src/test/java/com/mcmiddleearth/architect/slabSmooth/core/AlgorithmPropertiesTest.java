@@ -11,22 +11,26 @@ import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.function.IntPredicate;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * What the smoother promises builders, on the golden scenes' inputs and on random hills: only blocks inside the
- * selection or brush change; only terrain, its pieces, and the air and plants next to it change; and the same seed
- * gives the same result.
+ * selection or brush change; only terrain, its pieces, and the air and plants next to it change; what is built keeps
+ * the blocks it stands on and hangs from; and the same seed gives the same result.
  */
 class AlgorithmPropertiesTest {
 
     private static final String AIR = "minecraft:air";
     /** A two-high plant from the table's decor list. */
     private static final String PLANT_LOWER = "minecraft:large_fern[half=lower]", PLANT_UPPER = "minecraft:large_fern[half=upper]";
+    /** Built blocks: something standing on the ground, and something hanging under it. */
+    private static final String CHEST = "minecraft:chest[facing=north,type=single,waterlogged=false]",
+            LANTERN = "minecraft:lantern[hanging=true,waterlogged=false]";
     /** A block entity, a log, water, a waterlogged stair and bedrock: never changed. */
-    private static final List<String> LEFT_ALONE = List.of("minecraft:chest[facing=north,type=single,waterlogged=false]",
+    private static final List<String> LEFT_ALONE = List.of(CHEST,
             "minecraft:oak_log[axis=y]", "minecraft:water[level=0]",
             "minecraft:stone_stairs[facing=east,half=bottom,shape=straight,waterlogged=true]", "minecraft:bedrock");
     /** The golden tiles run's tile size and margin. */
@@ -105,6 +109,47 @@ class AlgorithmPropertiesTest {
         assertTrue(changedColumns > 0, "nothing changed at all");
         assertTrue(changed.isEmpty(), changed.size() + " blocks changed that aren't terrain, pieces, air or plants, such as "
                 + first(changed));
+    }
+
+    /**
+     * What is built keeps its support. On each golden scene, once with chests on the tops of every third column and
+     * once with lanterns under every block of ground with air under it in every third column: no block under a chest
+     * and no block over a lantern changes.
+     */
+    @Test
+    void noBlockUnderAChestOrOverALanternChanges() throws IOException {
+        List<String> underChests = new ArrayList<>(), overLanterns = new ArrayList<>();
+        int chests = 0, lanterns = 0, changedColumns = 0;
+        for (String name : GoldenScenes.NAMES) {
+            GoldenScenes.Scene ground = GoldenScenes.scene(name);
+            int cols = ground.length() * ground.width();
+            GoldenScenes.Scene s = withChestsOnTops(ground);
+            int[] withChests = s.blocks();
+            int chest = s.palette().indexOf(CHEST);
+            IntPredicate underAChest = i -> i + cols < withChests.length && withChests[i + cols] == chest;
+            Smoother.Result r = run(s, "directional", new Options(), null);
+            changedColumns += r.report().changedColumns();
+            chests += count(withChests.length, underAChest);
+            underChests.addAll(changes(s, r, underAChest, s.name()));
+
+            s = withLanternsUnder(ground);
+            int[] withLanterns = s.blocks();
+            int lantern = s.palette().indexOf(LANTERN);
+            IntPredicate overALantern = i -> i >= cols && withLanterns[i - cols] == lantern;
+            r = run(s, "directional", new Options(), null);
+            changedColumns += r.report().changedColumns();
+            lanterns += count(withLanterns.length, overALantern);
+            overLanterns.addAll(changes(s, r, overALantern, s.name()));
+        }
+        int chestCount = chests, lanternCount = lanterns;
+        assertTrue(chestCount > 0 && lanternCount > 0,
+                chestCount + " blocks under chests, " + lanternCount + " over lanterns");
+        assertTrue(changedColumns > 0, "nothing changed at all");
+        assertAll(
+                () -> assertTrue(underChests.isEmpty(), underChests.size() + " of " + chestCount
+                        + " blocks under a chest changed, such as " + first(underChests)),
+                () -> assertTrue(overLanterns.isEmpty(), overLanterns.size() + " of " + lanternCount
+                        + " blocks over a lantern changed, such as " + first(overLanterns)));
     }
 
     @Test
@@ -205,6 +250,67 @@ class AlgorithmPropertiesTest {
             }
         }
         return new GoldenScenes.Scene(s.name() + "+others", s.height(), s.length(), s.width(), palette, blocks);
+    }
+
+    /** A chest on the top of every third column: on its highest block of ground with air above it. */
+    private static GoldenScenes.Scene withChestsOnTops(GoldenScenes.Scene s) {
+        List<String> palette = new ArrayList<>(s.palette());
+        int chest = palette.size();
+        palette.add(CHEST);
+        int[] blocks = s.blocks().clone();
+        int cols = s.length() * s.width();
+        for (int c = 0; c < cols; c++) {
+            if (!everyThird(s, c)) {
+                continue;
+            }
+            for (int y = s.height() - 2; y >= 0; y--) {
+                int i = y * cols + c;
+                if (isGround(s, i) && AIR.equals(s.palette().get(s.blocks()[i + cols]))) {
+                    blocks[i + cols] = chest;
+                    break;
+                }
+            }
+        }
+        return new GoldenScenes.Scene(s.name() + "+chests", s.height(), s.length(), s.width(), palette, blocks);
+    }
+
+    /** A hanging lantern under every block of ground with air under it, in every third column. */
+    private static GoldenScenes.Scene withLanternsUnder(GoldenScenes.Scene s) {
+        List<String> palette = new ArrayList<>(s.palette());
+        int lantern = palette.size();
+        palette.add(LANTERN);
+        int[] blocks = s.blocks().clone();
+        int cols = s.length() * s.width();
+        for (int c = 0; c < cols; c++) {
+            if (!everyThird(s, c)) {
+                continue;
+            }
+            for (int y = 1; y < s.height(); y++) {
+                int i = y * cols + c;
+                if (isGround(s, i) && AIR.equals(s.palette().get(s.blocks()[i - cols]))) {
+                    blocks[i - cols] = lantern;
+                }
+            }
+        }
+        return new GoldenScenes.Scene(s.name() + "+lanterns", s.height(), s.length(), s.width(), palette, blocks);
+    }
+
+    /** One column in three, in a diagonal pattern. */
+    private static boolean everyThird(GoldenScenes.Scene s, int column) {
+        return (column % s.width() + 2 * (column / s.width())) % 3 == 0;
+    }
+
+    private static boolean isGround(GoldenScenes.Scene s, int i) {
+        int category = table.kind3(s.palette().get(s.blocks()[i])).category();
+        return category == Table.TERRAIN || category == Table.PIECE;
+    }
+
+    private static int count(int n, IntPredicate where) {
+        int count = 0;
+        for (int i = 0; i < n; i++) {
+            count += where.test(i) ? 1 : 0;
+        }
+        return count;
     }
 
     /** Per column, the height of the highest block that is neither air nor a plant, or -1. */

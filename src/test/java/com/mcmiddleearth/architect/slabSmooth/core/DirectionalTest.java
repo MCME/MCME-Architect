@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -195,6 +196,39 @@ class DirectionalTest {
     }
 
     /**
+     * That overhang without the lantern, and a chest on its lower layer: on the thin front, or on the block behind it
+     * in place of the overhang's upper block, where only the underside is open. The undersides pass may not have
+     * either block: no pass changes a block with something built on it.
+     */
+    @Test
+    void aBlockUnderABuiltBlockIsNotCutFromBelow() throws Exception {
+        Table table = TestTables.handMade();
+        int[] onTheFront = overhang(true), behindIt = overhang(true);
+        onTheFront[at(3, 6, 4)] = SCENE.indexOf(AIR);
+        onTheFront[at(3, 8, 4)] = SCENE.indexOf(CHEST);
+        behindIt[at(3, 6, 4)] = SCENE.indexOf(AIR);
+        behindIt[at(4, 8, 4)] = SCENE.indexOf(CHEST);
+        byte[] front = owners(onTheFront, table), behind = owners(behindIt, table);
+        assertAll(
+                () -> assertEquals(-1, front[at(3, 7, 4)], "a chest on it, open below and to the west"),
+                () -> assertEquals(-1, behind[at(4, 7, 4)], "a chest on it, open only below"));
+    }
+
+    /**
+     * A selection inside a mountain: ground in the area's top layer, over a cave. What is above the area is unknown,
+     * so it counts as nothing built, and nothing outside the area is read.
+     */
+    @Test
+    void groundInTheTopLayerIsSmoothedWithoutReadingAboveTheArea() throws Exception {
+        Table table = TestTables.handMade();
+        int[] blocks = cave();
+        assertEquals(SCENE.indexOf(STONE), blocks[at(5, H - 1, 4)], "ground in the top layer");
+        assertDoesNotThrow(() -> owners(blocks, table));
+        Smoother.Result r = assertDoesNotThrow(() -> smooth(blocks, table));
+        assertTrue(r.report().changedColumns() > 0, "the cave floor's step is smoothed");
+    }
+
+    /**
      * Grass on a two-block step, the same at every z: west of x 5 its top is at y 4; from x 5 east it is at y 6 and
      * one block higher every two blocks. The step's edge is the grass block at x 5, y 6.
      */
@@ -228,6 +262,21 @@ class DirectionalTest {
             }
         }
         blocks[at(3, 6, 4)] = SCENE.indexOf(LANTERN);
+        return blocks;
+    }
+
+    /** Stone filling the whole area, its top layer included, around a cave at x 2 to 11, y 3 to 8 and z 1 to 7, whose
+     *  floor steps up a block from x 7. */
+    private static int[] cave() {
+        int[] blocks = new int[W * H * L];
+        for (int y = 0; y < H; y++) {
+            for (int z = 0; z < L; z++) {
+                for (int x = 0; x < W; x++) {
+                    boolean air = x >= 2 && x <= 11 && y >= 3 && y <= 8 && z >= 1 && z <= 7 && !(x >= 7 && y == 3);
+                    blocks[at(x, y, z)] = SCENE.indexOf(air ? AIR : STONE);
+                }
+            }
+        }
         return blocks;
     }
 
