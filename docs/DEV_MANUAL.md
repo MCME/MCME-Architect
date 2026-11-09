@@ -1276,7 +1276,7 @@ Interfaces keep the jobs testable without a server. `SmoothJobs` and `SmoothBrus
 
 | Seam | On the server | What the interface is for |
 |---|---|---|
-| `SmoothWorldEdit` | `WorldEditSmoothing` | The only code that calls WorldEdit's sessions: the selection, opening an edit for a player in a world, binding the brush, and whether the write belongs off the main thread (FAWE). |
+| `SmoothWorldEdit` | `WorldEditSmoothing` | The only code that calls WorldEdit's sessions: the selection, opening an edit for a player in a world, binding the brush, the wands (the items WorldEdit's configuration names, and the wand a player's session has on an item), and whether the write belongs off the main thread (FAWE). On FAWE 2.16.1, `getBrushTool` can throw a `NullPointerException` in a session whose wands are not set up yet; `bind` answers that one plainly, and a second try works. |
 | `AreaSource` | `ChunkAreaSource` | Reads an area from chunk snapshots into a `LoadedArea` and holds its chunks until `release`. Fails with a message for the player when part of the area has not been generated. |
 | `BlockTarget` | `EditSessionTarget` | Where the result is written: `stateAt`, `set`, `close`. It sets blocks without block updates (neighbours and update side effects off), so stairs keep their shape and MCME's sugar-cane grass slab and repeater and comparator slabs stay as they are. A `FaweException` (no allowed region, or FAWE's own limit) becomes a `Refused` with its message, recognised by class name because FAWE is not a compile dependency. |
 | `TableSource` | `Packs` | The pack choice for an edit (the named pack, the RP region's, the player's, the default), the packs of the RP regions whose boxes meet a box, and the table for a choice. |

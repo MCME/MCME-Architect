@@ -626,10 +626,26 @@ class SlabSmoothCommandTest {
         assertEquals(List.of(), worldEdit.calls("bindBrush"), "WorldEdit's sessions are never asked");
     }
 
+    // /tool selwand and /tool navwand move a wand to another item: the player's session knows, the configuration doesn't
     @Test
-    void anotherItemStillBindsWhileWandsAreConfigured() {
+    void brushRefusesTheWandsTheSessionHasOnTheItem() {
+        worldEdit.sessionWands.put(Material.BLAZE_ROD, "WorldEdit wand");
+        worldEdit.sessionWands.put(Material.ARROW, "WorldEdit navigation wand");
+        PlayerMock builder = player(world, SLAB_SMOOTH);
+
+        assertEquals(List.of("error: That's your WorldEdit wand; hold another item that isn't a block, such as a "
+                + "feather, to bind the brush to."), answer(holding(builder, Material.BLAZE_ROD), "sls brush"));
+        assertEquals(List.of("error: That's your WorldEdit navigation wand; hold another item that isn't a block, "
+                + "such as a feather, to bind the brush to."), answer(holding(builder, Material.ARROW), "sls brush"));
+        assertEquals(2, worldEdit.calls("boundWand").size(), "the session was asked about each item");
+        assertEquals(List.of(), worldEdit.calls("bindBrush"), "and nothing was bound");
+    }
+
+    @Test
+    void anotherItemStillBindsBesideTheWands() {
         worldEdit.wandItem = Material.WOODEN_AXE;
         worldEdit.navigationWandItem = Material.COMPASS;
+        worldEdit.sessionWands.put(Material.BLAZE_ROD, "WorldEdit wand");
 
         answer(holding(player(world, SLAB_SMOOTH), Material.FEATHER), "sls brush");
         assertEquals(1, worldEdit.brushes.size());

@@ -25,7 +25,7 @@ import java.util.function.Function;
  */
 final class FakeSmoothWorldEdit implements SmoothWorldEdit {
 
-    /** One call of open, close, selection or bindBrush, with the thread it ran on. */
+    /** One call of open, close, selection, boundWand or bindBrush, with the thread it ran on. */
     record Call(String method, String thread, World world, Player player) {
     }
 
@@ -33,7 +33,10 @@ final class FakeSmoothWorldEdit implements SmoothWorldEdit {
     record Bound(Player player, double radius, Brush brush, String permission) {
     }
 
-    /** open, close, selection and bindBrush, in order. Sets and reads are too many to list here: see sets and reads. */
+    /**
+     * open, close, selection, boundWand and bindBrush, in order. Sets and reads are too many to list here: see sets and
+     * reads.
+     */
     final List<Call> calls = Collections.synchronizedList(new ArrayList<>());
     /**
      * What happened, in order: "open", "close", and whatever a test adds (such as "release" from its AreaSource), so
@@ -51,6 +54,11 @@ final class FakeSmoothWorldEdit implements SmoothWorldEdit {
 
     /** The items WorldEdit's configuration names as its wand and navigation wand; null: none. */
     volatile Material wandItem, navigationWandItem;
+    /**
+     * What boundWand answers per item: the wands a player's session has, which /tool selwand and /tool navwand can
+     * move to any item. Empty: a session that has bound no wand yet.
+     */
+    final Map<Material, String> sessionWands = new ConcurrentHashMap<>();
 
     /** True: like FAWE, which writes off the main thread. */
     volatile boolean offTheMainThread;
@@ -108,6 +116,12 @@ final class FakeSmoothWorldEdit implements SmoothWorldEdit {
             return "WorldEdit wand";
         }
         return item == navigationWandItem ? "WorldEdit navigation wand" : null;
+    }
+
+    @Override
+    public String boundWand(Player player, Material item) {
+        calls.add(new Call("boundWand", Thread.currentThread().getName(), null, player));
+        return sessionWands.get(item);
     }
 
     @Override

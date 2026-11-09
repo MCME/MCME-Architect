@@ -28,9 +28,18 @@ interface SmoothWorldEdit {
 
     /**
      * "WorldEdit wand" or "WorldEdit navigation wand" if item is the one WorldEdit's configuration names as that, else
-     * null. A brush can't be bound to either: WorldEdit's sessions fail on an item that is already a wand.
+     * null. The brush is bound to neither wand. On FAWE, binding it to the selection wand's item fails: getBrushTool
+     * asks the wand whether a player it doesn't have may use it. Binding it to the navigation wand there, or to
+     * either wand on plain WorldEdit, would replace that wand; refusing those is a choice, so a builder keeps them.
      */
     String wandName(Material item);
+
+    /**
+     * "WorldEdit wand" or "WorldEdit navigation wand" if the player's session has that wand on item, else null. A
+     * player can move a wand to any item (/tool selwand, /tool navwand), so this asks the session, without a player,
+     * which can't fail as binding can.
+     */
+    String boundWand(Player player, Material item);
 
     /** True on FAWE, which writes edits off the main thread; plain WorldEdit writes on it. */
     boolean writesOffTheMainThread();

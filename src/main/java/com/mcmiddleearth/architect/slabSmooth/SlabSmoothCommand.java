@@ -182,8 +182,14 @@ public class SlabSmoothCommand extends AbstractArchitectCommand {
             throw new Refusal("Hold a tool or another item that isn't a block, such as a feather or a "
                     + "bone, to bind the brush to.");
         }
-        // before any WorldEdit session call: FAWE fails on an item that is already a wand
+        // Never on a wand: the item WorldEdit's configuration names, which catches it before a session has bound
+        // anything, or a wand the player's session has on the item (/tool selwand and /tool navwand move them). On
+        // FAWE, binding to the selection wand fails. Binding to the navigation wand there, or to either wand on plain
+        // WorldEdit, would replace the wand; refusing those is a choice, so that a builder keeps their wands.
         String wand = SlabSmooth.worldEdit().wandName(item);
+        if (wand == null) {
+            wand = SlabSmooth.worldEdit().boundWand(player, item);
+        }
         if (wand != null) {
             throw new Refusal("That's your " + wand + "; hold another item that isn't a block, such as a feather, "
                     + "to bind the brush to.");

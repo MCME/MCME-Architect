@@ -7,20 +7,33 @@ import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.command.tool.BrushTool;
 import com.sk89q.worldedit.command.tool.InvalidToolBindException;
+import com.sk89q.worldedit.command.tool.NavigationWand;
+import com.sk89q.worldedit.command.tool.SelectionWand;
+import com.sk89q.worldedit.command.tool.Tool;
 import com.sk89q.worldedit.command.tool.brush.Brush;
 import com.sk89q.worldedit.extension.platform.Actor;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldedit.world.item.ItemType;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import java.util.logging.Logger;
+
 /**
  * SmoothWorldEdit on the WorldEdit or FastAsyncWorldEdit the server runs. Thin on purpose: it only passes calls on, so
- * it is checked on a real server rather than in unit tests. Only what opening an edit does with a refusal is tested
- * here, on a session the test makes.
+ * it is checked on a real server rather than in unit tests. Only what opening an edit does with a refusal, binding the
+ * brush, and asking a session which wand it has on an item are tested, on sessions the tests make.
  */
 final class WorldEditSmoothing implements SmoothWorldEdit {
+
+    /** Architect's log, for what a player is told plainly but an admin may want to see. */
+    private final Logger log;
+
+    WorldEditSmoothing(Logger log) {
+        this.log = log;
+    }
 
     @Override
     public Region selection(Player player) throws IncompleteRegionException {
@@ -74,9 +87,52 @@ final class WorldEditSmoothing implements SmoothWorldEdit {
     @Override
     public void bindBrush(Player player, double radius, Brush brush, String permission) throws InvalidToolBindException {
         var actor = BukkitAdapter.adapt(player);
-        BrushTool tool = session(actor).getBrushTool(BukkitAdapter.asItemType(player.getInventory().getItemInMainHand().getType()));
+        bind(session(actor), BukkitAdapter.asItemType(player.getInventory().getItemInMainHand().getType()), radius, brush,
+                permission, log);
+    }
+
+    /**
+     * What bindBrush does once it has the player's session and item; apart, so it can be tested without WorldEdit.
+     * <p>
+     * FAWE 2.16.1's getBrushTool(ItemType) passes no player on. It first sets up the session's wands if it hasn't yet,
+     * asking whether that missing player may use the navigation wand, and it asks the same of a selection wand on the
+     * item: a NullPointerException. FAWE marks the wands as set up before it asks, so on any item but a selection
+     * wand, which the command refuses before this, a second try binds the brush. Only that exception, from
+     * getBrushTool, gets a plain answer, and a line at FINE; anything else stays a failure.
+     */
+    static void bind(LocalSession session, ItemType item, double radius, Brush brush, String permission, Logger log)
+            throws InvalidToolBindException {
+        BrushTool tool;
+        try {
+            tool = session.getBrushTool(item);
+        } catch (NullPointerException e) {
+            log.fine(() -> "WorldEdit's session couldn't bind a brush to " + item + " yet: " + e);
+            throw new Refusal("WorldEdit isn't ready for that item yet; try /sls brush again.");
+        }
         tool.setBrush(brush, permission);
         tool.setSize(radius);
+    }
+
+    @Override
+    public String boundWand(Player player, Material item) {
+        return boundWand(session(BukkitAdapter.adapt(player)), BukkitAdapter.asItemType(item));
+    }
+
+    /**
+     * What boundWand(player, item) does once it has the player's session; apart, so it can be tested without WorldEdit.
+     * getTool(ItemType) only looks in the session's tools, on FAWE too, without a player, so it can't fail as
+     * getBrushTool does.
+     */
+    static String boundWand(LocalSession session, ItemType item) {
+        return wandOf(session.getTool(item));
+    }
+
+    /** The name the brush's refusal gives a wand tool, or null for any other tool and for none. */
+    static String wandOf(Tool tool) {
+        if (tool instanceof SelectionWand) {
+            return "WorldEdit wand";
+        }
+        return tool instanceof NavigationWand ? "WorldEdit navigation wand" : null;
     }
 
     @Override

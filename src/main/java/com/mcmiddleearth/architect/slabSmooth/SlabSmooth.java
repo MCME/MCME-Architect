@@ -46,7 +46,7 @@ public final class SlabSmooth {
 
         /** The services on the server. The chunks are read on the main thread, in later ticks of scheduler. */
         static Services onTheServer(JavaPlugin owner, BukkitScheduler scheduler) {
-            return new Services(new ArchitectPacks(owner, owner.getLogger()), new WorldEditSmoothing(),
+            return new Services(new ArchitectPacks(owner, owner.getLogger()), new WorldEditSmoothing(owner.getLogger()),
                     new ChunkAreaSource(owner, nextTick(owner, scheduler), System::nanoTime));
         }
     }

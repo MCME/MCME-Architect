@@ -3715,7 +3715,11 @@ Each entry gives what the player is told (or sees), the cause and the fix. See [
   block-cycling tool, so it is a poor choice.
 - **`That's your WorldEdit wand; hold another item that isn't a block, such as a feather, to bind the brush to.`**
   Cause: the item in the hand is WorldEdit's wand (or, in the same message, its navigation wand), as set in
-  WorldEdit's configuration. Fix: hold another item, such as a feather.
+  WorldEdit's configuration, or as your WorldEdit session has it since `/tool selwand` or `/tool navwand`. Fix: hold
+  another item, such as a feather.
+- **`WorldEdit isn't ready for that item yet; try /sls brush again.`** Cause: on FastAsyncWorldEdit, `/sls brush` came
+  before WorldEdit had set up your session, for example as the first thing you did after a restart. Nothing was bound.
+  Fix: run `/sls brush` again.
 - **`The radius must be a number from 1 to 12.`** Cause: the radius is outside `brush.maxRadius`. A larger `//size`
   is cut to that limit at every click without a message.
 - **`With surfaces top, select a box, polygon or cylinder.`** Cause: a selection of another shape with `surfaces top`.
