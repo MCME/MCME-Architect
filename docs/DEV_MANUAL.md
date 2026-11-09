@@ -1209,6 +1209,9 @@ The rules are in [Threading rules](#threading-rules); these are the ones smoothi
   chunk tickets are always released. A job keeps the settings and tables it started with, so a reload lets it finish.
   `SmoothJobs.close()` at disable stops a job: no more blocks are set and nothing is said, and an edit already open is
   closed, so what it wrote stays one undo step.
+- **Tables are built on the packs' worker** (`Architect SlabSmooth packs`), a daemon thread at the lowest priority like
+  the job worker. A build takes seconds of CPU, and a new thread would take the priority of the thread that starts it:
+  Paper's main thread, which runs above normal.
 - **The write is pinned to the world that was read.** `WorldEditSmoothing.open` sets the session's world override around
   `createEditSession` and puts it back. Without that, FAWE writes to the world the player is in at that moment.
 - **For a few milliseconds the player's session points at the job's world.** On FAWE, `WorldEditSmoothing.open` runs on

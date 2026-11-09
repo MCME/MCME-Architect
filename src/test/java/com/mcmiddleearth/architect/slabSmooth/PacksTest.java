@@ -74,6 +74,8 @@ class PacksTest {
     /** The made-up source of packs: one pack, Human, whose zip is already in the data folder. */
     private final class Fake implements PackSources {
         final Set<String> inventoryThreads = ConcurrentHashMap.newKeySet(), sourceThreads = ConcurrentHashMap.newKeySet();
+        /** The priorities of the threads that ran a check: each check asks for the pack's source first. */
+        final Set<Integer> checkPriorities = ConcurrentHashMap.newKeySet();
         final AtomicInteger regionCalls = new AtomicInteger(), sourceCalls = new AtomicInteger();
         volatile CountDownLatch gate; // while set, asking for the inventory waits for it
         volatile CountDownLatch entered; // counted down when something waits at the gate
@@ -107,6 +109,7 @@ class PacksTest {
         @Override
         public Source source(String pack) {
             sourceThreads.add(Thread.currentThread().getName());
+            checkPriorities.add(Thread.currentThread().getPriority());
             sourceCalls.incrementAndGet();
             return source;
         }
@@ -347,6 +350,26 @@ class PacksTest {
         assertFalse(fake.sourceThreads.isEmpty());
         assertEquals(Set.of(WORKER), fake.inventoryThreads, "caller was " + caller);
         assertEquals(Set.of(WORKER), fake.sourceThreads, "caller was " + caller);
+    }
+
+    // A build takes seconds of CPU. The worker's thread is made by the first ask, and a new thread takes the priority of
+    // the one that makes it: on the server Paper's main thread, at 8. It must run at the lowest, as the job worker does.
+    @Test
+    void theWorkerRunsAtTheLowestPriority() throws InterruptedException {
+        Packs packs = packs();
+        Thread mainLike = new Thread(() -> {
+            try {
+                packs.table(human(), false);
+            } catch (Refusal firstAsk) {
+                // try again: the worker has started
+            }
+        }, "main-like");
+        mainLike.setPriority(8);
+        mainLike.start();
+        mainLike.join();
+        await(packs);
+
+        assertEquals(Set.of(Thread.MIN_PRIORITY), fake.checkPriorities);
     }
 
     @Test

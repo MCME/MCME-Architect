@@ -105,10 +105,15 @@ final class Packs implements TableSource, Closeable {
     private final Logger log;
     private final Path dataDir, cacheDir, tablesDir;
     private final Downloads downloads;
-    /** A plain single-thread executor starts its thread with the first task. */
+    /**
+     * A plain single-thread executor starts its thread with the first task. A new thread takes the priority of the one
+     * that makes it, on the server Paper's main thread, which runs above normal; a build takes seconds of CPU, so this
+     * one runs at the lowest, as the job worker does.
+     */
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "Architect SlabSmooth packs");
         t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
         return t;
     });
     private final Map<String, Pack> packs = new ConcurrentHashMap<>();
