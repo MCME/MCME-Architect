@@ -2247,6 +2247,9 @@ smoothing](#permissions-for-smoothing)).
   at the default settings), but they do not change.
 - **Never** water, waterlogged blocks, or blocks with block data, such as chests, signs and heads. The only exception
   is a piece that the pack itself uses as a slab and that is a block entity, such as MCME's comparator slabs.
+- **A block with something built on it keeps its shape**, also at a cliff edge: the block under a chest, a fence, a
+  wall, a tree trunk or anything else smoothing leaves alone. A block with something hanging under it, such as a
+  lantern, gets only its top smoothed.
 
 > [!WARNING]
 > **Buildings made of terrain blocks get smoothed too.** Smoothing does not know what a block is part of. A wall or a
@@ -2308,8 +2311,10 @@ smoothing, the reply shows the pack it used, for example `[Mordor]`.
 - **One smoothing at a time on the whole server.** A selection or area that starts while another runs is told `Another
   smoothing is running; try again in a moment.` A big one takes a few seconds; the reply tells you when it is done.
 - **Changes made while it runs are left alone.** Smoothing reads the area, works out the result, and then writes it.
-  Blocks that you or someone else changed in between are not overwritten, and the reply says how many. A block placed
-  in the last fraction of a second of the write can still be overwritten, and is then part of that smoothing's `//undo`.
+  Blocks that you or someone else changed in between are not overwritten, and the reply says how many. Each block is
+  checked just before it is set. On FastAsyncWorldEdit, a block placed after its check and before FastAsyncWorldEdit
+  writes the edit can still be overwritten, and is then part of that smoothing's `//undo`. On plain WorldEdit nothing
+  comes between.
 - **A smoothing is dropped** if you leave the world (for a selection) or the server before it writes, because you could
   not undo it. Nothing changes then.
 - **Every smoothing is one `//undo` step**, also when it stopped at your WorldEdit block limit (`Too many blocks for
